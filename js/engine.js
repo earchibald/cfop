@@ -269,11 +269,11 @@ Cube.prototype.isSolvedAny=function(){return isSolvedAny(this);};
 function fromFacelets(f){
   const errors=[];
   if(!Array.isArray(f)||f.length!==54)return {ok:false,errors:['Need 54 stickers.']};
-  for(let i=0;i<6;i++)if(f[9*i+4]!==i)errors.push(`Centre of ${FACE_NAMES[i]} is wrong.`);
+  for(let i=0;i<6;i++)if(f[9*i+4]!==i)errors.push(`The centre of the ${['top','right','front','bottom','left','back'][i]} face must be ${COLOR_NAMES_E[i]}.`);
   const counts=[0,0,0,0,0,0];let unknown=0;for(const x of f){if(x>=0&&x<6)counts[x]++;else unknown++;}
   if(unknown)errors.push(`${unknown} sticker${unknown>1?'s are':' is'} not set.`);
   const bad=[];for(let c=0;c<6;c++)if(counts[c]!==9)bad.push(`${COLOR_NAMES_E[c]} ${counts[c]}`);
-  if(bad.length&&!unknown)errors.push('Each colour must appear 9 times: '+bad.join(', ')+'.');
+  if(bad.length&&!unknown)errors.push('Each colour must be on 9 stickers. These are not: '+bad.join(', ')+'.');
   if(errors.length)return {ok:false,errors,counts};
   const c=new Cube();const seenC=new Array(8).fill(0),seenE=new Array(12).fill(0);const badPieces=[];
   for(let i=0;i<8;i++){
@@ -293,15 +293,15 @@ function fromFacelets(f){
     if(found<0){badPieces.push({type:'edge',pos:i});continue;}
     seenE[found]++;
   }
-  for(const p of badPieces)errors.push(`The ${p.type} at ${p.type==='corner'?CORNER_NAMES[p.pos]:EDGE_NAMES[p.pos]} has a colour mix that does not exist.`);
+  for(const p of badPieces)errors.push(`The ${p.type} at ${p.type==='corner'?CORNER_NAMES[p.pos]:EDGE_NAMES[p.pos]} has a mix of colours that no real piece has. Check its stickers.`);
   if(errors.length)return {ok:false,errors,counts,badPieces};
   const dupC=[],dupE=[];for(let j=0;j<8;j++)if(seenC[j]!==1)dupC.push(CORNER_NAMES[j]);for(let j=0;j<12;j++)if(seenE[j]!==1)dupE.push(EDGE_NAMES[j]);
-  if(dupC.length)errors.push('Corner pieces appear twice or are missing: '+dupC.join(', ')+'.');
-  if(dupE.length)errors.push('Edge pieces appear twice or are missing: '+dupE.join(', ')+'.');
+  if(dupC.length)errors.push('Some corners show up twice, and others are missing: '+dupC.join(', ')+'.');
+  if(dupE.length)errors.push('Some edges show up twice, and others are missing: '+dupE.join(', ')+'.');
   if(errors.length)return {ok:false,errors,counts};
-  if(c.co.reduce((a,b)=>a+b,0)%3)errors.push('One corner is twisted. This cube cannot be solved as it is.');
-  if(c.eo.reduce((a,b)=>a+b,0)%2)errors.push('One edge is flipped. This cube cannot be solved as it is.');
-  if(permParity(c.cp)!==permParity(c.ep))errors.push('Two pieces are swapped. This cube cannot be solved as it is.');
+  if(c.co.reduce((a,b)=>a+b,0)%3)errors.push('One corner is twisted, so this cube cannot be solved. Check the corner stickers: one is probably wrong.');
+  if(c.eo.reduce((a,b)=>a+b,0)%2)errors.push('One edge is flipped, so this cube cannot be solved. Check the edge stickers: one is probably wrong.');
+  if(permParity(c.cp)!==permParity(c.ep))errors.push('Two pieces are swapped, so this cube cannot be solved. Check the stickers: two colours are probably mixed up.');
   if(errors.length)return {ok:false,errors,counts,cube:c,unsolvable:true};
   return {ok:true,errors:[],counts,cube:c};
 }

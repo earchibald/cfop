@@ -3,7 +3,7 @@
 const ALG_DB={
   eo:[
     {id:'eo-dot',name:'Dot (no edges)',group:'OLL edges',alg:"F R U R' U' F' f R U R' U' f'",prob:2,
-     recog:'No U-color edges on top. Centre only.',
+     recog:'No oriented edges on top. Only the centre shows the top colour.',
      why:"Two conjugates in a row. F [R U R' U'] F' flips the two edges that the sexy move touches, which makes an L. Then f [R U R' U'] f' finishes the line. Each half is: set up with F or f, do the sexy move, undo the setup. The setup move picks which two edges the sexy move flips."},
     {id:'eo-L',name:'L shape',group:'OLL edges',alg:"f R U R' U' f'",prob:4,
      recog:'Two oriented edges form an L. Hold the L so the oriented edges are at the right and the front; the empty edges are at the back and left.',
@@ -15,7 +15,7 @@ const ALG_DB={
   co:[
     {id:'co-sune',name:'Sune',group:'OLL corners',alg:"R U R' U R U2 R'",prob:4,
      recog:'One corner oriented. Hold it at front-left. The U sticker of the front-right corner faces front.',
-     why:"Sune is the heart of two-look OLL. It twists three corners: two clockwise, one counter-clockwise... net twist stays zero mod 3. Read it as (R U R' U) (R U2 R'): the first group lifts a pair, the second re-inserts it with a different twist. Every other 2-look corner case is a Sune variant or two Sunes."},
+     why:"Sune is the heart of two-look OLL. It twists three corners, all in the same direction. Three one-third twists make one whole turn, so the cube stays legal. Read it as (R U R' U) (R U2 R'). The first group lifts a pair out of its slot. The second group puts it back with a different twist. Every other two-look corner case is a Sune variant or two Sunes."},
     {id:'co-antisune',name:'Anti-Sune',group:'OLL corners',alg:"R U2 R' U' R U' R'",prob:4,
      recog:'One corner oriented. Hold it at back-right. The U sticker of the front-left corner faces front.',
      why:"Anti-Sune is the inverse of Sune read backwards: invert each move and reverse the order of Sune and you get R U2 R' U' R U' R'. Because it is the inverse, it twists the same three corners in the opposite direction. If Sune sends the pattern A→B, Anti-Sune sends B→A."},
@@ -30,17 +30,17 @@ const ALG_DB={
      why:"Start with a hedgeslammer (F R' F' R is sledgehammer inverse) and then a wide-R Sune fragment. Here the first move is F R' F' (hedgeslammer without the last R) and then r U R U' r', a fat-sexy variant. The wide moves are a conjugate trick: r...r' moves the middle slice along with R so that the U face centre moves too, which lets a corner twist happen without disturbing orientation elsewhere."},
     {id:'co-T',name:'T (chameleon)',group:'OLL corners',alg:"r U R' U' r' F R F'",prob:4,
      recog:'Two corners oriented, side by side on the right. The two left corners show U stickers on the front and back faces.',
-     why:"Fat sexy move then sledgehammer: (r U R' U') (r' F R F'). The wide r replaces R in the sexy move so the whole right block moves; the r' in the sledgehammer undoes the slice. Net: the sexy move twists two corners and the sledgehammer fixes the edges. It is a commutator in disguise: [r U R' U', r' F R F'] shares pieces only in the two corners that get twisted."},
+     why:"The fat sexy move, then the sledgehammer: (r U R' U') (r' F R F'). The wide r turns the middle slice together with R. The r' in the sledgehammer turns the slice back. In the end, the sexy move twists two corners and the sledgehammer fixes the edges. It works like a commutator: its two halves overlap only on the two corners that get twisted."},
     {id:'co-U',name:'U (headlights)',group:'OLL corners',alg:"R2 D R' U2 R D' R' U2 R'",prob:4,
      recog:'Two corners oriented, side by side (headlights). Hold them at the back. The two front corners show U stickers on the front face.',
-     why:"A pure corner commutator with a conjugate: R2 [D R' U2 R D' R' U2 R]... written as R2 then [D, R' U2 R] then R'. The commutator [D, R' U2 R] = D (R' U2 R) D' (R' U2 R)' twists two corners and nothing else: the only piece that both D and R' U2 R move is one corner, so the commutator can only affect pieces near that overlap. R2 and the final R' just move the target corners into position."},
+     why:"A pure corner commutator with a setup move. Read it as R2, then the commutator [D, R' U2 R], then R2 to undo the setup. The last R of the commutator and that R2 cancel to R'. D and R' U2 R share only one corner, so the commutator twists two corners and changes nothing else. The R2 at the start moves those corners into place."},
   ],
   cp:[
     {id:'pll-T',name:'T perm',group:'PLL corners',alg:"R U R' U' R' F R2 U' R' U' R U R' F'",prob:2,
-     recog:'Headlights on one side. Hold headlights on the left. Swaps the two right corners. It also swaps the left and right edges, which the corners step ignores; the picture here shows corner arrows only.',
-     why:"T perm = sexy move + a modified sledgehammer. (R U R' U') (R' F R2 U' R' U' R U R' F'). Read the tail as R' F R2 U' R' U' R U R' F': it is a sledgehammer that has been expanded to also undo the edge damage. T perm swaps two adjacent corners and two edges. In 2-look PLL you only care that it swaps two adjacent corners. T perm is its own inverse (order 2)."},
+     recog:'Headlights on one side. Hold headlights on the left. Swaps the two right corners. It also swaps the left and right edges. This step ignores edges, so the picture shows corner arrows only.',
+     why:"T perm is the sexy move, then a longer sledgehammer: (R U R' U') (R' F R2 U' R' U' R U R' F'). The second part is a sledgehammer with extra moves that also repair the edges. T perm swaps two corners side by side, and two edges. In two-look PLL, you only need its corner swap. Do T perm twice and the cube is back where it started."},
     {id:'pll-Y',name:'Y perm',group:'PLL corners',alg:"F R U' R' U' R U R' F' R U R' U' R' F R F'",prob:1,
-     recog:'No headlights on any side. Swaps diagonal corners (front-left with back-right as held). It also swaps two edges, which the corners step ignores.',
+     recog:'No headlights on any side. Swaps diagonal corners (front-left with back-right as held). It also swaps two edges. This step ignores edges.',
      why:"Y perm is two conjugated commutators glued together: (F R U' R' U' R U R' F') is a conjugate of an inverse-sexy-ish fragment and (R U R' U' R' F R F') is sexy + sledgehammer. Each half swaps some pieces; together they swap diagonal corners and two edges. Compare the second half with the T perm start: the same sexy move appears."},
   ],
   ep:[
@@ -51,11 +51,11 @@ const ALG_DB={
      recog:'One edge solved. Hold the solved edge at the back. The front edge must go to the left: UF→UL→UR→UF (clockwise from above).',
      why:"Ub is Ua inverted: reverse the moves and flip every prime. R2 U R U R' U' R' U' R' U R' is exactly the inverse of R U' R U R U R U' R' U' R2. So you only need to learn one and read it backwards. Ub cycles three edges clockwise."},
     {id:'pll-H',name:'H perm',group:'PLL edges',alg:"M2 U M2 U2 M2 U M2",prob:1,
-     recog:'No edges solved. Each edge is opposite from where it belongs (two swaps).',
+     recog:'No edges solved. Each edge is opposite from where it belongs (a double swap).',
      why:"H is the simplest PLL in slice notation: M2 U M2 U2 M2 U M2. Every M2 swaps the UF and UB edges (and DF and DB, which get swapped back). Each U rotates which pair of edges the next M2 touches. The pattern is symmetric, so you can start from any angle. It equals two Ua perms, or Ua then Ub with an AUF."},
     {id:'pll-Z',name:'Z perm',group:'PLL edges',alg:"M' U M2 U M2 U M' U2 M2 U'",prob:2,
      recog:'No edges solved. Each edge needs to swap with an adjacent edge. Hold so UF↔UL and UB↔UR need to swap.',
-     why:"Z swaps two adjacent pairs of edges. Like H it is an M-slice algorithm. The M' at the start and the M' later, with the three M2s, add up to a whole number of M turns, so the slice returns home. The U moves add up to five quarter turns: corners are only touched by U, so without the final U' the corners end one turn off. Most sheets leave that U' out and call it the AUF. With it, Z is a pure double swap of order 2."},
+     why:"Z swaps two adjacent pairs of edges. Like H it is an M-slice algorithm. The M' at the start and the M' later, with the three M2s, add up to a whole number of M turns, so the slice returns home. The U moves add up to five quarter turns: corners are only touched by U, so without the final U' the corners end one turn off. Most sheets leave that U' out and call it the AUF. With it, Z is a pure double swap. Do it twice and the cube is back where it started."},
   ],
 };
 // Full PLL reference (21). Each is verified in tests to be a pure U-layer permutation.

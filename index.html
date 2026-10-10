@@ -12,7 +12,7 @@
 <header class="top">
   <h1>Twistwright <span>CFOP trainer</span></h1>
   <div class="spacer"></div>
-  <nav id="mnav" aria-label="Jump to section"><button data-go="mg-ollE" title="OLL edges">OLL+</button><button data-go="mg-ollC" title="OLL corners">OLLx</button><button data-go="mg-pllC" title="PLL corners">PLLx</button><button data-go="mg-pllE" title="PLL edges">PLL+</button></nav>
+  <nav id="mnav" aria-label="Jump to section"><button data-go="mg-ollE" title="OLL edges">OLL 1</button><button data-go="mg-ollC" title="OLL corners">OLL 2</button><button data-go="mg-pllC" title="PLL corners">PLL 1</button><button data-go="mg-pllE" title="PLL edges">PLL 2</button></nav>
   <button class="small ghost" id="themeBtn" title="Toggle light/dark">Theme</button>
   <button class="small ghost" id="helpBtn">Keys</button>
 </header>
@@ -86,7 +86,7 @@
         <div class="row">
           <button class="primary" id="crossNew">New cross scramble</button>
           <label>Difficulty <select id="crossDiff"><option value="any">any</option><option value="easy">easy (≤5)</option><option value="hard">hard (≥7)</option></select></label>
-          <button id="crossReveal">Reveal solutions</button>
+          <button id="crossReveal">Reveal</button>
           <label style="font-size:13px"><input type="checkbox" id="crossPlus1"> include 1-move-longer plans</label>
         </div>
         <div class="row" style="margin-top:10px"><span>Optimal length: <b class="big" id="crossOpt">—</b></span><span class="muted" id="crossCount"></span></div>
@@ -110,12 +110,12 @@
           <div class="status-sel" id="f2lMode"><button data-m="live" class="on">Real cross-solved states</button><button data-m="cases">The 41 cases</button></div></div>
       </div>
       <div class="panel" id="f2lLive">
-        <p class="muted">The current scramble is solved through the cross for you. The dashed moves in the player show that part. Solve F2L, then compare with the pair plan. Pair plans are short inserts found by search, so they often differ from the textbook algorithm: both are valid. Learn to see why each one works.</p>
-        <div class="row"><button class="primary" id="f2lNew">New scramble</button><button id="f2lReveal">Reveal pair plan</button><label>Pairs left <select id="f2lPairs"><option>4</option><option>3</option><option>2</option><option>1</option></select></label></div>
+        <p class="muted">The current scramble is solved through the cross for you. The dashed moves in the player show that part. Solve F2L, then compare with the pair plan. The app finds short inserts for each pair. They often differ from the textbook algorithm. Both are correct, so learn why each one works.</p>
+        <div class="row"><button class="primary" id="f2lNew">New scramble</button><button id="f2lReveal">Reveal</button><label>Pairs left <select id="f2lPairs"><option>4</option><option>3</option><option>2</option><option>1</option></select></label></div>
         <div id="f2lPlan" style="margin-top:10px"></div>
       </div>
       <div class="panel hidden" id="f2lCases">
-        <p class="muted">Standard cases for the front-right slot. Click a case to set it up on the cube (with a random U turn so you recognise it, not memorise the setup). Double-click for details. Solve it, then reveal.</p>
+        <p class="muted">Standard cases for the front-right slot. Click a case to set it up on the cube (with a random U turn so you recognise it, not memorise the setup). Double-click a case to open its details. Solve it, then reveal.</p>
         <div class="row"><button class="primary" id="f2lRandomCase">Random selected case</button><button id="f2lCaseReveal">Reveal</button><select id="f2lGroup"><option value="all">All groups</option></select></div>
         <div id="f2lCaseOut" style="margin:8px 0"></div>
         <div class="cases" id="f2lCaseGrid"></div>
@@ -129,7 +129,7 @@
           <div class="row">
             <select id="llProb"><option value="balanced">Balanced</option><option value="realistic">Realistic probability</option></select>
             <label style="font-size:13px"><input type="checkbox" id="llRealState" checked> Realistic rest-of-layer</label>
-            <button class="primary" id="llNext">Next case</button><button id="llHint">Hint</button>
+            <button class="primary" id="llNext">Next case</button><button id="llHint">Reveal</button>
           </div>
         </div>
       </div>
@@ -144,7 +144,7 @@
     <section class="tab" id="tab-lab">
       <div class="panel">
         <h2>Algorithm lab: why it works</h2>
-        <p class="muted">Paste any algorithm, or pick one. The lab shows which pieces it moves, which it leaves alone, how the pieces cycle, how many repeats return the cube, and which hand triggers it is made of. Step through it on the cube; untouched stickers fade.</p>
+        <p class="muted">Paste any algorithm, or pick one. The lab shows which pieces it moves and which it leaves alone. It shows where each moved piece goes, and how many repeats bring the cube back. It also finds the triggers inside it. Step through it on the cube. Stickers that end where they started fade.</p>
         <div class="row"><input id="labAlg" class="mono" style="flex:1;min-width:260px" value="R U R' U R U2 R'"><select id="labPick"><option value="">Pick…</option></select><button class="primary" id="labRun">Analyse</button></div>
         <div class="lab-moves" id="labMoves" style="margin-top:10px"></div>
         <div class="row" style="margin-top:6px"><button class="small" id="labPrev">◀ step</button><button class="small" id="labNext">step ▶</button><button class="small" id="labPlay">▶ play</button><label style="font-size:13px"><input type="checkbox" id="labFade" checked> fade untouched stickers</label><label style="font-size:13px"><input type="checkbox" id="labFromSolved" checked> start from solved</label></div>
@@ -166,7 +166,7 @@
     </section>
     <!-- REFERENCE -->
     <section class="tab" id="tab-ref">
-      <div id="refMobile"><div class="panel"><h2>CFOP reference</h2><p class="muted" style="margin:0">Tap a case to zoom: algorithm, recognition and breakdown. Scrambles are white up, green front; cases are shown yellow up.</p></div><div id="refMobileCases"></div></div>
+      <div id="refMobile"><div class="panel"><h2>CFOP reference</h2><p class="muted" style="margin:0">Tap a case to open its details: algorithm, how to recognise it, and how it works. Scrambles are white up, green front; cases are shown yellow up.</p></div><div id="refMobileCases"></div></div>
       <div id="refDesktop" style="display:contents">
       <div class="panel"><h2>Reference</h2><p class="muted">Click any case to open it: large picture, recognition, breakdown, and buttons to set it on the cube or open it in the Lab. Algorithms follow jperm.net's two-look sets.</p></div>
       <div class="grid2 refcols">
@@ -177,9 +177,9 @@
           <h3 class="sub">1. Corners</h3><div class="rcards" id="refPLLc"></div>
           <h3 class="sub">2. Edges</h3><div class="rcards" id="refPLLe"></div></div>
       </div>
-      <div class="panel"><h3>Full PLL (21)</h3><p class="muted">For later. Each one is verified by the engine to permute only the top layer.</p><div class="wide"><table id="refPLL"></table></div></div>
+      <div class="panel"><h3>Full PLL (21)</h3><p class="muted">For later. The app checks that each one moves only the top layer.</p><div class="wide"><table id="refPLL"></table></div></div>
       <div class="panel"><h3>F2L (41 cases, front-right slot)</h3><div class="wide"><table id="refF2L"></table></div></div>
-      <div class="panel"><h3>Notation</h3><p>Face turns: <span class="mono">U R F D L B</span> clockwise when you look at that face. <span class="mono">'</span> is counter-clockwise. <span class="mono">2</span> is a half turn. Lower-case <span class="mono">r u f</span> turn two layers. <span class="mono">M E S</span> are the middle slices (M follows L, E follows D, S follows F). <span class="mono">x y z</span> rotate the whole cube like R, U, F.</p><p>Scrambles are applied with white up and green in front, the WCA convention. Solving plans start with one rotation (<span class="mono">z2</span> for a white cross) and then contain only face turns: hold the cube still, cross colour down, and turn faces.</p></div>
+      <div class="panel"><h3>Notation</h3><p>Face turns: <span class="mono">U R F D L B</span> clockwise when you look at that face. <span class="mono">'</span> is counter-clockwise. <span class="mono">2</span> is a half turn. Lower-case <span class="mono">r u f</span> turn two layers. <span class="mono">M E S</span> are the middle slices (M follows L, E follows D, S follows F). <span class="mono">x y z</span> rotate the whole cube like R, U, F.</p><p>Scrambles are applied with white up and green in front, the WCA rule. Solving plans start with one rotation (<span class="mono">z2</span> for a white cross) and then contain only face turns: hold the cube still, cross colour down, and turn faces.</p></div>
     </div>
     </section>
   </main>

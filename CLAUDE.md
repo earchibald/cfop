@@ -45,6 +45,10 @@ above. Add a new script with a `<script src>` tag after the one it depends on.
   case setup. The seed bar then shows a "Back to scramble" note.
 - Prose in the UI follows ASD-STE100 style: short sentences, active voice,
   one idea per sentence.
+- One word per idea in the UI: "player" (the move panel), "Reveal" (show an
+  answer), "details" (the case window), "solved" (not "done"), "plan" (the
+  guided solve). Cubing jargon is fine if `js/glossary.js` defines it. Other
+  jargon (maths, code, camera terms) is not: say it in plain words.
 
 ## Test and run
 

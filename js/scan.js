@@ -321,15 +321,15 @@ function openScan(){
 }
 function scanStatus(t){const e=$('#scanStatus');if(e)e.textContent=t;}
 async function startCamera(){
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){scanStatus('This browser cannot open the camera here. Use https or localhost.');return;}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){scanStatus('This browser cannot use the camera on this page. Try another browser, or open Twistwright from its web address.');return;}
   try{
     const s=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:false});
     if(!$('#scanBg')){s.getTracks().forEach(t=>t.stop());return;} // closed while the prompt was open
     scanStream=s;const v=$('#scanVideo');v.srcObject=s;await v.play().catch(()=>{});
     scanStatus('Show a face to the camera.');scanLoop();
   }catch(e){
-    scanStatus(e.name==='NotAllowedError'?'Camera access was refused. Allow the camera for this site in the browser settings, then open the scanner again.'
-      :e.name==='NotFoundError'?'No camera was found.':'The camera did not start: '+(e.message||e.name));
+    scanStatus(e.name==='NotAllowedError'?'The browser blocked the camera. Allow the camera for this site in the browser settings, then open the scanner again.'
+      :e.name==='NotFoundError'?'Twistwright cannot find a camera. Connect one, then open the scanner again.':'The camera did not start. Close other apps that use the camera, then open the scanner again.');
   }
 }
 function stopCamera(){clearTimeout(scanTimer);scanTimer=0;if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null;}}
@@ -366,7 +366,7 @@ function scanStep(r){
     const left=[0,1,2,3,4,5].filter(c=>!scanVoter.faces[c]).map(name);
     scanStatus(`The ${name(ev.centre)} face is read${ev.retake?' again':''}. Turn the cube to show the next face. Still to scan: ${left.join(', ')}.`);
   }else if(ev.event==='conflict'){
-    scanStatus(`This face has a ${name(ev.centre)} centre, but it does not match the ${name(ev.centre)} face read before. Show the face again, or press Start again.`);
+    scanStatus(`This face has a ${name(ev.centre)} centre, but its other stickers differ from the ${name(ev.centre)} face you showed before. Show the face again, or press Start again.`);
   }else if(ev.event==='reading'){
     scanStatus(`Hold still. Reading the ${name(ev.centre)} face: ${ev.tally.n} of ${scanVoter.opts.window}.`);
   }else if(ev.event==='held'){
