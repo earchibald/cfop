@@ -1,0 +1,12 @@
+{
+  "name": "cubeworks",
+  "private": true,
+  "description": "Cubeworks — a CFOP trainer for 3x3. Static site, no build step.",
+  "scripts": {
+    "test": "node test/load.js",
+    "serve": "python3 -m http.server 8000"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0"
+  }
+}

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cubeworks — CFOP trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="top">
+  <h1>Cubeworks <span>CFOP trainer</span></h1>
+  <div class="spacer"></div>
+  <nav id="mnav" aria-label="Jump to section"><button data-go="mg-ollE" title="OLL edges">OLL+</button><button data-go="mg-ollC" title="OLL corners">OLLx</button><button data-go="mg-pllC" title="PLL corners">PLLx</button><button data-go="mg-pllE" title="PLL edges">PLL+</button></nav>
+  <button class="small ghost" id="themeBtn" title="Toggle light/dark">Theme</button>
+  <button class="small ghost" id="helpBtn">Keys</button>
+</header>
+<div class="page">
+  <section class="player" id="player">
+    <div class="panel tight cubebox">
+      <svg id="cube" viewBox="0 0 400 360" aria-label="Cube view"></svg>
+      <div class="viewbtns"><button id="viewTop" title="Normal view">Top</button><button id="viewBottom" title="Look at the cross">Bottom</button><button id="viewNet" title="Unfolded">Net</button></div>
+    </div>
+    <div class="panel seqpanel">
+      <div class="seqhead"><span class="lbl" id="seqLabel">scramble</span><span class="muted" style="font-size:12px">Click a move, drag the slider, or use ← → to step. Press P to auto-step. The cube shows the state after the highlighted move.</span></div>
+      <div class="scramble" id="scramble"></div>
+      <div class="scrub"><button class="small" id="scrubStart" title="Go to start">⏮</button><button class="small" id="scrubPrev" title="Step back (←)">◀</button><input type="range" id="scrub" min="0" max="0" value="0"><button class="small" id="scrubNext" title="Step forward (→)">▶</button><button class="small" id="scrubEnd" title="Go to end">⏭</button><span class="mono muted" style="font-size:12px;min-width:48px;text-align:right" id="scrubPos">0 / 0</span></div>
+      <div class="autoplay"><button class="small" id="autoPlay" title="Auto-step through the sequence (P)">▷ Auto-step</button><label class="muted" for="autoSpeed">one move every</label><select id="autoSpeed"><option value="250">0.25 s</option><option value="500">0.5 s</option><option value="750">0.75 s</option><option value="1000">1 s</option><option value="1500">1.5 s</option><option value="2000">2 s</option><option value="3000">3 s</option></select></div>
+    </div>
+    <div class="panel timerpanel">
+      <div class="timer" id="timer">0.00</div>
+      <div class="timerhint" id="timerHint">Hold <span class="kbd">space</span>, release to start. Tap the time on touch screens.</div>
+      <div class="row" style="justify-content:center;margin-top:4px;font-size:12px">
+        <label><input type="checkbox" id="inspChk"> 15 s inspection</label>
+        <label><input type="checkbox" id="autoNext" checked> Next on stop</label>
+      </div>
+      <div class="stats"><div>last<b id="stLast">—</b></div><div>ao5<b id="stAo5">—</b></div><div>ao12<b id="stAo12">—</b></div><div>best<b id="stBest">—</b></div><div>n<b id="stN">0</b></div></div>
+      <div class="times" id="times"></div>
+      <div class="row" style="margin-top:4px;justify-content:space-between"><span class="muted" style="font-size:12px" id="timesScope">times: solve</span><span><button class="small ghost" id="delLast">Delete last</button><button class="small ghost" id="clearTimes">Clear</button></span></div>
+    </div>
+  </section>
+  <section class="panel tight seedbar">
+    <span class="lbl">Scramble</span>
+    <div class="seedrow">
+      <input id="seed" placeholder="seed name" title="Type any word to get a repeatable scramble">
+      <button class="small" id="newSeed">New</button>
+      <button class="small" id="reScramble" title="Apply this seed">Go</button>
+      <select id="scrLen" class="small" title="Scramble length"><option>20</option><option selected>22</option><option>25</option></select>
+      <button class="small ghost" id="histBtn">History</button>
+      <button class="small ghost" id="showScramble" title="Put the current scramble back in the player">Show scramble</button>
+      <button class="small" id="scanBtn" title="Type a scramble in standard notation">Enter a scramble</button>
+    </div>
+    <span class="muted" style="font-size:12px">White up, green front. The same seed always gives the same scramble.</span>
+    <div id="history" class="hidden" style="width:100%;font-size:13px"></div>
+  </section>
+<div class="wrap">
+  <nav class="rail" id="rail">
+    <button data-tab="solve" class="on"><span class="k">1</span>Solve</button>
+    <button data-tab="cross"><span class="k">2</span>Cross</button>
+    <button data-tab="f2l"><span class="k">3</span>F2L</button>
+    <button data-tab="ll"><span class="k">4</span>OLL · PLL</button>
+    <button data-tab="lab"><span class="k">5</span>Lab</button>
+    <button data-tab="ref"><span class="k">6</span>Reference</button>
+  </nav>
+  <main class="main">
+    <!-- SOLVE -->
+    <section class="tab on" id="tab-solve">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between">
+          <div><h2>Guided solve</h2><p class="muted" style="margin:0">Scramble with white up and green in front, as shown in the player above. Press Plan. Each step shows the cube at that point; click a move to step through it.</p></div>
+          <div class="row"><select id="crossColor" title="Scrambles are always applied white up, green front. This is the colour you then solve on the bottom."><option value="white">White cross (z2 after scramble)</option><option value="yellow">Yellow cross (no rotation)</option><option value="green">Green cross</option><option value="blue">Blue cross</option><option value="red">Red cross</option><option value="orange">Orange cross</option></select>
+          <select id="f2lOrder"><option value="greedy">F2L: shortest pair first</option><option value="FR,FL,BL,BR">F2L: FR FL BL BR</option><option value="FL,FR,BR,BL">F2L: FL FR BR BL</option></select>
+          <button class="primary" id="planBtn">Plan</button></div>
+        </div>
+      </div>
+      <div class="panel" id="planOut"><p class="muted">No plan yet. Scramble, then press Plan. The plan uses optimal cross, short pair inserts, and the two-look OLL/PLL algorithms from the Reference tab.</p></div>
+    </section>
+    <!-- CROSS -->
+    <section class="tab" id="tab-cross">
+      <div class="panel">
+        <h2>Cross tuning</h2>
+        <p class="muted">The cube on the left shows the full scramble. Plan the cross in your head, then check against every optimal solution. Use the Bottom view to inspect the cross directly.</p>
+        <div class="row">
+          <button class="primary" id="crossNew">New cross scramble</button>
+          <label>Difficulty <select id="crossDiff"><option value="any">any</option><option value="easy">easy (≤5)</option><option value="hard">hard (≥7)</option></select></label>
+          <button id="crossReveal">Reveal solutions</button>
+          <label style="font-size:13px"><input type="checkbox" id="crossPlus1"> include 1-move-longer plans</label>
+        </div>
+        <div class="row" style="margin-top:10px"><span>Optimal length: <b class="big" id="crossOpt">—</b></span><span class="muted" id="crossCount"></span></div>
+        <div id="crossSols" style="margin-top:8px"></div>
+      </div>
+      <div class="panel">
+        <h3>Check my plan</h3>
+        <p class="muted">Type the moves you would use. The checker applies them to the scramble and tells you if the cross is solved, how many moves you used, and the gap to optimal.</p>
+        <div class="row"><input id="crossTry" class="mono" style="flex:1;min-width:220px" placeholder="e.g. F2 D' R L' F"><button id="crossCheck">Check</button></div>
+        <div id="crossTryOut" style="margin-top:8px"></div>
+      </div>
+      <div class="panel">
+        <h3>What to look for</h3>
+        <div id="crossTips"></div>
+      </div>
+    </section>
+    <!-- F2L -->
+    <section class="tab" id="tab-f2l">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between"><h2>F2L</h2>
+          <div class="status-sel" id="f2lMode"><button data-m="live" class="on">Real cross-solved states</button><button data-m="cases">The 41 cases</button></div></div>
+      </div>
+      <div class="panel" id="f2lLive">
+        <p class="muted">A random scramble is solved through the cross for you. Solve F2L, then compare with the pair plan. Pair plans are short inserts found by search, so they often differ from the textbook algorithm: both are valid. Learn to see why each one works.</p>
+        <div class="row"><button class="primary" id="f2lNew">New F2L state</button><button id="f2lReveal">Reveal pair plan</button><label>Pairs left <select id="f2lPairs"><option>4</option><option>3</option><option>2</option><option>1</option></select></label></div>
+        <div id="f2lPlan" style="margin-top:10px"></div>
+      </div>
+      <div class="panel hidden" id="f2lCases">
+        <p class="muted">Standard cases for the front-right slot. Click a case to set it up on the cube (with a random U turn so you recognise it, not memorise the setup). Double-click for details. Solve it, then reveal.</p>
+        <div class="row"><button class="primary" id="f2lRandomCase">Random selected case</button><button id="f2lCaseReveal">Reveal</button><select id="f2lGroup"><option value="all">All groups</option></select></div>
+        <div id="f2lCaseOut" style="margin:8px 0"></div>
+        <div class="cases" id="f2lCaseGrid"></div>
+      </div>
+    </section>
+    <!-- LL -->
+    <section class="tab" id="tab-ll">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between">
+          <div><h2>Two-look OLL and PLL</h2><p class="muted" style="margin:0">Select cases, then train. Click a case picture to cycle its status: unlearned → learning → finished. Shift-click to toggle selection without changing status. Double-click for details.</p></div>
+          <div class="row">
+            <select id="llProb"><option value="balanced">Balanced</option><option value="realistic">Realistic probability</option></select>
+            <label style="font-size:13px"><input type="checkbox" id="llRealState" checked> Realistic rest-of-layer</label>
+            <button class="primary" id="llNext">Next case</button><button id="llHint">Hint</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel" id="llCurrent"><p class="muted">Press Next case. The cube shows the case; the setup moves appear in the scramble area if you want to set it on a real cube.</p></div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between"><h3>Cases</h3><span class="legend"><span><i style="background:var(--muted)"></i>unlearned</span><span><i style="background:#f5d31d"></i>learning</span><span><i style="background:var(--good)"></i>finished</span></span><span><button class="small ghost" id="llSelAll">Select all</button><button class="small ghost" id="llSelNone">None</button><button class="small ghost" id="llSelUnlearned">Not finished</button></span></div>
+        <div id="llGroups"></div>
+      </div>
+      <div class="panel"><h3>Per-case times</h3><div class="wide"><table id="llStats"></table></div></div>
+    </section>
+    <!-- LAB -->
+    <section class="tab" id="tab-lab">
+      <div class="panel">
+        <h2>Algorithm lab: why it works</h2>
+        <p class="muted">Paste any algorithm, or pick one. The lab shows which pieces it moves, which it leaves alone, how the pieces cycle, how many repeats return the cube, and which hand triggers it is made of. Step through it on the cube; untouched stickers fade.</p>
+        <div class="row"><input id="labAlg" class="mono" style="flex:1;min-width:260px" value="R U R' U R U2 R'"><select id="labPick"><option value="">Pick…</option></select><button class="primary" id="labRun">Analyse</button></div>
+        <div class="lab-moves" id="labMoves" style="margin-top:10px"></div>
+        <div class="row" style="margin-top:6px"><button class="small" id="labPrev">◀ step</button><button class="small" id="labNext">step ▶</button><button class="small" id="labPlay">▶ play</button><label style="font-size:13px"><input type="checkbox" id="labFade" checked> fade untouched stickers</label><label style="font-size:13px"><input type="checkbox" id="labFromSolved" checked> start from solved</label></div>
+      </div>
+      <div class="grid2">
+        <div class="panel" id="labOut"></div>
+        <div class="panel" id="labWhy"></div>
+      </div>
+      <div class="panel">
+        <h3>Build your own: commutators and conjugates</h3>
+        <p class="muted">A commutator <span class="mono">[A, B] = A B A' B'</span> only moves pieces that both A and B touch. Choose A and B so that they overlap on one piece and you get a pure 3-cycle or twist. A conjugate <span class="mono">[S: X] = S X S'</span> does X in a different place: S moves the pieces you want into X's path, and S' brings them back.</p>
+        <div class="grid2">
+          <div><label>A <input id="comA" class="mono" style="width:100%" value="R U R'"></label><label style="display:block;margin-top:6px">B <input id="comB" class="mono" style="width:100%" value="D"></label><div class="row" style="margin-top:6px"><button id="comBuild">Build [A, B]</button><button id="comSwap">Swap</button></div></div>
+          <div><label>Setup S <input id="conS" class="mono" style="width:100%" value="F"></label><label style="display:block;margin-top:6px">Core X <input id="conX" class="mono" style="width:100%" value="R U R' U'"></label><div class="row" style="margin-top:6px"><button id="conBuild">Build [S: X]</button></div></div>
+        </div>
+        <div id="comOut" style="margin-top:10px"></div>
+      </div>
+      <div class="panel"><h3>Concepts</h3><div id="concepts"></div></div>
+    </section>
+    <!-- REFERENCE -->
+    <section class="tab" id="tab-ref">
+      <div id="refMobile"><div class="panel"><h2>CFOP reference</h2><p class="muted" style="margin:0">Tap a case to zoom: algorithm, recognition and breakdown. Scrambles are white up, green front; cases are shown yellow up.</p></div><div id="refMobileCases"></div></div>
+      <div id="refDesktop" style="display:contents">
+      <div class="panel"><h2>Reference</h2><p class="muted">Click any case to open it: large picture, recognition, breakdown, and buttons to set it on the cube or open it in the Lab. Algorithms follow jperm.net's two-look sets.</p></div>
+      <div class="grid2 refcols">
+        <div class="panel"><h3>Two-look OLL</h3><p class="muted">Look 1: orient the edges. Only the edge stickers matter, so the corners are shown grey. Look 2: orient the corners.</p>
+          <h3 class="sub">1. Edges</h3><div class="rcards" id="refOLLe"></div>
+          <h3 class="sub">2. Corners</h3><div class="rcards" id="refOLLc"></div></div>
+        <div class="panel"><h3>Two-look PLL</h3><p class="muted">Look 1: permute the corners; these pictures show corner arrows only, since the edges are fixed in look 2. Look 2: permute the edges. A two-headed arrow is a swap.</p>
+          <h3 class="sub">1. Corners</h3><div class="rcards" id="refPLLc"></div>
+          <h3 class="sub">2. Edges</h3><div class="rcards" id="refPLLe"></div></div>
+      </div>
+      <div class="panel"><h3>Full PLL (21)</h3><p class="muted">For later. Each one is verified by the engine to permute only the top layer.</p><div class="wide"><table id="refPLL"></table></div></div>
+      <div class="panel"><h3>F2L (41 cases, front-right slot)</h3><div class="wide"><table id="refF2L"></table></div></div>
+      <div class="panel"><h3>Notation</h3><p>Face turns: <span class="mono">U R F D L B</span> clockwise when you look at that face. <span class="mono">'</span> is counter-clockwise. <span class="mono">2</span> is a half turn. Lower-case <span class="mono">r u f</span> turn two layers. <span class="mono">M E S</span> are the middle slices (M follows L, E follows D, S follows F). <span class="mono">x y z</span> rotate the whole cube like R, U, F.</p><p>Scrambles are applied with white up and green in front, the WCA convention. Solving plans start with one rotation (<span class="mono">z2</span> for a white cross) and then contain only face turns: hold the cube still, cross colour down, and turn faces.</p></div>
+    </div>
+    </section>
+  </main>
+</div>
+</div>
+<div id="helpBox" class="panel hidden" style="position:fixed;right:18px;bottom:18px;max-width:360px;z-index:9">
+</div>
+<script src="js/engine.js"></script>
+<script src="js/solver.js"></script>
+<script src="js/algs.js"></script>
+<script src="js/app.js"></script>
+<script src="js/enter.js"></script>
+</body>
+</html>
