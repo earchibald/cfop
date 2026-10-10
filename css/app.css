@@ -202,8 +202,15 @@ h3.sub{font-size:14px;color:var(--muted);margin:12px 0 6px}
 .good{color:var(--good)}
 
 /* scanner */
-.modal.scan{display:block;max-width:760px}
+.modal.scan{display:block;max-width:980px}
 .modal.scan h2{margin-top:0}
 .scan-view{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/9}
 .scan-view video,.scan-view canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .scan-view.mirror video,.scan-view.mirror canvas{transform:scaleX(-1)}
+.scan-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:start;margin-bottom:10px}
+.scan-net svg{width:100%;height:auto;display:block}
+.scan-net g{transition:opacity .2s}
+.scan-net g.flash{animation:scanflash .6s}
+@keyframes scanflash{0%,100%{opacity:1}40%{opacity:.25}}
+@media (max-width:700px){.scan-grid{grid-template-columns:1fr}}
+.modal.scan button:disabled{opacity:.45;cursor:not-allowed}

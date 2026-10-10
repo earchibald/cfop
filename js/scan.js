@@ -203,45 +203,206 @@ function readFace(img,opts){
   return {ok:true,colours:cl.colours,margins:cl.margins,gains:cl.gains,samples,points:lat.points,lattice:lat,blobs:st1.blobs};
 }
 
+// ---------- stage 4: vote across frames ----------
+// Pure state machine. Feed it readFace results; it locks a face when every cell agrees
+// over a run of frames. Locked faces keep the reading orientation of their frames.
+function makeVoter(opts){
+  opts=Object.assign({window:10,need:7,lead:3,switchAfter:2},opts||{});
+  return {opts,faces:{},centre:-1,run:[],pending:-1,pendingReads:[],justLocked:-1};
+}
+// Turn reading r (9 colours) to agree best with the reference reading.
+function alignReading(ref,r){
+  let best=0,bs=-1;
+  for(let k=0;k<4;k++){const t=rotateFace(r,k);let n=0;for(let i=0;i<9;i++)if(t[i]===ref[i])n++;if(n>bs){bs=n;best=k;}}
+  return best;
+}
+// Current winner per cell for the run: {colours, counts, lead, ready}.
+function voteTally(v){
+  const colours=[],counts=[];let ready=v.run.length>=v.opts.window;
+  for(let i=0;i<9;i++){
+    const c=[0,0,0,0,0,0];for(const r of v.run)c[r.colours[i]]++;
+    const order=[0,1,2,3,4,5].sort((a,b)=>c[b]-c[a]);colours.push(order[0]);counts.push(c[order[0]]);
+    if(c[order[0]]<v.opts.need||c[order[0]]-c[order[1]]<v.opts.lead)ready=false;
+  }
+  return {colours,counts,ready,n:v.run.length};
+}
+// Add one frame. Returns {event:'none'|'reading'|'locked'|'held', centre, tally}.
+function voteFrame(v,read){
+  if(!read||!read.ok)return {event:'none',centre:v.centre};
+  const c=read.colours[4];
+  if(c!==v.centre){
+    // A new centre must hold for a few frames before the tally moves to it.
+    if(c===v.pending)v.pendingReads.push(read);else{v.pending=c;v.pendingReads=[read];}
+    if(v.pendingReads.length<v.opts.switchAfter)return {event:'none',centre:v.centre};
+    const reads=v.pendingReads;v.centre=c;v.run=[];v.pending=-1;v.pendingReads=[];
+    if(c!==v.justLocked)v.justLocked=-1;
+    // Count the frames that confirmed the switch.
+    let ev;for(const r of reads)ev=voteFrame(v,r);return ev;
+  }
+  v.pending=-1;v.pendingReads=[];
+  // After a lock, the same face stays in view until the user turns the cube. Do not lock it again.
+  if(c===v.justLocked)return {event:'held',centre:c};
+  let cols=read.colours,margins=read.margins||new Array(9).fill(0);
+  if(v.run.length){const k=alignReading(voteTally(v).colours,cols);cols=rotateFace(cols,k);margins=rotateFace(margins,k);}
+  v.run.push({colours:cols,margins});if(v.run.length>v.opts.window)v.run.shift();
+  const t=voteTally(v);
+  if(!t.ready)return {event:'reading',centre:c,tally:t};
+  // Lock. A retake keeps the user's pinned stickers, turned to match the new reading.
+  const old=v.faces[c];let stickers=t.colours.slice(),pinned=new Array(9).fill(false);
+  const margin=[];for(let i=0;i<9;i++){const ms=v.run.filter(r=>r.colours[i]===stickers[i]).map(r=>r.margins[i]);margin.push(ms.reduce((a,b)=>a+b,0)/Math.max(1,ms.length));}
+  if(old&&old.pinned.some(Boolean)){
+    const k=alignReading(stickers,old.stickers),os=rotateFace(old.stickers,k),op=rotateFace(old.pinned,k);
+    for(let i=0;i<9;i++)if(op[i]){stickers[i]=os[i];pinned[i]=true;}
+  }
+  v.faces[c]={stickers,pinned,margins:margin};v.run=[];v.justLocked=c;
+  return {event:'locked',centre:c,retake:!!old,tally:t};
+}
+
 // ---------- UI ----------
-let scanStream=null;
+let scanStream=null,scanTimer=0,scanVoter=null,scanRes=null,scanWork=null,scanLast=null;
+const SCAN_W=320;
 function openScan(){
   if($('#scanBg'))return;
+  scanVoter=makeVoter();scanRes=null;scanLast=null;
   const bg=document.createElement('div');bg.className='modal-bg';bg.id='scanBg';
   bg.innerHTML=`<div class="modal scan" role="dialog" aria-label="Scan cube">
    <button class="close small ghost" id="scanClose" aria-label="Close">✕</button>
    <h2>Scan cube</h2>
-   <p class="muted" style="margin-top:0">Hold one face of the cube to the camera. Turn the cube to show the next face.</p>
-   <div class="scan-view mirror" id="scanView"><video id="scanVideo" autoplay playsinline muted></video><canvas id="scanOverlay"></canvas></div>
-   <div class="scan-row"><label><input type="checkbox" id="scanMirror" checked> Mirror</label></div>
+   <p class="muted" style="margin-top:0">Hold one face of the cube to the camera and keep it still. When the face is read, turn the cube to show the next face. You can show the faces in any order and at any angle.</p>
+   <div class="scan-grid">
+    <div><div class="scan-view mirror" id="scanView"><video id="scanVideo" autoplay playsinline muted></video><canvas id="scanOverlay"></canvas></div>
+     <div class="scan-row"><label><input type="checkbox" id="scanMirror" checked> Mirror</label><span class="muted" style="font-size:12px">Mirror flips the preview only.</span></div></div>
+    <div><div class="scan-net" id="scanNet"></div>
+     <p class="muted" style="font-size:12px;margin:6px 0">Click a sticker to change its colour. A changed sticker stays fixed.</p>
+     <div class="scan-row"><button class="primary" id="scanUse" disabled>Use this cube</button><button class="small ghost" id="scanReset">Start again</button></div></div>
+   </div>
    <div id="scanStatus" class="notice">Asking for camera access.</div>
   </div>`;
   document.body.appendChild(bg);
   bg.addEventListener('click',e=>{if(e.target===bg)closeScan();});
   $('#scanClose').onclick=closeScan;
   $('#scanMirror').onchange=e=>$('#scanView').classList.toggle('mirror',e.target.checked);
+  $('#scanUse').onclick=scanUse;
+  $('#scanReset').onclick=()=>{scanVoter=makeVoter();scanRes=null;drawNet();scanStatus('Show a face to the camera.');};
+  $('#scanNet').addEventListener('click',scanNetClick);
   document.addEventListener('keydown',scanKeys,true);
-  startCamera();
+  drawNet();startCamera();
 }
+function scanStatus(t){const e=$('#scanStatus');if(e)e.textContent=t;}
 async function startCamera(){
-  const st=$('#scanStatus');
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){st.textContent='This browser cannot open the camera here. Use https or localhost.';return;}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){scanStatus('This browser cannot open the camera here. Use https or localhost.');return;}
   try{
     const s=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:false});
     if(!$('#scanBg')){s.getTracks().forEach(t=>t.stop());return;} // closed while the prompt was open
     scanStream=s;const v=$('#scanVideo');v.srcObject=s;await v.play().catch(()=>{});
-    const t=s.getVideoTracks()[0],cfg=t.getSettings?t.getSettings():{};
-    st.textContent=`Camera on: ${t.label||'webcam'}${cfg.width?` at ${cfg.width}x${cfg.height}`:''}.`;
+    scanStatus('Show a face to the camera.');scanLoop();
   }catch(e){
-    st.textContent=e.name==='NotAllowedError'?'Camera access was refused. Allow the camera for this site in the browser settings, then open the scanner again.'
-      :e.name==='NotFoundError'?'No camera was found.':'The camera did not start: '+(e.message||e.name);
+    scanStatus(e.name==='NotAllowedError'?'Camera access was refused. Allow the camera for this site in the browser settings, then open the scanner again.'
+      :e.name==='NotFoundError'?'No camera was found.':'The camera did not start: '+(e.message||e.name));
   }
 }
-function stopCamera(){if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null;}}
+function stopCamera(){clearTimeout(scanTimer);scanTimer=0;if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null;}}
 function closeScan(){document.removeEventListener('keydown',scanKeys,true);stopCamera();const b=$('#scanBg');if(b)b.remove();}
 function scanKeys(e){
   if(!$('#scanBg'))return;
   if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeScan();return;}
   e.stopPropagation(); // keep tab/timer keys out while the scanner is open
+}
+// Grab a downscaled frame. The pixels are never mirrored; only the preview is.
+function grabFrame(v){
+  const vw=v.videoWidth,vh=v.videoHeight;if(!vw||!vh)return null;
+  const W=SCAN_W,H=Math.round(SCAN_W*vh/vw);
+  if(!scanWork){scanWork=document.createElement('canvas');}
+  if(scanWork.width!==W||scanWork.height!==H){scanWork.width=W;scanWork.height=H;}
+  const g=scanWork.getContext('2d',{willReadFrequently:true});g.drawImage(v,0,0,W,H);
+  return g.getImageData(0,0,W,H);
+}
+function scanLoop(){
+  if(!$('#scanBg')||!scanStream)return;
+  const v=$('#scanVideo'),t0=performance.now();
+  if(v.readyState>=2){
+    const img=grabFrame(v);
+    if(img){const r=readFace(img,{});scanLast=r;drawOverlay(img,r);scanStep(r);}
+  }
+  scanTimer=setTimeout(scanLoop,Math.max(10,70-(performance.now()-t0)));
+}
+function scanStep(r){
+  const ev=voteFrame(scanVoter,r),name=c=>COLOR_NAMES_E[c];
+  const nLocked=Object.keys(scanVoter.faces).length;
+  if(ev.event==='locked'){
+    flashNet(ev.centre);drawNet();
+    if(Object.keys(scanVoter.faces).length===6)return scanAssemble(ev.retake?`The ${name(ev.centre)} face is read again.`:'');
+    const left=[0,1,2,3,4,5].filter(c=>!scanVoter.faces[c]).map(name);
+    scanStatus(`The ${name(ev.centre)} face is read${ev.retake?' again':''}. Turn the cube to show the next face. Still to scan: ${left.join(', ')}.`);
+  }else if(ev.event==='reading'){
+    scanStatus(`Hold still. Reading the ${name(ev.centre)} face: ${ev.tally.n} of ${scanVoter.opts.window}.`);
+  }else if(ev.event==='held'){
+    if(nLocked<6)scanStatus(`The ${name(ev.centre)} face is read. Turn the cube to show the next face.`);
+  }else if(!r.ok&&nLocked<6&&!scanVoter.run.length){
+    scanStatus(r.reason==='cover'?'I can see part of a face. Show the whole face, closer to the camera.':'Show a face to the camera. Keep your fingers off the stickers.');
+  }
+}
+function scanAssemble(prefix){
+  const faces=[0,1,2,3,4,5].filter(c=>scanVoter.faces[c]).map(c=>scanVoter.faces[c]);
+  if(faces.length<6){scanRes=null;$('#scanUse').disabled=true;drawNet();return;}
+  scanRes=assembleScan(faces);
+  $('#scanUse').disabled=!scanRes.ok;drawNet();
+  const pre=prefix?prefix+' ':'';
+  if(scanRes.ok)scanStatus(pre+'All six faces are read and the cube is legal. '+(scanRes.changes.length?scanRes.changes.join(' ')+' Check the net. ':'')+(scanRes.ambiguous?'More than one reading fits. Check the net. ':'')+'Press Use this cube.');
+  else scanStatus(pre+scanRes.errors.join(' ')+' Click a sticker on the net to fix it, or show a face again to rescan it.');
+}
+function scanUse(){
+  if(!scanRes||!scanRes.ok)return;
+  const r=scrambleFromCube(scanRes.cube,customName('scan'));
+  if(r.ok)closeScan();else scanStatus(r.errors.join(' '));
+}
+// The net: U on top, L F R B across, D below. Before all six faces fit, each face shows as read.
+const NET_POS=[[1,0],[2,1],[1,1],[1,2],[0,1],[3,1]];
+function netFace(c){
+  const f=scanVoter.faces[c];if(!f)return null;
+  const k=scanRes&&scanRes.ok?scanRes.rotations[c]:0;
+  return {stickers:rotateFace(f.stickers,k),pinned:rotateFace(f.pinned,k),k};
+}
+function drawNet(){
+  const el=$('#scanNet');if(!el)return;
+  const s=22,g=2,fw=3*s+2*g+6;let out=`<svg viewBox="0 0 ${4*fw} ${3*fw}" role="img" aria-label="Scanned faces">`;
+  for(let c=0;c<6;c++){
+    const [fx,fy]=NET_POS[c],nf=netFace(c),ox=fx*fw+3,oy=fy*fw+3;
+    out+=`<g data-face="${c}">`;
+    for(let p=0;p<9;p++){
+      const x=ox+(p%3)*(s+g),y=oy+Math.floor(p/3)*(s+g);
+      const col=nf?stickerColor(nf.stickers[p]):p===4?stickerColor(c):'var(--panel2)';
+      out+=`<rect data-face="${c}" data-pos="${p}" x="${x}" y="${y}" width="${s}" height="${s}" rx="3" fill="${col}" stroke="${nf&&nf.pinned[p]?'var(--accent)':'var(--sticker-line,#111)'}" stroke-width="${nf&&nf.pinned[p]?2.5:1}" style="${nf&&p!==4?'cursor:pointer':''}"/>`;
+    }
+    out+='</g>';
+  }
+  el.innerHTML=out+'</svg>';
+}
+function flashNet(c){const g=$(`#scanNet g[data-face="${c}"]`);if(!g)return;setTimeout(()=>{const h=$(`#scanNet g[data-face="${c}"]`);if(h){h.classList.add('flash');setTimeout(()=>h.classList.remove('flash'),600);}},0);}
+function scanNetClick(e){
+  const r=e.target.closest('rect[data-pos]');if(!r)return;
+  const c=+r.dataset.face,p=+r.dataset.pos,f=scanVoter.faces[c];if(!f||p===4)return;
+  // Map the shown position back to the stored reading, which may be turned.
+  const k=scanRes&&scanRes.ok?scanRes.rotations[c]:0,idx=rotateFace([0,1,2,3,4,5,6,7,8],k)[p];
+  f.stickers[idx]=(f.stickers[idx]+1)%6;f.pinned[idx]=true;
+  if(Object.keys(scanVoter.faces).length===6)scanAssemble('');else drawNet();
+}
+// Overlay: the fitted lattice and the colour read at each cell. Drawn in frame pixels.
+function drawOverlay(img,r){
+  const cv=$('#scanOverlay');if(!cv)return;
+  if(cv.width!==img.width||cv.height!==img.height){cv.width=img.width;cv.height=img.height;}
+  const g=cv.getContext('2d');g.clearRect(0,0,cv.width,cv.height);
+  const cs=getComputedStyle(document.documentElement);
+  for(const b of r.blobs||[]){g.strokeStyle='rgba(255,255,255,.35)';g.lineWidth=1;g.strokeRect(b.bbox[0],b.bbox[1],b.bbox[2]-b.bbox[0],b.bbox[3]-b.bbox[1]);}
+  if(!r.ok)return;
+  const P=r.points,sp=r.lattice.spacing;
+  g.strokeStyle='rgba(255,255,255,.9)';g.lineWidth=1.5;
+  const ln=(a,b)=>{g.beginPath();g.moveTo(P[a].x,P[a].y);g.lineTo(P[b].x,P[b].y);g.stroke();};
+  for(let i=0;i<3;i++){ln(3*i,3*i+2);ln(i,i+6);}
+  P.forEach((q,i)=>{
+    g.beginPath();g.arc(q.x,q.y,sp*0.22,0,2*Math.PI);
+    g.fillStyle=cs.getPropertyValue('--sticker-'+COLOR_VARS[r.colours[i]]).trim()||'#888';g.fill();
+    g.lineWidth=2;g.strokeStyle='#000';g.stroke();
+  });
 }
 if(typeof document!=='undefined'&&$('#camBtn'))$('#camBtn').onclick=openScan;
