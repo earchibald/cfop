@@ -1,8 +1,13 @@
-# Cubeworks — working notes for Claude Code
+# Twistwright — working notes for Claude Code
 
-Cubeworks is a CFOP trainer for the 3x3 cube. It is a static site with no
+Twistwright is a CFOP trainer for the 3x3 cube. It is a static site with no
 build step. GitHub Pages serves `main` at https://earchibald.github.io/cfop/.
 Every push to `main` deploys in about 20 seconds.
+
+The app was called Cubeworks. Keep these old names as they are:
+
+- The repo slug `cfop` and the Pages URL. The owner will move them later.
+- The `cw:` localStorage prefix. A new prefix would erase saved history.
 
 ## Layout
 

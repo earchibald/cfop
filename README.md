@@ -1,4 +1,4 @@
-# Cubeworks
+# Twistwright
 
 A CFOP trainer for the 3x3 cube. It is a static site with no build step.
 

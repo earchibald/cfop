@@ -1,6 +1,6 @@
 # Camera scanner — design and handoff
 
-Goal: the user shows a physical cube to the Mac webcam, and Cubeworks reads
+Goal: the user shows a physical cube to the Mac webcam, and Twistwright reads
 the state with no manual alignment. The result goes to
 `scrambleFromCube(cube, name)` in `js/enter.js`, which derives a scramble and
 loads it into the trainer.

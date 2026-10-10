@@ -81,7 +81,7 @@ const GLOSSARY=[
   {id:'average',term:'Average (ao5, ao12)',match:/\bao(?:5|12)\b/i,
    def:'A fair average of recent solves. For ao5, drop the best and the worst of the last five times, then take the mean of the other three. For ao12, drop the best and the worst of the last twelve, then average the other ten.'},
   {id:'seed',term:'Seed',match:/\bseeds?\b/i,
-   def:'A word that picks a scramble in Cubeworks. The same seed always gives the same scramble, so you can repeat or share one.'},
+   def:'A word that picks a scramble in Twistwright. The same seed always gives the same scramble, so you can repeat or share one.'},
 ];
 const GLOSSARY_BY_ID=Object.fromEntries(GLOSSARY.map(g=>[g.id,g]));
 

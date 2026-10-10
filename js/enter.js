@@ -22,7 +22,7 @@ function openEnter(){
   bg.innerHTML=`<div class="modal enter" role="dialog" aria-label="Enter a scramble">
    <button class="close small ghost" id="enterClose" aria-label="Close">✕</button>
    <h2>Enter a scramble</h2>
-   <p class="muted" style="margin-top:0">Type a scramble in standard notation. Cubeworks loads it like a seed, so Plan, Cross, auto-step and the timer all work.</p>
+   <p class="muted" style="margin-top:0">Type a scramble in standard notation. Twistwright loads it like a seed, so Plan, Cross, auto-step and the timer all work.</p>
    <div class="scan-row"><input id="enterType" placeholder="e.g. R U R' U' F2 D L2 B'" style="flex:1;min-width:260px"><button class="primary" id="enterGo">Load scramble</button></div>
    <div id="enterStatus" class="notice" style="margin-top:10px">Use face turns only: U R F D L B, each with an optional <span class="kbd">'</span> or <span class="kbd">2</span>.</div>
   </div>`;
