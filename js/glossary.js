@@ -1,0 +1,196 @@
+// ================= Glossary =================
+// Cubing words in the description text link to a short entry. A link opens a floating card;
+// Esc or a tap anywhere closes it. The full list is at the end of the Reference tab.
+// Each entry: id, term, def, optional alg (example moves), see (ids), match (regex for the text).
+// Order matters: longer phrases come first, so "fat sexy move" wins over "sexy move" and "fat".
+const GLOSSARY=[
+  {id:'fat-sexy',term:'Fat sexy move',alg:"r U R' U'",match:/\bfat[ -]sexy(?: moves?)?/i,see:['sexy','wide'],
+   def:'The sexy move with a wide r in place of the first R. The middle slice turns with R, so the move also changes the M-slice edges and centres. OLL uses it often.'},
+  {id:'sexy',term:'Sexy move',alg:"R U R' U'",match:/\bsexy(?: moves?)?/i,see:['sledgehammer','trigger','fat-sexy'],
+   def:'A four-move trigger. Many algorithms are built from it. Do it six times in a row and the cube returns to where it started. Its inverse is U R U\' R\'.'},
+  {id:'sledgehammer',term:'Sledgehammer',alg:"R' F R F'",match:/\bsledge(?:hammers?)?\b/i,see:['sexy','hedgeslammer'],
+   def:'A four-move trigger. It often comes right after a sexy move, as in some OLL cases and the T perm. Its inverse is the hedgeslammer.'},
+  {id:'hedgeslammer',term:'Hedgeslammer',alg:"F R' F' R",match:/\bhedgeslammers?\b/i,see:['sledgehammer'],
+   def:'The inverse of the sledgehammer. It undoes a sledgehammer move for move.'},
+  {id:'antisune',term:'Anti-Sune',alg:"R U2 R' U' R U' R'",match:/\banti-?sunes?\b/i,see:['sune','oll'],
+   def:'The inverse of the Sune. It twists the same three corners as the Sune, in the opposite direction.'},
+  {id:'sune',term:'Sune',alg:"R U R' U R U2 R'",match:/\bsunes?\b/i,see:['antisune','oll'],
+   def:'A seven-move OLL algorithm. It twists three top corners and keeps the first two layers solved. Many last-layer algorithms are built from Sunes.'},
+  {id:'niklas',term:'Niklas',alg:"R U' L' U R' U' L U",match:/\bniklas\b/i,see:['commutator'],
+   def:'An eight-move commutator that cycles three corners. The rest of the cube stays where it was.'},
+  {id:'wide',term:'Wide move (fat move)',alg:"r = R + M'",match:/\b(?:wide|fat)(?:-[rlfbud])?(?: moves?)?\b/i,see:['slice','notation'],
+   def:'A turn of two layers together: a face and the middle slice next to it. Lowercase letters write it, so r is R plus the middle slice. Some cubers say "fat move". Some write Rw.'},
+  {id:'slice',term:'Slice move',alg:'M  E  S',match:/\bslice(?: moves?)?\b/i,see:['wide','notation'],
+   def:'A turn of a middle layer only. M turns the layer between L and R, in the same direction as L. E turns the layer between U and D, like D. S turns the layer between F and B, like F.'},
+  {id:'commutator',term:'Commutator',alg:"[A, B] = A B A' B'",match:/\bcommutators?\b/i,see:['conjugate','niklas'],
+   def:'Do A, do B, undo A, undo B. Only the pieces that both A and B move end up changed. A short commutator can move just three pieces.'},
+  {id:'conjugate',term:'Conjugate',alg:"[S: X] = S X S'",match:/\bconjugates?\b|\bconjugated\b/i,see:['setup','commutator'],
+   def:'Do a setup move S, do X, then undo S. The setup brings pieces to where X acts on them. X then acts, and the undo puts everything else back.'},
+  {id:'setup',term:'Setup move',match:/\bset ?up(?: moves?)?\b/i,see:['conjugate'],
+   def:'A move that brings pieces into position before an algorithm. You undo it after the algorithm. In the trainer, "set up" also means: put a case on the cube.'},
+  {id:'trigger',term:'Trigger',match:/\btriggers?\b/i,see:['sexy','sledgehammer'],
+   def:'A short, fast move group that many algorithms share, such as the sexy move or the sledgehammer. Learn triggers as one motion, not as single moves.'},
+  {id:'cancel',term:'Cancel (move cancellation)',match:/\bcancel(?:s|led|lation|lations)?\b/i,
+   def:'When two moves next to each other turn the same face, they join into one move or none. For example, U followed by U\' cancels to nothing, and U followed by U is U2.'},
+  {id:'cfop',term:'CFOP',match:/\bCFOP\b/,see:['cross','f2l','oll','pll'],
+   def:'The most common speed-solving method. Its four steps are Cross, F2L, OLL and PLL. It is also called the Fridrich method.'},
+  {id:'f2l',term:'F2L (first two layers)',match:/\bF2L\b/,see:['pair','slot','cross'],
+   def:'The second step of CFOP. After the cross, you solve the four corner-edge pairs of the first two layers, one slot at a time.'},
+  {id:'oll',term:'OLL (orient the last layer)',match:/\bOLL\b/,see:['orientation','two-look','pll'],
+   def:'The third step of CFOP. You turn the last-layer pieces so the top face is all one colour. The pieces can still be in the wrong places.'},
+  {id:'pll',term:'PLL (permute the last layer)',match:/\bPLL\b/,see:['permutation','perm','two-look'],
+   def:'The last step of CFOP. You move the last-layer pieces to their correct places. The top colour stays on top.'},
+  {id:'two-look',term:'Two-look',match:/\b(?:two|2)-look\b/i,see:['oll','pll'],
+   def:'A step split into two shorter steps, each with fewer algorithms to learn. Two-look OLL orients the edges, then the corners. Two-look PLL permutes the corners, then the edges.'},
+  {id:'cross',term:'Cross',match:/\bcross\b/i,see:['cfop','f2l'],
+   def:'The first step of CFOP. You solve the four edges around one centre, usually white, so they make a plus sign that matches the side centres.'},
+  {id:'pair',term:'Pair (F2L pair)',match:/\bpairs?\b/i,see:['f2l','slot','insert'],
+   def:'One corner and the edge that goes beside it in the first two layers. In F2L you join the two in the top layer, then put them into their slot together.'},
+  {id:'slot',term:'Slot',match:/\bslots?\b/i,see:['pair','insert'],
+   def:'One of the four places for an F2L pair, between two side centres: front-right, front-left, back-right or back-left.'},
+  {id:'insert',term:'Insert',match:/\b(?:re-)?inserts?\b|\binserted\b/i,see:['pair','slot'],
+   def:'The last moves of an F2L case. They put a joined pair into its slot.'},
+  {id:'auf',term:'AUF (adjust the U face)',match:/\bAUF\b/,see:['oll','pll'],
+   def:'A turn of the top layer (U, U\' or U2) before or after a last-layer algorithm. Before, it lines the case up. After, it finishes the solve.'},
+  {id:'perm',term:'Perm (PLL case)',match:/\b[AEFGHJNRTUVYZ][ab]? perms?\b/,see:['pll'],
+   def:'A PLL case, named by a letter, such as T perm, Y perm or U perm. The letter often looks like the arrows of the swap. Some come in two mirror forms, a and b.'},
+  {id:'headlights',term:'Headlights',match:/\bheadlights\b/i,
+   def:'Two stickers of the same colour side by side on the corners of one side face. In PLL they help you recognise the case. In two-look OLL, the U corner case shows two top stickers that face you like headlights.'},
+  {id:'orientation',term:'Orientation (orient)',match:/\borient(?:ation|ations|ed|s)?\b/i,see:['permutation','edge-flip','corner-twist'],
+   def:'Which way a piece faces in its place. A piece can be in the right place but turned the wrong way. Orient means: turn pieces so they face the right way.'},
+  {id:'permutation',term:'Permutation (permute)',match:/\bpermut(?:ation|ations|e|es|ed)\b/i,see:['orientation','parity'],
+   def:'Where the pieces are, without regard to which way they face. Permute means: move pieces to their correct places.'},
+  {id:'parity',term:'Parity',match:/\bparity\b/i,see:['permutation'],
+   def:'Whether a swap count is even or odd. On a 3x3, a legal move always keeps corner parity equal to edge parity. So two pieces alone can never be swapped.'},
+  {id:'edge-flip',term:'Edge flip',match:/\bedge flips?\b|\bflipped edges?\b|\bone edge is flipped\b/i,see:['orientation'],
+   def:'An edge in its correct place but turned over, so its two colours face the wrong ways. One flipped edge alone cannot happen on a legal cube.'},
+  {id:'corner-twist',term:'Corner twist',match:/\bcorner twists?\b|\btwisted corners?\b|\bone corner is twisted\b/i,see:['orientation'],
+   def:'A corner in its correct place but turned a third of a turn. One twisted corner alone cannot happen on a legal cube.'},
+  {id:'rotation',term:'Cube rotation',alg:'x  y  z',match:/\b(?:cube )?rotations?\b/i,see:['notation'],
+   def:'A turn of the whole cube in your hands. No layer moves against another. x turns it like R, y like U, and z like F.'},
+  {id:'notation',term:'Notation',alg:"R  R'  R2",match:/\bnotation\b/i,see:['wide','slice','rotation'],
+   def:'Letters for moves. U R F D L B turn one face clockwise, as you look at that face. A prime (\') means counter-clockwise. A 2 means a half turn.'},
+  {id:'prime',term:'Prime',alg:"R'",match:/\bprime\b/i,see:['notation'],
+   def:'The apostrophe after a move. It means: turn that face counter-clockwise. Say R\' as "R prime".'},
+  {id:'alg',term:'Alg (algorithm)',match:/\balgs?\b/i,see:['notation','trigger'],
+   def:'A fixed sequence of moves that does one known job, such as solving one OLL case.'},
+  {id:'cubie',term:'Cubie',match:/\bcubies?\b/i,
+   def:'One of the small pieces of the cube: 8 corners, 12 edges and 6 centres.'},
+  {id:'inspection',term:'Inspection',match:/\binspection\b/i,see:['cross'],
+   def:'The 15 seconds you may look at the cube before a timed solve. Most cubers plan the cross during inspection.'},
+  {id:'average',term:'Average (ao5, ao12)',match:/\bao(?:5|12)\b/i,
+   def:'A fair average of recent solves. For ao5, drop the best and the worst of the last five times, then take the mean of the other three. For ao12, drop the best and the worst of the last twelve, then average the other ten.'},
+  {id:'seed',term:'Seed',match:/\bseeds?\b/i,
+   def:'A word that picks a scramble in Cubeworks. The same seed always gives the same scramble, so you can repeat or share one.'},
+];
+const GLOSSARY_BY_ID=Object.fromEntries(GLOSSARY.map(g=>[g.id,g]));
+
+// Small DOM builder: el('div', {className:'x'}, 'text', childNode, ...).
+function glEl(tag,props,...kids){
+  const e=document.createElement(tag);
+  for(const k in props||{}){if(k==='data')Object.assign(e.dataset,props.data);else if(k in e)e[k]=props[k];else e.setAttribute(k,props[k]);}
+  for(const c of kids)if(c!=null)e.append(c);
+  return e;
+}
+function glLinkEl(id,text){return glEl('span',{className:'gl',tabIndex:0,role:'button',title:GLOSSARY_BY_ID[id].term,data:{gl:id}},text);}
+
+// ---------- link the description text ----------
+// Never link inside these: moves, controls, labels (a click would toggle them), headings, case names.
+const GL_SKIP='button,input,select,option,textarea,label,svg,script,style,code,kbd,a,h1,h2,h3,dt,th,.sec>b,.gl,.gl-pop,.m,.mono,.kbd,.scramble,.algbig,.big,.alg,.tag,.timer,.times,.stats,.rail,header.top,.nm,.case,.alt,.lbl,#seqLabel,.viewbtns';
+const GL_BLOCK='p,li,td,dd,.sec,.tip,.notice,.muted,.step,div';
+const glDone=new WeakMap(); // block -> Set of ids already linked there
+function glossaryLink(root){
+  if(!root||root.nodeType!==1&&root.nodeType!==3)return;
+  const texts=[];
+  if(root.nodeType===3)texts.push(root);
+  else{
+    if(root.closest&&root.closest(GL_SKIP))return;
+    const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>{
+      const p=n.parentElement;if(!p||!n.nodeValue.trim())return NodeFilter.FILTER_REJECT;
+      return p.closest(GL_SKIP)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT;}});
+    while(w.nextNode())texts.push(w.currentNode);
+  }
+  for(const t of texts)glLinkText(t);
+}
+function glLinkText(t){
+  const p=t.parentElement;if(!p||!t.isConnected||p.closest(GL_SKIP))return;
+  const block=p.closest(GL_BLOCK)||p;let done=glDone.get(block);if(!done){done=new Set(block.dataset.glSelf?[block.dataset.glSelf]:[]);glDone.set(block,done);}
+  // The earliest match of any entry not yet linked in this block.
+  let best=null;
+  for(const g of GLOSSARY){
+    if(done.has(g.id))continue;const m=t.nodeValue.match(g.match);
+    if(m&&(!best||m.index<best.m.index))best={g,m};
+  }
+  if(!best)return;
+  done.add(best.g.id);
+  const after=t.splitText(best.m.index),rest=after.splitText(best.m[0].length);
+  after.replaceWith(glLinkEl(best.g.id,after.nodeValue));
+  glLinkText(rest); // more terms later in the same text
+}
+
+// ---------- the floating card ----------
+let glOpen=null;
+function glossaryShow(id,anchor){
+  const g=GLOSSARY_BY_ID[id];if(!g)return;glossaryHide(false);
+  const back=glEl('div',{className:'gl-back'});
+  const see=(g.see||[]).filter(s=>GLOSSARY_BY_ID[s]);
+  const seeRow=see.length?glEl('div',{className:'gl-see'},'See also: ',...see.flatMap((s,i)=>i?[', ',glLinkEl(s,GLOSSARY_BY_ID[s].term)]:[glLinkEl(s,GLOSSARY_BY_ID[s].term)])):null;
+  const pop=glEl('div',{className:'gl-pop',role:'dialog','aria-label':g.term,tabIndex:-1},
+    glEl('div',{className:'gl-term'},g.term),g.alg?glEl('div',{className:'gl-alg mono'},g.alg):null,glEl('p',{},g.def),seeRow);
+  document.body.append(back,pop);
+  // Below the link, or above it when there is no room. Kept inside the window.
+  const r=anchor.getBoundingClientRect(),pw=pop.offsetWidth,ph=pop.offsetHeight,vw=document.documentElement.clientWidth,vh=window.innerHeight;
+  const left=Math.max(12,Math.min(vw-pw-12,r.left+r.width/2-pw/2));
+  const top=r.bottom+8+ph<=vh-8||r.top-8-ph<8?r.bottom+8:r.top-8-ph;
+  pop.style.left=left+'px';pop.style.top=Math.max(8,top)+'px';
+  glOpen={pop,back,anchor};
+  pop.focus({preventScroll:true});
+}
+function glossaryHide(refocus){
+  if(!glOpen)return;const {pop,back,anchor}=glOpen;glOpen=null;pop.remove();back.remove();
+  if(refocus&&anchor&&anchor.isConnected)anchor.focus({preventScroll:true});
+}
+function glossaryInit(){
+  // A tap on a link opens its entry. While a card is open, any tap closes it; a tap on a
+  // see-also link inside the card opens that entry instead. The backdrop keeps the tap from
+  // reaching the page, so it does not start the timer or turn the cube.
+  document.addEventListener('click',e=>{
+    const l=e.target.closest&&e.target.closest('.gl');
+    if(glOpen){
+      e.preventDefault();e.stopPropagation();
+      if(l&&glOpen.pop.contains(l))glossaryShow(l.dataset.gl,glOpen.anchor);else glossaryHide(false);
+      return;
+    }
+    if(l){e.preventDefault();e.stopPropagation();glossaryShow(l.dataset.gl,l);}
+  },true);
+  // Esc closes the card only, not a dialog under it. This listener is added first, so it runs first.
+  document.addEventListener('keydown',e=>{
+    if(glOpen&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();glossaryHide(true);return;}
+    const l=e.target.closest&&e.target.closest('.gl');
+    if(l&&e.key==='Enter'){e.preventDefault();e.stopImmediatePropagation();glossaryShow(l.dataset.gl,l);return;}
+    if(glOpen&&e.key!=='Tab')e.stopImmediatePropagation(); // keep timer and tab keys out while the card is open
+  },true);
+  window.addEventListener('resize',()=>glossaryHide(false));
+  document.addEventListener('scroll',e=>{if(glOpen&&!glOpen.pop.contains(e.target))glossaryHide(false);},true);
+
+  // The full list, at the end of the Reference tab.
+  const ref=document.getElementById('tab-ref');
+  if(ref){
+    const dl=glEl('dl',{className:'gl-list'});
+    for(const g of GLOSSARY.slice().sort((a,b)=>a.term.localeCompare(b.term)))
+      dl.append(glEl('dt',{id:'gl-'+g.id},g.term),glEl('dd',{data:{glSelf:g.id}},g.alg?glEl('span',{className:'mono'},g.alg):null,g.alg?' · ':null,g.def));
+    ref.append(glEl('div',{className:'panel',id:'glossary'},glEl('h3',{},'Glossary'),
+      glEl('p',{className:'muted'},'Underlined words in the description text open these entries.'),dl));
+  }
+  glossaryLink(document.body);
+  // Text that the app renders later gets linked too. Work is batched to one pass per frame.
+  let pending=new Set(),queued=false;
+  new MutationObserver(ms=>{
+    for(const m of ms)for(const n of m.addedNodes){
+      if(n.nodeType===1&&(n.classList.contains('gl')||n.classList.contains('gl-pop')||n.classList.contains('gl-back')))continue;
+      pending.add(n);
+    }
+    if(pending.size&&!queued){queued=true;requestAnimationFrame(()=>{queued=false;const ns=pending;pending=new Set();for(const n of ns)glossaryLink(n);});}
+  }).observe(document.body,{childList:true,subtree:true});
+}
+glossaryInit();

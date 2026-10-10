@@ -216,3 +216,18 @@ h3.sub{font-size:14px;color:var(--muted);margin:12px 0 6px}
 .modal.scan button:disabled{opacity:.45;cursor:not-allowed}
 /* A dark backdrop: a bright page lights a glossy cube and puts reflections on it. */
 .modal-bg.scan-bg{background:rgba(0,0,0,.92)}
+
+/* glossary */
+.gl{border-bottom:1px dotted color-mix(in srgb,currentColor 45%,transparent);cursor:help;border-radius:2px}
+.gl:hover,.gl:focus-visible{color:var(--accent);border-bottom-color:var(--accent)}
+.gl-back{position:fixed;inset:0;z-index:40}
+.gl-pop{position:fixed;z-index:41;width:max-content;max-width:min(340px,calc(100vw - 24px));background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.28);font-size:14px;line-height:1.45}
+.gl-pop:focus{outline:none}
+.gl-pop p{margin:6px 0 0}
+.gl-term{font-weight:600}
+.gl-alg{margin-top:4px;color:var(--accent)}
+.gl-see{margin-top:8px;font-size:12px;color:var(--muted)}
+.gl-list{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:8px 0 0;font-size:14px}
+.gl-list dt{font-weight:600}
+.gl-list dd{margin:0}
+@media (max-width:700px){.gl-list{grid-template-columns:1fr}.gl-list dd{margin-bottom:6px}}
