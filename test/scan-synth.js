@@ -9,7 +9,7 @@ const {render,rnd,U}=require('./synth-render');
 // Stickered faces must give the right colours. Stickerless faces are glossy and their red and
 // orange sit close together, so per frame they must give the right lattice; test/scan-vote.js
 // checks their colours across frames, where the joint read in stage 5 settles red and orange.
-const N=+(process.env.TRIALS||150);const t0=Date.now();const rates={};
+const N=+(process.env.TRIALS||200);const t0=Date.now();const rates={};
 const onCells=(img,pts)=>pts&&[0,1,2,3].some(k=>T.rotateFace(img.centres,k).every((c,i)=>Math.hypot(c.x-pts[i].x,c.y-pts[i].y)<0.3*img.cell));
 for(const style of ['stickers','stickerless']){
   let ok=0,geo=0;const fails={};
@@ -26,8 +26,7 @@ for(const style of ['stickers','stickerless']){
 }
 console.log(`scan-synth: ${((Date.now()-t0)/(2*N)).toFixed(0)} ms per trial`);
 assert.ok(rates.stickers>=0.95,'stickered faces: colour read rate is below 95%');
-// Regression floor while stages 1-2 improve for stickerless cubes; the target is 95%.
-assert.ok(rates.stickerless>=0.5,'stickerless faces: lattice rate fell below the floor');
+assert.ok(rates.stickerless>=0.95,'stickerless faces: lattice rate is below 95%');
 // Frames with no cube must not give a face.
 let falseReads=0;for(let n=0;n<40;n++)if(T.readFace(render(new Array(9).fill(0),320,240,true)).ok)falseReads++;
 console.log(`scan-synth: ${falseReads}/40 frames with no cube gave a face`);

@@ -35,15 +35,17 @@ for(let n=0;n<10;n++)ev=T.voteFrame(v,ok(other));
 assert.strictEqual(ev.event,'conflict');assert.strictEqual(v.faces[2].stickers.join(),stored);
 console.log('scan-vote: unit checks ok');
 
-// End to end with synthetic frames.
-const ms=[];for(let i=0;i<25;i++)ms.push(T.FACE_MOVES[Math.floor(U(0,18))]);
-const cube=T.applyAlg(new T.Cube(),ms),f=cube.toFacelets();
-v=T.makeVoter();let frames=0;const order=[2,0,1,5,3,4];
-for(const c of order){
-  const truth=f.slice(9*c,9*c+9);let locked=false;
-  for(let n=0;n<40&&!locked;n++){frames++;const e=T.voteFrame(v,T.readFace(render(truth)));locked=e.event==='locked';}
-  assert.ok(locked,'face did not lock: '+c);
+// End to end with synthetic frames, for a stickered and a glossy stickerless cube.
+for(const style of ['stickers','stickerless']){
+  const ms=[];for(let i=0;i<25;i++)ms.push(T.FACE_MOVES[Math.floor(U(0,18))]);
+  const cube=T.applyAlg(new T.Cube(),ms),f=cube.toFacelets();
+  v=T.makeVoter();let frames=0;const order=[2,0,1,5,3,4];
+  for(const c of order){
+    const truth=f.slice(9*c,9*c+9);let locked=false;
+    for(let n=0;n<60&&!locked;n++){frames++;const e=T.voteFrame(v,T.readFace(render(truth,320,240,false,style)));locked=e.event==='locked';}
+    assert.ok(locked,`${style}: face did not lock: ${c}`);
+  }
+  const res=T.assembleScan(Object.values(v.faces));
+  assert.ok(res.ok,`${style}: cube not legal: ${res.errors}`);assert.ok(res.cube.equals(cube),`${style}: wrong cube`);
+  console.log(`scan-vote: ${style} end to end ok, ${frames} frames for six faces${res.changes.length?', '+res.changes.join(' '):''}`);
 }
-const res=T.assembleScan(Object.values(v.faces));
-assert.ok(res.ok,'cube not legal: '+res.errors);assert.ok(res.cube.equals(cube),'wrong cube');
-console.log(`scan-vote: end to end ok, ${frames} frames for six faces${res.changes.length?', repairs: '+res.changes.join(' '):''}`);

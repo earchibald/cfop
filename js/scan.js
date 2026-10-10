@@ -71,8 +71,9 @@ function findBlobs(img,opts){
     const tr=vxx+vyy,det=vxx*vyy-vxy*vxy,disc=Math.sqrt(Math.max(0,tr*tr/4-det));
     const l1=tr/2+disc,l2=tr/2-disc;if(l2<=0)continue;
     const fill=n/(12*Math.sqrt(det));
-    // Square or round stickers, seen at an angle: compact and not too long.
-    if(l1/l2>4||fill<0.75||fill>1.25)continue;
+    // Square or round stickers, seen at an angle, or half a tile split by a reflection:
+    // compact and not too long. The lattice fit rejects the rest.
+    if(l1/l2>7||fill<0.75||fill>1.25)continue;
     blob.cx=cx;blob.cy=cy;blob.ok=true;
   }
   return {blobs:blobs.filter(b=>b.ok),labels:lab,dark,W,H,grooveT:gT};
