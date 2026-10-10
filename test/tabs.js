@@ -49,6 +49,29 @@ w.addEventListener('load',async()=>{try{
   const sel=()=>$(`#llGroups .case[data-id="${id}"]`).classList.contains('sel');const was=sel();
   click($(`#llGroups .case[data-id="${id}"] svg`),{shiftKey:true});assert.strictEqual(sel(),!was,'shift-click toggles selection');assert.ok(!$('#modalBg'));
 
+  // F2L cases work like the OLL/PLL cards: status button, click opens the window, shift-click selects,
+  // Next case starts a drill with a per-case timer scope, Reveal shows the answer.
+  tab('f2l');$('#f2lMode button[data-m="cases"]').click();
+  assert.ok(!$('#f2lCaseGrid').closest('.panel').classList.contains('hidden'),'F2L case grid shows');
+  const fc=$('#f2lCaseGrid .case');const fn=fc.dataset.n;
+  const fst=()=>$(`#f2lCaseGrid .case[data-n="${fn}"] .stbtn`);
+  assert.strictEqual(fst().textContent,'unlearned','F2L card has a status button');
+  click(fst());assert.strictEqual(fst().textContent,'learning','F2L status cycles');assert.ok(!$('#modalBg'));
+  click($(`#f2lCaseGrid .case[data-n="${fn}"] svg`));assert.ok($('#modalBg'),'F2L card click opens the case window');
+  assert.strictEqual($('#modalBg .stbtn').textContent,'learning','window shows the F2L status');
+  assert.ok(/Why it works/.test($('#modalBg').textContent),'F2L window explains the case');
+  $('#modalClose').click();
+  const fsel=()=>$(`#f2lCaseGrid .case[data-n="${fn}"]`).classList.contains('sel');const fwas=fsel();
+  click($(`#f2lCaseGrid .case[data-n="${fn}"] svg`),{shiftKey:true});assert.strictEqual(fsel(),!fwas,'F2L shift-click toggles selection');
+  $('#f2lSelNone').click();assert.ok(!$('#f2lCaseGrid .case.sel'),'None clears the selection');
+  $('#f2lRandomCase').click();assert.ok(/Select at least one/.test($('#f2lCaseOut').textContent),'no drill with nothing selected');
+  $('#f2lSelAll').click();assert.strictEqual($$('#f2lCaseGrid .case.sel').length,41,'Select all');
+  $('#f2lRandomCase').click();assert.ok(drill(),'Next case starts an F2L drill');assert.ok(/setup for case/.test(label()));
+  assert.ok(/^Times: F2L case #\d+$/.test($('#timesScope').textContent),'timer scope is the case');
+  assert.ok(/Answer hidden/.test($('#f2lCaseOut').textContent),'answer hidden before reveal');
+  $('#f2lCaseReveal').click();assert.ok(/F2L case #\d+/.test($('#f2lCaseOut').textContent),'reveal names the case');assert.ok($('#f2lCasePlay'),'reveal offers to step through');
+  $('#drillBack').click();assert.ok(!drill());assert.ok(/^Times: F2L$/.test($('#timesScope').textContent),'scope returns to the tab');
+
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('tabs: scramble persists across tabs, drills, case cards ok');process.exit(0);
+  console.log('tabs: scramble persists across tabs, drills, case cards, F2L cards ok');process.exit(0);
 }catch(e){console.error('tabs: FAIL',e.message,errs);process.exit(1);}});

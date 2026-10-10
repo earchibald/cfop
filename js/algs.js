@@ -96,6 +96,14 @@ const F2L_CASES=[
   {n:35,alg:"U' R U R' U y L' U L",grp:'Corner up, edge in slot'},{n:36,alg:"U R U' R' U' y L' U L",grp:'Corner up, edge in slot'},
   {n:37,alg:"R2 U2 F R2 F' U2 R' U R'",grp:'Both in slot'},{n:38,alg:"R U' R' U' R U R' U2 R U' R'",grp:'Both in slot'},{n:39,alg:"R U' R' U R U2 R' U R U' R'",grp:'Both in slot'},{n:40,alg:"R U' R' U' R U' R' U y L' U L",grp:'Both in slot'},{n:41,alg:"R U R' U' R U' R' U y L' U' L",grp:'Both in slot'},
 ];
+// Why each F2L group works. One text per group, shown in the case window and after a reveal.
+const F2L_WHY={
+  'Basic inserts':"The corner and the edge already sit next to each other as a pair, or one U turn joins them. One trigger such as R U R' or R U' R' turns the pair into the slot. Every other F2L case is a way to reach one of these four.",
+  'Corner up, edge up':"Both pieces are in the top layer. First separate them or turn them so that they can meet, then join them into a pair with the slot open, then insert the pair. The R U R' trigger opens the slot, a U turn moves the top layer under it, and R' or R closes the slot with a piece inside.",
+  'Corner down, edge up':"The corner is in its slot, but twisted or flipped. Lift it out with R U R' or R U' R' so that it meets the edge on top. The lift is chosen so that the pair forms at once, and the last trigger inserts the pair.",
+  'Corner up, edge in slot':"The edge is in its slot, but the corner is on top. Lift the edge out with a trigger that also catches the corner, so the two pieces pair up on the way out. Then insert the pair.",
+  'Both in slot':"Both pieces are in the slot, but at least one is wrong. Take them out with R U' R' or R U R', which puts them on top as a known case. Then solve that case. These are the longest cases, so avoid them: look ahead and do not insert a pair that is wrong.",
+};
 // Cross technique notes
 const CROSS_TIPS=[
   {t:'Count before you turn',d:'Every cross is 8 moves or fewer. If your plan is 9+, there is a better one. The solver below shows all optimal plans. Compare yours with them and find which piece you handled first that cost moves.'},

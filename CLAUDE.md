@@ -23,7 +23,7 @@ The app was called Cubeworks. Keep these old names as they are:
 | `js/scan-assemble.js` | Scanner stage 5: face rotations, colour repairs, joint colour read (pure, no DOM) |
 | `js/scan.js` | Scanner stages 1-4 and the Scan cube dialog |
 | `js/glossary.js` | Glossary entries, links in description text, the floating card |
-| `test/` | `load.js` jsdom smoke test, `glossary.js`, and the scanner tests |
+| `test/` | `load.js` jsdom smoke test, `tabs.js` (scramble, drills, case cards), `mobile.js` (phone menu), `glossary.js`, and the scanner tests |
 | `docs/` | Design notes and handoff documents |
 
 The scripts share one global scope. `index.html` loads them in the order
@@ -43,6 +43,14 @@ above. Add a new script with a `<script src>` tag after the one it depends on.
   `setSequence(moves, label, base, drill)` loads the player. Pass a `drill`
   name for anything that does not come from the current scramble, such as a
   case setup. The seed bar then shows a "Back to scramble" note.
+- Case status (unlearned, learning, finished) is one map, `llState.status`,
+  keyed by the OLL/PLL case id or `f2l-N` for an F2L case. `stBtn(id)` draws
+  the button and `cycleStatus(id)` changes it. Per-case times use the timer
+  scopes `ll:<id>` and `f2l:<n>`.
+- Phone layout (760px and narrower): the Reference section is the home
+  screen. The menu button in the top bar opens the other sections. `goTab()`
+  switches sections. Mark text for one layout only with `.desktop-only` or
+  `.mobile-only`.
 - Prose in the UI follows ASD-STE100 style: short sentences, active voice,
   one idea per sentence.
 - One word per idea in the UI: "player" (the move panel), "Reveal" (show an
