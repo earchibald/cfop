@@ -53,6 +53,7 @@
       <button class="small" id="camBtn" title="Read a real cube with the webcam">Scan cube</button>
     </div>
     <span class="muted" style="font-size:12px">White up, green front. The same seed always gives the same scramble.</span>
+    <div id="drillNote" class="drillnote hidden"><span>Drill: <b id="drillName"></b>. The player shows this case, not the scramble. Your scramble is kept.</span><button class="small primary" id="drillBack">Back to scramble</button></div>
     <div id="history" class="hidden" style="width:100%;font-size:13px"></div>
   </section>
 <div class="wrap">
@@ -109,8 +110,8 @@
           <div class="status-sel" id="f2lMode"><button data-m="live" class="on">Real cross-solved states</button><button data-m="cases">The 41 cases</button></div></div>
       </div>
       <div class="panel" id="f2lLive">
-        <p class="muted">A random scramble is solved through the cross for you. Solve F2L, then compare with the pair plan. Pair plans are short inserts found by search, so they often differ from the textbook algorithm: both are valid. Learn to see why each one works.</p>
-        <div class="row"><button class="primary" id="f2lNew">New F2L state</button><button id="f2lReveal">Reveal pair plan</button><label>Pairs left <select id="f2lPairs"><option>4</option><option>3</option><option>2</option><option>1</option></select></label></div>
+        <p class="muted">The current scramble is solved through the cross for you. The dashed moves in the player show that part. Solve F2L, then compare with the pair plan. Pair plans are short inserts found by search, so they often differ from the textbook algorithm: both are valid. Learn to see why each one works.</p>
+        <div class="row"><button class="primary" id="f2lNew">New scramble</button><button id="f2lReveal">Reveal pair plan</button><label>Pairs left <select id="f2lPairs"><option>4</option><option>3</option><option>2</option><option>1</option></select></label></div>
         <div id="f2lPlan" style="margin-top:10px"></div>
       </div>
       <div class="panel hidden" id="f2lCases">
@@ -124,7 +125,7 @@
     <section class="tab" id="tab-ll">
       <div class="panel">
         <div class="row" style="justify-content:space-between">
-          <div><h2>Two-look OLL and PLL</h2><p class="muted" style="margin:0">Select cases, then train. Click a case picture to cycle its status: unlearned → learning → finished. Shift-click to toggle selection without changing status. Double-click for details.</p></div>
+          <div><h2>Two-look OLL and PLL</h2><p class="muted" style="margin:0">Select cases, then train. The button under each case changes its status: unlearned → learning → finished. Click a case to open its details. Shift-click a case to add it to training or remove it.</p></div>
           <div class="row">
             <select id="llProb"><option value="balanced">Balanced</option><option value="realistic">Realistic probability</option></select>
             <label style="font-size:13px"><input type="checkbox" id="llRealState" checked> Realistic rest-of-layer</label>
@@ -132,7 +133,7 @@
           </div>
         </div>
       </div>
-      <div class="panel" id="llCurrent"><p class="muted">Press Next case. The cube shows the case; the setup moves appear in the scramble area if you want to set it on a real cube.</p></div>
+      <div class="panel" id="llCurrent"><p class="muted">Press Next case to start a drill. The cube shows the case, and the setup moves show in the player for a real cube. Your scramble is kept. Press Back to scramble to return to it.</p></div>
       <div class="panel">
         <div class="row" style="justify-content:space-between"><h3>Cases</h3><span class="legend"><span><i style="background:var(--muted)"></i>unlearned</span><span><i style="background:#f5d31d"></i>learning</span><span><i style="background:var(--good)"></i>finished</span></span><span><button class="small ghost" id="llSelAll">Select all</button><button class="small ghost" id="llSelNone">None</button><button class="small ghost" id="llSelUnlearned">Not finished</button></span></div>
         <div id="llGroups"></div>

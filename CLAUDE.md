@@ -39,6 +39,10 @@ above. Add a new script with a `<script src>` tag after the one it depends on.
   for illegal cubes.
 - `scrambleFromCube(cube, name)` derives a scramble from a `Cube`, loads it,
   and switches to the Solve tab. It is the hook for the camera scanner.
+- One current scramble is shared by all tabs. A tab change never replaces it.
+  `setSequence(moves, label, base, drill)` loads the player. Pass a `drill`
+  name for anything that does not come from the current scramble, such as a
+  case setup. The seed bar then shows a "Back to scramble" note.
 - Prose in the UI follows ASD-STE100 style: short sentences, active voice,
   one idea per sentence.
 

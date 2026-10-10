@@ -93,8 +93,12 @@ function modeFor(group){return group==='OLL edges'?'eo':group==='OLL corners'?'o
 function thumb3D(cube){const f=cube.toFacelets();return `<svg viewBox="40 30 320 300">${renderCube3D(f,{yaw:-32,pitch:28,scale:48})}</svg>`;}
 
 // ---------- sequence (scramble) panel ----------
-const seqState={moves:[],idx:0,label:'scramble',base:new Cube()};
-function setSequence(moves,label,base){stopAuto();seqState.moves=Array.isArray(moves)?moves:parseAlg(moves);seqState.label=label||'';seqState.base=base||new Cube();seqState.idx=seqState.moves.length;renderSequence();applySequence();}
+// drill: a name when the player shows a case drill instead of the current scramble. Tab changes keep a drill.
+const seqState={moves:[],idx:0,label:'scramble',base:new Cube(),drill:null};
+function setSequence(moves,label,base,drill){stopAuto();seqState.moves=Array.isArray(moves)?moves:parseAlg(moves);seqState.label=label||'';seqState.base=base||new Cube();seqState.idx=seqState.moves.length;
+  if(!drill&&seqState.drill){currentLabel=scrLabel;if(timer.scope.startsWith('ll:'))setScope(TAB_SCOPE[curTab]);}
+  seqState.drill=drill||null;$('#drillNote').classList.toggle('hidden',!drill);$('#drillName').textContent=drill||'';
+  renderSequence();applySequence();}
 function cubeAtSeq(i){return applyAlg(seqState.base,seqState.moves.slice(0,i));}
 function applySequence(){showCube(cubeAtSeq(seqState.idx));$('#scrub').max=seqState.moves.length;$('#scrub').value=seqState.idx;$('#scrubPos').textContent=seqState.idx+' / '+seqState.moves.length;$$('#scramble .m').forEach((el,i)=>{el.classList.toggle('done',i<seqState.idx);el.classList.toggle('cur',i===seqState.idx-1);});}
 function renderSequence(){$('#seqLabel').textContent=seqState.label||'';$('#scramble').innerHTML=seqState.moves.map((m,i)=>`<span class="m" data-i="${i}">${fmtMove(m)}</span>`).join('');
@@ -104,7 +108,10 @@ function focusPlayer(){const p=$('#player');window.scrollTo({top:0,behavior:'smo
 function showScr(){const r=crossRotation();const end=applyAlg(scr.cube,r?[r]:[]);
   setSequence([...scr.moves,...(r?[r]:[])],'scramble · seed '+scr.seed+(r?' · last step '+r+' = solving grip: '+holdText(end).replace(/^Hold /,'').replace(/\.$/,''):''));
   if(r){const el=$$('#scramble .m').pop();el.classList.add('rot');el.title='Rotation only, not a scramble move. '+holdText(end);}}
-$('#showScramble').onclick=()=>{showScr();focusPlayer();};
+// The current scramble as this tab shows it: F2L live adds the rotation and the solved cross.
+function showForTab(){if(curTab==='f2l'&&f2lState.mode==='live')showF2LState();else showScr();}
+$('#showScramble').onclick=()=>{showForTab();focusPlayer();};
+$('#drillBack').onclick=()=>showForTab();
 $('#scrubStart').onclick=()=>{stopAuto();seqState.idx=0;applySequence();};$('#scrubEnd').onclick=()=>{stopAuto();seqState.idx=seqState.moves.length;applySequence();};
 $('#scrubPrev').onclick=()=>{stopAuto();seqState.idx=Math.max(0,seqState.idx-1);applySequence();};$('#scrubNext').onclick=()=>{stopAuto();seqState.idx=Math.min(seqState.moves.length,seqState.idx+1);applySequence();};
 // ---------- auto-step ----------
@@ -129,7 +136,7 @@ function loadScramble(seed,moves,custom){
   scr.moves=Array.isArray(moves)?moves:parseAlg(moves);scr.cube=applyAlg(new Cube(),scr.moves);
   const ent={seed,len:scr.moves.length,t:Date.now()};if(custom)ent.moves=scr.moves.join(' ');
   history=[ent,...history.filter(h=>h.seed!==seed)].slice(0,30);store.set('history',history);renderHistory();
-  showScr();
+  showForTab();
   planState.plan=null;$('#planOut').innerHTML='<p class="muted">New scramble. Press Plan.</p>';
   crossState.revealed=false;refreshCross();
 }
@@ -156,7 +163,7 @@ function renderTimes(){const arr=scopeTimes();$('#stLast').textContent=fmt(arr.l
   $('#times').innerHTML=arr.slice(-40).map((x,i)=>`<span class="${x.ms===best?'best':''}" title="${esc(x.label||'')} · ${new Date(x.t).toLocaleString()}">${fmt(x.ms)}</span>`).reverse().join('');$('#timesScope').textContent='times: '+timer.scope;}
 function setScope(s){timer.scope=s;renderTimes();}
 function recordTime(ms){const arr=times[timer.scope]||(times[timer.scope]=[]);arr.push({ms,t:Date.now(),label:currentLabel()});store.set('times',times);renderTimes();if(onTimerStop)onTimerStop(ms);}
-let onTimerStop=null;let currentLabel=()=>scr.seed;
+let onTimerStop=null;const scrLabel=()=>curTab==='f2l'?'f2l '+scr.seed:scr.seed;let currentLabel=scrLabel;
 const tEl=$('#timer');
 function timerTick(){if(timer.state==='running'){tEl.textContent=fmt(performance.now()-timer.t0);timer.raf=requestAnimationFrame(timerTick);}else if(timer.state==='inspecting'){const left=15-(performance.now()-timer.inspT0)/1000;tEl.textContent=left>0?Math.ceil(left).toString():(left>-2?'+2':'DNF');timer.raf=requestAnimationFrame(timerTick);}}
 function timerPress(){ // key/finger down
@@ -186,9 +193,7 @@ $('#times').onclick=e=>{if(e.target.tagName!=='SPAN')return;const arr=scopeTimes
 let curTab='solve';
 const TAB_SCOPE={solve:'solve',cross:'cross',f2l:'f2l',ll:'ll',lab:'lab',ref:'ref'};
 $$('#rail button').forEach(b=>b.onclick=()=>{curTab=b.dataset.tab;$$('#rail button').forEach(x=>x.classList.toggle('on',x===b));$$('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+curTab));setScope(TAB_SCOPE[curTab]);onEnterTab(curTab);});
-function onEnterTab(t){if(t==='solve'||t==='cross'){showScr();if(t==='cross')refreshCross();}
-  if(t==='f2l'){if(f2lState.mode==='live'&&!f2lState.cube)newF2LState();else if(f2lState.mode==='live')showF2LState();}
-  if(t==='ll'&&!llState.cur)$('#llNext').click();}
+function onEnterTab(t){if(!seqState.drill)showForTab();else if(t==='f2l'&&f2lState.mode==='live')showF2LState();if(t==='cross')refreshCross();}
 function nextForTab(){({solve:()=>newScramble(),cross:()=>$('#crossNew').click(),f2l:()=>(f2lState.mode==='live'?$('#f2lNew'):$('#f2lRandomCase')).click(),ll:()=>$('#llNext').click()}[curTab]||(()=>{}))();}
 function hintForTab(){({cross:()=>$('#crossReveal').click(),f2l:()=>(f2lState.mode==='live'?$('#f2lReveal'):$('#f2lCaseReveal')).click(),ll:()=>$('#llHint').click()}[curTab]||(()=>{}))();}
 $('#autoNext').checked=store.get('autoNext',true);$('#autoNext').onchange=()=>store.set('autoNext',$('#autoNext').checked);
@@ -250,7 +255,7 @@ function refreshCross(){if(!tablesReady){$('#crossOpt').textContent='…';ensure
   $$('#crossSols .alt').forEach(el=>el.onclick=()=>{const {phys:pc}=orientedScramble();setSequence(parseAlg(el.textContent),'cross plan · '+holdText(pc),pc);seqState.idx=0;applySequence();focusPlayer();});
   $('#crossTryOut').innerHTML='';}
 $('#crossReveal').onclick=()=>{crossState.revealed=!crossState.revealed;refreshCross();};
-$('#crossPlus1').onchange=refreshCross;$('#crossColor').onchange=()=>{store.set('crossColor',$('#crossColor').value);if(/^scramble/.test(seqState.label))showScr();refreshCross();planState.plan=null;renderLLGroups();renderF2LGrid();if(mobileMQ.matches)renderMobileRef();$('#planOut').innerHTML='<p class="muted">Cross colour changed. Press Plan.</p>';};
+$('#crossPlus1').onchange=refreshCross;$('#crossColor').onchange=()=>{store.set('crossColor',$('#crossColor').value);if(!seqState.drill)showForTab();refreshCross();planState.plan=null;renderLLGroups();renderF2LGrid();if(mobileMQ.matches)renderMobileRef();$('#planOut').innerHTML='<p class="muted">Cross colour changed. Press Plan.</p>';};
 $('#crossNew').onclick=()=>{ensureTables(()=>{const diff=$('#crossDiff').value;for(let k=0;k<200;k++){const seed=randomSeedName();const moves=randomMoveScramble(seed,+$('#scrLen').value);const c=toFrame(applyAlg(new Cube(),moves));const d=buildCrossTable()[crossIndex(c)];if(diff==='any'||(diff==='easy'&&d<=5)||(diff==='hard'&&d>=7)){newScramble(seed);return;}}newScramble();});};
 $('#crossCheck').onclick=()=>{let ms;try{ms=parseAlg($('#crossTry').value);applyAlg(new Cube(),ms);}catch(e){$('#crossTryOut').innerHTML='<span style="color:var(--warn)">Could not read a move: '+esc(e.message)+'</span>';return;}
   const {cube}=orientedScramble();const c=applyAlg(cube,ms);const ok=crossSolved(c);const opt=crossState.sol?crossState.sol.optimal:'?';const n=ms.filter(m=>!'xyz'.includes(m[0])).length;
@@ -261,15 +266,21 @@ $('#crossCheck').onclick=()=>{let ms;try{ms=parseAlg($('#crossTry').value);apply
 $('#crossTips').innerHTML=CROSS_TIPS.map(t=>`<div class="tip"><b>${esc(t.t)}</b>${esc(t.d)}</div>`).join('');
 
 // ---------- F2L tab ----------
-const f2lState={mode:'live',cube:null,base:null,seqMoves:null,plan:null,caseSel:new Set(F2L_CASES.map(c=>c.n)),curCase:null,caseSetup:null,caseAUF:''};
-$$('#f2lMode button').forEach(b=>b.onclick=()=>{f2lState.mode=b.dataset.m;$$('#f2lMode button').forEach(x=>x.classList.toggle('on',x===b));$('#f2lLive').classList.toggle('hidden',f2lState.mode!=='live');$('#f2lCases').classList.toggle('hidden',f2lState.mode!=='cases');if(f2lState.mode==='live')showF2LState();});
-function newF2LState(){ensureTables(()=>{const seed=randomSeedName();const moves=randomMoveScramble(seed,22);let c=toFrame(applyAlg(new Cube(),moves));const r=crossRotation();const seqMoves=[...moves,...(r?[r]:[])];const cs=solveCross(c,0,1).solutions[0];const csm=parseAlg(cs);c=applyAlg(c,csm);seqMoves.push(...csm);
-  const want=+$('#f2lPairs').value;const plan=solveF2L(c);let pre=[];for(let i=0;i<4-want&&plan;i++){pre.push(...plan.steps[i].moves);}
-  c=applyAlg(c,pre);seqMoves.push(...pre);f2lState.cube=c;f2lState.seqMoves=seqMoves;f2lState.seed=seed;f2lState.plan=solveF2L(c);f2lState.revealed=false;currentLabel=()=>'f2l '+seed;showF2LState();});}
-function showF2LState(){if(!f2lState.cube)return;setSequence(f2lState.seqMoves,'F2L state · seed '+f2lState.seed+' (scramble, rotation, cross'+($('#f2lPairs').value<4?', pairs':'')+')');$('#f2lPlan').innerHTML=f2lState.revealed?renderF2LPlan():'<p class="muted">Pair plan hidden. Solve the pairs, then reveal.</p>';}
+const f2lState={mode:'live',key:null,cube:null,extra:[],plan:null,caseSel:new Set(F2L_CASES.map(c=>c.n)),curCase:null,caseSetup:null,caseAUF:''};
+$$('#f2lMode button').forEach(b=>b.onclick=()=>{f2lState.mode=b.dataset.m;$$('#f2lMode button').forEach(x=>x.classList.toggle('on',x===b));$('#f2lLive').classList.toggle('hidden',f2lState.mode!=='live');$('#f2lCases').classList.toggle('hidden',f2lState.mode!=='cases');if(f2lState.mode==='live')showF2LState();else if(!seqState.drill)showScr();});
+// The F2L state of the current scramble: rotate, solve the cross, then solve pairs until the chosen number is left.
+function f2lKey(){return [scr.moves.join(' '),crossRotation(),$('#f2lPairs').value].join('|');}
+function ensureF2L(cb){if(f2lState.key===f2lKey()){cb();return;}ensureTables(()=>{let c=toFrame(scr.cube);const r=crossRotation();const extra=r?[r]:[];const csm=parseAlg(solveCross(c,0,1).solutions[0]);c=applyAlg(c,csm);extra.push(...csm);
+  const want=+$('#f2lPairs').value;const plan=solveF2L(c);const pre=[];for(let i=0;i<4-want&&plan;i++){pre.push(...plan.steps[i].moves);}
+  c=applyAlg(c,pre);extra.push(...pre);Object.assign(f2lState,{key:f2lKey(),cube:c,extra,plan:solveF2L(c),revealed:false});cb();});}
+function showF2LState(){ensureF2L(()=>{
+  if(!seqState.drill&&curTab==='f2l'&&f2lState.mode==='live'){const n=scr.moves.length,left=+$('#f2lPairs').value;
+    setSequence([...scr.moves,...f2lState.extra],'scramble · seed '+scr.seed+' · dashed moves are solved for you: '+(crossRotation()?'rotation, ':'')+'cross'+(left<4?', '+(4-left)+' pair'+(left<3?'s':''):''));
+    $$('#scramble .m').forEach((el,i)=>{if(i>=n){el.classList.add('rot');el.title='Solved for you, not a scramble move.';}});}
+$('#f2lPlan').innerHTML=f2lState.revealed?renderF2LPlan():'<p class="muted">Pair plan hidden. Solve the pairs, then reveal.</p>';});}
 function renderF2LPlan(){const p=f2lState.plan;if(!p)return '<p>No plan found.</p>';let cur=f2lState.cube;const seqFor=[];const html=p.steps.map((s,i)=>{const h=stepHTML(`Pair ${i+1}: ${s.slot}`,describePair(cur,s.slot),s.moves,'p'+i,`${s.moves.length} moves`);seqFor.push(['p'+i,cur,s.moves]);cur=applyAlg(cur,s.moves);return h;}).join('');
   setTimeout(()=>wireSteps($('#f2lPlan'),key=>{const e=seqFor.find(x=>x[0]===key);return {cube:phys(e[1]),moves:e[2]};}),0);const total=p.steps.reduce((a,b)=>a+b.moves.length,0);return `<div class="muted" style="font-size:13px">${total} moves for ${p.steps.length} pair${p.steps.length>1?'s':''}, shortest-first order.</div>`+html;}
-$('#f2lNew').onclick=newF2LState;$('#f2lReveal').onclick=()=>{f2lState.revealed=!f2lState.revealed;showF2LState();};
+$('#f2lNew').onclick=()=>newScramble();$('#f2lReveal').onclick=()=>ensureF2L(()=>{f2lState.revealed=!f2lState.revealed;showF2LState();});
 // cases grid
 const groups=[...new Set(F2L_CASES.map(c=>c.grp))];groups.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;$('#f2lGroup').appendChild(o);});
 function caseSetupCube(f){return phys(derotate(applyAlg(new Cube(),invertAlg(f.alg))));}
@@ -278,12 +289,12 @@ function renderF2LGrid(){const g=$('#f2lGroup').value;$('#f2lCaseGrid').innerHTM
 $('#f2lGroup').onchange=renderF2LGrid;renderF2LGrid();
 function setF2LCase(n){const f=F2L_CASES.find(c=>c.n===n);f2lState.curCase=n;const auf=AUFS[Math.floor(Math.random()*4)];// state = inv(alg) then U^-auf ; solve = auf then alg
   const setup=removeRotations([...parseAlg(invertAlg(f.alg)),...(auf?[invertAlg(auf)]:[])]);f2lState.caseSetup=setup;f2lState.caseAUF=auf;f2lState.caseRevealed=false;currentLabel=()=>'f2l case '+n;
-  const r=crossRotation();setSequence([...(r?[r]:[]),...setup],`F2L case #${n} setup (from solved, white up: rotate, then turn)`);renderF2LGrid();renderF2LCaseOut();}
+  const r=crossRotation();setSequence([...(r?[r]:[]),...setup],`F2L case #${n} setup (from solved, white up: rotate, then turn)`,undefined,'F2L case #'+n);renderF2LGrid();renderF2LCaseOut();}
 function renderF2LCaseOut(){const n=f2lState.curCase;if(!n){$('#f2lCaseOut').innerHTML='';return;}const f=F2L_CASES.find(c=>c.n===n);
   $('#f2lCaseOut').innerHTML=`<div class="row"><b>Case #${n}</b><span class="tag">${esc(f.grp)}</span>${f2lState.caseRevealed?`<span class="mono">${esc((f2lState.caseAUF?f2lState.caseAUF+' · ':'')+f.alg)}</span><button class="small" id="f2lCaseLab">Open in Lab</button>`:'<span class="muted">solution hidden</span>'}</div>`;
   const b=$('#f2lCaseLab');if(b)b.onclick=()=>{loadLab(f.alg,'F2L #'+n);};}
 $('#f2lRandomCase').onclick=()=>{const pool=F2L_CASES.filter(c=>f2lState.caseSel.has(c.n));if(!pool.length)return;setF2LCase(pool[Math.floor(Math.random()*pool.length)].n);};
-$('#f2lCaseReveal').onclick=()=>{f2lState.caseRevealed=!f2lState.caseRevealed;renderF2LCaseOut();if(f2lState.caseRevealed&&f2lState.curCase){const f=F2L_CASES.find(c=>c.n===f2lState.curCase);const base=cubeAtSeq(seqState.moves.length);const sol=removeRotations([...(f2lState.caseAUF?[f2lState.caseAUF]:[]),...parseAlg(f.alg)]);setSequence(sol,'F2L case #'+f.n+' solution — press ▶ to step',base);seqState.idx=0;applySequence();focusPlayer();}};
+$('#f2lCaseReveal').onclick=()=>{f2lState.caseRevealed=!f2lState.caseRevealed;renderF2LCaseOut();if(f2lState.caseRevealed&&f2lState.curCase){const f=F2L_CASES.find(c=>c.n===f2lState.curCase);const base=cubeAtSeq(seqState.moves.length);const sol=removeRotations([...(f2lState.caseAUF?[f2lState.caseAUF]:[]),...parseAlg(f.alg)]);setSequence(sol,'F2L case #'+f.n+' solution — press ▶ to step',base,'F2L case #'+f.n);seqState.idx=0;applySequence();focusPlayer();}};
 
 // ---------- LL trainer ----------
 const LL_ALL=[...ALG_DB.eo,...ALG_DB.co,...ALG_DB.cp,...ALG_DB.ep];
@@ -291,9 +302,17 @@ const llState={status:store.get('llStatus',{}),sel:new Set(store.get('llSel',LL_
 function saveLL(){store.set('llStatus',llState.status);store.set('llSel',[...llState.sel]);}
 function caseCube(a){return phys(applyAlg(new Cube(),invertAlg(a.alg)));}
 function renderLLGroups(){const groupsLL=[['OLL edges',ALG_DB.eo],['OLL corners',ALG_DB.co],['PLL corners',ALG_DB.cp],['PLL edges',ALG_DB.ep]];
-  $('#llGroups').innerHTML=groupsLL.map(([g,list])=>`<h3 style="margin:10px 0 6px;font-size:14px;color:var(--muted)">${g}</h3><div class="cases">${list.map(a=>`<div class="case ${llState.sel.has(a.id)?'sel':''}" data-id="${a.id}" title="${esc(a.alg)}"><span class="st ${llState.status[a.id]||''}"></span>${thumbTop(caseCube(a),modeFor(a.group))}<div>${esc(a.name)}</div></div>`).join('')}</div>`).join('');
-  $$('#llGroups .case').forEach(el=>{el.ondblclick=e=>{e.preventDefault();openCaseModal(modalForLL(LL_ALL.find(a=>a.id===el.dataset.id)));};el.onclick=e=>{if(e.detail>1)return;const id=el.dataset.id;if(e.shiftKey){if(llState.sel.has(id))llState.sel.delete(id);else llState.sel.add(id);}else{const order=['','learning','finished'];const cur=llState.status[id]||'';llState.status[id]=order[(order.indexOf(cur)+1)%3];if(!llState.sel.has(id))llState.sel.add(id);}saveLL();renderLLGroups();renderLLStats();};});}
+  $('#llGroups').innerHTML=groupsLL.map(([g,list])=>`<h3 style="margin:10px 0 6px;font-size:14px;color:var(--muted)">${g}</h3><div class="cases">${list.map(a=>`<div class="case ${llState.sel.has(a.id)?'sel':''}" data-id="${a.id}" tabindex="0" title="Open details. Shift-click to add or remove from training.">${thumbTop(caseCube(a),modeFor(a.group))}<div>${esc(a.name)}</div>${stBtn(a.id)}</div>`).join('')}</div>`).join('');
+  $$('#llGroups .case').forEach(el=>{const id=el.dataset.id;
+    el.onclick=e=>{if(e.target.closest('.stbtn'))return;if(e.shiftKey){if(llState.sel.has(id))llState.sel.delete(id);else llState.sel.add(id);saveLL();renderLLGroups();return;}openCaseModal(modalForLL(LL_ALL.find(a=>a.id===id)));};
+    el.onkeydown=e=>{if(e.key==='Enter'&&e.target===el)el.click();};});}
 renderLLGroups();
+// Case status: unlearned -> learning -> finished. A status button shows on each case card and in the case window.
+const LL_ORDER=['','learning','finished'];
+function stBtn(id){const s=llState.status[id]||'',nm=s||'unlearned';return `<button class="stbtn ${s}" data-st-id="${esc(id)}" title="Status: ${nm}. Click to change." aria-label="Status: ${nm}. Click to change."><i></i>${nm}</button>`;}
+function cycleStatus(id){const cur=llState.status[id]||'';llState.status[id]=LL_ORDER[(LL_ORDER.indexOf(cur)+1)%3];llState.sel.add(id);saveLL();renderLLGroups();renderLLStats();
+  $$('.modal .stbtn').forEach(b=>{if(b.dataset.stId===id)b.outerHTML=stBtn(id);});}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.stbtn');if(b){e.stopPropagation();cycleStatus(b.dataset.stId);}});
 $('#llSelAll').onclick=()=>{LL_ALL.forEach(a=>llState.sel.add(a.id));saveLL();renderLLGroups();};$('#llSelNone').onclick=()=>{llState.sel.clear();saveLL();renderLLGroups();};
 $('#llSelUnlearned').onclick=()=>{llState.sel=new Set(LL_ALL.filter(a=>llState.status[a.id]!=='finished').map(a=>a.id));saveLL();renderLLGroups();};
 function pick(list,realistic){if(!list.length)return null;if(!realistic)return list[Math.floor(Math.random()*list.length)];const tot=list.reduce((a,b)=>a+(b.prob||1),0);let r=Math.random()*tot;for(const a of list){r-=(a.prob||1);if(r<=0)return a;}return list[list.length-1];}
@@ -313,7 +332,7 @@ function llSetupFor(a){ // returns setup moves from solved
 }
 $('#llNext').onclick=()=>{const list=LL_ALL.filter(a=>llState.sel.has(a.id));const a=pick(list,$('#llProb').value==='realistic');if(!a){$('#llCurrent').innerHTML='<p>Select at least one case.</p>';return;}
   llState.cur=a;llState.hint=false;const setup=llSetupFor(a);llState.setup=setup;llState.cube=applyAlg(new Cube(),setup);currentLabel=()=>a.name;timer.scope='ll:'+a.id;renderTimes();
-  view.mode='3d';view.yaw=-32;view.pitch=28;const r=crossRotation();setSequence([...(r?[r]:[]),...setup],'setup for case (from solved, white up: rotate, then turn)');renderLLCurrent();};
+  view.mode='3d';view.yaw=-32;view.pitch=28;const r=crossRotation();setSequence([...(r?[r]:[]),...setup],'setup for case (from solved, white up: rotate, then turn)',undefined,'OLL · PLL case');renderLLCurrent();};
 function llHintHTML(a){const tests={'OLL edges':eoSolved,'OLL corners':ollSolved,'PLL corners':cpSolvedLL,'PLL edges':c=>AUFS.some(u=>applyAlg(c,u).isSolved())};
   const list={'OLL edges':ALG_DB.eo,'OLL corners':ALG_DB.co,'PLL corners':ALG_DB.cp,'PLL edges':ALG_DB.ep}[a.group];const r=findLLStep(llState.cube,list,tests[a.group]);
   const s=r?`<div class="big">${esc((r.pre?r.pre+' · ':'')+r.alg)}</div><div class="muted">${r.pre?'AUF '+r.pre+' first. ':''}${esc(a.recog)}</div>`:`<div class="big">${esc(a.alg)}</div>`;return s;}
@@ -321,7 +340,7 @@ function renderLLCurrent(){const a=llState.cur;const arr=times['ll:'+a.id]||[];
   $('#llCurrent').innerHTML=`<div class="row" style="justify-content:space-between"><div><span class="tag">${esc(a.group)}</span><b ${llState.hint?'id="llNameBtn" style="cursor:pointer;text-decoration:underline dotted" title="Open case details"':''}>${llState.hint?esc(a.name):'?'}</b> <span class="muted" style="font-size:13px">${arr.length?`mean ${fmt(arr.reduce((x,y)=>x+y.ms,0)/arr.length)} over ${arr.length}`:'no times yet'}</span></div><div style="width:90px">${thumbTop(phys(llState.cube),modeFor(a.group))}</div></div>
   <div style="margin-top:8px">${llState.hint?llHintHTML(a)+`<div class="row" style="margin-top:6px"><button class="small" id="llLab">Why does it work? (Lab)</button><button class="small" id="llPlay">Step through on cube</button></div>`:'<span class="muted">Hint hidden (press H or Hint).</span>'}</div>`;
   const nb=$('#llNameBtn');if(nb)nb.onclick=()=>openCaseModal(modalForLL(a));
-  const b=$('#llLab');if(b)b.onclick=()=>loadLab(a.alg,a.name);const p=$('#llPlay');if(p)p.onclick=()=>{const list={'OLL edges':ALG_DB.eo,'OLL corners':ALG_DB.co,'PLL corners':ALG_DB.cp,'PLL edges':ALG_DB.ep}[a.group];const tests={'OLL edges':eoSolved,'OLL corners':ollSolved,'PLL corners':cpSolvedLL,'PLL edges':c=>AUFS.some(u=>applyAlg(c,u).isSolved())};const r=findLLStep(llState.cube,list,tests[a.group]);const moves=[...(r&&r.pre?[r.pre]:[]),...parseAlg(r?r.alg:a.alg)];setSequence(moves,'solution for this case — press ▶ to step',phys(llState.cube));seqState.idx=0;applySequence();focusPlayer();};}
+  const b=$('#llLab');if(b)b.onclick=()=>loadLab(a.alg,a.name);const p=$('#llPlay');if(p)p.onclick=()=>{const list={'OLL edges':ALG_DB.eo,'OLL corners':ALG_DB.co,'PLL corners':ALG_DB.cp,'PLL edges':ALG_DB.ep}[a.group];const tests={'OLL edges':eoSolved,'OLL corners':ollSolved,'PLL corners':cpSolvedLL,'PLL edges':c=>AUFS.some(u=>applyAlg(c,u).isSolved())};const r=findLLStep(llState.cube,list,tests[a.group]);const moves=[...(r&&r.pre?[r.pre]:[]),...parseAlg(r?r.alg:a.alg)];setSequence(moves,'solution for this case — press ▶ to step',phys(llState.cube),'OLL · PLL case');seqState.idx=0;applySequence();focusPlayer();};}
 $('#llHint').onclick=()=>{if(!llState.cur)return;llState.hint=!llState.hint;renderLLCurrent();};
 function renderLLStats(){const rows=LL_ALL.map(a=>{const arr=times['ll:'+a.id]||[];if(!arr.length)return '';const mean=arr.reduce((x,y)=>x+y.ms,0)/arr.length;const best=Math.min(...arr.map(x=>x.ms));return `<tr><td>${esc(a.name)}</td><td class="muted">${esc(a.group)}</td><td class="mono">${arr.length}</td><td class="mono">${fmt(mean)}</td><td class="mono">${fmt(best)}</td><td>${llState.status[a.id]||'unlearned'}</td></tr>`;}).join('');
   $('#llStats').innerHTML=rows?'<tr><th>Case</th><th>Group</th><th>n</th><th>mean</th><th>best</th><th>status</th></tr>'+rows:'<tr><td class="muted">No case times yet. Times recorded in this tab are stored per case.</td></tr>';}
@@ -398,6 +417,7 @@ function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why,
       <div class="algbig">${trigSpans(o.alg)}</div>
       ${o.recog?`<div class="sec"><b>Recognise</b>${esc(o.recog)}</div>`:''}
       ${o.why?`<div class="sec"><b>Why it works</b>${esc(o.why)}</div>`:''}
+      ${o.llId?`<div class="sec"><b>Status</b>${stBtn(o.llId)}</div>`:''}
       <div class="sec"><b>What it moves</b><span class="mono" style="font-size:13px">${esc(text)}</span></div>
       <div class="sec"><b>Set up from solved (white up)</b><span class="mono" style="font-size:14px">${esc([...(crossRotation()?[crossRotation()]:[]),...o.setupMoves].join(' '))}</span></div>
       <div class="row mobile-hide" style="margin-top:14px"><button class="primary" id="modalSetup">Show on cube</button><button id="modalStep">Step through solution</button><button id="modalLab">Open in Lab</button></div>
@@ -408,9 +428,9 @@ function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why,
   if(mobileMQ.matches){bg.querySelector('.modal').addEventListener('click',e=>{if(e.target.closest('button, a, input, select, textarea'))return;close();});}
   try{window.history.pushState({modal:1},'');}catch(e){}window.addEventListener('popstate',popClose);
   const r=crossRotation();
-  $('#modalSetup').onclick=()=>{setSequence([...(r?[r]:[]),...o.setupMoves],'setup for '+o.title+' (from solved, white up)');close();focusPlayer();};
-  $('#modalStep').onclick=()=>{const base=applyAlg(new Cube(),[...(r?[r]:[]),...o.setupMoves]);setSequence(removeRotations(parseAlg(o.alg)),'solution: '+o.title+' — press ▶ to step',base);seqState.idx=0;applySequence();close();focusPlayer();};
-  $('#modalLab').onclick=()=>{setSequence([...(r?[r]:[]),...o.setupMoves],'setup for '+o.title);$('#labFromSolved').checked=false;loadLab(o.alg,o.title);close();};
+  $('#modalSetup').onclick=()=>{setSequence([...(r?[r]:[]),...o.setupMoves],'setup for '+o.title+' (from solved, white up)',undefined,o.title);close();focusPlayer();};
+  $('#modalStep').onclick=()=>{const base=applyAlg(new Cube(),[...(r?[r]:[]),...o.setupMoves]);setSequence(removeRotations(parseAlg(o.alg)),'solution: '+o.title+' — press ▶ to step',base,o.title);seqState.idx=0;applySequence();close();focusPlayer();};
+  $('#modalLab').onclick=()=>{setSequence([...(r?[r]:[]),...o.setupMoves],'setup for '+o.title,undefined,o.title);$('#labFromSolved').checked=false;loadLab(o.alg,o.title);close();};
   document.addEventListener('keydown',escClose);
 }
 function escClose(e){if(e.key==='Escape')closeModal();}
@@ -420,7 +440,7 @@ try{window.history.scrollRestoration='manual';}catch(e){}
 function goNext(){const id=modalNext;modalNext=null;if(!id||!mobileMQ.matches)return;setTimeout(()=>{const t=document.getElementById(id);if(t)t.scrollIntoView({behavior:'smooth',block:'start'});},60);}
 function popClose(){const b=$('#modalBg');if(b){b.remove();document.removeEventListener('keydown',escClose);}window.removeEventListener('popstate',popClose);goNext();}
 function closeModal(){const b=$('#modalBg');if(!b)return;b.remove();document.removeEventListener('keydown',escClose);window.removeEventListener('popstate',popClose);if(window.history.state&&window.history.state.modal){try{window.history.back();}catch(e){}}goNext();}
-function modalForLL(a){const c=applyAlg(new Cube(),invertAlg(a.alg));return {title:a.name,group:a.group,alg:a.alg,recog:a.recog,why:a.why,pic:thumbTop(phys(c),modeFor(a.group)),setupMoves:removeRotations(parseAlg(invertAlg(a.alg)))};}
+function modalForLL(a){const c=applyAlg(new Cube(),invertAlg(a.alg));return {title:a.name,llId:a.id,group:a.group,alg:a.alg,recog:a.recog,why:a.why,pic:thumbTop(phys(c),modeFor(a.group)),setupMoves:removeRotations(parseAlg(invertAlg(a.alg)))};}
 function modalForPLL(p){const c=derotate(applyAlg(new Cube(),invertAlg(p.alg)));const two=LL_ALL.find(x=>x.name.startsWith(p.name+' '));return {title:p.name+' perm',group:'PLL · '+p.type,alg:p.alg,recog:two?two.recog:'',why:two?two.why:'',pic:thumbTop(phys(c),'pll'),setupMoves:removeRotations(parseAlg(invertAlg(p.alg)))};}
 function modalForF2L(f){const c=derotate(applyAlg(new Cube(),invertAlg(f.alg)));const cpos=c.cp.indexOf(4),epos=c.ep.indexOf(8);
   const recog=`Pair for the front-right slot. Corner is at ${CORNER_NAMES[cpos]}${cpos<4?` with its ${COLOR_NAMES[phys(c).toFacelets()[cornerFacelet[cpos][0]]]} sticker on top`:''}; edge is at ${EDGE_NAMES[epos]}.`;
@@ -462,7 +482,7 @@ $('#themeBtn').onclick=()=>{const r=document.documentElement;const cur=r.dataset
 $('#helpBtn').onclick=()=>{const b=$('#helpBox');b.classList.toggle('hidden');
   b.innerHTML=`<h3>Keys</h3><table><tr><td><span class="kbd">space</span></td><td>hold, release to start · press to stop</td></tr><tr><td><span class="kbd">1</span>–<span class="kbd">6</span></td><td>switch tab</td></tr><tr><td><span class="kbd">N</span></td><td>next scramble / case</td></tr><tr><td><span class="kbd">H</span></td><td>hint / reveal</td></tr><tr><td><span class="kbd">←</span> <span class="kbd">→</span></td><td>step through the move bar</td></tr><tr><td>drag cube</td><td>orbit the view</td></tr></table><p class="muted" style="margin-top:8px;font-size:12px">Times, case statuses and seed history are saved in this browser.</p>`;};
 $('#scrLen').onchange=()=>newScramble($('#seed').value||undefined);
-$('#f2lPairs').onchange=()=>{if(f2lState.mode==='live')newF2LState();};
+$('#f2lPairs').onchange=()=>{if(f2lState.mode==='live')showF2LState();};
 // boot
 $('#crossColor').value=store.get('crossColor','white');
 renderTimes();renderHistory();newScramble();applyMobile();setTimeout(()=>{buildCrossTable();tablesReady=true;if(curTab==='cross')refreshCross();},300);

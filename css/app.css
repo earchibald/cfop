@@ -101,8 +101,13 @@ nav.rail button.on .k{color:var(--accent)}
 .case{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px;text-align:center;cursor:pointer;font-size:12px;position:relative}
 .case svg{width:100%;height:auto}
 .case.sel{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
-.case .st{position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:var(--muted)}
-.case .st.learning{background:#f5d31d}.case .st.finished{background:var(--good)}
+/* case status button: on case cards and in the case window */
+.stbtn{display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:2px 9px;font-size:11px;border-radius:99px;background:var(--panel);color:var(--muted)}
+.stbtn i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.stbtn.learning{color:var(--text)}.stbtn.learning i{background:#f5d31d}
+.stbtn.finished{color:var(--good);border-color:var(--good)}.stbtn.finished i{background:var(--good)}
+.modal .stbtn{font-size:13px;padding:4px 12px;margin-top:2px}
+.drillnote{display:flex;gap:10px;align-items:center;flex-wrap:wrap;width:100%;font-size:13px;padding:6px 10px;border:1px solid var(--accent);border-radius:8px;background:var(--panel2)}
 .case.trash{opacity:.4}
 .big{font-size:22px;font-family:var(--mono)}
 .hidden{display:none!important}
