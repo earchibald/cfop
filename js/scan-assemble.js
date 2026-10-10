@@ -70,6 +70,16 @@ function assembleScan(faces){
   let sols=legalRotations(byFace);
   if(sols.length)return done(sols,[]);
 
+  // Repair 0: read all stickers again against this cube's own centre colours, nine per colour.
+  // This settles red/orange and white/yellow when the light shifts the colours.
+  const joint=jointColours(faces.map(fc=>fc));
+  if(joint){
+    const trial=new Array(6);for(const fc of faces)trial[fc.stickers[4]]=joint.get(fc);
+    let n=0;for(let c=0;c<6;c++)for(let p=0;p<9;p++)if(trial[c][p]!==byFace[c][p])n++;
+    sols=legalRotations(trial);
+    if(sols.length){const r=done(sols,[`I read ${n} sticker${n===1?'':'s'} again against the centre colours.`]);r.joint=true;return r;}
+  }
+
   // Repair 1: one face read with red/orange or white/yellow swapped throughout.
   for(let face=0;face<6;face++)for(const [a,b] of SCAN_CONFUSE){
     const s=byFace[face];if(!s.some((x,p)=>p!==4&&(x===a||x===b)))continue;
@@ -109,4 +119,44 @@ function assembleScan(faces){
   const errors=bad.length?['Each colour must appear 9 times: '+bad.map(c=>`${COLOR_NAMES_E[c]} ${counts[c]}`).join(', ')+'.']
     :['The faces do not fit together as one cube. Check the stickers on the net, or scan a face again.'];
   return {ok:false,facelets:f,errors,changes:[]};
+}
+
+// Assign the 48 non-centre stickers to the six colours, eight each, by distance to the centre
+// colours in Lab. faces need .lab (9 Lab values). Pinned stickers keep their colour.
+// Returns a Map face -> 9 colours, or null.
+function jointColours(faces){
+  if(faces.length!==6||!faces.every(f=>f.lab))return null;
+  const anchor=[];for(const f of faces)anchor[f.stickers[4]]=f.lab[4];
+  const dist=(a,b)=>Math.sqrt(0.35*(a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2);
+  const slots=[8,8,8,8,8,8],items=[],out=new Map();
+  for(const f of faces){
+    const s=f.stickers.slice();out.set(f,s);
+    for(let p=0;p<9;p++){
+      if(p===4)continue;
+      if(f.pinned&&f.pinned[p]){slots[s[p]]--;continue;}
+      items.push({f,p});
+    }
+  }
+  if(slots.some(n=>n<0))return null;
+  const cols=[];for(let c=0;c<6;c++)for(let k=0;k<slots[c];k++)cols.push(c);
+  if(cols.length!==items.length)return null;
+  const cost=items.map(it=>cols.map(c=>dist(it.f.lab[it.p],anchor[c])));
+  const asg=hungarian(cost);
+  items.forEach((it,i)=>{out.get(it.f)[it.p]=cols[asg[i]];});
+  return out;
+}
+// Minimum-cost assignment for a square cost matrix. Returns col index per row.
+function hungarian(a){
+  const n=a.length,INF=1e18,u=new Array(n+1).fill(0),v=new Array(n+1).fill(0),p=new Array(n+1).fill(0),way=new Array(n+1).fill(0);
+  for(let i=1;i<=n;i++){
+    p[0]=i;let j0=0;const minv=new Array(n+1).fill(INF),used=new Array(n+1).fill(false);
+    do{
+      used[j0]=true;const i0=p[j0];let d=INF,j1=0;
+      for(let j=1;j<=n;j++)if(!used[j]){const cur=a[i0-1][j-1]-u[i0]-v[j];if(cur<minv[j]){minv[j]=cur;way[j]=j0;}if(minv[j]<d){d=minv[j];j1=j;}}
+      for(let j=0;j<=n;j++){if(used[j]){u[p[j]]+=d;v[j]-=d;}else minv[j]-=d;}
+      j0=j1;
+    }while(p[j0]!==0);
+    do{const j1=way[j0];p[j0]=p[j1];j0=j1;}while(j0);
+  }
+  const ans=new Array(n);for(let j=1;j<=n;j++)ans[p[j]-1]=j-1;return ans;
 }

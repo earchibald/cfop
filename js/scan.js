@@ -33,6 +33,17 @@ function findBlobs(img,opts){
     // The black plastic: very dark, or dark against its surroundings and not saturated.
     if(L[i]<12||(L[i]<0.6*mean&&c<35&&L[i]<45))dark[i]=1;
   }
+  // Grooves: stickerless cubes have no black gaps, only thin light or dark lines between
+  // pieces. A second difference across 2 px finds a line that differs from both sides.
+  const gL=opts.grooveBlur?sL:L,gA=opts.grooveBlur?sA:A,gB=opts.grooveBlur?sB:B;
+  const d2=(i,k)=>{const dL=gL[i]-(gL[i-k]+gL[i+k])/2,da=gA[i]-(gA[i-k]+gA[i+k])/2,db=gB[i]-(gB[i-k]+gB[i+k])/2;return 0.5*dL*dL+da*da+db*db;};
+  // Sensor noise also gives second differences. Measure it on a sparse sample and stay above it.
+  let gT=opts.grooveT;
+  if(gT==null){const smp=[];for(let y=2;y<H-2;y+=3)for(let x=2+(y%5);x<W-2;x+=7)smp.push(d2(y*W+x,1));smp.sort((a,b)=>a-b);gT=Math.max(25,14*smp[smp.length>>1]);}
+  if(gT>0)for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++){
+    const i=y*W+x;if(dark[i])continue;
+    if(d2(i,2)>gT||d2(i,2*W)>gT)dark[i]=2;
+  }
   // Flood-fill regions of near-uniform colour.
   const lab=new Int32Array(N).fill(-1),stack=new Int32Array(N),blobs=[];
   const minA=opts.minArea||Math.max(12,N/4000),maxA=N/12;
@@ -64,7 +75,7 @@ function findBlobs(img,opts){
     if(l1/l2>4||fill<0.75||fill>1.25)continue;
     blob.cx=cx;blob.cy=cy;blob.ok=true;
   }
-  return {blobs:blobs.filter(b=>b.ok),labels:lab,dark,W,H};
+  return {blobs:blobs.filter(b=>b.ok),labels:lab,dark,W,H,grooveT:gT};
 }
 
 // ---------- stage 2: fit a 3x3 lattice ----------
@@ -149,19 +160,22 @@ function solve3(M,b){
 // ---------- stage 3: read colours ----------
 // Median linear RGB in a small disc at each point. Glare and sticker edges stay out of the median.
 // Glare is bright and grey. When a fair share of the disc is saturated, only those pixels count.
-function sampleDiscs(img,points,radius){
-  const W=img.width,H=img.height,d=img.data,r=Math.max(1.5,radius),out=[];
+// inner: optional per-point inner radius. The centre cell often carries a logo, so it is read in a ring.
+function sampleDiscs(img,points,radius,inner){
+  const W=img.width,H=img.height,d=img.data,out=[];
   const med=a=>{if(!a.length)return 0;a.sort((x,y)=>x-y);return a[a.length>>1];};
-  for(const p of points){
+  points.forEach((p,n)=>{
+    const ri=inner&&inner[n]||0,r=Math.max(1.5,ri?ri+Math.max(1.5,radius-ri):radius);
     const all=[],sat=[];
     for(let y=Math.floor(p.y-r);y<=Math.ceil(p.y+r);y++)for(let x=Math.floor(p.x-r);x<=Math.ceil(p.x+r);x++){
-      if(x<0||y<0||x>=W||y>=H||(x-p.x)**2+(y-p.y)**2>r*r)continue;const j=4*(y*W+x);
+      const q=(x-p.x)**2+(y-p.y)**2;
+      if(x<0||y<0||x>=W||y>=H||q>r*r||q<ri*ri)continue;const j=4*(y*W+x);
       const px=[SRGB_LIN[d[j]],SRGB_LIN[d[j+1]],SRGB_LIN[d[j+2]]];all.push(px);
       const l=linToLab(...px);if(Math.hypot(l[1],l[2])>22)sat.push(px);
     }
     const use=sat.length>=0.3*all.length?sat:all;
     out.push([0,1,2].map(c=>med(use.map(q=>q[c]))));
-  }
+  });
   return out;
 }
 function colourDist(l1,l2){return Math.sqrt(0.35*(l1[0]-l2[0])**2+(l1[1]-l2[1])**2+(l1[2]-l2[2])**2);}
@@ -196,9 +210,9 @@ function classifySamples(samples,opts){
 }
 // Stages 1-3 on one frame. Returns {ok, colours, margins, points, lattice, blobs, reason}.
 function readFace(img,opts){
-  const st1=findBlobs(img,opts),lat=fitLattice(st1.blobs);
+  const st1=findBlobs(img,opts),lat=fitLattice(st1.blobs);lat.grooveT=st1.grooveT;
   if(!lat.ok)return {ok:false,reason:lat.reason,blobs:st1.blobs,lattice:lat};
-  const samples=sampleDiscs(img,lat.points,lat.spacing*0.3);
+  const sp=lat.spacing,samples=sampleDiscs(img,lat.points,sp*0.3,[0,0,0,0,sp*0.3,0,0,0,0]);
   const cl=classifySamples(samples,opts);
   return {ok:true,colours:cl.colours,margins:cl.margins,gains:cl.gains,samples,points:lat.points,lattice:lat,blobs:st1.blobs};
 }
@@ -226,7 +240,7 @@ function voteTally(v){
   }
   return {colours,counts,ready,n:v.run.length};
 }
-// Add one frame. Returns {event:'none'|'reading'|'locked'|'held', centre, tally}.
+// Add one frame. Returns {event:'none'|'reading'|'locked'|'held'|'conflict', centre, tally}.
 function voteFrame(v,read){
   if(!read||!read.ok)return {event:'none',centre:v.centre};
   const c=read.colours[4];
@@ -236,25 +250,41 @@ function voteFrame(v,read){
     if(v.pendingReads.length<v.opts.switchAfter)return {event:'none',centre:v.centre};
     const reads=v.pendingReads;v.centre=c;v.run=[];v.pending=-1;v.pendingReads=[];
     if(c!==v.justLocked)v.justLocked=-1;
+    if(c!==v.conflict)v.conflict=-1;
     // Count the frames that confirmed the switch.
     let ev;for(const r of reads)ev=voteFrame(v,r);return ev;
   }
   v.pending=-1;v.pendingReads=[];
   // After a lock, the same face stays in view until the user turns the cube. Do not lock it again.
-  if(c===v.justLocked)return {event:'held',centre:c};
+  if(c===v.justLocked)return {event:v.conflict===c?'conflict':'held',centre:c};
   let cols=read.colours,margins=read.margins||new Array(9).fill(0);
-  if(v.run.length){const k=alignReading(voteTally(v).colours,cols);cols=rotateFace(cols,k);margins=rotateFace(margins,k);}
-  v.run.push({colours:cols,margins});if(v.run.length>v.opts.window)v.run.shift();
+  const g=read.gains||[1,1,1];let lab=read.samples?read.samples.map(s=>linToLab(s[0]*g[0],s[1]*g[1],s[2]*g[2])):null;
+  if(v.run.length){const k=alignReading(voteTally(v).colours,cols);cols=rotateFace(cols,k);margins=rotateFace(margins,k);if(lab)lab=rotateFace(lab,k);}
+  v.run.push({colours:cols,margins,lab});if(v.run.length>v.opts.window)v.run.shift();
   const t=voteTally(v);
   if(!t.ready)return {event:'reading',centre:c,tally:t};
   // Lock. A retake keeps the user's pinned stickers, turned to match the new reading.
   const old=v.faces[c];let stickers=t.colours.slice(),pinned=new Array(9).fill(false);
-  const margin=[];for(let i=0;i<9;i++){const ms=v.run.filter(r=>r.colours[i]===stickers[i]).map(r=>r.margins[i]);margin.push(ms.reduce((a,b)=>a+b,0)/Math.max(1,ms.length));}
+  if(old){
+    // A retake must look like the face read before. If not, a centre was misread (a logo, say),
+    // and the new face must not overwrite the old one.
+    const k=alignReading(stickers,old.stickers),os=rotateFace(old.stickers,k);
+    let same=0;for(let i=0;i<9;i++)if(i!==4&&os[i]===stickers[i])same++;
+    if(same<5){v.run=[];v.justLocked=c;v.conflict=c;return {event:'conflict',centre:c,tally:t};}
+  }
+  const margin=[],labs=[];
+  for(let i=0;i<9;i++){
+    const agree=v.run.filter(r=>r.colours[i]===stickers[i]);
+    margin.push(agree.reduce((a,r)=>a+r.margins[i],0)/Math.max(1,agree.length));
+    // Mean colour of the agreeing frames, for the joint read in stage 5.
+    const ls=agree.filter(r=>r.lab).map(r=>r.lab[i]);
+    labs.push(ls.length?[0,1,2].map(c=>ls.reduce((a,l)=>a+l[c],0)/ls.length):null);
+  }
   if(old&&old.pinned.some(Boolean)){
     const k=alignReading(stickers,old.stickers),os=rotateFace(old.stickers,k),op=rotateFace(old.pinned,k);
     for(let i=0;i<9;i++)if(op[i]){stickers[i]=os[i];pinned[i]=true;}
   }
-  v.faces[c]={stickers,pinned,margins:margin};v.run=[];v.justLocked=c;
+  v.faces[c]={stickers,pinned,margins:margin,lab:labs.every(Boolean)?labs:null};v.run=[];v.justLocked=c;v.conflict=-1;
   return {event:'locked',centre:c,retake:!!old,tally:t};
 }
 
@@ -264,11 +294,11 @@ const SCAN_W=320;
 function openScan(){
   if($('#scanBg'))return;
   scanVoter=makeVoter();scanRes=null;scanLast=null;
-  const bg=document.createElement('div');bg.className='modal-bg';bg.id='scanBg';
+  const bg=document.createElement('div');bg.className='modal-bg scan-bg';bg.id='scanBg';
   bg.innerHTML=`<div class="modal scan" role="dialog" aria-label="Scan cube">
    <button class="close small ghost" id="scanClose" aria-label="Close">✕</button>
    <h2>Scan cube</h2>
-   <p class="muted" style="margin-top:0">Hold one face of the cube to the camera and keep it still. When the face is read, turn the cube to show the next face. You can show the faces in any order and at any angle.</p>
+   <p class="muted" style="margin-top:0">Hold one face of the cube to the camera and keep it still. When the face is read, turn the cube to show the next face. You can show the faces in any order and at any angle. A glossy cube reflects the screen. If the read jumps, tilt the cube a little or dim the screen.</p>
    <div class="scan-grid">
     <div><div class="scan-view mirror" id="scanView"><video id="scanVideo" autoplay playsinline muted></video><canvas id="scanOverlay"></canvas></div>
      <div class="scan-row"><label><input type="checkbox" id="scanMirror" checked> Mirror</label><span class="muted" style="font-size:12px">Mirror flips the preview only.</span></div></div>
@@ -334,6 +364,8 @@ function scanStep(r){
     if(Object.keys(scanVoter.faces).length===6)return scanAssemble(ev.retake?`The ${name(ev.centre)} face is read again.`:'');
     const left=[0,1,2,3,4,5].filter(c=>!scanVoter.faces[c]).map(name);
     scanStatus(`The ${name(ev.centre)} face is read${ev.retake?' again':''}. Turn the cube to show the next face. Still to scan: ${left.join(', ')}.`);
+  }else if(ev.event==='conflict'){
+    scanStatus(`This face has a ${name(ev.centre)} centre, but it does not match the ${name(ev.centre)} face read before. Show the face again, or press Start again.`);
   }else if(ev.event==='reading'){
     scanStatus(`Hold still. Reading the ${name(ev.centre)} face: ${ev.tally.n} of ${scanVoter.opts.window}.`);
   }else if(ev.event==='held'){

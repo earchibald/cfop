@@ -28,6 +28,11 @@ for(let n=0;n<10;n++)ev=T.voteFrame(v,ok(T.rotateFace(face,1)));
 assert.strictEqual(ev.event,'locked');assert.ok(ev.retake);
 const k=[0,1,2,3].find(k=>T.rotateFace(v.faces[2].stickers,k).join()===pinnedCol.join());
 assert.ok(k!==undefined,'pinned sticker lost on retake');
+// A different face with the same centre colour is a conflict, not a retake.
+for(let n=0;n<12;n++)T.voteFrame(v,ok([1,1,1,1,0,1,1,1,1]));
+const stored=v.faces[2].stickers.join(),other=[5,5,5,0,2,0,4,4,4];
+for(let n=0;n<10;n++)ev=T.voteFrame(v,ok(other));
+assert.strictEqual(ev.event,'conflict');assert.strictEqual(v.faces[2].stickers.join(),stored);
 console.log('scan-vote: unit checks ok');
 
 // End to end with synthetic frames.

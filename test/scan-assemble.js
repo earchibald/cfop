@@ -46,6 +46,21 @@ for(let n=0;n<M;n++){
 console.log(`repair: one sticker ${fixed}/${M}, two stickers ${fixed2}/${M}, whole face ${faceSwap}/${M}`);
 assert.ok(fixed>=M*0.95&&fixed2>=M*0.9&&faceSwap>=M*0.95,'repair rate too low');
 
+// Joint read: dim light makes five red stickers read as orange. With per-cell Lab values,
+// stage 5 assigns all stickers to the centre colours, nine each, and recovers the cube.
+const LAB=[[95,0,2],[50,62,45],[58,-55,40],[88,-6,80],[64,48,68],[42,12,-60]];
+let joint=0;const J=40;
+for(let n=0;n<J;n++){
+  const c=randomCube(),faces=scanOf(c);
+  for(const fc of faces)fc.lab=fc.stickers.map(x=>LAB[x].map(v=>v+(rnd(7)-3)));
+  // Light shifts the reds toward orange; the five least red ones read as orange.
+  const reds=[];faces.forEach((fc,fi)=>fc.stickers.forEach((x,p)=>{if(x===1&&p!==4)reds.push([fi,p]);}));
+  for(const [fi,p] of reds.slice(0,5)){faces[fi].stickers[p]=4;faces[fi].lab[p]=[55,56,55];}
+  const r=T.assembleScan(faces);if(r.ok&&r.cube.equals(c)&&r.joint)joint++;
+}
+console.log(`repair: joint read ${joint}/${J}`);
+assert.ok(joint>=J-1,'joint read failed');
+
 // Errors in plain words.
 const c=randomCube(),faces=scanOf(c);
 assert.match(T.assembleScan(faces.slice(0,5)).errors[0],/^Scan the \w+ face\.$/);

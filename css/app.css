@@ -214,3 +214,5 @@ h3.sub{font-size:14px;color:var(--muted);margin:12px 0 6px}
 @keyframes scanflash{0%,100%{opacity:1}40%{opacity:.25}}
 @media (max-width:700px){.scan-grid{grid-template-columns:1fr}}
 .modal.scan button:disabled{opacity:.45;cursor:not-allowed}
+/* A dark backdrop: a bright page lights a glossy cube and puts reflections on it. */
+.modal-bg.scan-bg{background:rgba(0,0,0,.92)}
