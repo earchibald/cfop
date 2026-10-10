@@ -200,3 +200,10 @@ h3.sub{font-size:14px;color:var(--muted);margin:12px 0 6px}
 .modal.enter h2{margin-top:0}
 .scan-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
 .good{color:var(--good)}
+
+/* scanner */
+.modal.scan{display:block;max-width:760px}
+.modal.scan h2{margin-top:0}
+.scan-view{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/9}
+.scan-view video,.scan-view canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.scan-view.mirror video,.scan-view.mirror canvas{transform:scaleX(-1)}

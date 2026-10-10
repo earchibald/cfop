@@ -5,5 +5,5 @@ const dom=new JSDOM(html,{runScripts:'dangerously',resources:'usable',pretendToB
 const w=dom.window;w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=function(){};
 w.addEventListener('load',()=>{setTimeout(()=>{
 console.log('errors',errs);
-console.log('moves',w.document.querySelectorAll('.scramble .m').length,'cases',w.document.querySelectorAll('.case').length,'Cube',typeof w.Cube,'solve',typeof w.solveTwoPhase,'scanBtn',typeof w.openEnter);
+console.log('moves',w.document.querySelectorAll('.scramble .m').length,'cases',w.document.querySelectorAll('.case').length,'Cube',typeof w.Cube,'solve',typeof w.solveTwoPhase,'scanBtn',typeof w.openEnter,'camBtn',typeof w.openScan);
 process.exit(0);},500);});
