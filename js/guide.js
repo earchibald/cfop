@@ -2,8 +2,10 @@
 // Two views in #tab-bsolve. The entry view: the "What does your cube look like?" cards from
 // beghome.js (scan, paint, mix it up, practice on the screen) and "Start with this scramble". The
 // guide view: solveBeginner(heldCube()) shown one part at a time, with a stage bar, the steps in
-// plain words, the moves, and Done / Show me. The cube starts white up: the first part begins with
-// z2, the turn-over, as the guide's own first instruction. From then on the cube is held yellow up.
+// plain words, the moves, and Done / Show me. The cube starts white up. Every part says which center
+// is on top (part.up): yellow for the daisy and the cross, white for the white corners, yellow from
+// the middle layer on. Where that changes, the part begins with z2, the turn-over, as its own dashed
+// tile, as the guide's own "flip your cube over" instruction.
 // Globals: startGuide() (go to this tab and start the guided solve on the current scramble),
 // guideState (the state, for tests). Every string from data goes through esc().
 
@@ -20,11 +22,11 @@ function gdBuild(){
   const g=guideState;g.plan=null;g.parts=[];g.i=0;g.total=0;g.counted=false;g.showPlan=false;g.msg='';
   let plan=null;try{plan=solveBeginner(heldCube());}catch(e){plan=null;}
   if(!plan||!plan.solved){g.view='entry';g.msg='The app cannot find a solve for this cube. Check the colors, then scan or paint the cube again.';return false;}
-  // The first part starts from the cube white up and turns it over (z2) before its own moves.
-  let c=heldCube(),done=0,first=true;
+  // The cube starts white up. A part whose top differs from the cube so far turns it over (z2) first.
+  let c=scr.cube,done=0,up='white';
   for(const st of plan.stages)st.parts.forEach((p,k)=>{
-    const flip=first;first=false;const hold=p.pre?[p.pre]:[];
-    const seq=[...(flip?['z2']:[]),...hold,...p.moves];const before=flip?scr.cube:c;const held=applyAlg(c,hold);
+    const flip=p.up!==up;const before=c;if(flip){c=applyAlg(c,['z2']);up=p.up;}
+    const hold=p.pre?[p.pre]:[];const seq=[...(flip?['z2']:[]),...hold,...p.moves];const held=applyAlg(c,hold);
     c=applyAlg(c,[...hold,...p.moves]);
     g.parts.push({stage:st,k,m:st.parts.length,part:p,seq,before,held,after:c,done,flip});done+=gdFaceMoves(p.moves);
   });
@@ -44,29 +46,13 @@ function gdFindPiece(f,piece){
 function gdLit(cube,piece){if(!piece)return null;const p=gdFindPiece(cube.toFacelets(),piece);return p?new Set([...p.fl,...GD_CENTRES]):null;}
 function gdThumb(cube,piece){const fade=gdLit(cube,piece);return `<svg viewBox="40 30 320 300" role="img">${renderCube3D(cube.toFacelets(),{yaw:-32,pitch:28,scale:48,fade})}</svg>`;}
 
-// One sentence on why this part uses these moves. null when there is nothing to add.
+// Why this part uses these moves: the guide's own words for its algorithm. null when there is nothing to add.
 function gdWhy(e){
-  const p=e.part;
-  if(p.trigger){
-    const ch=p.chunks[0];const c1=applyAlg(e.held,p.moves.slice(0,ch?ch.at:0));const f=c1.toFacelets();const w=f[31];
-    const pc=p.piece&&gdFindPiece(f,p.piece);
-    if(pc&&(pc.i===0||pc.i===1)&&f[pc.fl[0]]!==w){
-      const right=pc.i===0;const tile=f[right?20:18];const side=right?'right':'left';
-      return {h:'Why this trigger?',t:`The ${COLOR_NAMES[tile]} tile is at the top ${side} of its face, so the ${side} hand does it.`};
-    }
-    if(pc&&pc.i<4)return {h:'Why this trigger?',t:'White faces up. Two Right Triggers turn the corner so white faces out.'};
-    return {h:'Why this trigger?',t:'The corner is in the wrong spot. A Right Trigger lifts it out to the top layer.'};
-  }
-  if(p.move){
-    const pc=p.piece&&gdFindPiece(e.held.toFacelets(),p.piece);
-    if(pc&&pc.i>=8)return {h:'Why this move?',t:'The edge is stuck in the middle layer. A Move Right with a yellow edge pushes it out.'};
-    return {h:'Why this move?',t:`The top color matches the ${p.move} center, so the edge goes to the ${p.move}.`};
-  }
-  if(p.alg&&BEGINNER_ALGS[p.alg]){const a=BEGINNER_ALGS[p.alg];return {h:'Why this move?',t:`This is the ${a.name.toLowerCase()} algorithm. Say it as one phrase: ${a.say}.`};}
-  return null;
+  const a=e.part.alg&&BEGINNER_ALGS[e.part.alg];if(!a)return null;
+  return {h:'Why these moves?',t:`${a.why?a.why+' ':''}Say it as: ${a.say}.`};
 }
 
-// The moves as tiles: the turn-over and the hold change dashed first, the triggers boxed with their name.
+// The moves as tiles: the turn-over and the hold change dashed first, the guide's algorithms boxed with their name.
 function gdTiles(p,flip){
   let out=flip?'<span class="m gd-rot" title="Turn the whole cube over">z2</span>':'';
   out+=p.pre?`<span class="m gd-rot" title="Turn the whole cube">${fmtMove(p.pre)}</span>`:'';
@@ -119,8 +105,9 @@ function gdEntryHTML(){
 function gdGuideHTML(){
   const g=guideState;const e=g.parts[g.i];const p=e.part;const st=e.stage;
   const col=COLOR_NAMES[e.held.center[2]];
-  const hold=e.flip?`<li><b>Turn the cube over</b> so the yellow center is on top${p.pre?'':` and <b>${esc(col)} in front</b>`}. ${st.n===1?'The daisy grows around the yellow center. ':''}Yellow stays on top for every step from here.${p.pre?` Then turn the whole cube so ${esc(col)} faces you. The dashed moves are these turns.`:' The dashed move is this turn.'}</li>`
-    :`<li><b>Hold the cube</b> with yellow up and <b>${esc(col)} in front</b>.${p.pre?` Turn the whole cube so ${esc(col)} faces you. The dashed move is this turn.`:' The 3D cube shows this view.'}</li>`;
+  const topNote={1:'The daisy grows around the yellow center.',2:'The daisy sits on top.',3:'Step 3 works with the white cross on top.',4:'From here to the end, yellow stays on top.'}[st.n]||'';
+  const hold=e.flip?`<li><b>Turn the cube over</b> so the ${esc(p.up)} center is on top${p.pre?'':` and <b>${esc(col)} in front</b>`}.${topNote?' '+topNote:''}${p.pre?` Then turn the whole cube so ${esc(col)} faces you. The dashed moves are these turns.`:' The dashed move is this turn.'}</li>`
+    :`<li><b>Hold the cube</b> with ${esc(p.up)} up and <b>${esc(col)} in front</b>.${p.pre?` Turn the whole cube so ${esc(col)} faces you. The dashed move is this turn.`:' The 3D cube shows this view.'}</li>`;
   const why=gdWhy(e);
   const next=g.parts[g.i+1];
   const lesson=typeof openLesson==='function'?`<button class="small ghost" id="gdLesson">Open the lesson</button>`:'';

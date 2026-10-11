@@ -1,4 +1,4 @@
-// Learn and Cheat sheet: the nine step cards, Continue, a lesson with triggers, cases and drills,
+// Learn and Cheat sheet: the nine step cards, Continue, a lesson with algorithms, cases and drills,
 // the status button and Mark finished, the goal pictures, the cheat sheet, and the glossary links.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
@@ -25,33 +25,36 @@ w.addEventListener('load',async()=>{try{
   assert.strictEqual(nextTitle(),'Basics: Get to know your cube','Up next names the basics');
   assert.strictEqual(cont().textContent,'Start →','the first visit says Start');
   assert.ok(card(0).classList.contains('cur'),'the basics card is up next');
-  assert.ok(/Left Trigger, Right Trigger/.test(card(3).textContent),'step 3 names its triggers');
-  assert.ok(/Move Left, Move Right/.test(card(4).textContent),'step 4 names its moves');
+  assert.ok(/Corner in, left · Corner in, right/.test(card(3).textContent),'step 3 names its algorithms');
+  assert.ok(/Moving Left · Moving Right/.test(card(4).textContent),'step 4 names its moves');
   assert.strictEqual(card(5).querySelector('.tag').textContent,'unlearned');
   assert.ok(!d.body.dataset.lesson,'no lesson open');
 
-  // A lesson: header, triggers, cases.
+  // A lesson: header, algorithms, cases.
   click(card(3));
   assert.strictEqual($('#tab-learn h2').textContent,'The white corners','step 3 opens');
   assert.strictEqual(d.body.dataset.lesson,'1','the lesson flag is set');
   assert.ok(/Step 3 of 8/.test($('#tab-learn .ln-of').textContent));
-  assert.strictEqual($$('#tab-learn .ln-trigs .ln-box').length,2,'two trigger boxes');
+  assert.strictEqual($$('#tab-learn .ln-algs .ln-box').length,4,'four algorithm boxes');
   assert.strictEqual($$('#tab-learn .ln-case').length,4,'four cases');
   assert.strictEqual($$('#tab-learn .ln-case button[data-ln="case"]').length,4,'each case has Show');
 
-  // Show on the cube: the Right Trigger, as a drill, from the start.
-  click($('#tab-learn button[data-ln="trig"][data-id="right"]'));
-  assert.deepStrictEqual(moves(),['R','U',"R'"],'three moves in the player');
+  // Show on the cube: Corner in, right, as a drill, from the start. Step 3 is held white up.
+  click($('#tab-learn button[data-ln="alg"][data-id="cornerRight"]'));
+  assert.deepStrictEqual(moves(),["D'","R'",'D','R'],'four moves in the player');
   assert.ok(drill(),'the drill note shows');
-  assert.strictEqual($('#scrubPos').textContent,'0 / 3','the player starts at the first move');
-  assert.ok(/Right Trigger/.test($('#seqLabel').textContent));
-  // The drill starts from a solved cube with the trigger undone: the moves end solved.
-  const end=w.cubeAtSeq(3).toFacelets(),held=w.lnHeld().toFacelets();assert.deepStrictEqual(end,held,'the trigger ends on the solved cube');
+  assert.strictEqual($('#scrubPos').textContent,'0 / 4','the player starts at the first move');
+  assert.ok(/Corner in, right/.test($('#seqLabel').textContent));
+  assert.strictEqual(w.cubeAtSeq(0).toFacelets()[4],0,'the step 3 drill is held white up');
+  // The drill starts from a solved cube with the algorithm undone: the moves end solved.
+  const end=w.cubeAtSeq(4).toFacelets(),white=w.lnWhiteUp().toFacelets();assert.deepStrictEqual(end,white,'the algorithm ends on the solved cube');
   // Why it works opens and closes.
-  click($('#tab-learn button[data-ln="why"][data-id="right"]'));assert.ok($('#tab-learn .ln-why'),'Why it works opens');
-  click($('#tab-learn button[data-ln="why"][data-id="right"]'));assert.ok(!$('#tab-learn .ln-why'),'Why it works closes');
-  // A case: Show loads its moves.
-  click($('#tab-learn button[data-ln="case"][data-i="0"]'));assert.deepStrictEqual(moves(),["L'","U'",'L'],'the first case loads its moves');assert.ok(drill());
+  click($('#tab-learn button[data-ln="why"][data-id="cornerRight"]'));assert.ok($('#tab-learn .ln-why'),'Why it works opens');
+  click($('#tab-learn button[data-ln="why"][data-id="cornerRight"]'));assert.ok(!$('#tab-learn .ln-why'),'Why it works closes');
+  // A case: Show loads its moves. The last case has its own setup: a white corner on top in the wrong place.
+  click($('#tab-learn button[data-ln="case"][data-i="0"]'));assert.deepStrictEqual(moves(),['D','L',"D'","L'"],'the first case loads its moves');assert.ok(drill());
+  click($('#tab-learn button[data-ln="case"][data-i="3"]'));assert.deepStrictEqual(moves(),["R'","D'",'R']);
+  {const f=w.cubeAtSeq(0).toFacelets();assert.ok(f.slice(0,9).every(x=>x===0),'white face on top');assert.ok(f[9]!==f[13]||f[20]!==f[22],'the top right corner is in the wrong place');}
   // Show the goal: no moves, the goal cube.
   click($('#tab-learn button[data-ln="goal"]'));assert.strictEqual(moves().length,0,'the goal has no moves');assert.ok(drill());
   $('#drillBack').click();assert.ok(!drill(),'Back to scramble');
@@ -81,18 +84,18 @@ w.addEventListener('load',async()=>{try{
   const D=[27,28,29,30,31,32,33,34,35];
   assert.ok([1,3,5,7].every(i=>g[1][i]===0),'step 1: a daisy of white edges on top');
   assert.ok([28,30,31,32,34].every(i=>g[2][i]===0),'step 2: a white cross on the bottom');
-  assert.ok(D.every(i=>g[3][i]===0),'step 3: the white face is complete');
+  assert.ok(D.map(i=>i-27).every(i=>g[3][i]===0),'step 3: the white face is complete, on top');
   assert.ok([1,2,4,5].every(f=>[3,4,5,6,7,8].every(p=>g[4][9*f+p]===g[4][9*f+4])),'step 4: two layers solved');
   assert.ok([1,3,4,5,7].every(i=>g[5][i]===3),'step 5: a yellow cross');
   assert.ok([0,1,2,3,4,5,6,7,8].every(i=>g[6][i]===3),'step 6: a yellow face');
-  assert.ok(g.every(f=>f[22]===2&&f[4]===3),'every goal is held yellow up, green in front');
+  assert.ok(g.every((f,n)=>f[22]===2&&f[4]===(n===3?0:3)),'every goal is held yellow up, green in front, except step 3 white up');
 
   // openLesson: an algorithm step.
   w.goTab('practice');w.openLesson(5);
   assert.strictEqual(d.body.dataset.tab,'learn','openLesson goes to Learn');
   assert.strictEqual($('#tab-learn h2').textContent,'The yellow cross');
   click($('#tab-learn button[data-ln="alg"][data-id="yellowCross"]'));
-  assert.deepStrictEqual(moves(),['F','R','U',"R'","U'","F'"],'the algorithm loads');assert.ok(drill());
+  assert.deepStrictEqual(moves(),['F','U','R',"U'","R'","F'"],'the algorithm loads');assert.ok(drill());
 
   // The glossary links "daisy" in the lesson text.
   w.openLesson(2);await sleep(150);
@@ -102,7 +105,7 @@ w.addEventListener('load',async()=>{try{
   // The cheat sheet: eight steps, Show loads an algorithm.
   w.goTab('cheat');assert.ok($('#tab-cheat').classList.contains('on'));
   assert.strictEqual($$('#tab-cheat .ln-cs-step').length,8,'eight step panels');
-  click($('#tab-cheat button[data-cs="alg"][data-id="edgeCycle"]'));
+  click($('#tab-cheat button[data-cs="alg"][data-id="yellowEdges"]'));
   assert.strictEqual(moves().length,9,'the yellow edges algorithm loads');assert.ok(drill());
   assert.deepStrictEqual(w.cubeAtSeq(9).toFacelets(),w.lnHeld().toFacelets(),'it ends on the solved cube');
 

@@ -1,34 +1,36 @@
 // ===== Beginner mode: Practice (one step at a time) and Progress =====
 // Fills #tab-practice and #tab-progress at load. Loads after beginner-ui.js, learn.js, guide.js
 // and paint.js. Defines startPractice(n): go to Practice, choose step n, New cube.
-// Data: BEGINNER_STEPS, BEGINNER_TRIGGERS (js/beginner.js), solveBeginner, heldCube(),
+// Data: BEGINNER_STEPS, BEGINNER_ALGS (js/beginner.js), solveBeginner, heldCube(),
 // begProgress, stBtn, cycleStatus (js/beginner-ui.js and js/app.js). Every dynamic string goes
 // through esc(); this file writes only trusted, escaped markup via innerHTML, as every other
 // beginner-mode module does (no build step, no templating library, a static site).
 
 // practiceState: the practice cube for the chosen step, built from the current scramble.
 // step: 1..8. built: a practice cube exists. seed/scrMoves: the scramble it was built from.
-// prefix: the moves for steps 1..step-1, already done. parts: the chosen step's parts.
-// partCubes: the cube before each part, so a row click can set the player up correctly.
+// prefix: the moves for steps 1..step-1, already done, with z2 where the top changes.
+// parts: the chosen step's parts. partCubes: the cube before each part, partSeqs: its moves with
+// the turn-over and the hold first, so a row click can set the player up correctly.
 const practiceState={step:Math.min(8,Math.max(1,+store.get('practiceStep',1)||1)),built:false,
-  revealed:false,plan:null,prefix:[],parts:[],partCubes:[],seed:'',scrMoves:[]};
+  revealed:false,plan:null,prefix:[],parts:[],partCubes:[],partSeqs:[],seed:'',scrMoves:[]};
 let prOwnScramble=false;
 
 // ---------- building the practice cube ----------
 function prBuild(n){
   let plan=null;try{plan=solveBeginner(heldCube());}catch(e){plan=null;}
   if(!plan){practiceState.built=false;return;}
-  const prefix=[];
+  const prefix=[];let up='yellow'; // heldCube() is yellow up
   for(const st of plan.stages){
     if(st.n>=n)break;
-    for(const p of st.parts){if(p.pre)prefix.push(p.pre);prefix.push(...p.moves);}
+    for(const p of st.parts){if(p.up!==up){prefix.push('z2');up=p.up;}if(p.pre)prefix.push(p.pre);prefix.push(...p.moves);}
   }
   const stage=plan.stages.find(st=>st.n===n);
   const parts=stage?stage.parts:[];
   let cube=applyAlg(heldCube(),prefix);
-  const partCubes=[];
-  for(const p of parts){partCubes.push(cube);if(p.pre)cube=applyAlg(cube,[p.pre]);cube=applyAlg(cube,p.moves);}
-  Object.assign(practiceState,{step:n,plan,prefix,parts,partCubes,seed:scr.seed,scrMoves:scr.moves.slice(),
+  const partCubes=[],partSeqs=[];
+  for(const p of parts){const seq=[];if(p.up!==up){seq.push('z2');up=p.up;}if(p.pre)seq.push(p.pre);seq.push(...p.moves);
+    partCubes.push(cube);partSeqs.push(seq);cube=applyAlg(cube,seq);}
+  Object.assign(practiceState,{step:n,plan,prefix,parts,partCubes,partSeqs,seed:scr.seed,scrMoves:scr.moves.slice(),
     revealed:false,built:true});
 }
 
@@ -42,7 +44,7 @@ function prShowPlayer(){
 }
 tabShow.practice=()=>{if(practiceState.built)prShowPlayer();else showScr();};
 
-// ---------- the moves of one part, as tiles with its triggers boxed ----------
+// ---------- the moves of one part, as tiles with the guide's algorithms boxed ----------
 function prTiles(p){
   let out='';const chunks=p.chunks||[];
   for(let i=0;i<p.moves.length;i++){
@@ -81,7 +83,7 @@ function prRenderPanel(){
   panel.innerHTML=html;
   $$('#prGoal .pr-row').forEach(el=>{
     const go=()=>{const i=+el.dataset.i,p=g.parts[i];
-      setSequence([p.pre,...p.moves].filter(Boolean),'practice · step '+n+' · '+p.title,g.partCubes[i]);
+      setSequence(g.partSeqs[i],'practice · step '+n+' · '+p.title,g.partCubes[i]);
       seqState.idx=0;applySequence();focusPlayer();};
     el.onclick=go;el.onkeydown=e=>{if(e.key==='Enter')go();};
   });

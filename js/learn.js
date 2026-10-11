@@ -1,44 +1,54 @@
 // ===== Beginner mode: the Learn tab (the step list and the lessons) and the Cheat sheet =====
 // Loads after beginner-ui.js. Fills #tab-learn and #tab-cheat at load. Defines openLesson(n).
 // Every "Show" button loads a drill into the player: the current scramble is kept.
-// Data: BEGINNER_STEPS, BEGINNER_TRIGGERS, BEGINNER_ALGS and beginnerChunks (js/beginner.js).
+// Data: BEGINNER_STEPS, BEGINNER_ALGS and beginnerChunks (js/beginner.js).
 // All markup is built from fixed strings and the method data; every dynamic string goes through esc().
 
 // ---------- cubes for the pictures and the drills ----------
 // The solved cube as the beginner holds it: yellow up, green in front, white down.
 function lnHeld(){return applyAlg(new Cube(),['z2']);}
+// Step 3 works white up, green in front. Every other step works yellow up.
+function lnWhiteUp(){return new Cube();}
+function lnFrame(n){return n===3?lnWhiteUp():lnHeld();}
 // Turn the cube about the vertical until green is in front again (a plan adds y holds).
 function lnGreenFront(c){for(let i=0;i<4&&c.toFacelets()[22]!==2;i++)c=applyAlg(c,['y']);return c;}
 // The goal of each step, from one fixed example solve. Computed once, on first use.
 let lnGoalCache=null;
 function lnGoals(){
   if(lnGoalCache)return lnGoalCache;
-  let c=applyAlg(new Cube(),[...randomMoveScramble('lesson',22),'z2']);
+  let c=applyAlg(new Cube(),[...randomMoveScramble('lesson',22),'z2']);let up='yellow';
   const plan=solveBeginner(c);const g=[lnHeld()];
-  for(const st of plan.stages){for(const p of st.parts){if(p.pre)c=applyAlg(c,[p.pre]);if(p.moves.length)c=applyAlg(c,p.moves);}g[st.n]=lnGreenFront(c);}
+  for(const st of plan.stages){
+    for(const p of st.parts){if(p.up!==up){c=applyAlg(c,['z2']);up=p.up;}if(p.pre)c=applyAlg(c,[p.pre]);if(p.moves.length)c=applyAlg(c,p.moves);}
+    // Step 3's goal is seen white up, as the step holds it. Every other goal is seen yellow up.
+    const want=st.n===3?0:3;g[st.n]=lnGreenFront(c.toFacelets()[4]===want?c:applyAlg(c,['z2']));}
   g[8]=lnHeld();lnGoalCache=g;return g;
 }
-// The cube a case starts from: the step's start position with the case moves undone.
-// Steps 1 and 2 start from a daisy, so the moves bring a white edge up or down.
-function lnCaseBase(n){const h=lnHeld();
+// The cube a step's cases build on: the step's own hold, and for steps 1 and 2 a daisy, so the
+// case moves bring a white edge up or down.
+function lnCaseBase(n){const h=lnFrame(n);
   if(n===1)return applyAlg(h,['F2','R2','B2','L2']); // a full daisy
   if(n===2)return applyAlg(h,['R2','B2','L2']);      // a daisy with the front edge already down
   return h;}
 function lnSetup(base,moves){const ms=Array.isArray(moves)?moves:parseAlg(moves);return ms.length?applyAlg(base,invertAlg(ms)):base;}
-// Load moves into the player as a drill and step through from the start.
-function lnDrill(moves,label,base,drill){
+// Where a case starts: its own setup from the base, or else its moves undone, so they end on the base.
+function lnCaseStart(n,c){return c.setup?applyAlg(lnCaseBase(n),parseAlg(c.setup)):lnSetup(lnCaseBase(n),parseAlg(c.moves||''));}
+// An algorithm's drill starts with the algorithm undone on the step's hold, so it ends solved.
+function lnAlgStart(a){return lnSetup(lnFrame(a.step),parseAlg(a.alg));}
+// Load moves into the player as a drill, from `start`, and step through from the start.
+function lnDrill(moves,label,start,drill){
   const ms=Array.isArray(moves)?moves:parseAlg(moves);
-  setSequence(ms,label,lnSetup(base,ms),drill);seqState.idx=0;applySequence();focusPlayer();
+  setSequence(ms,label,start,drill);seqState.idx=0;applySequence();focusPlayer();
 }
 // A picture from above (the top, front and right faces) or from below.
 function lnPic(cube,below){const f=cube.toFacelets();
   return `<svg viewBox="40 30 320 300" aria-hidden="true">${renderCube3D(f,{yaw:-32,pitch:below?-34:28,scale:48})}</svg>`;}
-const LN_GOAL_BELOW={2:true,3:true,4:true}; // the white face is the goal: look from below
+const LN_GOAL_BELOW={2:true,4:true}; // the white face is below: look from below. Step 3 holds it on top.
 
 // ---------- small renderers ----------
 const lnStepNo=s=>s.n===0?'Basics':'Step '+s.n;
 const lnStatus=n=>begProgress.status(n);
-// Move tiles. Triggers inside the moves show as boxes with their name.
+// Move tiles. The guide's algorithms inside the moves show as boxes with their name.
 function lnTiles(moves,big){
   const ms=Array.isArray(moves)?moves:parseAlg(moves);const ch=beginnerChunks(ms);let out='';
   for(let i=0;i<ms.length;i++){
@@ -48,20 +58,14 @@ function lnTiles(moves,big){
   }
   return `<span class="ms${big?' big':''}">${out}</span>`;
 }
-function lnTrigBox(t){return `<span class="ms"><span class="trig"><b class="lbl">${esc(t.name)}</b>${t.moves.map(m=>`<span class="m">${fmtMove(m)}</span>`).join('')}</span></span>`;}
 // The face thumb on a step card: the step's goal, as seen from above. '.' is a gray tile.
 const LN_FACES={
   basics:'.W.WWW.W.',daisy:'.W.WYW.W.',cross:'.W.WWW.W.',corners:'WWWWWWWWW',middle:'GGGGGGGGG',
   ycross:'.Y.YYY.Y.',yface:'YYYYYYYYY',ycorners:'YYYYYYYYY',yedges:'YYYYYYYYY'};
 function lnFace(id){const p=LN_FACES[id]||'.........';
   return `<span class="face" aria-hidden="true">${[...p].map(ch=>`<i${ch==='.'?'':` class="${ch}"`}></i>`).join('')}</span>`;}
-// The trigger or algorithm names a step uses.
-function lnUses(s){
-  if(s.id==='middle')return 'Move Left, Move Right';
-  if(s.triggers)return s.triggers.map(t=>BEGINNER_TRIGGERS[t].name).join(', ');
-  if(s.algs)return s.algs.map(a=>BEGINNER_ALGS[a].name+' algorithm').join(', ');
-  return '';
-}
+// The algorithm names a step uses.
+function lnUses(s){return s.algs?s.algs.map(a=>BEGINNER_ALGS[a].name).join(' · '):'';}
 function lnTag(st){return `<span class="tag ln-tag ${esc(st)}">${esc(st||'unlearned')}</span>`;}
 
 // ---------- the Learn home: the nine steps ----------
@@ -79,10 +83,6 @@ function lnHomeHTML(){
 // ---------- a lesson ----------
 const LN_CASES_TITLE={1:'Where you find a white edge, and what to do',2:'Line up each edge, then turn it down',3:'Where you find a white corner, and what to do',
   4:'Where the edge goes, and what to do',5:'What you see on top, and what to do',6:'What you see on top, and what to do',7:'What you see, and what to do',8:'What you see, and what to do'};
-const LN_WHY={
-  right:"R turns the right face up. The empty spot at the bottom right comes up to the top, and the white corner moves to the back. U brings the white corner round into the raised right face. R' turns the face back down, and the corner drops into its spot.",
-  left:"L' turns the left face up. The empty spot at the bottom left comes up to the top, and the white corner moves to the back. U' brings the white corner round into the raised left face. L turns the face back down, and the corner drops into its spot.",
-};
 const LN_FACE_WORDS=[['U','the top face (up)'],['D','the bottom face (down)'],['F','the front face'],['B','the back face'],['R','the right face'],['L','the left face']];
 function lnLessonHTML(n){
   const s=BEGINNER_STEPS[n];const st=lnStatus(n);const prev=BEGINNER_STEPS[n-1],next=BEGINNER_STEPS[n+1];
@@ -94,13 +94,11 @@ function lnLessonHTML(n){
   if(n===0)moves=`<div class="panel ln-panel"><h3>The six moves</h3><p>Each letter turns one face a quarter turn, clockwise as you look at that face.</p>
     <ul class="ln-faces">${LN_FACE_WORDS.map(([m,w])=>`<li><span class="ms"><span class="m">${esc(m)}</span></span> <span>${esc(w)}</span></li>`).join('')}</ul>
     <div class="row"><button class="small" data-ln="moves">Show the six moves on the cube</button></div></div>`;
-  if(s.triggers)moves+=`<div class="panel ln-panel"><h3>The triggers</h3><div class="ln-trigs">${s.triggers.map(id=>{const t=BEGINNER_TRIGGERS[id];const open=lnView.why.has(id);
-    return `<div class="ln-box">${lnTrigBox(t)}<div class="muted ln-small">${esc(t.hint)}</div><div class="row"><button class="small" data-ln="trig" data-id="${esc(id)}">Show on the cube</button><button class="small ghost" data-ln="why" data-id="${esc(id)}" aria-expanded="${open}">Why it works</button></div>${open?`<p class="ln-why">${esc(LN_WHY[id])}</p>`:''}</div>`;}).join('')}</div></div>`;
-  if(s.algs)moves+=`<div class="panel ln-panel"><h3>The algorithm${s.algs.length>1?'s':''}</h3>${s.algs.map(id=>{const a=BEGINNER_ALGS[id];
-    return `<div class="ln-box"><b>${esc(a.name)}</b>${lnTiles(a.alg,true)}<div class="ln-say">Say it as: <b>${esc(a.say)}</b></div><div class="row"><button class="small" data-ln="alg" data-id="${esc(id)}">Show on the cube</button></div></div>`;}).join('')}</div>`;
+  if(s.algs)moves+=`<div class="panel ln-panel"><h3>The algorithm${s.algs.length>1?'s':''}</h3><div class="ln-algs">${s.algs.map(id=>{const a=BEGINNER_ALGS[id];const open=lnView.why.has(id);
+    return `<div class="ln-box"><b>${esc(a.name)}</b>${lnTiles(a.alg,true)}<div class="ln-say">Say it as: <b>${esc(a.say)}</b></div><div class="row"><button class="small" data-ln="alg" data-id="${esc(id)}">Show on the cube</button>${a.why?`<button class="small ghost" data-ln="why" data-id="${esc(id)}" aria-expanded="${open}">Why it works</button>`:''}</div>${open?`<p class="ln-why">${esc(a.why)}</p>`:''}</div>`;}).join('')}</div></div>`;
   const cases=s.cases?`<div class="panel ln-panel"><div class="row ln-ch"><h3>${esc(LN_CASES_TITLE[n]||'Where you find the piece, and what to do')}</h3><span class="muted ln-small">Show puts the case on the cube</span></div>
     ${s.cases.map((c,i)=>{const ms=parseAlg(c.moves||'');
-      return `<div class="ln-case"><div class="ln-cpic">${ms.length?lnPic(lnSetup(lnCaseBase(n),ms),false):''}</div><div class="ln-cbody"><b>${esc(c.name)}</b><div class="muted">${esc(c.text)}</div>${ms.length?`<div class="ln-cmoves">${lnTiles(ms)}</div>`:''}</div>${ms.length?`<button class="small" data-ln="case" data-i="${i}">Show</button>`:''}</div>`;}).join('')}</div>`:'';
+      return `<div class="ln-case"><div class="ln-cpic">${ms.length?lnPic(lnCaseStart(n,c),false):''}</div><div class="ln-cbody"><b>${esc(c.name)}</b><div class="muted">${esc(c.text)}</div>${ms.length?`<div class="ln-cmoves">${lnTiles(ms)}</div>`:''}</div>${ms.length?`<button class="small" data-ln="case" data-i="${i}">Show</button>`:''}</div>`;}).join('')}</div>`:'';
   const done=st==='finished';
   const nextBtn=next?`<button class="primary" data-ln="open" data-n="${next.n}">Next: ${esc(lnStepNo(next))}, ${esc(next.name)} →</button>`:`<button class="primary" data-ln="solve">Solve my cube →</button>`;
   const end=`<div class="panel ln-foot"><div><b>Can you do this step on your own cube?</b> <span class="muted">Mark it finished. You can always come back.</span></div>
@@ -133,11 +131,10 @@ $('#tab-learn').addEventListener('click',e=>{
   else if(act==='practice'){if(typeof startPractice==='function')startPractice(n);}
   else if(act==='mark')lnMarkFinished(n);
   else if(act==='goal'){setSequence([],'goal of '+lnStepNo(s).toLowerCase(),lnGoals()[n],'Lesson: '+lnStepNo(s).toLowerCase());focusPlayer();}
-  else if(act==='moves')lnDrill(['U','D','F','B','R','L'],'the six moves, from the lesson',lnHeld(),'Lesson: the six moves');
-  else if(act==='trig'){const t=BEGINNER_TRIGGERS[b.dataset.id];lnDrill(t.moves,t.name+', from the lesson',lnHeld(),'Lesson: '+t.name);}
+  else if(act==='moves'){const six=['U','D','F','B','R','L'];lnDrill(six,'the six moves, from the lesson',lnSetup(lnHeld(),six),'Lesson: the six moves');}
   else if(act==='why'){const id=b.dataset.id;if(lnView.why.has(id))lnView.why.delete(id);else lnView.why.add(id);lnRender();}
-  else if(act==='alg'){const a=BEGINNER_ALGS[b.dataset.id];lnDrill(a.alg,a.name+' algorithm, from the lesson',lnHeld(),'Lesson: '+a.name);}
-  else if(act==='case'){const c=s.cases[+b.dataset.i];lnDrill(c.moves,c.name+', from the lesson',lnCaseBase(n),'Lesson: '+lnStepNo(s).toLowerCase());}
+  else if(act==='alg'){const a=BEGINNER_ALGS[b.dataset.id];lnDrill(a.alg,a.name+' algorithm, from the lesson',lnAlgStart(a),'Lesson: '+a.name);}
+  else if(act==='case'){const c=s.cases[+b.dataset.i];lnDrill(c.moves,c.name+', from the lesson',lnCaseStart(n,c),'Lesson: '+lnStepNo(s).toLowerCase());}
 });
 document.addEventListener('cw:status',e=>{if(!String(e.detail).startsWith('beg-'))return;
   const a=document.activeElement,refocus=a&&a.classList&&a.classList.contains('stbtn')&&a.closest('#tab-learn');
@@ -145,32 +142,28 @@ document.addEventListener('cw:status',e=>{if(!String(e.detail).startsWith('beg-'
 
 // ---------- the Cheat sheet ----------
 const LN_CHEAT={
-  1:{rule:'Bring each white edge to the top, white side up. Turn the top first if the spot is taken.',
-     list:[['White on the left of the front face',"L'"],['White on the right of the front face','R'],['White at the top of the front face','F R'],['White at the bottom of the front face',"F' R"],['White on the bottom face','F2']]},
-  2:{rule:'Turn the top until an edge sits over the center of its other color. Then do a half turn of that face.',list:[['Edge over its center, in front','F2']]},
-  3:{rule:'Turn the top until the side color sits over its center. Matching tile top left: Left Trigger. Top right: Right Trigger. White up: Right Trigger twice.',trigs:['left','right']},
-  4:{rule:'Match the front color to the front center. Top color on the left: Move Left. On the right: Move Right. Then put the white corner back with a trigger.',
-     list:[['Move Left',"U' L' U' L"],['Move Right',"U R U R'"]]},
-  5:{rule:'Dot: hold the cube any way. L at the back left. Line left to right. Repeat until you see the cross.'},
-  6:{rule:'One yellow corner on top: hold it at the front left. None or two: yellow faces you on the front left corner. Repeat.'},
-  7:{rule:'Matching pair on the left, over its center. Do the algorithm, then the yellow face algorithm. No pair: do both once, then look again.'},
-  8:{rule:'Solved side at the back. Do the algorithm. Up to three times.'},
+  1:{rule:'Yellow on top. Look at the top layer, then the middle, then the bottom. Turn the top to move a petal out of the way first.',
+     list:[['Middle layer, white facing you, at the front right','R'],['Middle layer, white facing right, at the front right',"U' F'"],['Bottom layer, white facing down, under the front','F2'],['Top layer, white facing out: hold it on the right',"R' U F'"]]},
+  2:{rule:'Yellow on top. Turn the top until the front tile of the top edge matches the front center. Then F2. Then flip the cube over.',list:[['Edge over its center, in front','F2']]},
+  3:{rule:'White cross on top. Turn the bottom until the corner sits between its centers. Hold white facing you: bottom left or bottom right, then that algorithm. White facing down: white to the front first. Wrong corner on top: corner down first.'},
+  4:{rule:'Flip over: white down. Turn the top until a top edge makes a vertical line with the front center. Top tile matches the left center: Moving Left. The right center: Moving Right. Stuck edge: hold it on the right, Moving Right.'},
+  5:{rule:'Dot: hold the cube any way. Line: left to right. L: back left. FUR says U\'R\'F\'. Repeat until you see the cross.'},
+  6:{rule:'One corner: feed the fish, that corner at the front left. None: a yellow tile on the left face, front left. Two: left thumb on a yellow tile on the front, front left. Repeat.'},
+  7:{rule:'Turn the top until two corners are right. Next to each other: tail lights at the back. Across from each other: the chant once, then look again.'},
+  8:{rule:'Solved side at the back. The front edge matches the left center: as written. The right center: both U turns as U\'. No side solved: once, any way.'},
 };
 function lnCheatHTML(){
   const show=(kind,id)=>`<button class="small" data-cs="${kind}" data-id="${esc(id)}">Show</button>`;
   const panels=BEGINNER_STEPS.filter(s=>s.n>0).map(s=>{const c=LN_CHEAT[s.n]||{};let body='';
-    if(c.list)body+=`<ul class="ln-cs-list">${c.list.map(([t,m],i)=>`<li><span>${esc(t)}</span><span class="ln-cs-mv">${lnTiles(m)}${s.n===4?show('move',s.n+':'+i):''}</span></li>`).join('')}</ul>`;
-    if(c.trigs)body+=c.trigs.map(id=>`<div class="ln-cs-alg">${lnTrigBox(BEGINNER_TRIGGERS[id])}${show('trig',id)}</div>`).join('');
+    if(c.list)body+=`<ul class="ln-cs-list">${c.list.map(([t,m])=>`<li><span>${esc(t)}</span><span class="ln-cs-mv">${lnTiles(m)}</span></li>`).join('')}</ul>`;
     if(s.algs)body+=s.algs.map(id=>{const a=BEGINNER_ALGS[id];return `<div class="ln-cs-alg"><div class="ln-cs-an"><b>${esc(a.name)}</b><span class="muted"> · ${esc(a.say)}</span></div>${lnTiles(a.alg)}${show('alg',id)}</div>`;}).join('');
     return `<div class="panel ln-cs-step" data-n="${s.n}"><h3><span class="mono muted">Step ${s.n}</span> · ${esc(s.name)}</h3><p class="ln-cs-goal">${esc(s.goal)}</p>${body}<p class="ln-cs-rule">${esc(c.rule||s.how)}</p></div>`;}).join('');
-  return `<div class="panel"><h2>Cheat sheet</h2><p class="muted">Keep this page open while you solve. Turn the cube over first: yellow on top for every step.</p></div><div class="ln-cs-grid">${panels}</div>`;
+  return `<div class="panel"><h2>Cheat sheet</h2><p class="muted">Keep this page open while you solve. Yellow on top for steps 1 and 2, white on top for step 3, yellow on top from step 4 to the end.</p></div><div class="ln-cs-grid">${panels}</div>`;
 }
 function lnRenderCheat(){const t=$('#tab-cheat');if(t)t.innerHTML=lnCheatHTML();}
 $('#tab-cheat').addEventListener('click',e=>{
   const b=e.target.closest&&e.target.closest('[data-cs]');if(!b)return;const id=b.dataset.id;
-  if(b.dataset.cs==='trig'){const t=BEGINNER_TRIGGERS[id];lnDrill(t.moves,t.name+', from the cheat sheet',lnHeld(),'Cheat sheet: '+t.name);}
-  else if(b.dataset.cs==='alg'){const a=BEGINNER_ALGS[id];lnDrill(a.alg,a.name+' algorithm, from the cheat sheet',lnHeld(),'Cheat sheet: '+a.name);}
-  else if(b.dataset.cs==='move'){const [n,i]=id.split(':').map(Number);const [name,m]=LN_CHEAT[n].list[i];lnDrill(m,name+', from the cheat sheet',lnHeld(),'Cheat sheet: '+name);}
+  if(b.dataset.cs==='alg'){const a=BEGINNER_ALGS[id];lnDrill(a.alg,a.name+' algorithm, from the cheat sheet',lnAlgStart(a),'Cheat sheet: '+a.name);}
 });
 
 lnRender();lnRenderCheat();

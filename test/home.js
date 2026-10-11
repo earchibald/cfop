@@ -77,10 +77,10 @@ w.addEventListener('load',async()=>{try{
   click($('#tab-learn button[data-ln="list"]'));
 
   // A lesson's Show: the player with a drill, the bar says Back to my cube.
-  w.openLesson(3);click($('#tab-learn button[data-ln="trig"][data-id="right"]'));
-  assert.strictEqual(view(),'player');assert.deepStrictEqual(moves(),['R','U',"R'"]);
-  assert.deepStrictEqual(caps(),['right ↻','top ↻','right ↺'],'captions in words');
-  assert.ok(/Lesson: Right Trigger/.test($('#begBar').textContent)&&/Your own cube is kept/.test($('#begBar').textContent),'the bar names the drill');
+  w.openLesson(3);click($('#tab-learn button[data-ln="alg"][data-id="cornerRight"]'));
+  assert.strictEqual(view(),'player');assert.deepStrictEqual(moves(),["D'","R'",'D','R']);
+  assert.deepStrictEqual(caps(),['bottom ↺','right ↺','bottom ↻','right ↻'],'captions in words');
+  assert.ok(/Lesson: Corner in, right/.test($('#begBar').textContent)&&/Your own cube is kept/.test($('#begBar').textContent),'the bar names the drill');
   assert.ok(!d.body.hasAttribute('data-begletters'),'no seed bar for a drill');
   click($('#begBack'));assert.strictEqual(view(),'ask','Back to my cube ends the drill');assert.ok(!w.seqState.drill);
   click($('#tab-learn button[data-ln="list"]'));

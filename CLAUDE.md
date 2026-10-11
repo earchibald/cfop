@@ -18,7 +18,7 @@ The app was called Cubeworks. Keep these old names as they are:
 | `js/engine.js` | `Cube` model, `parseAlg`, `applyAlg`, `invertAlg`, cross and F2L solvers, `fromFacelets` validation |
 | `js/draw.js` | `cubePolys` and `renderCube3D` (the 3D view, with a layer part way through a move: `{move, t}`), `renderNet`, `moveGeom` (pure, no DOM) |
 | `js/solver.js` | Kociemba two-phase solver, `solveTwoPhase(cube, {timeMs})` |
-| `js/beginner.js` | Beginner method: the eight steps, triggers and algorithms as data, `solveBeginner(cube)` that follows the guide part by part, `beginnerChunks` (pure, no DOM) |
+| `js/beginner.js` | Beginner method, from the current Rubik's solution guide (2020): the eight steps, the algorithms with their sayings as data, `solveBeginner(cube)` that follows the guide part by part, `beginnerChunks` (pure, no DOM) |
 | `js/algs.js` | Algorithm database |
 | `js/app.js` | UI, trainer, timer, history, `loadScramble` |
 | `js/enter.js` | Enter-a-scramble dialog, `scrambleFromCube(cube, name)` |
@@ -54,7 +54,11 @@ above. Add a new script with a `<script src>` tag after the one it depends on.
   In beginner mode the solver reads `heldCube()`, the scramble after `z2`
   (yellow up), but the screen never hides that turn: a beginner starts white
   up, and the first part of the guided solve shows `z2` as its own dashed
-  "turn over" tile. `showScr()` hands beginner mode to `showBegScr()`, which
+  "turn over" tile. Every part of a plan carries `up`, the center on top
+  while it is done (`'white'` for step 3, `'yellow'` otherwise); where it
+  changes, the consumer shows `z2` first. The method follows the current
+  Rubik's guide (`docs/beginner-mode.md` names the PDF), not an older one.
+  `showScr()` hands beginner mode to `showBegScr()`, which
   shows the question instead of the player; `setSequence` fires
   `cw:sequence`, and any loaded moves switch the view to `player`.
   `loadScramble`, `cycleStatus`, the tab buttons and `setMethod` fire

@@ -1,47 +1,63 @@
-// The beginner method: the guide's algorithms do what the guide says, and the solver
-// solves random scrambles with only the guide's moves, holds and rules.
+// The beginner method: the guide's algorithms do what the guide says, from the holds the guide
+// gives, and the solver solves random scrambles with only the guide's moves, holds and rules.
 const assert=require('assert');
 const run=require('./vm-load')('js/engine.js','js/beginner.js');
 const Cube=run('Cube'),applyAlg=run('applyAlg'),invertAlg=run('invertAlg'),parseAlg=run('parseAlg');
 const solveBeginner=run('solveBeginner'),beginnerChunks=run('beginnerChunks');
-const STEPS=run('BEGINNER_STEPS'),ALGS=run('BEGINNER_ALGS'),TRIG=run('BEGINNER_TRIGGERS');
+const STEPS=run('BEGINNER_STEPS'),ALGS=run('BEGINNER_ALGS');
 const randomMoveScramble=run('randomMoveScramble');
-const S=new Cube();const fl=c=>c.toFacelets();
+const S=new Cube();const Y=applyAlg(S,['z2']);const fl=c=>c.toFacelets();
+const FACE=/^(?:[URFDLB]['2]?|y['2]?)$/;
 const uniform=c=>{const f=fl(c);return [0,1,2,3,4,5].every(i=>f.slice(9*i,9*i+9).every(x=>x===f[9*i+4]));};
+// Yellow up: the first layer (white, below) and the first two layers.
+const firstLayer=c=>{const f=fl(c);for(let i=27;i<36;i++)if(f[i]!==f[31])return false;for(const face of [1,2,4,5])for(const p of [6,7,8])if(f[9*face+p]!==f[9*face+4])return false;return true;};
 const twoLayers=c=>{const f=fl(c);for(let i=27;i<36;i++)if(f[i]!==f[31])return false;for(const face of [1,2,4,5])for(const p of [3,4,5,6,7,8])if(f[9*face+p]!==f[9*face+4])return false;return true;};
-const f2lDone=c=>{const f=fl(c);for(let i=27;i<36;i++)if(f[i]!==3)return false;for(const face of [1,2,4,5])for(const p of [3,4,5,6,7,8])if(f[9*face+p]!==f[9*face+4])return false;return true;};
+const okCorner=(f,i)=>cornerFacelet[i].slice(1).every(x=>f[x]===f[9*Math.floor(x/9)+4]);
+const cornerFacelet=run('cornerFacelet'),edgeFacelet=run('edgeFacelet');
 
 // ----- the data -----
 assert.strictEqual(STEPS.length,9,'Basics plus eight steps');
 STEPS.forEach((s,i)=>{assert.strictEqual(s.n,i);assert.ok(s.name&&s.goal&&s.what&&s.how,'step '+i+' has prose');
-  for(const c of (s.cases||[]))if(c.moves)parseAlg(c.moves).forEach(m=>assert.ok(/^[URFDLB]['2]?$/.test(m),'case move '+m));});
-for(const k in ALGS)parseAlg(ALGS[k].alg).forEach(m=>assert.ok(/^[URFDLB]['2]?$/.test(m)));
-assert.strictEqual(JSON.stringify(beginnerChunks("F R U R' U' F'")),JSON.stringify([{label:'Right Trigger',id:'right',at:1,len:3}]),'the cross alg holds one Right Trigger');
-assert.strictEqual(beginnerChunks("U' L' U' L U R U R'").map(c=>c.label).join(),'Left Trigger,Right Trigger');
-assert.strictEqual(beginnerChunks(ALGS.sune.alg).map(c=>c.at).join(),'0','Sune starts with the Right Trigger');
+  for(const a of (s.algs||[]))assert.ok(ALGS[a],'step '+i+' names a known algorithm: '+a);
+  for(const c of (s.cases||[])){if(c.moves)parseAlg(c.moves).forEach(m=>assert.ok(FACE.test(m),'case move '+m));if(c.setup)parseAlg(c.setup).forEach(m=>assert.ok(FACE.test(m),'setup move '+m));}});
+for(const k in ALGS){const a=ALGS[k];assert.strictEqual(a.id,k);assert.ok(a.name&&a.say&&a.step,'alg '+k+' has a name, a saying and a step');parseAlg(a.alg).forEach(m=>assert.ok(/^[URFDLB]['2]?$/.test(m)));
+  if(a.parts)assert.strictEqual(a.parts.reduce((n,[len])=>n+len,0),parseAlg(a.alg).length,'the parts of '+k+' cover it');}
+// (JSON: arrays from the vm realm are not deepStrictEqual to arrays from this one.)
+const J=JSON.stringify;
+assert.strictEqual(J(beginnerChunks("U F U R U' R' F'").map(c=>[c.label,c.at,c.len])),J([['Yellow cross',1,6]]),'the yellow cross alg is found after a U');
+assert.strictEqual(J(beginnerChunks(ALGS.moveLeft.alg).map(c=>[c.label,c.at,c.len])),J([['next to its corner',0,4],['into the middle layer',4,4]]),'Moving Left boxes in two halves');
+assert.strictEqual(J(beginnerChunks(ALGS.yellowCorners.alg).map(c=>c.at)),J([0,4,8]),'the chant boxes in three');
+assert.strictEqual(J(beginnerChunks("D' D' R' D R").map(c=>[c.label,c.at])),J([['Corner in, right',1]]),'a D turn before the corner alg is not part of it');
 
-// ----- the algorithms, as the guide describes them -----
-// A trigger inserts a corner from the top layer into the slot below it.
-{const c=applyAlg(S,invertAlg("R U R'"));const f=fl(c);assert.ok(f2lDone(applyAlg(c,"R U R'")));
-  assert.strictEqual(f[9],3,'before the Right Trigger: bottom color faces right at the top right');assert.strictEqual(f[20],2,'its front tile matches the front center');}
-{const c=applyAlg(S,invertAlg("L' U' L"));const f=fl(c);assert.strictEqual(f[38],3,'before the Left Trigger: bottom color faces left');assert.strictEqual(f[18],2);}
-// Move Left and Move Right, each with the corner put back by the step 3 rule.
-{const c=applyAlg(S,invertAlg("U' L' U' L y' U R U R'"));const f=fl(c);assert.ok(f[19]===f[22]&&f[7]===f[40],'Move Left starts with the edge at the top of the front, front tile matching, top tile the left color');assert.ok(f2lDone(applyAlg(c,"U' L' U' L y' U R U R'")));}
-{const c=applyAlg(S,invertAlg("U R U R' y U' L' U' L"));const f=fl(c);assert.ok(f[19]===f[22]&&f[7]===f[13],'Move Right: top tile is the right color');assert.ok(f2lDone(applyAlg(c,"U R U R' y U' L' U' L")));}
-// Yellow cross: line (left to right) -> cross; L at the back left -> line.
-{const top=c=>[1,3,5,7].map(i=>fl(c)[i]===0?1:0).join('');
-  const line=applyAlg(S,invertAlg(ALGS.yellowCross.alg));assert.strictEqual(top(line),'0110','the alg solves a line held left to right (UB UL UR UF)');
-  const L=applyAlg(line,invertAlg(ALGS.yellowCross.alg));assert.strictEqual(top(L),'1100','before that, an L at the back left');}
-// Sune: one corner oriented at the front left, top color of the front right corner faces front.
-{const c=applyAlg(S,invertAlg(ALGS.sune.alg));const f=fl(c);assert.strictEqual(f[6],0);assert.strictEqual(f[20],0);assert.notStrictEqual(f[0],0);assert.notStrictEqual(f[2],0);assert.notStrictEqual(f[8],0);}
-// Yellow corners: the alg then Sune swaps the two right-hand corners, keeps the left pair and all orientation.
-{const c=applyAlg(S,ALGS.cornerSwap.alg+' '+ALGS.sune.alg);assert.strictEqual(c.cp.join(),'3,1,2,0,4,5,6,7');assert.ok(c.co.every(x=>x===0));assert.ok(c.eo.every(x=>x===0));}
-// Yellow edges: a cycle of three top edges, the back edge stays.
-{const c=applyAlg(S,ALGS.edgeCycle.alg);assert.strictEqual(c.cp.join(),'0,1,2,3,4,5,6,7');assert.strictEqual(c.ep[3],3,'UB stays');assert.strictEqual(c.ep.slice(4).join(),'4,5,6,7,8,9,10,11');}
+// ----- the algorithms, from the holds the guide gives -----
+// Daisy: a top edge with white facing out, held on the right, comes back white up.
+{const daisy=applyAlg(Y,['F2','R2','B2','L2']);const c=applyAlg(daisy,invertAlg(ALGS.edgeFlip.alg));const f=fl(c);
+  assert.strictEqual(f[10],0,'before the flip: white faces right at the top right');assert.ok([1,3,7].every(i=>f[i]===0),'the other petals stay');
+  assert.ok([1,3,5,7].every(i=>fl(applyAlg(c,ALGS.edgeFlip.alg))[i]===0),'after: a daisy');}
+// White corners, white up: white at the bottom left or right of the front goes in.
+{const c=applyAlg(S,invertAlg(ALGS.cornerLeft.alg));const f=fl(c);assert.strictEqual(f[24],0,'Corner in, left: white faces you at the bottom left');assert.ok(applyAlg(c,ALGS.cornerLeft.alg).isSolved());}
+{const c=applyAlg(S,invertAlg(ALGS.cornerRight.alg));const f=fl(c);assert.strictEqual(f[26],0,'Corner in, right: white faces you at the bottom right');assert.ok(applyAlg(c,ALGS.cornerRight.alg).isSolved());
+  const d=applyAlg(c,invertAlg(ALGS.cornerFront.alg));assert.strictEqual(fl(d)[29],0,'White to the front: before it, white faces down at the bottom right');}
+{const c=applyAlg(S,ALGS.cornerDown.alg);const f=fl(c);assert.ok([1,3,5,7].every(i=>f[i]===0),'Corner down keeps the cross');assert.strictEqual(c.cp.indexOf(0),5,'the top right corner is now at the bottom left');}
+// Middle layer: a vertical line, the top tile the color of the left or right center.
+{const c=applyAlg(Y,invertAlg(ALGS.moveLeft.alg));const f=fl(c);assert.ok(f[19]===f[22]&&f[7]===f[40],'Moving Left: front tile matches the front, top tile the left center');assert.ok(twoLayers(applyAlg(c,ALGS.moveLeft.alg)));}
+{const c=applyAlg(Y,invertAlg(ALGS.moveRight.alg));const f=fl(c);assert.ok(f[19]===f[22]&&f[7]===f[13],'Moving Right: top tile the right center');assert.ok(twoLayers(applyAlg(c,ALGS.moveRight.alg)));}
+// Yellow cross: an L at the back left -> the cross; a line left to right -> that L.
+{const top=c=>[1,3,5,7].map(i=>fl(c)[i]===3?1:0).join('');
+  const L=applyAlg(Y,invertAlg(ALGS.yellowCross.alg));assert.strictEqual(top(L),'1100','the alg solves an L at the back left (UB UL UR UF)');
+  const line=applyAlg(L,invertAlg(ALGS.yellowCross.alg));assert.strictEqual(top(line),'0110','before that, a line left to right');}
+// Yellow face: feed the fish. One corner yellow up at the front left, yellow on the front at the top right.
+{const c=applyAlg(Y,invertAlg(ALGS.yellowFace.alg));const f=fl(c);assert.strictEqual(f[6],3);assert.strictEqual(f[20],3);assert.ok([0,2,8].every(i=>f[i]!==3));}
+// Yellow corners: with the tail lights at the back, the chant places all four corners.
+{const c=applyAlg(Y,invertAlg(ALGS.yellowCorners.alg));const f=fl(c);assert.ok(okCorner(f,2)&&okCorner(f,3),'the two back corners are right');assert.ok(!okCorner(f,0)&&!okCorner(f,1));
+  const g=fl(applyAlg(c,ALGS.yellowCorners.alg));assert.ok([0,1,2,3].every(i=>okCorner(g,i)),'all four corners placed');}
+// Yellow edges: the back edge stays; the front edge is the left center's color for the alg as written.
+{const c=applyAlg(Y,invertAlg(ALGS.yellowEdges.alg));const f=fl(c);assert.strictEqual(f[46],f[49],'UB stays');assert.strictEqual(f[19],f[40],'front edge matches the left center');assert.ok(uniform(applyAlg(c,ALGS.yellowEdges.alg)));
+  const d=applyAlg(Y,invertAlg(ALGS.yellowEdgesRight.alg));const h=fl(d);assert.strictEqual(h[46],h[49]);assert.strictEqual(h[19],h[13],"with U' turns: front edge matches the right center");}
 
 // ----- the solver -----
-const ALLOWED=/^(?:[URFDLB]['2]?|y['2]?)$/;
-let total=0,max=0,parts=0;
+const ALLOWED=/^(?:[URFDLB]['2]?|y['2]?|z2)$/;
+let total=0,max=0,parts=0,flips=0;
 for(let i=0;i<300;i++){
   const scr=randomMoveScramble('beginner-'+i,25);
   const start=applyAlg(S,[...scr,'z2']); // held yellow up, green in front
@@ -50,25 +66,32 @@ for(let i=0;i<300;i++){
   assert.ok(uniform(applyAlg(start,plan.moves)),'the flat move list solves it too');
   assert.strictEqual(plan.stages.length,8);
   for(const s of plan.stages)for(const p of s.parts){parts++;assert.ok(p.title&&p.text,'every part has a title and text');
+    assert.strictEqual(p.up,s.n===3?'white':'yellow','step 3 works white up, the rest yellow up');
     for(const m of [p.pre,...p.moves].filter(Boolean))assert.ok(ALLOWED.test(m),'move '+m);
     if(p.pre)assert.ok(/^y/.test(p.pre),'a hold is a y rotation');}
-  // Step 1 ends with a daisy, step 2 with a cross, step 6 with a yellow face.
-  let c=start;const atEnd=[];for(const s of plan.stages){for(const p of s.parts)c=applyAlg(c,[p.pre,...p.moves].filter(Boolean));atEnd.push(c);}
+  // Follow the plan with its turn-overs. Step 1 ends with a daisy, 2 with a cross, 3 with the first
+  // layer, 4 with two layers, 6 with a yellow face, 8 solved.
+  let c=start,up='yellow';const atEnd=[];
+  for(const s of plan.stages){for(const p of s.parts){if(p.up!==up){c=applyAlg(c,['z2']);up=p.up;}c=applyAlg(c,[p.pre,...p.moves].filter(Boolean));}atEnd.push(up==='yellow'?c:applyAlg(c,['z2']));}
   const f1=fl(atEnd[0]);assert.ok([1,3,5,7].every(j=>f1[j]===f1[31]),'daisy after step 1');
   const f2=fl(atEnd[1]);assert.ok([28,30,32,34].every(j=>f2[j]===f2[31])&&[25,16,43,52].every(j=>f2[j]===f2[9*Math.floor(j/9)+4]),'cross after step 2');
+  assert.ok(firstLayer(atEnd[2]),'the first layer after step 3');
   assert.ok(twoLayers(atEnd[3]),'two layers after step 4');
   const f6=fl(atEnd[5]);assert.ok(f6.slice(0,9).every(x=>x===f6[4]),'yellow face after step 6');
   assert.ok(uniform(atEnd[7]),'solved after step 8');
-  total+=plan.moves.length;max=Math.max(max,plan.moves.length);
+  total+=plan.moves.length;max=Math.max(max,plan.moves.length);flips+=plan.moves.filter(m=>m==='z2').length;
 }
-console.log(`beginner: 300 random scrambles solved, ${Math.round(total/300)} moves on average, ${max} at most, ${Math.round(parts/300)} parts each`);
+console.log(`beginner: 300 random scrambles solved, ${Math.round(total/300)} moves on average, ${max} at most, ${Math.round(parts/300)} parts each, ${(flips/300).toFixed(1)} turn-overs`);
 
-// The yellow face rule (count the corners, hold as the guide says, Sune) always finishes.
+// The yellow face rule (count the corners, hold as the guide says, the algorithm) always finishes.
 {const C=["R U R' U R U2 R'","R U2 R' U' R U' R'","R U R' U R U' R' U R U2 R'","R U2 R2 U' R2 U' R2 U2 R","r U R' U' r' F R F'","R2 D R' U2 R D' R' U2 R'","F' r U R' U' r' F R"];
   for(const alg of C)for(const auf of ['','U',"U'",'U2']){
     const c=applyAlg(S,['z2',...parseAlg(invertAlg(alg)),...(auf?[auf]:[])]); // yellow up, then the case
     const plan=solveBeginner(c);const st=plan.stages[5];
-    assert.ok(st.parts.length>0&&st.parts.length<=4,'yellow face in at most 4 rounds: '+alg);
+    assert.ok(st.parts.length>0&&st.parts.length<=3,'yellow face in at most 3 rounds: '+alg);
     assert.ok(plan.solved);
   }}
+// The yellow corners rule: two corners right, the tail lights at the back, at most twice.
+{for(let i=0;i<40;i++){const c=applyAlg(S,['z2',...randomMoveScramble('corners-'+i,20)]);const plan=solveBeginner(c);
+  const st=plan.stages[6];const algs=st.parts.filter(p=>p.alg==='yellowCorners').length;assert.ok(algs<=2,'the chant at most twice');}}
 console.log('beginner: ok');

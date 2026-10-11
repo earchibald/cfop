@@ -359,7 +359,7 @@ button.puzzle:hover,.puzzle[aria-expanded="true"]{border-color:var(--text);color
 .ms{display:inline-flex;gap:5px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:15px}
 .ms .m{padding:1px 7px;border-radius:var(--chip);background:var(--panel2);border:1px solid var(--line);font-weight:500}
 .ms.big{font-size:22px}.ms.big .m{padding:4px 12px;border-radius:9px}
-.trig{display:inline-flex;align-items:center;gap:4px;padding:4px 8px 4px 10px;border-radius:11px;border:1px dashed var(--muted)}
+.trig{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px;padding:4px 8px 4px 10px;border-radius:11px;border:1px dashed var(--muted)}
 .trig b{font-family:var(--sans);font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-right:4px;font-weight:600}
 .note{background:color-mix(in srgb,var(--sticker-Y) 22%,var(--panel));border:1px solid color-mix(in srgb,var(--sticker-Y) 60%,var(--line));border-radius:12px;padding:12px 14px;font-size:14px}
 .stagebar{display:flex;gap:10px;align-items:flex-end}
@@ -449,7 +449,7 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
 .ln-panel{display:flex;flex-direction:column;gap:10px}
 .ln-panel p{margin:0}
 .ln-ch{justify-content:space-between;align-items:baseline}
-.ln-trigs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ln-algs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .ln-box{display:flex;flex-direction:column;gap:8px;align-items:flex-start;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--panel2)}
 .ln-why{font-size:14px;margin:0;padding-top:6px;border-top:1px solid var(--line)}
 .ln-say{font-size:14px}
@@ -472,7 +472,7 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
   .ln-mob{display:flex}
   .ln-intro{display:none}
   .bstep .desc,.bstep .ln-uses{display:none}
-  .ln-what,.ln-trigs,.ln-cs-grid{grid-template-columns:1fr}
+  .ln-what,.ln-algs,.ln-cs-grid{grid-template-columns:1fr}
   .ln-pic svg{max-width:160px}
   .ln-case{grid-template-columns:64px minmax(0,1fr);gap:10px}
   .ln-cpic svg{width:64px}
