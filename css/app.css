@@ -261,6 +261,14 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
+/* ---------- yes/no dialog ---------- */
+.modal.ask{display:block;max-width:420px;padding:22px 24px}
+.modal.ask h2{margin-top:0;font-size:21px}
+.modal.ask p{margin:6px 0 0}
+.modal.ask .kbd{margin-left:6px;opacity:.75}
+.modal.ask .primary .kbd{background:rgba(128,128,128,.28);border-color:transparent;color:inherit}
+@media (max-width:760px){.modal-bg.ask-bg{padding:16px;align-items:center}.modal.ask{max-width:420px;border:1px solid var(--line);border-radius:calc(var(--r) + 4px);box-shadow:var(--shadow);padding:22px 24px}}
+
 /* ---------- enter-scramble dialog ---------- */
 .modal.enter{display:block;max-width:560px}
 .modal.enter h2{margin-top:0}

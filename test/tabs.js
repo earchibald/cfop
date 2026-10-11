@@ -4,7 +4,7 @@ const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
 const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
 const dom=new JSDOM(html,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,url:'file://'+path.join(__dirname,'..','index.html'),virtualConsole:vc,
-  beforeParse(w){w.matchMedia=()=>({matches:false,addEventListener(){},addListener(){}});w.scrollTo=()=>{};}});
+  beforeParse(w){w.confirm=()=>{w.confirm.called=true;return true;};w.matchMedia=()=>({matches:false,addEventListener(){},addListener(){}});w.scrollTo=()=>{};}});
 const w=dom.window;const d=w.document;w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=function(){};
 const $=s=>d.querySelector(s),$$=s=>[...d.querySelectorAll(s)];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -73,5 +73,13 @@ w.addEventListener('load',async()=>{try{
   $('#drillBack').click();assert.ok(!drill());assert.ok(/^Times: F2L$/.test($('#timesScope').textContent),'scope returns to the tab');
 
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('tabs: scramble persists across tabs, drills, case cards, F2L cards ok');process.exit(0);
+  // The Clear button opens a themed dialog. Escape cancels, Enter confirms. Space does not reach the timer.
+  tab('solve');w.recordTime(12340);w.recordTime(9870);assert.strictEqual($('#stN').textContent,'2','two times recorded');
+  const key=(type,k,code)=>d.dispatchEvent(new w.KeyboardEvent(type,{key:k,code:code||k,bubbles:true,cancelable:true}));
+  $('#clearTimes').click();assert.ok($('#askBg'),'Clear opens a dialog');assert.ok(!w.confirm.called,'no browser confirm');
+  assert.ok($('#askTitle').textContent.includes('Clear'),'dialog names the action');
+  key('keydown',' ','Space');key('keyup',' ','Space');assert.ok($('#askBg'),'Space leaves the dialog open');assert.ok(!$('#timer').classList.contains('run'),'Space does not start the timer');
+  key('keydown','Escape');assert.ok(!$('#askBg'),'Escape closes the dialog');
+  $('#clearTimes').click();key('keydown','Enter');assert.ok(!$('#askBg'),'Enter closes the dialog');assert.strictEqual($('#stN').textContent,'0','Enter clears the times');
+  console.log('tabs: scramble persists across tabs, drills, case cards, F2L cards, clear dialog ok');process.exit(0);
 }catch(e){console.error('tabs: FAIL',e.message,errs);process.exit(1);}});

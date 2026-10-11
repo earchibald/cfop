@@ -190,8 +190,28 @@ document.addEventListener('keydown',e=>{const tag=document.activeElement.tagName
 document.addEventListener('keyup',e=>{if(e.code==='Space'){const tag=document.activeElement.tagName;if(tag==='INPUT'||tag==='TEXTAREA')return;e.preventDefault();timerRelease();}});
 tEl.addEventListener('pointerdown',e=>{e.preventDefault();timerPress();});tEl.addEventListener('pointerup',e=>{e.preventDefault();timerRelease();});
 $('#delLast').onclick=()=>{const arr=scopeTimes();arr.pop();store.set('times',times);renderTimes();};
-$('#clearTimes').onclick=()=>{if(confirm('Clear all times for '+scopeName()+'?')){times[timer.scope]=[];store.set('times',times);renderTimes();}};
-$('#times').onclick=e=>{if(e.target.tagName!=='SPAN')return;const arr=scopeTimes();const shown=arr.slice(-40).reverse();const i=[...e.target.parentNode.children].indexOf(e.target);const item=shown[i];if(item&&confirm('Delete '+fmt(item.ms)+'?')){arr.splice(arr.indexOf(item),1);store.set('times',times);renderTimes();}};
+// A themed yes/no dialog in place of the browser confirm box. Enter confirms, Escape cancels.
+// Space is swallowed while it is open so the timer does not start or stop behind it.
+function askConfirm(title,text,yesLabel,onYes){
+  if($('#askBg'))return;
+  const bg=document.createElement('div');bg.className='modal-bg ask-bg';bg.id='askBg';
+  bg.innerHTML=`<div class="modal ask" role="alertdialog" aria-modal="true" aria-labelledby="askTitle" aria-describedby="askText">
+   <h2 id="askTitle">${esc(title)}</h2>
+   <p id="askText" class="muted">${esc(text)}</p>
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button id="askNo">Cancel <span class="kbd">Esc</span></button><button class="primary" id="askYes">${esc(yesLabel)} <span class="kbd">Enter</span></button></div>
+  </div>`;
+  const close=()=>{document.removeEventListener('keydown',keys,true);document.removeEventListener('keyup',keys,true);bg.remove();};
+  const yes=()=>{close();onYes();};
+  const keys=e=>{if(e.code==='Space'){e.preventDefault();e.stopPropagation();return;}if(e.type!=='keydown')return;
+    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();}else if(e.key==='Enter'){e.preventDefault();e.stopPropagation();yes();}};
+  document.body.appendChild(bg);
+  bg.addEventListener('click',e=>{if(e.target===bg)close();});
+  $('#askNo').onclick=close;$('#askYes').onclick=yes;
+  document.addEventListener('keydown',keys,true);document.addEventListener('keyup',keys,true);
+  setTimeout(()=>$('#askYes').focus(),20);
+}
+$('#clearTimes').onclick=()=>askConfirm('Clear all times?','This removes every time for '+scopeName()+'. You cannot undo it.','Clear',()=>{times[timer.scope]=[];store.set('times',times);renderTimes();});
+$('#times').onclick=e=>{if(e.target.tagName!=='SPAN')return;const arr=scopeTimes();const shown=arr.slice(-40).reverse();const i=[...e.target.parentNode.children].indexOf(e.target);const item=shown[i];if(item)askConfirm('Delete this time?',fmt(item.ms)+' is removed from '+scopeName()+'. You cannot undo it.','Delete',()=>{arr.splice(arr.indexOf(item),1);store.set('times',times);renderTimes();});};
 
 // ---------- tabs ----------
 let curTab='solve';
