@@ -5,13 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Twistwright — CFOP trainer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Azeret+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
 <header class="top">
   <button id="menuBtn" aria-label="Open the menu" aria-expanded="false" aria-controls="menu">☰</button>
-  <h1>Twistwright <span>CFOP trainer</span></h1>
+  <h1><svg class="mark" viewBox="0 0 36 32" aria-hidden="true"><g fill="currentColor"><rect class="twist" x="6" y="1" width="8" height="8" rx="2"/><rect class="twist" x="16" y="1" width="8" height="8" rx="2"/><rect class="twist" x="26" y="1" width="8" height="8" rx="2"/><rect x="2" y="12" width="8" height="8" rx="2"/><rect x="12" y="12" width="8" height="8" rx="2"/><rect x="22" y="12" width="8" height="8" rx="2"/><rect x="2" y="23" width="8" height="8" rx="2"/><rect x="12" y="23" width="8" height="8" rx="2"/><rect x="22" y="23" width="8" height="8" rx="2"/></g></svg>Twistwright</h1>
+  <span class="puzzle" title="The 3×3 cube, solved with CFOP">3×3 · CFOP</span>
   <span id="mtitle" aria-hidden="true"></span>
   <div class="spacer"></div>
   <nav id="mnav" aria-label="Jump to section"><button data-go="mg-ollE" title="OLL edges">OLL 1</button><button data-go="mg-ollC" title="OLL corners">OLL 2</button><button data-go="mg-pllC" title="PLL corners">PLL 1</button><button data-go="mg-pllE" title="PLL edges">PLL 2</button></nav>
@@ -61,16 +62,16 @@
   </section>
 <div class="wrap">
   <nav class="rail" id="rail">
-    <button data-tab="solve" class="on"><span class="k">1</span>Solve</button>
-    <button data-tab="cross"><span class="k">2</span>Cross</button>
-    <button data-tab="f2l"><span class="k">3</span>F2L</button>
-    <button data-tab="ll"><span class="k">4</span>OLL · PLL</button>
-    <button data-tab="lab"><span class="k">5</span>Lab</button>
-    <button data-tab="ref"><span class="k">6</span>Reference</button>
+    <button data-tab="solve" data-sec="solve" class="on"><span class="k">1</span><i class="sec-sq"></i>Solve</button>
+    <button data-tab="cross" data-sec="cross"><span class="k">2</span><i class="sec-sq"></i>Cross</button>
+    <button data-tab="f2l" data-sec="f2l"><span class="k">3</span><i class="sec-sq"></i>F2L</button>
+    <button data-tab="ll" data-sec="ll"><span class="k">4</span><i class="sec-sq"></i>OLL · PLL</button>
+    <button data-tab="lab" data-sec="lab"><span class="k">5</span><i class="sec-sq"></i>Lab</button>
+    <button data-tab="ref" data-sec="ref"><span class="k">6</span><i class="sec-sq"></i>Reference</button>
   </nav>
   <main class="main">
     <!-- SOLVE -->
-    <section class="tab on" id="tab-solve">
+    <section class="tab on" id="tab-solve" data-sec="solve">
       <div class="panel">
         <div class="row" style="justify-content:space-between">
           <div><h2>Guided solve</h2><p class="muted" style="margin:0">Scramble with white up and green in front, as shown in the player above. Press Plan. Each step shows the cube at that point; click a move to step through it.</p></div>
@@ -82,7 +83,7 @@
       <div class="panel" id="planOut"><p class="muted">No plan yet. Scramble, then press Plan. The plan uses optimal cross, short pair inserts, and the two-look OLL/PLL algorithms from the Reference tab.</p></div>
     </section>
     <!-- CROSS -->
-    <section class="tab" id="tab-cross">
+    <section class="tab" id="tab-cross" data-sec="cross">
       <div class="panel">
         <h2>Cross tuning</h2>
         <p class="muted">The cube on the left shows the full scramble. Plan the cross in your head, then check against every optimal solution. Use the Bottom view to inspect the cross directly.</p>
@@ -107,7 +108,7 @@
       </div>
     </section>
     <!-- F2L -->
-    <section class="tab" id="tab-f2l">
+    <section class="tab" id="tab-f2l" data-sec="f2l">
       <div class="panel">
         <div class="row" style="justify-content:space-between"><h2>F2L</h2>
           <div class="status-sel" id="f2lMode"><button data-m="live" class="on">Real cross-solved states</button><button data-m="cases">The 41 cases</button></div></div>
@@ -123,13 +124,13 @@
       </div>
       <div class="panel hidden" id="f2lCaseOut"><p class="muted">Press Next case to start a drill. The cube shows the case with a random U turn, so you recognise it and do not memorise the setup. Your scramble is kept. Press Back to scramble to return to it.</p></div>
       <div class="panel hidden" id="f2lCaseList">
-        <div class="row" style="justify-content:space-between"><h3>Cases</h3><span class="legend"><span><i style="background:var(--muted)"></i>unlearned</span><span><i style="background:#f5d31d"></i>learning</span><span><i style="background:var(--good)"></i>finished</span></span><span><button class="small ghost" id="f2lSelAll">Select all</button><button class="small ghost" id="f2lSelNone">None</button><button class="small ghost" id="f2lSelUnlearned">Not finished</button></span></div>
+        <div class="row" style="justify-content:space-between"><h3>Cases</h3><span class="legend"><span><i class="unlearned"></i>unlearned</span><span><i style="background:var(--sticker-Y)"></i>learning</span><span><i style="background:var(--sticker-G)"></i>finished</span></span><span><button class="small ghost" id="f2lSelAll">Select all</button><button class="small ghost" id="f2lSelNone">None</button><button class="small ghost" id="f2lSelUnlearned">Not finished</button></span></div>
         <div class="cases" id="f2lCaseGrid"></div>
       </div>
       <div class="panel hidden" id="f2lStatsPanel"><h3>Per-case times</h3><div class="wide"><table id="f2lStats"></table></div></div>
     </section>
     <!-- LL -->
-    <section class="tab" id="tab-ll">
+    <section class="tab" id="tab-ll" data-sec="ll">
       <div class="panel">
         <div class="row" style="justify-content:space-between">
           <div><h2>Two-look OLL and PLL</h2><p class="muted" style="margin:0">Select cases, then train. The button under each case changes its status: unlearned → learning → finished. Click a case to open its details. Shift-click a case to add it to training or remove it.</p></div>
@@ -142,13 +143,13 @@
       </div>
       <div class="panel" id="llCurrent"><p class="muted">Press Next case to start a drill. The cube shows the case, and the setup moves show in the player for a real cube. Your scramble is kept. Press Back to scramble to return to it.</p></div>
       <div class="panel">
-        <div class="row" style="justify-content:space-between"><h3>Cases</h3><span class="legend"><span><i style="background:var(--muted)"></i>unlearned</span><span><i style="background:#f5d31d"></i>learning</span><span><i style="background:var(--good)"></i>finished</span></span><span><button class="small ghost" id="llSelAll">Select all</button><button class="small ghost" id="llSelNone">None</button><button class="small ghost" id="llSelUnlearned">Not finished</button></span></div>
+        <div class="row" style="justify-content:space-between"><h3>Cases</h3><span class="legend"><span><i class="unlearned"></i>unlearned</span><span><i style="background:var(--sticker-Y)"></i>learning</span><span><i style="background:var(--sticker-G)"></i>finished</span></span><span><button class="small ghost" id="llSelAll">Select all</button><button class="small ghost" id="llSelNone">None</button><button class="small ghost" id="llSelUnlearned">Not finished</button></span></div>
         <div id="llGroups"></div>
       </div>
       <div class="panel"><h3>Per-case times</h3><div class="wide"><table id="llStats"></table></div></div>
     </section>
     <!-- LAB -->
-    <section class="tab" id="tab-lab">
+    <section class="tab" id="tab-lab" data-sec="lab">
       <div class="panel">
         <h2>Algorithm lab: why it works</h2>
         <p class="muted">Paste any algorithm, or pick one. The lab shows which pieces it moves and which it leaves alone. It shows where each moved piece goes, and how many repeats bring the cube back. It also finds the triggers inside it. Step through it on the cube. Stickers that end where they started fade.</p>
@@ -172,7 +173,7 @@
       <div class="panel"><h3>Concepts</h3><div id="concepts"></div></div>
     </section>
     <!-- REFERENCE -->
-    <section class="tab" id="tab-ref">
+    <section class="tab" id="tab-ref" data-sec="ref">
       <div id="refMobile"><div class="panel"><h2>CFOP reference</h2><p class="muted" style="margin:0">Tap a case to open its details: algorithm, how to recognise it, and how it works. Scrambles are white up, green front; cases are shown yellow up.</p></div><div id="refMobileCases"></div></div>
       <div id="refDesktop" style="display:contents">
       <div class="panel"><h2>Reference</h2><p class="muted">Click any case to open it: large picture, recognition, breakdown, and buttons to set it on the cube or open it in the Lab. Algorithms follow jperm.net's two-look sets.</p></div>

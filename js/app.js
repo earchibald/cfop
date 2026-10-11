@@ -501,7 +501,7 @@ window.addEventListener('resize',setTopH);
 // On a phone the Reference section is the home screen. The menu opens the other sections.
 function applyMobile(){setTopH();if(mobileMQ.matches){renderMobileRef();goTab(store.get('mtab','ref'));}}
 if(mobileMQ.addEventListener)mobileMQ.addEventListener('change',applyMobile);else if(mobileMQ.addListener)mobileMQ.addListener(applyMobile);
-function renderMenu(){$('#menu').innerHTML=$$('#rail button').map(b=>`<button data-tab="${b.dataset.tab}" class="${b.dataset.tab===curTab?'on':''}">${esc(b.lastChild.textContent)}</button>`).join('');
+function renderMenu(){$('#menu').innerHTML=$$('#rail button').map(b=>`<button data-tab="${b.dataset.tab}" data-sec="${b.dataset.tab}" class="${b.dataset.tab===curTab?'on':''}"><i class="sec-sq"></i>${esc(b.lastChild.textContent)}</button>`).join('');
   $$('#menu button').forEach(m=>m.onclick=()=>{closeMenu();goTab(m.dataset.tab);window.scrollTo({top:0});});}
 function openMenu(){renderMenu();$('#menuBg').classList.remove('hidden');$('#menuBtn').setAttribute('aria-expanded','true');}
 function closeMenu(){$('#menuBg').classList.add('hidden');$('#menuBtn').setAttribute('aria-expanded','false');}
