@@ -33,10 +33,14 @@ function removeRotations(moves){
 const view={yaw:-32,pitch:28,mode:'3d'};
 let displayedCube=new Cube();let fadeSet=null;
 function showCube(cube,fade){displayedCube=cube;fadeSet=fade||null;drawMain();}
+// The "Drag to rotate" hint shows in the 3D view until the first drag of the session.
+let dragHintDone=false;
+function drawDragHint(){const h=$('#dragHint');if(h)h.classList.toggle('hidden',dragHintDone||view.mode!=='3d');}
 function drawMain(){
   const f=displayedCube.toFacelets();const svg=$('#cube');
   if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');svg.innerHTML=renderNet(f,{fade:fadeSet});}
   else{svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(f,{yaw:view.yaw,pitch:view.pitch,fade:fadeSet});}
+  drawDragHint();
 }
 // The mark: the solved cube in the player view, half way through R. The same code draws
 // both, so the mark is the player cube. One SVG serves both themes: the U, R and D stickers
@@ -131,9 +135,11 @@ $('#histBtn').onclick=()=>$('#history').classList.toggle('hidden');
 $('#viewTop').onclick=()=>{view.mode='3d';view.yaw=-32;view.pitch=28;drawMain();};
 $('#viewBottom').onclick=()=>{view.mode='3d';view.yaw=-32;view.pitch=-34;drawMain();};
 $('#viewNet').onclick=()=>{view.mode='net';drawMain();};
-(()=>{let drag=null;const svg=$('#cube');svg.addEventListener('pointerdown',e=>{if(view.mode!=='3d')return;drag={x:e.clientX,y:e.clientY,yaw:view.yaw,pitch:view.pitch};svg.setPointerCapture(e.pointerId);});
-svg.addEventListener('pointermove',e=>{if(!drag)return;view.yaw=drag.yaw+(e.clientX-drag.x)*0.5;view.pitch=Math.max(-80,Math.min(80,drag.pitch+(e.clientY-drag.y)*0.5));drawMain();});
-svg.addEventListener('pointerup',()=>drag=null);svg.addEventListener('pointercancel',()=>drag=null);})();
+// Drag to rotate. preventDefault and body.cube-drag keep the drag from selecting page text.
+(()=>{let drag=null;const svg=$('#cube');const stop=()=>{drag=null;document.body.classList.remove('cube-drag');};
+svg.addEventListener('pointerdown',e=>{if(view.mode!=='3d')return;e.preventDefault();drag={x:e.clientX,y:e.clientY,yaw:view.yaw,pitch:view.pitch};document.body.classList.add('cube-drag');if(svg.setPointerCapture)svg.setPointerCapture(e.pointerId);});
+svg.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(!dragHintDone&&dx*dx+dy*dy>16)dragHintDone=true;view.yaw=drag.yaw+dx*0.5;view.pitch=Math.max(-80,Math.min(80,drag.pitch+dy*0.5));drawMain();});
+svg.addEventListener('pointerup',stop);svg.addEventListener('pointercancel',stop);})();
 
 // ---------- timer ----------
 const timer={state:'idle',t0:0,raf:0,inspT0:0,scope:'solve',holdT:0};

@@ -81,5 +81,11 @@ w.addEventListener('load',async()=>{try{
   key('keydown',' ','Space');key('keyup',' ','Space');assert.ok($('#askBg'),'Space leaves the dialog open');assert.ok(!$('#timer').classList.contains('run'),'Space does not start the timer');
   key('keydown','Escape');assert.ok(!$('#askBg'),'Escape closes the dialog');
   $('#clearTimes').click();key('keydown','Enter');assert.ok(!$('#askBg'),'Enter closes the dialog');assert.strictEqual($('#stN').textContent,'0','Enter clears the times');
-  console.log('tabs: scramble persists across tabs, drills, case cards, F2L cards, clear dialog ok');process.exit(0);
+  // The "Drag to rotate" hint shows in the 3D view and goes away after the first drag of the session.
+  const hint=()=>!$('#dragHint').classList.contains('hidden');const pev=(t,x,y)=>$('#cube').dispatchEvent(new w.MouseEvent(t,{clientX:x,clientY:y,bubbles:true,cancelable:true}));
+  assert.ok(hint(),'hint shows at boot');$('#viewNet').click();assert.ok(!hint(),'no hint in the net view');$('#viewTop').click();assert.ok(hint(),'hint returns in the 3D view');
+  pev('pointerdown',100,100);assert.ok(d.body.classList.contains('cube-drag'),'drag blocks text selection');pev('pointermove',101,100);assert.ok(hint(),'a tiny move keeps the hint');
+  pev('pointermove',140,120);assert.ok(!hint(),'a drag hides the hint');pev('pointerup',140,120);assert.ok(!d.body.classList.contains('cube-drag'),'selection returns after the drag');
+  $('#viewNet').click();$('#viewTop').click();assert.ok(!hint(),'the hint stays hidden for the session');
+  console.log('tabs: scramble persists across tabs, drills, case cards, F2L cards, clear dialog, drag hint ok');process.exit(0);
 }catch(e){console.error('tabs: FAIL',e.message,errs);process.exit(1);}});
