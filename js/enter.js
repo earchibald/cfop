@@ -14,7 +14,7 @@ function scrambleFromCube(cube,name){
   if(!applyAlg(new Cube(),scr).equals(res.cube))return {ok:false,errors:['The scramble does not match the cube.']};
   loadScramble(name||customName('cube'),scr,true);goSolveTab();return {ok:true,moves:scr};
 }
-function goSolveTab(){const b=$$('#rail button').find(x=>x.dataset.tab==='solve');if(b&&!b.classList.contains('on'))b.click();focusPlayer();}
+function goSolveTab(){const t=method==='beginner'?'bsolve':'solve';if(curTab!==t)goTab(t);focusPlayer();}
 
 function openEnter(){
   if($('#enterBg'))return;

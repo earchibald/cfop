@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Twistwright — CFOP trainer</title>
+<title>Twistwright — learn and train the 3×3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Azeret+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css">
@@ -12,7 +12,15 @@
 <header class="top">
   <button id="menuBtn" aria-label="Open the menu" aria-expanded="false" aria-controls="menu">☰</button>
   <h1><svg class="mark" id="mark" viewBox="-21.17 -23.45 45.63 46.41" aria-hidden="true"></svg>Twistwright</h1>
-  <span class="puzzle" title="The 3×3 cube, solved with CFOP">3×3 · CFOP</span>
+  <button class="puzzle" id="methodChip" aria-expanded="false" aria-controls="methodPop" title="Puzzle and method"><span class="desktop-only">3×3 ·</span><span id="methodName">CFOP</span> <span aria-hidden="true">▾</span></button>
+  <div id="methodPop" class="method-pop hidden" role="dialog" aria-label="Choose a method">
+    <div class="row" style="justify-content:space-between;align-items:baseline"><h3>3×3 cube · choose a method</h3><span class="muted" style="font-size:13px">2×2 and 4×4 come later</span></div>
+    <div class="mcards">
+      <button class="mcard" data-method="beginner"><span class="row" style="width:100%"><i class="sec-sq" style="--sec:var(--sticker-Y)"></i><b>Beginner</b><span class="tag mcur">current</span></span><span class="muted">The Rubik's eight-step method. Learn one step at a time. Solve your own cube with the app at your side.</span><span class="mnote" id="mnoteBeg"></span></button>
+      <button class="mcard" data-method="cfop"><span class="row" style="width:100%"><i class="sec-sq" style="--sec:var(--sticker-O)"></i><b>CFOP</b><span class="tag mcur">current</span></span><span class="muted">Cross, F2L, OLL, PLL. For speed. Drills, case cards, a timer, and the algorithm lab.</span><span class="mnote muted">For solvers who know the beginner method</span></button>
+    </div>
+    <span class="muted" style="font-size:13px">Your scramble, times and history stay. Each method keeps its own tab.</span>
+  </div>
   <span id="mtitle" aria-hidden="true"></span>
   <div class="spacer"></div>
   <nav id="mnav" aria-label="Jump to section"><button data-go="mg-ollE" title="OLL edges">OLL 1</button><button data-go="mg-ollC" title="OLL corners">OLL 2</button><button data-go="mg-pllC" title="PLL corners">PLL 1</button><button data-go="mg-pllE" title="PLL edges">PLL 2</button></nav>
@@ -42,7 +50,16 @@
       </div>
       <div class="stats"><div>last<b id="stLast">—</b></div><div>ao5<b id="stAo5">—</b></div><div>ao12<b id="stAo12">—</b></div><div>best<b id="stBest">—</b></div><div>n<b id="stN">0</b></div></div>
       <div class="times" id="times"></div>
-      <div class="row" style="margin-top:4px;justify-content:space-between"><span class="muted" style="font-size:13px" id="timesScope">times: solve</span><span><button class="small ghost" id="delLast">Delete last</button><button class="small ghost" id="clearTimes">Clear</button></span></div>
+      <div class="row" style="margin-top:4px;justify-content:space-between"><span class="muted" style="font-size:13px" id="timesScope">times: solve</span><span><button class="small ghost" id="timerBack" title="Show your progress in this panel">Progress</button><button class="small ghost" id="delLast">Delete last</button><button class="small ghost" id="clearTimes">Clear</button></span></div>
+    </div>
+    <div class="panel progresspanel" id="progressPanel">
+      <span class="lbl">your progress</span>
+      <div class="psq" id="progSq" aria-label="The eight steps"></div>
+      <div id="progText" style="font-size:14px"></div>
+      <div class="ptiles"><div><span class="muted">cubes solved</span><b id="progSolves">0</b></div><div><span class="muted">rounds practised</span><b id="progPract">0</b></div></div>
+      <div style="font-size:14px"><b>Up next</b><br><span id="progNext"></span></div>
+      <button class="primary" id="progSolve">Solve my cube</button>
+      <div class="ptimer"><span class="muted" style="font-size:13px">Ready to go faster?</span><button class="small" id="progTimer">Time my solves</button><span class="muted" style="font-size:12px">Shows the timer in this panel. Times save like in CFOP.</span></div>
     </div>
   </section>
   <section class="panel tight seedbar">
@@ -56,6 +73,7 @@
       <button class="small ghost" id="showScramble" title="Put the current scramble back in the player">Show scramble</button>
       <button class="small" id="scanBtn" title="Type a scramble in standard notation">Enter a scramble</button>
       <button class="small" id="camBtn" title="Read a real cube with the webcam">Scan cube</button>
+      <button class="small" id="paintBtn" title="Tap the colours of a real cube onto a map">Paint cube</button>
     </div>
     <span class="muted desktop-only" style="font-size:13px">White up, green front. The same seed always gives the same scramble.</span>
     <div id="drillNote" class="drillnote hidden"><span>Drill: <b id="drillName"></b>. The player shows this case, not the scramble. Your scramble is kept.</span><button class="small primary" id="drillBack">Back to scramble</button></div>
@@ -69,6 +87,13 @@
     <button data-tab="ll" data-sec="ll"><span class="k">4</span><i class="sec-sq"></i>OLL · PLL</button>
     <button data-tab="lab" data-sec="lab"><span class="k">5</span><i class="sec-sq"></i>Lab</button>
     <button data-tab="ref" data-sec="ref"><span class="k">6</span><i class="sec-sq"></i>Reference</button>
+  </nav>
+  <nav class="rail" id="brail">
+    <button data-tab="learn" data-sec="learn"><span class="k">1</span><i class="sec-sq"></i>Learn</button>
+    <button data-tab="bsolve" data-sec="bsolve"><span class="k">2</span><i class="sec-sq"></i>Solve my cube</button>
+    <button data-tab="practice" data-sec="practice"><span class="k">3</span><i class="sec-sq"></i>Practice</button>
+    <button data-tab="progress" data-sec="progress"><span class="k">4</span><i class="sec-sq"></i>Progress</button>
+    <button data-tab="cheat" data-sec="cheat"><span class="k">5</span><i class="sec-sq"></i>Cheat sheet</button>
   </nav>
   <main class="main">
     <!-- SOLVE -->
@@ -192,6 +217,16 @@
       <div class="panel"><h3>Notation</h3><p>Face turns: <span class="mono">U R F D L B</span> clockwise when you look at that face. <span class="mono">'</span> is counter-clockwise. <span class="mono">2</span> is a half turn. Lower-case <span class="mono">r u f</span> turn two layers. <span class="mono">M E S</span> are the middle slices (M follows L, E follows D, S follows F). <span class="mono">x y z</span> rotate the whole cube like R, U, F.</p><p>Scrambles are applied with white up and green in front, the WCA rule. Solving plans start with one rotation (<span class="mono">z2</span> for a white cross) and then contain only face turns: hold the cube still, cross colour down, and turn faces.</p></div>
     </div>
     </section>
+    <!-- BEGINNER: Learn (js/learn.js) -->
+    <section class="tab" id="tab-learn" data-sec="learn"><div class="panel"><h2>Learn</h2></div></section>
+    <!-- BEGINNER: Solve my cube (js/guide.js) -->
+    <section class="tab" id="tab-bsolve" data-sec="bsolve"><div class="panel"><h2>Solve my cube</h2></div></section>
+    <!-- BEGINNER: Practice (js/practice.js) -->
+    <section class="tab" id="tab-practice" data-sec="practice"><div class="panel"><h2>Practice</h2></div></section>
+    <!-- BEGINNER: Progress (js/practice.js) -->
+    <section class="tab" id="tab-progress" data-sec="progress"><div class="panel"><h2>Progress</h2></div></section>
+    <!-- BEGINNER: Cheat sheet (js/learn.js) -->
+    <section class="tab" id="tab-cheat" data-sec="cheat"><div class="panel"><h2>Cheat sheet</h2></div></section>
   </main>
 </div>
 </div>
@@ -200,11 +235,17 @@
 <script src="js/engine.js"></script>
 <script src="js/draw.js"></script>
 <script src="js/solver.js"></script>
+<script src="js/beginner.js"></script>
 <script src="js/algs.js"></script>
 <script src="js/app.js"></script>
 <script src="js/enter.js"></script>
 <script src="js/scan-assemble.js"></script>
 <script src="js/scan.js"></script>
+<script src="js/beginner-ui.js"></script>
+<script src="js/learn.js"></script>
+<script src="js/paint.js"></script>
+<script src="js/guide.js"></script>
+<script src="js/practice.js"></script>
 <script src="js/glossary.js"></script>
 </body>
 </html>

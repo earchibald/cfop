@@ -80,14 +80,14 @@ function thumb3D(cube){const f=cube.toFacelets();return `<svg viewBox="40 30 320
 
 // ---------- sequence (scramble) panel ----------
 // drill: a name when the player shows a case drill instead of the current scramble. Tab changes keep a drill.
-const seqState={moves:[],idx:0,label:'scramble',base:new Cube(),drill:null};
+var seqState={moves:[],idx:0,label:'scramble',base:new Cube(),drill:null}; // var: tests read it from the window
 function setSequence(moves,label,base,drill){stopAuto();seqState.moves=Array.isArray(moves)?moves:parseAlg(moves);seqState.label=label||'';seqState.base=base||new Cube();seqState.idx=seqState.moves.length;
-  if(!drill&&seqState.drill){currentLabel=scrLabel;if(/^(ll|f2l):/.test(timer.scope))setScope(TAB_SCOPE[curTab]);}
+  if(!drill&&seqState.drill){currentLabel=scrLabel;if(/^(ll|f2l):/.test(timer.scope))setScope(TAB_SCOPE[curTab]||'solve');}
   seqState.drill=drill||null;$('#drillNote').classList.toggle('hidden',!drill);$('#drillName').textContent=drill||'';
   renderSequence();applySequence();}
 function cubeAtSeq(i){return applyAlg(seqState.base,seqState.moves.slice(0,i));}
 function applySequence(){showCube(cubeAtSeq(seqState.idx));$('#scrub').max=seqState.moves.length;$('#scrub').value=seqState.idx;$('#scrubPos').textContent=seqState.idx+' / '+seqState.moves.length;$$('#scramble .m').forEach((el,i)=>{el.classList.toggle('done',i<seqState.idx);el.classList.toggle('cur',i===seqState.idx-1);});}
-function renderSequence(){$('#seqLabel').textContent=seqState.label||'';$('#scramble').innerHTML=seqState.moves.map((m,i)=>`<span class="m" data-i="${i}">${fmtMove(m)}</span>`).join('');
+function renderSequence(){$('#seqLabel').textContent=seqState.label||'';$('#scramble').innerHTML=seqState.moves.map((m,i)=>`<span class="m${/^[xyz]/.test(m)?' rot':''}" data-i="${i}">${fmtMove(m)}</span>`).join('');
   $$('#scramble .m').forEach(el=>el.onclick=()=>{stopAuto();seqState.idx=+el.dataset.i+1;applySequence();});}
 $('#scrub').oninput=e=>{stopAuto();seqState.idx=+e.target.value;applySequence();};
 function focusPlayer(){const p=$('#player');window.scrollTo({top:0,behavior:'smooth'});p.classList.remove('flash');void p.offsetWidth;p.classList.add('flash');}
@@ -95,7 +95,9 @@ function showScr(){const r=crossRotation();const end=applyAlg(scr.cube,r?[r]:[])
   setSequence([...scr.moves,...(r?[r]:[])],'scramble · seed '+scr.seed+(r?' · last step '+r+' = solving grip: '+holdText(end).replace(/^Hold /,'').replace(/\.$/,''):''));
   if(r){const el=$$('#scramble .m').pop();el.classList.add('rot');el.title='Rotation only, not a scramble move. '+holdText(end);}}
 // The current scramble as this tab shows it: F2L live adds the rotation and the solved cross.
-function showForTab(){if(curTab==='f2l'&&f2lState.mode==='live')showF2LState();else showScr();}
+// A beginner tab that shows something else registers it in tabShow[tab].
+const tabShow={};
+function showForTab(){if(tabShow[curTab])tabShow[curTab]();else if(curTab==='f2l'&&f2lState.mode==='live')showF2LState();else showScr();}
 $('#showScramble').onclick=()=>{showForTab();focusPlayer();};
 $('#drillBack').onclick=()=>showForTab();
 $('#scrubStart').onclick=()=>{stopAuto();seqState.idx=0;applySequence();};$('#scrubEnd').onclick=()=>{stopAuto();seqState.idx=seqState.moves.length;applySequence();};
@@ -113,7 +115,7 @@ $('#autoPlay').onclick=toggleAuto;
 $('#autoSpeed').value=String(store.get('autoSpeed',1000));
 $('#autoSpeed').onchange=()=>{store.set('autoSpeed',autoMs());if(auto.timer){clearTimeout(auto.timer);auto.timer=setTimeout(autoTick,autoMs());}};
 // scramble state
-const scr={seed:'',moves:[],cube:new Cube()};
+var scr={seed:'',moves:[],cube:new Cube()}; // var: tests read it from the window
 let history=store.get('history',[]);
 function newScramble(seed){
   seed=seed||randomSeedName();loadScramble(seed,randomMoveScramble(seed,+$('#scrLen').value),false);}
@@ -125,6 +127,7 @@ function loadScramble(seed,moves,custom){
   showForTab();
   planState.plan=null;$('#planOut').innerHTML='<p class="muted">New scramble. Press Plan.</p>';
   crossState.revealed=false;refreshCross();
+  document.dispatchEvent(new CustomEvent('cw:scramble'));
 }
 function renderHistory(){$('#history').innerHTML=history.length?'<div class="muted">Recent seeds (click to reload):</div>'+history.map(h=>`<span class="alt" data-s="${esc(h.seed)}"${h.moves?` title="${esc(h.moves)}"`:''}>${esc(h.seed)}</span>`).join(''):'<span class="muted">No history yet.</span>';
   $$('#history .alt').forEach(el=>el.onclick=()=>{const h=history.find(x=>x.seed===el.dataset.s);if(h&&h.moves){loadScramble(h.seed,parseAlg(h.moves),true);return;}$('#seed').value=el.dataset.s;newScramble(el.dataset.s);});}
@@ -156,11 +159,14 @@ function recordTime(ms){const arr=times[timer.scope]||(times[timer.scope]=[]);ar
 let onTimerStop=null;const scrLabel=()=>curTab==='f2l'?'f2l '+scr.seed:scr.seed;let currentLabel=scrLabel;
 const tEl=$('#timer');
 function timerTick(){if(timer.state==='running'){tEl.textContent=fmt(performance.now()-timer.t0);timer.raf=requestAnimationFrame(timerTick);}else if(timer.state==='inspecting'){const left=15-(performance.now()-timer.inspT0)/1000;tEl.textContent=left>0?Math.ceil(left).toString():(left>-2?'+2':'DNF');timer.raf=requestAnimationFrame(timerTick);}}
+function timerHidden(){return method==='beginner'&&!document.body.dataset.begtimer;}
 function timerPress(){ // key/finger down
+  if(timerHidden())return;
   if(timer.state==='running'){timer.state='stopped';timer.justStopped=true;cancelAnimationFrame(timer.raf);const ms=performance.now()-timer.t0;tEl.textContent=fmt(ms);tEl.className='timer';recordTime(ms);return;}
   if(timer.state==='idle'||timer.state==='stopped'||timer.state==='inspecting'){timer.holdT=performance.now();tEl.className='timer ready';}
 }
 function timerRelease(){
+  if(timerHidden())return;
   if(timer.justStopped){timer.justStopped=false;timer.state='idle';return;}
   if(timer.state==='stopped'){timer.state='idle';}
   if(timer.state==='idle'){if($('#inspChk').checked){timer.state='inspecting';timer.inspT0=performance.now();tEl.className='timer insp';timerTick();return;}stopAuto();timer.state='running';timer.t0=performance.now();tEl.className='timer run';timerTick();return;}
@@ -169,7 +175,7 @@ function timerRelease(){
 document.addEventListener('keydown',e=>{const tag=document.activeElement.tagName;if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
   if(e.code==='Space'){e.preventDefault();if(e.repeat)return;timerPress();return;}
   if(timer.state==='running')return;
-  if(e.key>='1'&&e.key<='6'){const b=$$('#rail button')[+e.key-1];if(b)b.click();}
+  if(e.key>='1'&&e.key<='6'){const b=railButtons()[+e.key-1];if(b)b.click();}
   if(e.key==='ArrowLeft'){$('#scrubPrev').click();}if(e.key==='ArrowRight'){$('#scrubNext').click();}
   if(e.key==='p'||e.key==='P'){toggleAuto();}if(e.key==='n'||e.key==='N'){nextForTab();}if(e.key==='h'||e.key==='H'){hintForTab();}
 });
@@ -199,12 +205,19 @@ function askConfirm(title,text,yesLabel,onYes){
 $('#clearTimes').onclick=()=>askConfirm('Clear all times?','This removes every time for '+scopeName()+'. You cannot undo it.','Clear',()=>{times[timer.scope]=[];store.set('times',times);renderTimes();});
 $('#times').onclick=e=>{if(e.target.tagName!=='SPAN')return;const arr=scopeTimes();const shown=arr.slice(-40).reverse();const i=[...e.target.parentNode.children].indexOf(e.target);const item=shown[i];if(item)askConfirm('Delete this time?',fmt(item.ms)+' is removed from '+scopeName()+'. You cannot undo it.','Delete',()=>{arr.splice(arr.indexOf(item),1);store.set('times',times);renderTimes();});};
 
-// ---------- tabs ----------
+// ---------- tabs and the method ----------
+// Two methods share the page: CFOP (the rail #rail) and the beginner method (#brail).
+// beginner-ui.js draws the chip that switches them. Each method remembers its own tab.
+let method=store.get('method','cfop')==='beginner'?'beginner':'cfop';document.body.dataset.method=method;
 let curTab='solve';
-const TAB_SCOPE={solve:'solve',cross:'cross',f2l:'f2l',ll:'ll',lab:'lab',ref:'ref'};
-$$('#rail button').forEach(b=>b.onclick=()=>{curTab=b.dataset.tab;$$('#rail button').forEach(x=>x.classList.toggle('on',x===b));$$('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+curTab));
-  document.body.dataset.tab=curTab;$('#mtitle').textContent=b.lastChild.textContent;if(mobileMQ.matches)store.set('mtab',curTab);setScope(TAB_SCOPE[curTab]);onEnterTab(curTab);});
-function goTab(name){const b=$(`#rail button[data-tab="${name}"]`);if(b)b.click();}
+const TAB_SCOPE={solve:'solve',cross:'cross',f2l:'f2l',ll:'ll',lab:'lab',ref:'ref',learn:'solve',bsolve:'solve',practice:'solve',progress:'solve',cheat:'solve'};
+const BEGINNER_TABS=['learn','bsolve','practice','progress','cheat'];
+function railButtons(){return $$(method==='beginner'?'#brail button':'#rail button');}
+function tabKey(){return (mobileMQ.matches?'m':'')+(method==='beginner'?'btab':'tab');}
+function homeTab(){return method==='beginner'?'learn':mobileMQ.matches?'ref':'solve';}
+$$('nav.rail button').forEach(b=>b.onclick=()=>{curTab=b.dataset.tab;$$('nav.rail button').forEach(x=>x.classList.toggle('on',x===b));$$('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+curTab));
+  document.body.dataset.tab=curTab;$('#mtitle').textContent=b.lastChild.textContent;store.set(tabKey(),curTab);setScope(TAB_SCOPE[curTab]);onEnterTab(curTab);document.dispatchEvent(new CustomEvent('cw:tab',{detail:curTab}));});
+function goTab(name){const b=$(`nav.rail button[data-tab="${name}"]`);if(b)b.click();}
 function onEnterTab(t){if(!seqState.drill)showForTab();else if(t==='f2l'&&f2lState.mode==='live')showF2LState();if(t==='cross')refreshCross();}
 function nextForTab(){({solve:()=>newScramble(),cross:()=>$('#crossNew').click(),f2l:()=>(f2lState.mode==='live'?$('#f2lNew'):$('#f2lRandomCase')).click(),ll:()=>$('#llNext').click()}[curTab]||(()=>{}))();}
 function hintForTab(){({cross:()=>$('#crossReveal').click(),f2l:()=>(f2lState.mode==='live'?$('#f2lReveal'):$('#f2lCaseReveal')).click(),ll:()=>$('#llHint').click()}[curTab]||(()=>{}))();}
@@ -214,7 +227,7 @@ onTimerStop=()=>{if($('#autoNext').checked&&(curTab==='solve'||curTab==='cross'|
 
 // ---------- cross colour / orientation ----------
 const CROSS_ROT={white:'z2',yellow:'',green:"x'",blue:'x',red:'z',orange:"z'"};
-function crossRotation(){return CROSS_ROT[$('#crossColor').value]||'';}
+function crossRotation(){if(method==='beginner')return 'z2';return CROSS_ROT[$('#crossColor').value]||'';}
 // Frames. Scrambles are applied white up, green front. To solve with another colour down we rotate the
 // cube by r. A face move M after the rotation is the same as solving X = r' S r in the engine frame.
 function rotCube(){return applyAlg(new Cube(),crossRotation());}
@@ -341,7 +354,7 @@ const LL_ORDER=['','learning','finished'];
 function stBtn(id){const s=llState.status[id]||'',nm=s||'unlearned';return `<button class="stbtn ${s}" data-st-id="${esc(id)}" title="Status: ${nm}. Click to change." aria-label="Status: ${nm}. Click to change."><i></i>${nm}</button>`;}
 function cycleStatus(id){const cur=llState.status[id]||'';llState.status[id]=LL_ORDER[(LL_ORDER.indexOf(cur)+1)%3];
   if(id.startsWith('f2l-')){f2lState.caseSel.add(+id.slice(4));saveF2L();store.set('llStatus',llState.status);renderF2LGrid();}else{llState.sel.add(id);saveLL();renderLLGroups();}
-  renderCaseStats();$$('.modal .stbtn').forEach(b=>{if(b.dataset.stId===id)b.outerHTML=stBtn(id);});}
+  renderCaseStats();$$('.modal .stbtn').forEach(b=>{if(b.dataset.stId===id)b.outerHTML=stBtn(id);});document.dispatchEvent(new CustomEvent('cw:status',{detail:id}));}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.stbtn');if(b){e.stopPropagation();cycleStatus(b.dataset.stId);}});
 $('#llSelAll').onclick=()=>{LL_ALL.forEach(a=>llState.sel.add(a.id));saveLL();renderLLGroups();};$('#llSelNone').onclick=()=>{llState.sel.clear();saveLL();renderLLGroups();};
 $('#llSelUnlearned').onclick=()=>{llState.sel=new Set(LL_ALL.filter(a=>llState.status[a.id]!=='finished').map(a=>a.id));saveLL();renderLLGroups();};
@@ -386,7 +399,7 @@ PLL_FULL.forEach(p=>{const o=document.createElement('option');o.value=p.alg;o.te
 [['Sexy move',"R U R' U'"],['Sledgehammer',"R' F R F'"],['Niklas (corner 3-cycle)',"R U' L' U R' U' L U"],['Twist two corners',"R' D' R D R' D' R D U D' R' D R D' R' D R U'"],['Edge flip (2)',"M' U M' U M' U2 M U M U M U2"],['Corner commutator [R U R\', D]',"R U R' D R U' R' D'"],['Edge 3-cycle [M\', U2]',"M' U2 M U2"]].forEach(([n,a])=>{const o=document.createElement('option');o.value=a;o.textContent=n;$('#labPick').appendChild(o);});
 $('#labPick').onchange=e=>{if(e.target.value){$('#labAlg').value=e.target.value;runLab();}};
 $('#labRun').onclick=()=>runLab();$('#labAlg').addEventListener('keydown',e=>{if(e.key==='Enter')runLab();});
-function loadLab(alg,name){$('#labAlg').value=alg;$$('#rail button')[4].click();runLab(name);}
+function loadLab(alg,name){$('#labAlg').value=alg;if(method==='beginner')setMethod('cfop');goTab('lab');runLab(name);}
 const PIECE=(i,isEdge)=>isEdge?EDGE_NAMES[i]:CORNER_NAMES[i];
 function invariants(c){const tw=c.co.reduce((a,b)=>a+b,0)%3,fl=c.eo.reduce((a,b)=>a+b,0)%2;const par=p=>{let s=0;const seen=[];for(let i=0;i<p.length;i++){if(seen[i])continue;let j=i,len=0;while(!seen[j]){seen[j]=true;j=p[j];len++;}s+=len-1;}return s%2;};return {tw,fl,cpar:par(c.cp),epar:par(c.ep)};}
 function runLab(name){
@@ -509,9 +522,9 @@ const mobileMQ=matchMedia('(max-width: 760px)');
 function setTopH(){document.documentElement.style.setProperty('--toph',$('.top').getBoundingClientRect().height+'px');}
 window.addEventListener('resize',setTopH);
 // On a phone the Reference section is the home screen. The menu opens the other sections.
-function applyMobile(){setTopH();if(mobileMQ.matches){renderMobileRef();goTab(store.get('mtab','ref'));}}
+function applyMobile(){setTopH();if(mobileMQ.matches)renderMobileRef();goTab(store.get(tabKey(),homeTab()));}
 if(mobileMQ.addEventListener)mobileMQ.addEventListener('change',applyMobile);else if(mobileMQ.addListener)mobileMQ.addListener(applyMobile);
-function renderMenu(){$('#menu').innerHTML=$$('#rail button').map(b=>`<button data-tab="${b.dataset.tab}" data-sec="${b.dataset.tab}" class="${b.dataset.tab===curTab?'on':''}"><i class="sec-sq"></i>${esc(b.lastChild.textContent)}</button>`).join('');
+function renderMenu(){$('#menu').innerHTML=railButtons().map(b=>`<button data-tab="${b.dataset.tab}" data-sec="${b.dataset.tab}" class="${b.dataset.tab===curTab?'on':''}"><i class="sec-sq"></i>${esc(b.lastChild.textContent)}</button>`).join('');
   $$('#menu button').forEach(m=>m.onclick=()=>{closeMenu();goTab(m.dataset.tab);window.scrollTo({top:0});});}
 function openMenu(){renderMenu();$('#menuBg').classList.remove('hidden');$('#menuBtn').setAttribute('aria-expanded','true');}
 function closeMenu(){$('#menuBg').classList.add('hidden');$('#menuBtn').setAttribute('aria-expanded','false');}
@@ -523,7 +536,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();});
 $('#themeBtn').onclick=()=>{const r=document.documentElement;const cur=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');r.dataset.theme=cur==='dark'?'light':'dark';store.set('theme',r.dataset.theme);};
 (()=>{const t=store.get('theme',null);if(t)document.documentElement.dataset.theme=t;})();
 $('#helpBtn').onclick=()=>{const b=$('#helpBox');b.classList.toggle('hidden');
-  b.innerHTML=`<h3>Keys</h3><table><tr><td><span class="kbd">space</span></td><td>hold, release to start · press to stop</td></tr><tr><td><span class="kbd">1</span>–<span class="kbd">6</span></td><td>switch tab</td></tr><tr><td><span class="kbd">N</span></td><td>next scramble / case</td></tr><tr><td><span class="kbd">H</span></td><td>reveal the answer</td></tr><tr><td><span class="kbd">←</span> <span class="kbd">→</span></td><td>step through the player</td></tr><tr><td>drag cube</td><td>orbit the view</td></tr></table><p class="muted" style="margin-top:8px;font-size:13px">Times, case statuses and seed history are saved in this browser.</p>`;};
+  b.innerHTML=`<h3>Keys</h3><table><tr><td><span class="kbd">space</span></td><td>hold, release to start · press to stop</td></tr><tr><td><span class="kbd">1</span>–<span class="kbd">${railButtons().length}</span></td><td>switch tab</td></tr><tr><td><span class="kbd">N</span></td><td>next scramble / case</td></tr><tr><td><span class="kbd">H</span></td><td>reveal the answer</td></tr><tr><td><span class="kbd">←</span> <span class="kbd">→</span></td><td>step through the player</td></tr><tr><td>drag cube</td><td>orbit the view</td></tr></table><p class="muted" style="margin-top:8px;font-size:13px">Times, case statuses and seed history are saved in this browser.</p>`;};
 $('#scrLen').onchange=()=>newScramble($('#seed').value||undefined);
 $('#planRef').checked=store.get('planRef',false);$('#planRef').onchange=()=>{store.set('planRef',$('#planRef').checked);if(planState.plan)$('#planBtn').click();};
 $('#f2lPairs').onchange=()=>{if(f2lState.mode==='live')showF2LState();};

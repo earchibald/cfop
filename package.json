@@ -3,7 +3,7 @@
   "private": true,
   "description": "Twistwright — a CFOP trainer for 3x3. Static site, no build step.",
   "scripts": {
-    "test": "node test/load.js && node test/draw.js && node test/tabs.js && node test/plan.js && node test/mobile.js && node test/glossary.js && node test/scan-assemble.js && node test/scan-synth.js && node test/scan-vote.js",
+    "test": "node test/load.js && node test/draw.js && node test/tabs.js && node test/plan.js && node test/mobile.js && node test/glossary.js && node test/beginner.js && node test/method.js && node test/learn.js && node test/guide.js && node test/paint.js && node test/practice.js && node test/scan-assemble.js && node test/scan-synth.js && node test/scan-vote.js",
     "serve": "python3 -m http.server 8000"
   },
   "devDependencies": {

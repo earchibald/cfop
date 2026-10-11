@@ -185,7 +185,7 @@ th{color:var(--muted);font-weight:500;border-top:0;font-size:14px}
 .pieces div{background:var(--panel2);border-radius:var(--chip);padding:5px 8px;font-family:var(--mono)}
 .pieces div.mv{outline:1px solid var(--accent)}
 .lifted{opacity:.35}
-@media (max-width:1000px){.player{grid-template-columns:260px minmax(0,1fr)}.player .timerpanel{grid-column:1 / -1}}
+@media (max-width:1000px){.player{grid-template-columns:260px minmax(0,1fr)}.player .timerpanel,.player .progresspanel{grid-column:1 / -1}}
 @media (max-width:760px){.page{padding:12px}.player{grid-template-columns:1fr}.wrap{grid-template-columns:1fr}nav.rail{position:static;flex-direction:row;overflow-x:auto;gap:2px}nav.rail button{padding:8px 10px;white-space:nowrap}nav.rail button .k{display:none}.grid2{grid-template-columns:1fr}.timer{font-size:44px}.step{grid-template-columns:1fr;gap:4px}.top{padding:10px 12px}}
 
 .modal-bg{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
@@ -217,7 +217,7 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
 .menu button{text-align:left;background:transparent;border:1px solid transparent;padding:13px 14px;font-size:16px;border-radius:var(--rb);display:flex;align-items:center;gap:12px}
 .menu button.on{background:var(--panel2);border-color:var(--line);font-weight:600}
 @media (max-width:760px){
-  nav.rail,#helpBtn,#refDesktop,.desktop-only,.puzzle{display:none!important}
+  nav.rail,#helpBtn,#refDesktop,.desktop-only{display:none!important}
   .mobile-only{display:inline}
   body[data-tab="ref"] .player,body[data-tab="ref"] .seedbar{display:none!important}
   .page{padding:10px}
@@ -234,7 +234,7 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
   #themeBtn{padding:9px 8px}
   /* player: cube and timer side by side, the moves below */
   .player{grid-template-columns:1fr 1fr;grid-template-areas:"cube timer" "seq seq";gap:8px}
-  .player .cubebox{grid-area:cube}.player .timerpanel{grid-area:timer;grid-column:auto;padding:8px}.player .seqpanel{grid-area:seq}
+  .player .cubebox{grid-area:cube}.player .timerpanel,.player .progresspanel{grid-area:timer;grid-column:auto;padding:8px}.player .seqpanel{grid-area:seq}
   .cubebox svg{max-height:200px}
   .cubebox .viewbtns{top:4px;right:4px}
   .cubebox .draghint{left:6px;bottom:4px;font-size:11px}
@@ -314,3 +314,205 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
 .gl-list dt{font-weight:600}
 .gl-list dd{margin:0}
 @media (max-width:700px){.gl-list{grid-template-columns:1fr}.gl-list dd{margin-bottom:6px}}
+
+/* ---------- beginner mode: the chip, the popover, the progress panel ---------- */
+/* Shared pieces for the beginner tabs (learn.js, guide.js, paint.js, practice.js) follow.
+   Each file appends its own section below this one; none edits the rules above. */
+[data-sec="learn"]{--sec:var(--sticker-W)}[data-sec="bsolve"]{--sec:var(--sticker-O)}[data-sec="practice"]{--sec:var(--sticker-G)}
+[data-sec="progress"]{--sec:var(--sticker-B)}[data-sec="cheat"]{--sec:var(--sticker-R)}
+body[data-method="beginner"] #rail{display:none}
+body:not([data-method="beginner"]) #brail{display:none}
+body[data-method="beginner"]:not([data-begtimer]) .timerpanel{display:none}
+body:not([data-method="beginner"]) #progressPanel,body[data-begtimer] #progressPanel{display:none}
+body:not([data-method="beginner"]) #timerBack{display:none}
+button.puzzle{cursor:pointer;background:transparent;line-height:1.3;gap:5px}
+button.puzzle:hover,.puzzle[aria-expanded="true"]{border-color:var(--text);color:var(--text);background:var(--panel)}
+.method-pop{position:absolute;top:calc(100% + 6px);left:18px;width:min(560px,calc(100vw - 24px));background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;z-index:30;font-weight:400}
+.mcards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.mcard{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);text-align:left;font-weight:400;line-height:1.4;font-size:14px}
+.mcard b{font-size:17px}
+.mcard .mcur{display:none;margin-left:auto}
+.mcard.on{border:2px solid var(--text);background:var(--panel);padding:13px}
+.mcard.on .mcur{display:inline-block}
+.mcard .mnote{font-size:13px;color:var(--good)}
+.mcard .mnote.muted{color:var(--muted)}
+@media (max-width:560px){.mcards{grid-template-columns:1fr}}
+.progresspanel{display:flex;flex-direction:column;gap:10px}
+.progresspanel .lbl{color:var(--muted);font-size:14px}
+.psq{display:flex;gap:4px}
+.psq i{display:block;width:26px;height:26px;border-radius:6px;background:var(--sticker-X);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.psq i.learning{background:var(--sticker-Y)}.psq i.finished{background:var(--sticker-G)}
+.ptiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;font-size:13px}
+.ptiles div{padding:8px 10px;border-radius:var(--rb);background:var(--panel2)}
+.ptiles b{display:block;font-size:20px;line-height:1.2}
+.ptimer{margin-top:auto;border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+/* shared beginner pieces: step cards, face thumbs, trigger boxes, notes, the stage bar, cards */
+.bstep{display:flex;gap:12px;align-items:center;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);text-align:left;font:inherit;width:100%;cursor:pointer;line-height:1.4}
+.bstep:hover{border-color:var(--muted)}
+.bstep.cur{border-color:var(--sticker-Y);background:color-mix(in srgb,var(--sticker-Y) 14%,var(--panel2))}
+.bstep .n{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.bstep .body{flex:1;min-width:0}
+.bstep .desc{color:var(--muted);font-size:14px}
+.face{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--sticker-line);padding:2px;border-radius:4px;width:46px;flex:none}
+.face i{display:block;aspect-ratio:1;border-radius:2px;background:var(--sticker-X)}
+.face i.W{background:var(--sticker-W)}.face i.Y{background:var(--sticker-Y)}.face i.R{background:var(--sticker-R)}.face i.O{background:var(--sticker-O)}.face i.G{background:var(--sticker-G)}.face i.B{background:var(--sticker-B)}
+.ms{display:inline-flex;gap:5px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:15px}
+.ms .m{padding:1px 7px;border-radius:var(--chip);background:var(--panel2);border:1px solid var(--line);font-weight:500}
+.ms.big{font-size:22px}.ms.big .m{padding:4px 12px;border-radius:9px}
+.trig{display:inline-flex;align-items:center;gap:4px;padding:4px 8px 4px 10px;border-radius:11px;border:1px dashed var(--muted)}
+.trig b{font-family:var(--sans);font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-right:4px;font-weight:600}
+.note{background:color-mix(in srgb,var(--sticker-Y) 22%,var(--panel));border:1px solid color-mix(in srgb,var(--sticker-Y) 60%,var(--line));border-radius:12px;padding:12px 14px;font-size:14px}
+.stagebar{display:flex;gap:10px;align-items:flex-end}
+.stagebar .stage{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--muted);flex:1;text-align:center;background:none;border:0;padding:0;font-weight:500;cursor:pointer}
+.stagebar .stage i{display:block;width:100%;height:8px;border-radius:4px;background:var(--sticker-X)}
+.stagebar .stage.done i{background:var(--sticker-G)}.stagebar .stage.cur{color:var(--text);font-weight:600}.stagebar .stage.cur i{background:var(--sticker-Y)}
+button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sans)} /* .big alone is the mono algorithm size */
+.bcards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap)}
+.bcards .panel{display:flex;flex-direction:column;gap:10px}
+.bcards .panel.pick{border:2px solid var(--text);padding:15px}
+.bcards .panel>button{margin-top:auto;align-self:flex-start}
+@media (max-width:760px){
+  .puzzle{padding:5px 8px}
+  body[data-tab="learn"]:not([data-lesson]) .player,body[data-tab="learn"]:not([data-lesson]) .seedbar{display:none!important}
+  .player .progresspanel{padding:10px;gap:6px}
+  .psq i{width:18px;height:18px;border-radius:5px}
+  .ptiles,.ptimer span{display:none}
+  .method-pop{left:8px;right:8px;width:auto}
+  .bcards{grid-template-columns:1fr}
+  .stagebar{gap:4px}.stagebar .stage{font-size:0;gap:0}
+  button.big{min-height:52px}
+}
+/* ---------- beginner: guide (Solve my cube) ---------- */
+.gd-ic{width:48px;height:36px;fill:none;stroke:var(--muted);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.gd-net{display:grid;grid-template-columns:repeat(4,22px);gap:2px;width:max-content}
+.gd-net .face{width:22px;padding:1px;gap:1px;border-radius:3px}
+.gd-now{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.gd-msg{margin-top:8px;color:var(--warn)}
+.gd-line{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.gd-plan{margin-top:10px;border-top:1px solid var(--line);padding-top:6px;max-height:420px;overflow:auto}
+.gd-ph{font-size:15px;margin:10px 0 4px}
+.gd-pnone{margin:0 0 4px;font-size:14px}
+.gd-prow{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto;gap:8px;align-items:center;width:100%;text-align:left;background:none;border:1px solid transparent;border-radius:var(--rb);padding:5px 8px;font:inherit;font-size:14px;color:var(--text);cursor:pointer;font-weight:400}
+.gd-prow:hover{border-color:var(--line)}
+.gd-prow.done{color:var(--muted)}
+.gd-prow.cur{border-color:var(--sticker-Y);background:color-mix(in srgb,var(--sticker-Y) 14%,var(--panel2));font-weight:600}
+.gd-head{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.gd-head h2{margin-top:2px}
+.gd-sub{font-size:13px}
+.gd-body{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:var(--gap);margin-top:12px;align-items:start}
+.gd-steps{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:10px;font-size:17px;line-height:1.45}
+.gd-steps .ms{margin-top:6px}
+.gd-moves .m.gd-rot{font-style:italic;border-style:dashed;background:transparent}
+.gd-side{display:flex;flex-direction:column;gap:10px}
+.gd-ba{display:flex;align-items:center;gap:4px}
+.gd-ba figure{margin:0;flex:1;min-width:0;text-align:center}
+.gd-ba svg{width:100%;height:auto;max-width:120px;display:block;margin:0 auto}
+.gd-ba figcaption{font-size:12px}
+.gd-arrow{color:var(--muted);font-size:18px}
+.gd-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.gd-lost{font-size:13px;flex-basis:100%}
+.gd-next{display:flex;flex-direction:column;gap:2px;font-size:14px}
+.gd-win{border:2px solid var(--sticker-G);background:color-mix(in srgb,var(--sticker-G) 14%,var(--panel));padding:15px}
+.gd-win p{margin:4px 0}
+.gd-win .row{margin-top:10px}
+@media (max-width:760px){
+  .gd-body{grid-template-columns:1fr}
+  .gd-steps{font-size:19px}
+  .gd-actions #gdDone{width:100%;order:-1}
+  .gd-actions #gdShow{flex:1}
+  .gd-head{flex-wrap:wrap}
+}
+
+/* ---------- beginner: learn (js/learn.js: the step list, the lessons, the cheat sheet) ---------- */
+.ln-intro{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.ln-intro p{margin:6px 0 0;max-width:62ch}
+.ln-steps{display:flex;flex-direction:column;gap:8px}
+.ln-mob{display:none}
+.ln-strip{gap:12px;align-items:center;font-size:14px}
+button.ln-mob{justify-content:center;align-items:center}
+.ln-listhead{justify-content:space-between;align-items:baseline;font-size:13px}.ln-listhead b{font-size:19px}
+.bstep .ln-uses{font-size:13px}
+.bstep .ln-tag{flex:none;margin:0}
+.ln-tag.learning{border-color:var(--sticker-Y);background:color-mix(in srgb,var(--sticker-Y) 22%,var(--panel));color:var(--text)}
+.ln-tag.finished{border-color:var(--good);color:var(--good)}
+.ln-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.ln-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.ln-link{background:none;border:0;padding:0;color:var(--link);font-size:13px;font-weight:500}
+.ln-link:hover{text-decoration:underline}
+.ln-of{font-size:13px;margin:4px 0 2px}
+.ln-st{display:inline-flex;align-items:center;gap:6px}.ln-st .stbtn{margin-top:0;font-size:14px;padding:4px 12px 4px 8px}
+.ln-hint{font-size:12px}
+.ln-what{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:20px}
+.ln-text{display:flex;flex-direction:column;gap:12px}
+.ln-text p,.ln-goal p{margin:4px 0 0}
+.ln-goal{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.ln-pic{width:100%;background:var(--panel2);border-radius:var(--rb);padding:6px}
+.ln-pic svg{display:block;width:100%;max-width:220px;height:auto;margin:0 auto}
+.ln-cap,.ln-small{font-size:13px}
+.ln-panel{display:flex;flex-direction:column;gap:10px}
+.ln-panel p{margin:0}
+.ln-ch{justify-content:space-between;align-items:baseline}
+.ln-trigs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ln-box{display:flex;flex-direction:column;gap:8px;align-items:flex-start;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--panel2)}
+.ln-why{font-size:14px;margin:0;padding-top:6px;border-top:1px solid var(--line)}
+.ln-say{font-size:14px}
+.ln-faces{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px 14px;font-size:14px}
+.ln-case{display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px;border-radius:12px;background:var(--panel2)}
+.ln-cpic svg{display:block;width:84px;height:auto}
+.ln-cbody{display:flex;flex-direction:column;gap:2px;font-size:14px}.ln-cbody b{font-size:15px}
+.ln-cmoves{margin-top:6px}
+.ln-cs-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}
+.ln-cs-step{display:flex;flex-direction:column;gap:8px}
+.ln-cs-step h3 .mono{font-size:13px;font-weight:500}
+.ln-cs-step p{margin:0;font-size:14px}
+.ln-cs-goal{color:var(--muted)}
+.ln-cs-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.ln-cs-list li{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.ln-cs-mv{display:inline-flex;gap:8px;align-items:center}
+.ln-cs-alg{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.ln-cs-an{width:100%;font-size:14px}
+@media (max-width:760px){
+  .ln-mob{display:flex}
+  .ln-intro{display:none}
+  .bstep .desc,.bstep .ln-uses{display:none}
+  .ln-what,.ln-trigs,.ln-cs-grid{grid-template-columns:1fr}
+  .ln-pic svg{max-width:160px}
+  .ln-case{grid-template-columns:64px minmax(0,1fr);gap:10px}
+  .ln-cpic svg{width:64px}
+  .ln-case>button{grid-column:2;justify-self:start}
+  .ln-foot .row button{flex:1 1 auto}
+}
+
+/* ---------- beginner: paint the colours ---------- */
+.modal.paint{display:block;max-width:640px}
+.modal.paint h2{margin-top:0}
+.pt-body{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin-top:10px}
+.pt-net{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;flex:0 0 380px;width:380px;max-width:100%}
+.pt-slot{display:flex}
+.pt-face{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:2px;background:var(--sticker-line);padding:2px;border-radius:6px;width:100%;aspect-ratio:1}
+.pt-tile{border:0;padding:0;border-radius:3px;aspect-ratio:1;min-width:0;cursor:pointer}
+.pt-tile:disabled{cursor:default;opacity:1}
+.pt-tile.pt-center{box-shadow:inset 0 0 0 2px rgba(0,0,0,.3)}
+.pt-side{flex:1;min-width:220px;display:flex;flex-direction:column;gap:12px}
+.pt-palette{display:flex;gap:8px;flex-wrap:wrap}
+.pt-swatch{width:36px;height:36px;border-radius:8px;border:2px solid var(--line);padding:0;cursor:pointer}
+.pt-swatch.on{border-color:var(--text);border-width:3px}
+.pt-count{font-size:14px}
+@media (max-width:760px){
+  .pt-net{flex-basis:auto;width:100%;max-width:336px}
+  .pt-body{flex-direction:column}
+  .pt-tile{min-height:0}
+}
+
+/* ---------- beginner: practice (js/practice.js: Practice and Progress) ---------- */
+#prSteps{flex-wrap:wrap}
+#prSteps button{padding:6px 10px;font-size:13px;white-space:nowrap}
+.pr-row{border:1px solid var(--line);border-radius:var(--rb);background:var(--panel2);padding:10px 12px;margin-top:8px;cursor:pointer}
+.pr-row:hover{border-color:var(--muted)}
+.pr-row:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.pr-stepname{color:var(--text);text-decoration:none}
+.pr-stepname:hover{color:var(--link);text-decoration:underline}
+#prTable td{vertical-align:middle}
+@media (max-width:760px){
+  #prSteps button{font-size:12px;padding:5px 7px}
+}
