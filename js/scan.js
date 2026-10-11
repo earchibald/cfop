@@ -302,9 +302,9 @@ function openScan(){
    <p class="muted" style="margin-top:0">Hold one face of the cube to the camera and keep it still. When the face is read, turn the cube to show the next face. You can show the faces in any order and at any angle. A glossy cube reflects the screen. If the read jumps, tilt the cube a little or dim the screen.</p>
    <div class="scan-grid">
     <div><div class="scan-view mirror" id="scanView"><video id="scanVideo" autoplay playsinline muted></video><canvas id="scanOverlay"></canvas></div>
-     <div class="scan-row"><label><input type="checkbox" id="scanMirror" checked> Mirror</label><span class="muted" style="font-size:12px">Mirror flips the preview only.</span></div></div>
+     <div class="scan-row"><label><input type="checkbox" id="scanMirror" checked> Mirror</label><span class="muted" style="font-size:13px">Mirror flips the preview only.</span></div></div>
     <div><div class="scan-net" id="scanNet"></div>
-     <p class="muted" style="font-size:12px;margin:6px 0">Click a sticker to change its colour. A changed sticker stays fixed.</p>
+     <p class="muted" style="font-size:13px;margin:6px 0">Click a sticker to change its colour. A changed sticker stays fixed.</p>
      <div class="scan-row"><button class="primary" id="scanUse" disabled>Use this cube</button><button class="small ghost" id="scanReset">Start again</button></div></div>
    </div>
    <div id="scanStatus" class="notice">Asking for camera access.</div>
