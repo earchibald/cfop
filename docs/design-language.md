@@ -37,5 +37,8 @@ orange tile with white text, so the signal survives the yellow highlight.
 
 Sticker colours are `--sticker-W Y R O G B`, with `--sticker-X` for a sticker
 that does not matter and `--sticker-line` for the gap between stickers. The
-original Rubik's and GAN values were adjusted for contrast; the dark blue
-and the light yellow moved most.
+dark values are the original Rubik's stickers lifted for contrast on black;
+the blue moved most. The light values follow GAN stickerless plastic as
+sampled from matte product photos: a lemon yellow, a grass green with a
+yellow lean, an azure blue, a true red and a yellower orange, all at full
+saturation so they read as deep plastic, not faded print.
