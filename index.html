@@ -77,6 +77,7 @@
           <div><h2>Guided solve</h2><p class="muted" style="margin:0">Scramble with white up and green in front, as shown in the player above. Press Plan. Each step shows the cube at that point; click a move to step through it.</p></div>
           <div class="row"><select id="crossColor" title="Scrambles are always applied white up, green front. This is the colour you then solve on the bottom."><option value="white">White cross (z2 after scramble)</option><option value="yellow">Yellow cross (no rotation)</option><option value="green">Green cross</option><option value="blue">Blue cross</option><option value="red">Red cross</option><option value="orange">Orange cross</option></select>
           <select id="f2lOrder"><option value="greedy">F2L: shortest pair first</option><option value="FR,FL,BL,BR">F2L: FR FL BL BR</option><option value="FL,FR,BR,BL">F2L: FL FR BR BL</option></select>
+          <label title="Turn the whole cube (y) before a step, so each pair goes in at the front right and each last-layer case sits as the reference shows it. Off: keep one front and use any face moves."><input type="checkbox" id="planRef"> Rotate to each algorithm</label>
           <button class="primary" id="planBtn">Plan</button></div>
         </div>
       </div>

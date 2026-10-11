@@ -23,7 +23,7 @@ The app was called Cubeworks. Keep these old names as they are:
 | `js/scan-assemble.js` | Scanner stage 5: face rotations, colour repairs, joint colour read (pure, no DOM) |
 | `js/scan.js` | Scanner stages 1-4 and the Scan cube dialog |
 | `js/glossary.js` | Glossary entries, links in description text, the floating card |
-| `test/` | `load.js` jsdom smoke test, `tabs.js` (scramble, drills, case cards), `mobile.js` (phone menu), `glossary.js`, and the scanner tests |
+| `test/` | `load.js` jsdom smoke test, `tabs.js` (scramble, drills, case cards, clear dialog), `plan.js` (guided solve with rotations), `mobile.js` (phone menu), `glossary.js`, and the scanner tests |
 | `docs/` | Design notes and handoff documents |
 
 The scripts share one global scope. `index.html` loads them in the order

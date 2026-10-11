@@ -253,24 +253,28 @@ function buildPlan(){
   const cross=solveCross(c0,0,24);if(planState.crossChoice>=cross.solutions.length)planState.crossChoice=0;
   const crossMoves=parseAlg(cross.solutions[planState.crossChoice]);
   const c1=applyAlg(c0,crossMoves);
-  const order=$('#f2lOrder').value;const f2l=solveF2L(c1,order==='greedy'?null:order.split(','));
+  const order=$('#f2lOrder').value;const ref=$('#planRef').checked;const slots=order==='greedy'?null:order.split(',');
+  const f2l=ref?solveF2LRef(c1,slots,F2L_CASES):solveF2L(c1,slots);
   if(!f2l){$('#planOut').innerHTML='<p>Could not find short pair inserts for this scramble. Try another cross solution.</p>';return;}
-  const ll=solveLL(f2l.cube,ALG_DB);
-  planState.plan={rot,c0,p0,cross,crossMoves,f2l,ll};renderPlan();
+  const ll=solveLL(f2l.cube,ALG_DB,ref);
+  planState.plan={rot,c0,p0,cross,crossMoves,f2l,ll,ref};renderPlan();
 }
 function renderPlan(){
   const p=planState.plan;const steps=[];let total=0;
   const seqFor=[];// key -> {cube,moves}
   let cur=p.c0;const P=x=>phys(x);
   steps.push(stepHTML('Cross',`optimal ${p.cross.optimal} moves`,p.crossMoves,'cross',`${p.cross.solutions.length} optimal plan${p.cross.solutions.length>1?'s':''}`));seqFor.push(['cross',cur,p.crossMoves]);cur=applyAlg(cur,p.crossMoves);total+=p.crossMoves.length;
-  p.f2l.steps.forEach((s,i)=>{steps.push(stepHTML(`Pair ${i+1}: ${s.slot}`,describePair(cur,s.slot),s.moves,'f2l'+i,`${s.moves.length} moves`));seqFor.push(['f2l'+i,cur,s.moves]);cur=applyAlg(cur,s.moves);total+=s.moves.length;});
-  if(p.ll){for(const s of p.ll.steps){const moves=[...(s.pre?[s.pre]:[]),...parseAlg(s.alg),...(s.post?[s.post]:[])];steps.push(stepHTML(s.stage,s.name,moves,'ll'+s.stage,s.pre?`AUF ${s.pre} first`:''));seqFor.push(['ll'+s.stage,cur,moves]);cur=applyAlg(cur,moves);total+=moves.length;}}
+  // With rotations in the plan, cur carries turned centres. derotate turns it home so slot names apply.
+  p.f2l.steps.forEach((s,i)=>{const notes=[`${s.moves.length} moves`];if(s.rot)notes.push(`rotate ${esc(s.rot)} first`);if(s.ref)notes.push(`<a href="#" class="case-link" data-n="${s.ref}">F2L case ${s.ref}</a>`);
+    steps.push(stepHTML(`Pair ${i+1}: ${s.slot}`,describePair(derotate(cur),s.slot),s.moves,'f2l'+i,notes.join(' · ')));seqFor.push(['f2l'+i,cur,s.moves]);cur=applyAlg(cur,s.moves);total+=s.moves.length;});
+  if(p.ll){for(const s of p.ll.steps){const moves=[...(s.pre?[s.pre]:[]),...parseAlg(s.alg),...(s.post?[s.post]:[])];steps.push(stepHTML(s.stage,s.name,moves,'ll'+s.stage,s.pre?(s.pre[0]==='y'?`rotate ${esc(s.pre)} first`:`AUF ${s.pre} first`):''));seqFor.push(['ll'+s.stage,cur,moves]);cur=applyAlg(cur,moves);total+=moves.length;}}
   const alts=p.cross.solutions.map((s,i)=>`<span class="alt ${i===planState.crossChoice?'pick':''}" data-i="${i}">${esc(s)}</span>`).join('');
-  $('#planOut').innerHTML=`<div class="row" style="justify-content:space-between;margin-bottom:6px"><div>${p.rot?`<span class="tag">rotate ${esc(p.rot)} first</span>`:''}${esc(holdText(p.p0))} <span class="muted">Total ${total} moves. ${cur.isSolvedAny()?'It ends solved.':'This plan does not end solved. Try another cross.'}</span></div><button class="small" id="planSeq">Load the whole plan into the player</button></div>
+  $('#planOut').innerHTML=`<div class="row" style="justify-content:space-between;margin-bottom:6px"><div>${p.rot?`<span class="tag">rotate ${esc(p.rot)} first</span>`:''}${esc(holdText(p.p0))} <span class="muted">${p.ref?'The cube turns before some steps. ':''}Total ${total} moves. ${cur.isSolvedAny()?'It ends solved.':'This plan does not end solved. Try another cross.'}</span></div><button class="small" id="planSeq">Load the whole plan into the player</button></div>
     <div>${steps.join('')}</div>
     <h3 style="margin-top:12px">Cross alternatives</h3><p class="muted">Pick another optimal cross; the F2L plan recomputes. Compare which one leaves pairs easy.</p><div>${alts}</div>`;
   wireSteps($('#planOut'),key=>{const e=seqFor.find(x=>x[0]===key);return {cube:P(e[1]),moves:e[2]};});
   $$('#planOut .alt').forEach(el=>el.onclick=()=>{planState.crossChoice=+el.dataset.i;buildPlan();});
+  $$('#planOut .case-link').forEach(el=>el.onclick=e=>{e.preventDefault();const f=F2L_CASES.find(c=>c.n===+el.dataset.n);if(f)openCaseModal(modalForF2L(f));});
   $('#planSeq').onclick=()=>{const all=seqFor.flatMap(x=>x[2]);setSequence(all,'solution · '+holdText(p.p0),p.p0);seqState.idx=0;applySequence();focusPlayer();};
 }
 // ---------- CROSS tab ----------
@@ -535,6 +539,7 @@ $('#themeBtn').onclick=()=>{const r=document.documentElement;const cur=r.dataset
 $('#helpBtn').onclick=()=>{const b=$('#helpBox');b.classList.toggle('hidden');
   b.innerHTML=`<h3>Keys</h3><table><tr><td><span class="kbd">space</span></td><td>hold, release to start · press to stop</td></tr><tr><td><span class="kbd">1</span>–<span class="kbd">6</span></td><td>switch tab</td></tr><tr><td><span class="kbd">N</span></td><td>next scramble / case</td></tr><tr><td><span class="kbd">H</span></td><td>reveal the answer</td></tr><tr><td><span class="kbd">←</span> <span class="kbd">→</span></td><td>step through the player</td></tr><tr><td>drag cube</td><td>orbit the view</td></tr></table><p class="muted" style="margin-top:8px;font-size:13px">Times, case statuses and seed history are saved in this browser.</p>`;};
 $('#scrLen').onchange=()=>newScramble($('#seed').value||undefined);
+$('#planRef').checked=store.get('planRef',false);$('#planRef').onchange=()=>{store.set('planRef',$('#planRef').checked);if(planState.plan)$('#planBtn').click();};
 $('#f2lPairs').onchange=()=>{if(f2lState.mode==='live')showF2LState();};
 // boot
 $('#crossColor').value=store.get('crossColor','white');

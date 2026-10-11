@@ -200,6 +200,54 @@ function solveF2L(cube,order){
   }
   return {steps,cube:c};
 }
+// ===== Turn the cube to each algorithm =====
+// A state whose centres have turned (a rotation was applied) is reframed with rotationToRestore(c).mul(c):
+// the same cube as the solver now holds it, with the centres back at home. derotate(c) is different: it
+// turns the cube back physically, so the original slot names apply again.
+function reframe(c){const r=rotationToRestore(c);return r?r.mul(c):c;}
+// The state as held after the rotation r is applied to a cube in state c (r' c r).
+function afterRotation(c,r){if(!r)return c;const R=MOVES[r];return R.inverse().mul(c).mul(R);}
+// The y rotation that brings a slot to the front right, and where each slot goes after one y.
+const SLOT_TO_FRONT={FR:'',FL:"y'",BL:'y2',BR:'y'};
+const SLOT_AFTER_Y={FR:'FL',FL:'BL',BL:'BR',BR:'FR'};
+const Y_COUNT={'':0,y:1,y2:2,"y'":3};
+function yRot(k){return Y_ROTS.find(r=>Y_COUNT[r]===((k%4)+4)%4);}
+function slotAfterY(name,k){for(let i=0;i<(k%4+4)%4;i++)name=SLOT_AFTER_Y[name];return name;}
+// The net y rotation of a move list, as a count of y turns. Every reference alg turns only about y.
+function yCountOf(moves){const c=applyAlg(new Cube(),moves).center.join();for(const r of Y_ROTS)if(applyAlg(new Cube(),r||[]).center.join()===c)return Y_COUNT[r];return 0;}
+// Solve one pair the way the reference shows it. `cube` is the state in the original frame (cross on D, no
+// rotation) and `grip` is how many y turns the solver has made so far. The cube is turned so the slot is at
+// the front right, then a reference case with an AUF is tried. If no case fits (a piece sits in another
+// slot) the search solver runs in that grip. Returns {rot, moves, ref} with the rotation first in moves.
+function solveF2LPairRef(cube,slot,keep,grip,cases){
+  const here=slotAfterY(slot.name,grip);const rot=SLOT_TO_FRONT[here];const g=grip+Y_COUNT[rot];
+  const X=afterRotation(cube,yRot(g));
+  const fr=SLOTS[0];const keepF=keep.map(s=>SLOTS.find(x=>x.name===slotAfterY(s.name,g)));
+  const goal=c=>{const z=derotate(c);if(!crossSolved(z)||!slotSolved(z,fr))return false;for(const s of keepF)if(!slotSolved(z,s))return false;return true;};
+  const out=(moves,ref)=>({rot,moves:[...(rot?[rot]:[]),...moves],ref});
+  if(goal(X))return out([],null);
+  let best=null;
+  for(const f of cases)for(const u of AUFS){const moves=simplify([...(u?[u]:[]),...parseAlg(f.alg)]);// an AUF merges with a leading U of the alg
+    if(best&&moves.length>=best.moves.length)continue;if(goal(applyAlg(X,moves)))best={moves,ref:f.n};}
+  if(best)return out(best.moves,best.ref);
+  const sol=solveF2LPair(X,fr,keepF,14,3000000);return sol?out(sol,null):null;
+}
+// Full F2L with the cube turned to each algorithm. Steps carry the slot (original name), the rotation,
+// the moves and the reference case number. `cube` on return is the state as held at the end.
+function solveF2LRef(cube,order,cases){
+  let c=cube;let grip=0;const steps=[];const done=[];let remaining=order?order.map(n=>SLOTS.find(s=>s.name===n)):SLOTS.slice();
+  while(remaining.length){
+    let best=null;const cands=order?[remaining[0]]:remaining;
+    for(const s of cands){const r=solveF2LPairRef(c,s,done,grip,cases);if(r&&(!best||r.moves.length<best.r.moves.length))best={s,r};}
+    if(!best)return null;
+    steps.push({slot:best.s.name,rot:best.r.rot,moves:best.r.moves,ref:best.r.ref});
+    // The physical cube is c turned by the grip. Apply the moves there, then turn it back home.
+    const g=yRot(grip);c=derotate(applyAlg(c,[...(g?[g]:[]),...best.r.moves]));
+    grip=(grip+yCountOf(best.r.moves))%4;
+    done.push(best.s);remaining=remaining.filter(x=>x!==best.s);
+  }
+  return {steps,cube:afterRotation(c,yRot(grip)),grip};
+}
 // ===== Last layer =====
 function f2lSolved(c){if(!crossSolved(c))return false;for(const s of SLOTS)if(!slotSolved(c,s))return false;return true;}
 function eoSolved(c){for(let e=0;e<4;e++)if(c.eo[e]!==0)return false;return true;}
@@ -207,24 +255,27 @@ function ollSolved(c){if(!eoSolved(c))return false;for(let i=0;i<4;i++)if(c.co[i
 function cpSolvedLL(c){ // corners permuted relative to each other (allow AUF)
   for(let k=0;k<4;k++){const u=applyAlg(c,['U','U2',"U'",''][k]||[]);let ok=true;for(let i=0;i<4;i++)if(u.cp[i]!==i){ok=false;break;}if(ok)return true;}return false;}
 const AUFS=['','U',"U'",'U2'];
-// Try algs with pre/post AUF; return shortest {pre,alg,post,name}
-function findLLStep(cube,algs,test){
+// Rotations about the vertical axis, in place of an AUF when the plan turns the cube to each algorithm.
+const Y_ROTS=['','y',"y'",'y2'];
+// Try algs with a pre AUF (or, with rotate, a pre y rotation) and return the shortest {pre,alg,name,cube}.
+// The returned cube is reframed: it is the state as held after the alg, with the centres home.
+function findLLStep(cube,algs,test,rotate){
   let best=null;
   for(const a of algs){const ac=applyAlg(new Cube(),a.alg);
-    for(const pre of AUFS){const c1=pre?cube.mul(MOVES[pre]):cube;const c2=c1.mul(ac);
+    for(const pre of (rotate?Y_ROTS:AUFS)){const c1=pre?(rotate?afterRotation(cube,pre):cube.mul(MOVES[pre])):cube;const c2=reframe(c1.mul(ac));
       if(test(c2)){const len=(pre?1:0)+parseAlg(a.alg).length;if(!best||len<best.len)best={pre,alg:a.alg,name:a.name,len,cube:c2};}
     }
   }
   return best;
 }
-function solveLL(cube,DB){
+function solveLL(cube,DB,rotate){
   const steps=[];let c=cube;
-  if(!eoSolved(c)){const r=findLLStep(c,DB.eo,eoSolved);if(!r)return null;steps.push({stage:'OLL edges',...r});c=r.cube;}
-  if(!ollSolved(c)){const r=findLLStep(c,DB.co,ollSolved);if(!r)return null;steps.push({stage:'OLL corners',...r});c=r.cube;}
-  if(!cpSolvedLL(c)){const r=findLLStep(c,DB.cp,cpSolvedLL);if(!r)return null;steps.push({stage:'PLL corners',...r});c=r.cube;}
+  if(!eoSolved(c)){const r=findLLStep(c,DB.eo,eoSolved,rotate);if(!r)return null;steps.push({stage:'OLL edges',...r});c=r.cube;}
+  if(!ollSolved(c)){const r=findLLStep(c,DB.co,ollSolved,rotate);if(!r)return null;steps.push({stage:'OLL corners',...r});c=r.cube;}
+  if(!cpSolvedLL(c)){const r=findLLStep(c,DB.cp,cpSolvedLL,rotate);if(!r)return null;steps.push({stage:'PLL corners',...r});c=r.cube;}
   if(!c.isSolved()){ // edges with AUF at end
     let best=null;
-    for(const a of DB.ep){const ac=applyAlg(new Cube(),a.alg);for(const pre of AUFS){const c1=pre?c.mul(MOVES[pre]):c;const c2=c1.mul(ac);for(const post of AUFS){const c3=post?c2.mul(MOVES[post]):c2;if(c3.isSolved()){const len=(pre?1:0)+parseAlg(a.alg).length+(post?1:0);if(!best||len<best.len)best={pre,alg:a.alg,name:a.name,post,len,cube:c3};}}}}
+    for(const a of DB.ep){const ac=applyAlg(new Cube(),a.alg);for(const pre of (rotate?Y_ROTS:AUFS)){const c1=pre?(rotate?afterRotation(c,pre):c.mul(MOVES[pre])):c;const c2=reframe(c1.mul(ac));for(const post of AUFS){const c3=post?c2.mul(MOVES[post]):c2;if(c3.isSolved()){const len=(pre?1:0)+parseAlg(a.alg).length+(post?1:0);if(!best||len<best.len)best={pre,alg:a.alg,name:a.name,post,len,cube:c3};}}}}
     if(!best){ // maybe just AUF
       for(const post of AUFS){const c3=post?c.mul(MOVES[post]):c;if(c3.isSolved()){best={pre:'',alg:'',name:'AUF',post,len:post?1:0,cube:c3};}}
     }
