@@ -1,7 +1,6 @@
 // ===================== APP =====================
 const $=s=>document.querySelector(s);const $$=s=>[...document.querySelectorAll(s)];
 const COLOR_NAMES=['white','red','green','yellow','orange','blue'];
-const COLOR_VARS=['W','R','G','Y','O','B'];
 const store={get(k,d){try{const v=localStorage.getItem('cw:'+k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem('cw:'+k,JSON.stringify(v));}catch(e){}}};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // format a move: a prime move (letter and prime) gets the prime colour; plain and 2 moves keep the text colour
@@ -30,44 +29,25 @@ function removeRotations(moves){
   }
   return simplify(out);
 }
-// ---------- SVG cube rendering ----------
-const FACE_GEOM=[ // n, right, down
-  {n:[0,1,0],r:[1,0,0],d:[0,0,1]},{n:[1,0,0],r:[0,0,-1],d:[0,-1,0]},{n:[0,0,1],r:[1,0,0],d:[0,-1,0]},
-  {n:[0,-1,0],r:[1,0,0],d:[0,0,-1]},{n:[-1,0,0],r:[0,0,1],d:[0,-1,0]},{n:[0,0,-1],r:[-1,0,0],d:[0,-1,0]}];
+// ---------- SVG cube rendering: js/draw.js ----------
 const view={yaw:-32,pitch:28,mode:'3d'};
-function rot3(p,yaw,pitch){const a=yaw*Math.PI/180,b=pitch*Math.PI/180;let [x,y,z]=p;let x1=x*Math.cos(a)+z*Math.sin(a),z1=-x*Math.sin(a)+z*Math.cos(a);let y1=y*Math.cos(b)-z1*Math.sin(b),z2=y*Math.sin(b)+z1*Math.cos(b);return [x1,y1,z2];}
-function stickerColor(ci){return `var(--sticker-${COLOR_VARS[ci]})`;}
-function renderCube3D(facelets,opts={}){
-  const yaw=opts.yaw??view.yaw,pitch=opts.pitch??view.pitch;const S=opts.scale||52;const cx=opts.cx||200,cy=opts.cy||185;
-  const faces=[];
-  for(let f=0;f<6;f++){const g=FACE_GEOM[f];const nz=rot3(g.n,yaw,pitch)[2];faces.push({f,nz});}
-  faces.sort((a,b)=>a.nz-b.nz);
-  let out='';
-  for(const {f,nz} of faces){if(nz<0.02)continue;const g=FACE_GEOM[f];
-    // face background polygon
-    const corners=[[-1.5,-1.5],[1.5,-1.5],[1.5,1.5],[-1.5,1.5]].map(([u,v])=>{const p=[g.n[0]*1.5+g.r[0]*u+g.d[0]*v,g.n[1]*1.5+g.r[1]*u+g.d[1]*v,g.n[2]*1.5+g.r[2]*u+g.d[2]*v];const q=rot3(p,yaw,pitch);return [cx+q[0]*S,cy-q[1]*S];});
-    out+=`<polygon points="${corners.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="var(--sticker-line)"/>`;
-    for(let i=0;i<3;i++)for(let j=0;j<3;j++){const idx=9*f+3*i+j;const cu=j-1,cv=i-1;const h=0.44;
-      const pts=[[cu-h,cv-h],[cu+h,cv-h],[cu+h,cv+h],[cu-h,cv+h]].map(([u,v])=>{const p=[g.n[0]*1.5+g.r[0]*u+g.d[0]*v,g.n[1]*1.5+g.r[1]*u+g.d[1]*v,g.n[2]*1.5+g.r[2]*u+g.d[2]*v];const q=rot3(p,yaw,pitch);return [cx+q[0]*S,cy-q[1]*S];});
-      const faded=opts.fade&&!opts.fade.has(idx);
-      out+=`<polygon points="${pts.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="${stickerColor(facelets[idx])}" ${faded?'opacity="0.22"':''} stroke="var(--sticker-line)" stroke-width="0.6" stroke-linejoin="round"/>`;
-    }
-  }
-  return out;
-}
-function renderNet(facelets,opts={}){
-  const s=opts.size||30;const pos=[[3,0],[6,3],[3,3],[3,6],[0,3],[9,3]];let out='';
-  for(let f=0;f<6;f++){const [px,py]=pos[f];for(let i=0;i<3;i++)for(let j=0;j<3;j++){const idx=9*f+3*i+j;const faded=opts.fade&&!opts.fade.has(idx);
-    out+=`<rect x="${(px+j)*s+20}" y="${(py+i)*s+20}" width="${s-2}" height="${s-2}" rx="3" fill="${stickerColor(facelets[idx])}" ${faded?'opacity="0.22"':''} stroke="var(--sticker-line)" stroke-width="1"/>`;}}
-  return out;
-}
 let displayedCube=new Cube();let fadeSet=null;
 function showCube(cube,fade){displayedCube=cube;fadeSet=fade||null;drawMain();}
 function drawMain(){
   const f=displayedCube.toFacelets();const svg=$('#cube');
   if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');svg.innerHTML=renderNet(f,{fade:fadeSet});}
-  else{svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(f,{fade:fadeSet});}
+  else{svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(f,{yaw:view.yaw,pitch:view.pitch,fade:fadeSet});}
 }
+// The mark: the solved cube in the player view, half way through R. The same code draws
+// both, so the mark is the player cube. One SVG serves both themes: the U, R and D stickers
+// take --mk-top, --mk-side and --mk-bottom, which the theme sets. Dark mode shows white up and
+// red right. Light mode shows the same cube with yellow up and orange right.
+const MARK_VIEWBOX='-21.17 -23.45 45.63 46.41';
+function drawMark(){const el=$('#mark');if(!el)return;
+  const color=ci=>ci===0?'var(--mk-top)':ci===1?'var(--mk-side)':ci===3?'var(--mk-bottom)':stickerColor(ci);
+  const polys=cubePolys(new Cube().toFacelets(),{move:'R',t:0.5,scale:10,cx:0,cy:0,body:'var(--mk-body)',color});
+  el.setAttribute('viewBox',MARK_VIEWBOX);el.innerHTML=polysSVG(polys);}
+drawMark();
 // thumbnails
 let _mk=0;
 function thumbTop(cube,mode){ // mode 'eo' (edges only matter), 'oll' (U colour vs grey), 'pll' (real colours + flow arrows)

@@ -16,6 +16,7 @@ The app was called Cubeworks. Keep these old names as they are:
 | `index.html` | Page shell and markup |
 | `css/app.css` | All styles |
 | `js/engine.js` | `Cube` model, `parseAlg`, `applyAlg`, `invertAlg`, cross and F2L solvers, `fromFacelets` validation |
+| `js/draw.js` | `cubePolys` and `renderCube3D` (the 3D view, with a layer part way through a move: `{move, t}`), `renderNet`, `moveGeom` (pure, no DOM) |
 | `js/solver.js` | Kociemba two-phase solver, `solveTwoPhase(cube, {timeMs})` |
 | `js/algs.js` | Algorithm database |
 | `js/app.js` | UI, trainer, timer, history, `loadScramble` |
@@ -23,7 +24,7 @@ The app was called Cubeworks. Keep these old names as they are:
 | `js/scan-assemble.js` | Scanner stage 5: face rotations, colour repairs, joint colour read (pure, no DOM) |
 | `js/scan.js` | Scanner stages 1-4 and the Scan cube dialog |
 | `js/glossary.js` | Glossary entries, links in description text, the floating card |
-| `test/` | `load.js` jsdom smoke test, `tabs.js` (scramble, drills, case cards, clear dialog), `plan.js` (guided solve with rotations), `mobile.js` (phone menu), `glossary.js`, and the scanner tests |
+| `test/` | `load.js` jsdom smoke test, `draw.js` (a part turn lands on the moved cube), `tabs.js` (scramble, drills, case cards, clear dialog), `plan.js` (guided solve with rotations), `mobile.js` (phone menu), `glossary.js`, and the scanner tests |
 | `docs/` | Design notes and handoff documents |
 
 The scripts share one global scope. `index.html` loads them in the order

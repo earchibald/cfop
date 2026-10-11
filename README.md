@@ -20,6 +20,7 @@ The site deploys to GitHub Pages on every push to `main`.
 | `index.html` | Page shell and markup |
 | `css/app.css` | All styles |
 | `js/engine.js` | Cube model, move parser, cross and F2L solvers, last layer, rotations |
+| `js/draw.js` | Cube pictures: the 3D view, a layer part way through a move, the net |
 | `js/solver.js` | Kociemba two-phase solver and facelet validation |
 | `js/algs.js` | Algorithm database with recognition and breakdown text |
 | `js/app.js` | UI, trainer, timer, history |
