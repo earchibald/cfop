@@ -8,7 +8,7 @@ The cube is the design. Chrome is monochrome. Colour carries meaning.
 | Light mode | A GAN stickerless cube on a light grey desk. Off-white panels with thin seams, the black core as the primary button. No pure white. |
 | Type | Rubik for text and the timer. Azeret Mono for notation. |
 | Shape | Rounded cubies: 16px panels, 10px buttons, 7px chips, hairline borders, a soft top sheen. |
-| Mark | Nine tiles with the top row mid-turn. The moving row takes the current-move colour. |
+| Mark | The cube from the front, tilted 10° toward the viewer, green face, top layer turned half a U. Dark mode shows white up and red right. Light mode shows the same cube from the other side: yellow up and orange right, because white vanishes on the light desk. One SVG; `--mk-top` and `--mk-side` switch with the theme. The generator is a small 3D projection, not hand-drawn. |
 
 ## Colour means something
 
