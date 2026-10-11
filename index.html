@@ -29,6 +29,12 @@
 </header>
 <div id="menuBg" class="menu-bg hidden"><nav id="menu" class="menu" aria-label="Sections"></nav></div>
 <div class="page">
+  <section class="beghome" id="begHome" aria-label="Beginner home">
+    <section class="panel beg-next" id="begNext" aria-label="Up next"></section>
+    <section class="panel beg-ask" id="begAsk" aria-label="Your cube"></section>
+    <section class="panel beg-mix" id="begMix" aria-label="Mix it up with me"></section>
+  </section>
+  <div class="panel tight begbar hidden" id="begBar"></div>
   <section class="player" id="player">
     <div class="panel tight cubebox">
       <svg id="cube" viewBox="0 0 400 360" aria-label="Cube view"></svg>
@@ -36,10 +42,10 @@
       <div class="draghint" id="dragHint" aria-hidden="true"><svg viewBox="0 0 24 16"><path d="M3 12a9 9 0 0 1 18 0"/><path d="M3 12l-1.6-3.2M3 12l3.3-1.3"/><path d="M21 12l1.6-3.2M21 12l-3.3-1.3"/></svg><span>Drag to rotate</span></div>
     </div>
     <div class="panel seqpanel">
-      <div class="seqhead"><span class="lbl" id="seqLabel">scramble</span><span class="muted desktop-only" style="font-size:13px">Click a move, drag the slider, or use ← → to step. Press P to auto-step. The cube shows the state after the highlighted move.</span></div>
+      <div class="seqhead"><span class="lbl" id="seqLabel">scramble</span><span class="muted desktop-only hint" style="font-size:13px"><span class="cfop-only">Click a move, drag the slider, or use ← → to step. Press P to auto-step. The cube shows the state after the highlighted move.</span><span class="beg-only">Press ▶ to step. The cube shows the state after the bright turn.</span></span><button class="small" id="keyBtn" aria-expanded="false" aria-controls="keyPanel" title="What the letters mean">Key</button></div>
       <div class="scramble" id="scramble"></div>
       <div class="scrub"><button class="small" id="scrubStart" title="Go to start">⏮</button><button class="small" id="scrubPrev" title="Step back (←)">◀</button><input type="range" id="scrub" min="0" max="0" value="0"><button class="small" id="scrubNext" title="Step forward (→)">▶</button><button class="small" id="scrubEnd" title="Go to end">⏭</button><span class="mono muted" style="font-size:13px;min-width:48px;text-align:right" id="scrubPos">0 / 0</span></div>
-      <div class="autoplay"><button class="small" id="autoPlay" title="Auto-step through the sequence (P)">▷ Auto-step</button><label class="muted" for="autoSpeed">one move every</label><select id="autoSpeed"><option value="250">0.25 s</option><option value="500">0.5 s</option><option value="750">0.75 s</option><option value="1000">1 s</option><option value="1500">1.5 s</option><option value="2000">2 s</option><option value="3000">3 s</option></select></div>
+      <div class="autoplay"><button class="small" id="autoPlay" title="Auto-step through the sequence (P)">▷ Auto-step</button><label class="muted" for="autoSpeed">one <span class="cfop-only">move</span><span class="beg-only">turn</span> every</label><select id="autoSpeed"><option value="250">0.25 s</option><option value="500">0.5 s</option><option value="750">0.75 s</option><option value="1000">1 s</option><option value="1500">1.5 s</option><option value="2000">2 s</option><option value="3000">3 s</option></select></div>
     </div>
     <div class="panel timerpanel">
       <div class="timer" id="timer">0.00</div>
@@ -56,10 +62,17 @@
       <span class="lbl">your progress</span>
       <div class="psq" id="progSq" aria-label="The eight steps"></div>
       <div id="progText" style="font-size:14px"></div>
-      <div class="ptiles"><div><span class="muted">cubes solved</span><b id="progSolves">0</b></div><div><span class="muted">rounds practised</span><b id="progPract">0</b></div></div>
+      <div class="ptiles"><div><span class="muted">cubes solved</span><b id="progSolves">0</b></div><div><span class="muted">rounds practiced</span><b id="progPract">0</b></div></div>
       <div style="font-size:14px"><b>Up next</b><br><span id="progNext"></span></div>
       <button class="primary" id="progSolve">Solve my cube</button>
       <div class="ptimer"><span class="muted" style="font-size:13px">Ready to go faster?</span><button class="small" id="progTimer">Time my solves</button><span class="muted" style="font-size:12px">Shows the timer in this panel. Times save like in CFOP.</span></div>
+    </div>
+    <div class="panel keypanel" id="keyPanel" aria-label="Key: what the letters mean">
+      <b>Key: what the letters mean</b>
+      <span class="muted" style="font-size:14px">Each letter is one face. It turns a quarter turn, clockwise as you look at that face.</span>
+      <dl class="keylist"><dt>U</dt><dd>top (up)</dd><dt>D</dt><dd>bottom (down)</dd><dt>F</dt><dd>front</dd><dt>B</dt><dd>back</dd><dt>R</dt><dd>right</dd><dt>L</dt><dd>left</dd></dl>
+      <dl class="keylist keylist2"><dt class="mod">R'</dt><dd>the mark: counterclockwise ↺</dd><dt>R2</dt><dd>the 2: twice, a half turn</dd><dt class="rot">y</dt><dd>dashed: turn the whole cube, like a globe</dd><dt class="rot">z2</dt><dd>dashed: turn the whole cube over</dd></dl>
+      <button class="ln-link" id="keyLesson">Open the Basics lesson</button>
     </div>
   </section>
   <section class="panel tight seedbar">
@@ -73,7 +86,7 @@
       <button class="small ghost" id="showScramble" title="Put the current scramble back in the player">Show scramble</button>
       <button class="small" id="scanBtn" title="Type a scramble in standard notation">Enter a scramble</button>
       <button class="small" id="camBtn" title="Read a real cube with the webcam">Scan cube</button>
-      <button class="small" id="paintBtn" title="Tap the colours of a real cube onto a map">Paint cube</button>
+      <button class="small" id="paintBtn" title="Tap the colors of a real cube onto a map">Paint cube</button>
     </div>
     <span class="muted desktop-only" style="font-size:13px">White up, green front. The same seed always gives the same scramble.</span>
     <div id="drillNote" class="drillnote hidden"><span>Drill: <b id="drillName"></b>. The player shows this case, not the scramble. Your scramble is kept.</span><button class="small primary" id="drillBack">Back to scramble</button></div>
@@ -101,7 +114,7 @@
       <div class="panel">
         <div class="row" style="justify-content:space-between">
           <div><h2>Guided solve</h2><p class="muted" style="margin:0">Scramble with white up and green in front, as shown in the player above. Press Plan. Each step shows the cube at that point; click a move to step through it.</p></div>
-          <div class="row"><select id="crossColor" title="Scrambles are always applied white up, green front. This is the colour you then solve on the bottom."><option value="white">White cross (z2 after scramble)</option><option value="yellow">Yellow cross (no rotation)</option><option value="green">Green cross</option><option value="blue">Blue cross</option><option value="red">Red cross</option><option value="orange">Orange cross</option></select>
+          <div class="row"><select id="crossColor" title="Scrambles are always applied white up, green front. This is the color you then solve on the bottom."><option value="white">White cross (z2 after scramble)</option><option value="yellow">Yellow cross (no rotation)</option><option value="green">Green cross</option><option value="blue">Blue cross</option><option value="red">Red cross</option><option value="orange">Orange cross</option></select>
           <select id="f2lOrder"><option value="greedy">F2L: shortest pair first</option><option value="FR,FL,BL,BR">F2L: FR FL BL BR</option><option value="FL,FR,BR,BL">F2L: FL FR BR BL</option></select>
           <label title="Turn the whole cube (y) before a step, so each pair goes in at the front right and each last-layer case sits as the reference shows it. Off: keep one front and use any face moves."><input type="checkbox" id="planRef"> Rotate to each algorithm</label>
           <button class="primary" id="planBtn">Plan</button></div>
@@ -149,7 +162,7 @@
         <p class="muted">The 41 standard cases for the front-right slot. Select cases, then train. The button under each case changes its status: unlearned → learning → finished. Click a case to open its details. Shift-click a case to add it to training or remove it.</p>
         <div class="row"><button class="primary" id="f2lRandomCase">Next case</button><button id="f2lCaseReveal">Reveal</button><select id="f2lGroup"><option value="all">All groups</option></select></div>
       </div>
-      <div class="panel hidden" id="f2lCaseOut"><p class="muted">Press Next case to start a drill. The cube shows the case with a random U turn, so you recognise it and do not memorise the setup. Your scramble is kept. Press Back to scramble to return to it.</p></div>
+      <div class="panel hidden" id="f2lCaseOut"><p class="muted">Press Next case to start a drill. The cube shows the case with a random U turn, so you recognize it and do not memorize the setup. Your scramble is kept. Press Back to scramble to return to it.</p></div>
       <div class="panel hidden" id="f2lCaseList">
         <div class="row" style="justify-content:space-between"><h3>Cases</h3><span class="legend"><span><i class="unlearned"></i>unlearned</span><span><i style="background:var(--sticker-Y)"></i>learning</span><span><i style="background:var(--sticker-G)"></i>finished</span></span><span><button class="small ghost" id="f2lSelAll">Select all</button><button class="small ghost" id="f2lSelNone">None</button><button class="small ghost" id="f2lSelUnlearned">Not finished</button></span></div>
         <div class="cases" id="f2lCaseGrid"></div>
@@ -180,7 +193,7 @@
       <div class="panel">
         <h2>Algorithm lab: why it works</h2>
         <p class="muted">Paste any algorithm, or pick one. The lab shows which pieces it moves and which it leaves alone. It shows where each moved piece goes, and how many repeats bring the cube back. It also finds the triggers inside it. Step through it on the cube. Stickers that end where they started fade.</p>
-        <div class="row"><input id="labAlg" class="mono" style="flex:1;min-width:260px" value="R U R' U R U2 R'"><select id="labPick"><option value="">Pick…</option></select><button class="primary" id="labRun">Analyse</button></div>
+        <div class="row"><input id="labAlg" class="mono" style="flex:1;min-width:260px" value="R U R' U R U2 R'"><select id="labPick"><option value="">Pick…</option></select><button class="primary" id="labRun">Analyze</button></div>
         <div class="lab-moves" id="labMoves" style="margin-top:10px"></div>
         <div class="row" style="margin-top:6px"><button class="small" id="labPrev">◀ step</button><button class="small" id="labNext">step ▶</button><button class="small" id="labPlay">▶ play</button><label style="font-size:14px"><input type="checkbox" id="labFade" checked> fade untouched stickers</label><label style="font-size:14px"><input type="checkbox" id="labFromSolved" checked> start from solved</label></div>
       </div>
@@ -201,11 +214,11 @@
     </section>
     <!-- REFERENCE -->
     <section class="tab" id="tab-ref" data-sec="ref">
-      <div id="refMobile"><div class="panel"><h2>CFOP reference</h2><p class="muted" style="margin:0">Tap a case to open its details: algorithm, how to recognise it, and how it works. Scrambles are white up, green front; cases are shown yellow up.</p></div><div id="refMobileCases"></div></div>
+      <div id="refMobile"><div class="panel"><h2>CFOP reference</h2><p class="muted" style="margin:0">Tap a case to open its details: algorithm, how to recognize it, and how it works. Scrambles are white up, green front; cases are shown yellow up.</p></div><div id="refMobileCases"></div></div>
       <div id="refDesktop" style="display:contents">
       <div class="panel"><h2>Reference</h2><p class="muted">Click any case to open it: large picture, recognition, breakdown, and buttons to set it on the cube or open it in the Lab. Algorithms follow jperm.net's two-look sets.</p></div>
       <div class="grid2 refcols">
-        <div class="panel"><h3>Two-look OLL</h3><p class="muted">Look 1: orient the edges. Only the edge stickers matter, so the corners are shown grey. Look 2: orient the corners.</p>
+        <div class="panel"><h3>Two-look OLL</h3><p class="muted">Look 1: orient the edges. Only the edge stickers matter, so the corners are shown gray. Look 2: orient the corners.</p>
           <h3 class="sub">1. Edges</h3><div class="rcards" id="refOLLe"></div>
           <h3 class="sub">2. Corners</h3><div class="rcards" id="refOLLc"></div></div>
         <div class="panel"><h3>Two-look PLL</h3><p class="muted">Look 1: permute the corners; these pictures show corner arrows only, since the edges are fixed in look 2. Look 2: permute the edges. A two-headed arrow is a swap.</p>
@@ -214,7 +227,7 @@
       </div>
       <div class="panel"><h3>Full PLL (21)</h3><p class="muted">For later. The app checks that each one moves only the top layer.</p><div class="wide"><table id="refPLL"></table></div></div>
       <div class="panel"><h3>F2L (41 cases, front-right slot)</h3><div class="wide"><table id="refF2L"></table></div></div>
-      <div class="panel"><h3>Notation</h3><p>Face turns: <span class="mono">U R F D L B</span> clockwise when you look at that face. <span class="mono">'</span> is counter-clockwise. <span class="mono">2</span> is a half turn. Lower-case <span class="mono">r u f</span> turn two layers. <span class="mono">M E S</span> are the middle slices (M follows L, E follows D, S follows F). <span class="mono">x y z</span> rotate the whole cube like R, U, F.</p><p>Scrambles are applied with white up and green in front, the WCA rule. Solving plans start with one rotation (<span class="mono">z2</span> for a white cross) and then contain only face turns: hold the cube still, cross colour down, and turn faces.</p></div>
+      <div class="panel"><h3>Notation</h3><p>Face turns: <span class="mono">U R F D L B</span> clockwise when you look at that face. <span class="mono">'</span> is counterclockwise. <span class="mono">2</span> is a half turn. Lower-case <span class="mono">r u f</span> turn two layers. <span class="mono">M E S</span> are the middle slices (M follows L, E follows D, S follows F). <span class="mono">x y z</span> rotate the whole cube like R, U, F.</p><p>Scrambles are applied with white up and green in front, the WCA rule. Solving plans start with one rotation (<span class="mono">z2</span> for a white cross) and then contain only face turns: hold the cube still, cross color down, and turn faces.</p></div>
     </div>
     </section>
     <!-- BEGINNER: Learn (js/learn.js) -->
@@ -242,6 +255,7 @@
 <script src="js/scan-assemble.js"></script>
 <script src="js/scan.js"></script>
 <script src="js/beginner-ui.js"></script>
+<script src="js/beghome.js"></script>
 <script src="js/learn.js"></script>
 <script src="js/paint.js"></script>
 <script src="js/guide.js"></script>

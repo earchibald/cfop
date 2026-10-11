@@ -50,15 +50,15 @@ w.addEventListener('load',async()=>{try{
   assert.ok(label().startsWith('practice'),'the label starts with practice: '+label());
 
   // Solved it: counts a round and starts a new cube.
-  assert.strictEqual(w.begProgress.data().practised,0);
+  assert.strictEqual(w.begProgress.data().practiced,0);
   click($('#prSolved'));
-  assert.strictEqual(w.begProgress.data().practised,1,'one round practised');
+  assert.strictEqual(w.begProgress.data().practiced,1,'one round practiced');
   assert.ok(label().includes('steps 1 to 2'),'Solved it starts a new cube on the same step');
 
-  // The Progress tab: the practised tile and a status button per step.
+  // The Progress tab: the practiced tile and a status button per step.
   w.goTab('progress');
   assert.ok($('#tab-progress').classList.contains('on'));
-  assert.strictEqual($('#prPract').textContent,'1','the practised tile shows 1');
+  assert.strictEqual($('#prPract').textContent,'1','the practiced tile shows 1');
   assert.strictEqual($$('#prTable .stbtn').length,9,'a status button for Basics and steps 1 to 8');
 
   // startPractice(5): switches to Practice, step 5 on, a new cube dashing steps 1 to 4.
@@ -67,14 +67,14 @@ w.addEventListener('load',async()=>{try{
   assert.ok($('#prSteps button[data-n="5"]').classList.contains('on'),'step 5 is on');
   assert.ok(label().includes('steps 1 to 4'),'the label names steps 1 to 4: '+label());
 
-  // Reset: a themed confirm dialog; Enter resets the practised count to zero.
+  // Reset: a themed confirm dialog; Enter resets the practiced count to zero.
   w.goTab('progress');
   click($('#prReset'));
   assert.ok($('#askBg'),'the reset dialog opens');
   assert.ok($('#askTitle').textContent.includes('Reset'),'the dialog names the action');
   key('keydown','Enter');
   assert.ok(!$('#askBg'),'Enter closes the dialog');
-  assert.strictEqual(w.begProgress.data().practised,0,'the practised count is reset');
+  assert.strictEqual(w.begProgress.data().practiced,0,'the practiced count is reset');
   assert.strictEqual($('#prPract').textContent,'0','the Progress tab follows');
 
   assert.deepStrictEqual(errs,[],'no script errors');

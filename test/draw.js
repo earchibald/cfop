@@ -1,6 +1,6 @@
 // The cube picture with a layer part way through a move.
 // At t=0 the picture is the plain picture. At t=1 every sticker sits where the matching
-// sticker of the cube after the move sits, with the same colour, from any camera angle.
+// sticker of the cube after the move sits, with the same color, from any camera angle.
 // Half way through, the picture has the cut faces and no bad numbers.
 const assert=require('assert');
 const run=require('./vm-load')('js/engine.js','js/draw.js');
@@ -10,7 +10,7 @@ const base=T.applyAlg(new T.Cube(),T.parseAlg("F R U' L2 D B' R2 U"));
 const views=[[-32,28],[-32,-34],[140,10],[45,-20],[0,0],[90,89]];
 const moves=[];for(const b of [..."URFDLBurfdlbMESxyz"])for(const s of ['',"'",'2'])moves.push(b+s);
 
-// stickers as colour + centre, for matching
+// stickers as color + center, for matching
 const stickers=polys=>polys.filter(p=>p.stroke).map(p=>({fill:p.fill,x:p.pts.reduce((a,q)=>a+q[0],0)/4,y:p.pts.reduce((a,q)=>a+q[1],0)/4}));
 const same=(A,B)=>{if(A.length!==B.length)return false;const used=new Set();
   for(const a of A){let hit=-1;for(let i=0;i<B.length;i++){if(used.has(i))continue;const b=B[i];if(b.fill===a.fill&&Math.hypot(a.x-b.x,a.y-b.y)<0.05){hit=i;break;}}

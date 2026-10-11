@@ -2,9 +2,9 @@
 // Pure functions, no DOM. Needs engine.js (fromFacelets, cornerFacelet, edgeFacelet,
 // cornerColor, edgeColor, COLOR_NAMES_E). See docs/scanner-handoff.md.
 //
-// A scanned face is {stickers:[9 colour indices], margins?:[9 numbers], pinned?:[9 bools]}.
+// A scanned face is {stickers:[9 color indices], margins?:[9 numbers], pinned?:[9 bools]}.
 // stickers read left to right, top to bottom, as the camera saw them. The face may be
-// turned by any multiple of 90 degrees; the centre colour says which face it is.
+// turned by any multiple of 90 degrees; the center color says which face it is.
 
 // Turn a 3x3 face reading 90 degrees clockwise, k times.
 function rotateFace(s,k){
@@ -14,7 +14,7 @@ function rotateFace(s,k){
 }
 
 const SCAN_PIECES=(()=>{
-  // Every legal colour tuple for a corner or edge slot, in the slot's facelet order.
+  // Every legal color tuple for a corner or edge slot, in the slot's facelet order.
   const corners=new Set(),edges=new Set();
   for(const cc of cornerColor)for(let o=0;o<3;o++)corners.add([0,1,2].map(n=>cc[(n+o)%3]).join());
   for(const ec of edgeColor){edges.add(ec.join());edges.add([ec[1],ec[0]].join());}
@@ -26,7 +26,7 @@ const SCAN_PIECES=(()=>{
 })();
 
 // All facelet arrays that come from some rotation of each face and pass fromFacelets.
-// byFace: 6 arrays of 9 colours, indexed by face (centre colour). Returns [{facelets,rotations}].
+// byFace: 6 arrays of 9 colors, indexed by face (center color). Returns [{facelets,rotations}].
 function legalRotations(byFace,limit){
   limit=limit||8;const out=[],seen=new Set();
   const f=new Array(54),rot=new Array(6);
@@ -57,8 +57,8 @@ function assembleScan(faces){
   const byFace=new Array(6).fill(null),src=new Array(6).fill(null);
   for(const fc of faces){
     const c=fc.stickers[4];
-    if(!(c>=0&&c<6))return {ok:false,errors:['A face has no centre colour.'],changes:[]};
-    if(byFace[c])return {ok:false,errors:[`Two faces have a ${COLOR_NAMES_E[c]} centre.`],changes:[]};
+    if(!(c>=0&&c<6))return {ok:false,errors:['A face has no center color.'],changes:[]};
+    if(byFace[c])return {ok:false,errors:[`Two faces have a ${COLOR_NAMES_E[c]} center.`],changes:[]};
     byFace[c]=fc.stickers.slice();src[c]=fc;
   }
   const missing=[0,1,2,3,4,5].filter(c=>!byFace[c]);
@@ -70,14 +70,14 @@ function assembleScan(faces){
   let sols=legalRotations(byFace);
   if(sols.length)return done(sols,[]);
 
-  // Repair 0: read all stickers again against this cube's own centre colours, nine per colour.
-  // This settles red/orange and white/yellow when the light shifts the colours.
-  const joint=jointColours(faces.map(fc=>fc));
+  // Repair 0: read all stickers again against this cube's own center colors, nine per color.
+  // This settles red/orange and white/yellow when the light shifts the colors.
+  const joint=jointColors(faces.map(fc=>fc));
   if(joint){
     const trial=new Array(6);for(const fc of faces)trial[fc.stickers[4]]=joint.get(fc);
     let n=0;for(let c=0;c<6;c++)for(let p=0;p<9;p++)if(trial[c][p]!==byFace[c][p])n++;
     sols=legalRotations(trial);
-    if(sols.length){const r=done(sols,[`I read ${n} sticker${n===1?'':'s'} again against the centre colours.`]);r.joint=true;return r;}
+    if(sols.length){const r=done(sols,[`I read ${n} sticker${n===1?'':'s'} again against the center colors.`]);r.joint=true;return r;}
   }
 
   // Repair 1: one face read with red/orange or white/yellow swapped throughout.
@@ -116,15 +116,15 @@ function assembleScan(faces){
   // No repair worked. Report the errors for the reading as scanned, at the best guess of rotations.
   const f=[];for(let face=0;face<6;face++)f.push(...byFace[face]);
   const bad=[0,1,2,3,4,5].filter(c=>counts[c]!==9);
-  const errors=bad.length?['Each colour must appear 9 times: '+bad.map(c=>`${COLOR_NAMES_E[c]} ${counts[c]}`).join(', ')+'.']
+  const errors=bad.length?['Each color must appear 9 times: '+bad.map(c=>`${COLOR_NAMES_E[c]} ${counts[c]}`).join(', ')+'.']
     :['The faces do not fit together as one cube. Check the stickers on the net, or scan a face again.'];
   return {ok:false,facelets:f,errors,changes:[]};
 }
 
-// Assign the 48 non-centre stickers to the six colours, eight each, by distance to the centre
-// colours in Lab. faces need .lab (9 Lab values). Pinned stickers keep their colour.
-// Returns a Map face -> 9 colours, or null.
-function jointColours(faces){
+// Assign the 48 non-center stickers to the six colors, eight each, by distance to the center
+// colors in Lab. faces need .lab (9 Lab values). Pinned stickers keep their color.
+// Returns a Map face -> 9 colors, or null.
+function jointColors(faces){
   if(faces.length!==6||!faces.every(f=>f.lab))return null;
   const anchor=[];for(const f of faces)anchor[f.stickers[4]]=f.lab[4];
   const dist=(a,b)=>Math.sqrt(0.35*(a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2);

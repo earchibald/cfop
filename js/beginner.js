@@ -1,8 +1,8 @@
 // ===== Beginner method: the Rubik's eight-step guide =====
 // Data: the steps, their goals, the algorithms and the trigger mnemonics.
 // Solver: solveBeginner(cube) returns the plan a beginner follows, part by part, with only
-// the guide's moves and holds. It reads the cube as held: the colour of the top centre is
-// "yellow" and the colour of the bottom centre is "white", whatever the real colours are.
+// the guide's moves and holds. It reads the cube as held: the color of the top center is
+// "yellow" and the color of the bottom center is "white", whatever the real colors are.
 // Pure: no DOM. Loads after engine.js.
 
 const BEGINNER_COLOR_NAMES=['white','red','green','yellow','orange','blue'];
@@ -25,14 +25,14 @@ const BEGINNER_ALGS={
 const BEGINNER_STEPS=[
   {n:0,id:'basics',name:'Get to know your cube',
    goal:'Know the three kinds of piece, how to hold the cube, and the six moves.',
-   what:'A cube has centres, edges and corners. A centre has one colour and never moves. An edge has two colours. A corner has three. Every piece has one home, next to the centres of its colours.',
-   how:'Hold the cube with the yellow centre on top for every step. The face that looks at you is the front. A letter is a quarter turn of that face, clockwise as you look at it. A letter with a mark, such as R\', turns the other way. A 2 means a half turn.',
-   note:'The centres tell you the colour of each face. White is always opposite yellow, green opposite blue, red opposite orange.'},
+   what:'A cube has centers, edges and corners. A center has one color and never moves. An edge has two colors. A corner has three. Every piece has one home, next to the centers of its colors.',
+   how:'Hold the cube with white on top to begin. Step 1 turns it over: from then on the yellow center is on top for every step. The face that looks at you is the front. A letter is a quarter turn of that face, clockwise as you look at it. A letter with a mark, such as R\', turns the other way. A 2 means a half turn.',
+   note:'The centers tell you the color of each face. White is always opposite yellow, green opposite blue, red opposite orange.'},
   {n:1,id:'daisy',name:'The daisy',
-   goal:'Four white edges around the yellow centre, like petals.',
-   what:'Find each white edge and bring it to the top face, white side up. Keep the ones you placed.',
+   goal:'Four white edges around the yellow center, like petals.',
+   what:'Turn the cube over so the yellow center is on top. Then find each white edge and bring it to the top face, white side up. Keep the ones you placed.',
    how:'Find a white edge. See where it is, then do the moves for that case. If the top spot you need is taken, turn the top first to make room.',
-   note:'As you place edges, you may need to turn the top to make space next to the yellow centre.',
+   note:'As you place edges, you may need to turn the top to make space next to the yellow center.',
    cases:[
      {name:'Already on top, white up',text:'Leave it.',moves:''},
      {name:'White on the left of the front face',text:'Turn the left face away from you.',moves:"L'"},
@@ -42,27 +42,27 @@ const BEGINNER_STEPS=[
      {name:'White on the bottom face',text:'Half turn of the front face.',moves:'F2'},
    ]},
   {n:2,id:'cross',name:'The white cross',
-   goal:'A white cross on the bottom. Each side colour of the cross matches its centre.',
-   what:'Move each white edge from the daisy down to the white face, with its other colour under the matching centre.',
-   how:'Turn the top until an edge sits over the centre of its other colour. Then do a half turn of that face. Repeat for all four edges.',
-   note:'Check from the side: the colour under each centre must match. Two edges that match and two that do not means the cross is not done.',
-   cases:[{name:'Edge over its centre',text:'Turn the top to match, then a half turn of the front.',moves:"U' F2"}]},
+   goal:'A white cross on the bottom. Each side color of the cross matches its center.',
+   what:'Move each white edge from the daisy down to the white face, with its other color under the matching center.',
+   how:'Turn the top until an edge sits over the center of its other color. Then do a half turn of that face. Repeat for all four edges.',
+   note:'Check from the side: the color under each center must match. Two edges that match and two that do not means the cross is not done.',
+   cases:[{name:'Edge over its center',text:'Turn the top to match, then a half turn of the front.',moves:"U' F2"}]},
   {n:3,id:'corners',name:'The white corners',
-   goal:'The white face is complete. The bottom row of every side matches its centre.',
-   what:'Find each white corner and move it down to the white face. Its two other colours must match the centres next to it.',
-   how:'Learn the two triggers first. Find a white corner in the top layer. Turn the top until its side colour sits over the centre of that colour. Do the trigger for that side. Keep the cross and the corners you placed.',
+   goal:'The white face is complete. The bottom row of every side matches its center.',
+   what:'Find each white corner and move it down to the white face. Its two other colors must match the centers next to it.',
+   how:'Learn the two triggers first. Find a white corner in the top layer. Turn the top until its side color sits over the center of that color. Do the trigger for that side. Keep the cross and the corners you placed.',
    note:'Move a white corner above the empty bottom corner it belongs to before you do a trigger. Then the corners you placed stay placed.',
    triggers:['left','right'],
    cases:[
-     {name:'Top layer, white facing out, matching tile top left',text:'Turn the top to match the centre. Left Trigger.',moves:"L' U' L"},
-     {name:'Top layer, white facing out, matching tile top right',text:'Turn the top to match the centre. Right Trigger.',moves:"R U R'"},
+     {name:'Top layer, white facing out, matching tile top left',text:'Turn the top to match the center. Left Trigger.',moves:"L' U' L"},
+     {name:'Top layer, white facing out, matching tile top right',text:'Turn the top to match the center. Right Trigger.',moves:"R U R'"},
      {name:'Top layer, white facing up',text:'Put it above its home. Right Trigger twice. Now white faces out: use the cases above.',moves:"R U R' R U R'"},
      {name:'Bottom layer, wrong spot or twisted',text:'Hold it at the bottom right of the front. Right Trigger lifts it out. Then use the cases above.',moves:"R U R'"},
    ]},
   {n:4,id:'middle',name:'The middle layer',
    goal:'The bottom two layers are complete.',
-   what:'Find the edges with no yellow on them. Move each one between the two centres that match its colours.',
-   how:'Turn the top until the edge\'s front colour matches the front centre. Look at its top colour. If that colour is on the left, do Move Left. If it is on the right, do Move Right. A white corner comes up. Put it back with a trigger, like Step 3.',
+   what:'Find the edges with no yellow on them. Move each one between the two centers that match its colors.',
+   how:'Turn the top until the edge\'s front color matches the front center. Look at its top color. If that color is on the left, do Move Left. If it is on the right, do Move Right. A white corner comes up. Put it back with a trigger, like Step 3.',
    note:'No edge without yellow on the top? One is stuck in the middle layer. Do Move Right on that spot with any yellow edge. The stuck edge comes up.',
    triggers:['left','right'],
    cases:[
@@ -70,7 +70,7 @@ const BEGINNER_STEPS=[
      {name:'Move Right',text:'U, Right Trigger. Then turn the top to match the white corner and do a Left Trigger.',moves:"U R U R'"},
    ]},
   {n:5,id:'ycross',name:'The yellow cross',
-   goal:'A yellow cross on top. The side colours do not matter yet.',
+   goal:'A yellow cross on top. The side colors do not matter yet.',
    what:'Flip the yellow edges so they all face up.',
    how:'Look at the top. A dot, an L, or a line. Hold the L at the back left. Hold the line left to right. Do the algorithm. Repeat until you see the cross.',
    note:'The algorithm is F, the Right Trigger, U\', F\'. Say it as one phrase.',
@@ -92,18 +92,18 @@ const BEGINNER_STEPS=[
      {name:'Two corners yellow on top',text:'Yellow faces you on the front left corner.',moves:"R U R' U R U2 R'"},
    ]},
   {n:7,id:'ycorners',name:'The yellow corners',
-   goal:'Each yellow corner sits between its centres. The top corners of every side match.',
+   goal:'Each yellow corner sits between its centers. The top corners of every side match.',
    what:'Move the yellow corners to their places. The yellow face breaks while you do it and comes back at the end.',
-   how:'Look for two corners on one side that show the same colour. Turn the top so that colour sits over its centre. Hold that side on the left. Do the algorithm, then the yellow face algorithm. No matching pair? Do both algorithms once with any side in front, and a pair appears.',
+   how:'Look for two corners on one side that show the same color. Turn the top so that color sits over its center. Hold that side on the left. Do the algorithm, then the yellow face algorithm. No matching pair? Do both algorithms once with any side in front, and a pair appears.',
    note:'After the first algorithm the top looks broken. That is right. The second algorithm brings the yellow face back.',
    algs:['cornerSwap','sune'],
    cases:[
      {name:'No matching corners',text:'Any side in front. Algorithm, then yellow face.',moves:"L' U R U' L U R' R U R' U R U2 R'"},
-     {name:'Two matching corners',text:'Line them up with their centre. Hold that side on the left. Algorithm, then yellow face.',moves:"L' U R U' L U R' R U R' U R U2 R'"},
+     {name:'Two matching corners',text:'Line them up with their center. Hold that side on the left. Algorithm, then yellow face.',moves:"L' U R U' L U R' R U R' U R U2 R'"},
    ]},
   {n:8,id:'yedges',name:'The yellow edges',
    goal:'The cube is solved.',
-   what:'Move the last three or four edges round until each is between its centres.',
+   what:'Move the last three or four edges round until each is between its centers.',
    how:'If one side is complete, hold it at the back. Do the algorithm. Not solved? Check for a complete side, put it at the back, and do it again. Up to three times.',
    note:'The back edge stays still. The other three go round. If no side is complete, use any side as the back: after one time, one side is complete.',
    algs:['edgeCycle'],
@@ -157,7 +157,7 @@ function solveBeginner(start){
   const cornerSt=(f,i)=>cornerFacelet[i].map(x=>f[x]);
   const edgeSolved=(f,i)=>edgeFacelet[i].every(x=>f[x]===f[9*BEG_FACE_OF(x)+4]);
   const cornerSolved=(f,i)=>cornerFacelet[i].every(x=>f[x]===f[9*BEG_FACE_OF(x)+4]);
-  // U turns so that the top slot `slot` holds no edge with colour w on top.
+  // U turns so that the top slot `slot` holds no edge with color w on top.
   function freeTop(f,slot,w){const idx=BEG_U_EDGE_RING.indexOf(slot);
     for(const k of [0,1,3,2]){const from=BEG_U_EDGE_RING[(idx-k+4)%4];if(f[edgeFacelet[BEG_EDGE_POS[from]][0]]!==w)return BEG_U_TOK[k];}return '';}
   const T=()=>fl()[4],W=()=>fl()[31];
@@ -199,7 +199,7 @@ function solveBeginner(start){
     const g=after(c,pre?[pre]:[]).toFacelets();
     let slot=null;for(const s of BEG_U_EDGE_RING){const st=edgeSt(g,BEG_EDGE_POS[s]);if(st[0]===w&&st[1]===col)slot=s;}
     const k=(BEG_U_EDGE_RING.indexOf('UF')-BEG_U_EDGE_RING.indexOf(slot)+4)%4;const u=BEG_U_TOK[k];
-    part(`White and ${name(col)} edge`,`Hold ${name(col)} in front.${u?' Turn the top until the edge sits over the '+name(col)+' centre: '+u+'.':' The edge already sits over the '+name(col)+' centre.'} A half turn of the front sends it down: F2.`,pre,[u,'F2'],{piece:{type:'edge',colors:e.st}});
+    part(`White and ${name(col)} edge`,`Hold ${name(col)} in front.${u?' Turn the top until the edge sits over the '+name(col)+' center: '+u+'.':' The edge already sits over the '+name(col)+' center.'} A half turn of the front sends it down: F2.`,pre,[u,'F2'],{piece:{type:'edge',colors:e.st}});
   }
 
   // ----- Step 3: the white corners (also used to put a corner back in step 4) -----
@@ -219,7 +219,7 @@ function solveBeginner(start){
     let at=null;for(const p of ['UFL','URF']){const st=cornerSt(gr,BEG_CORNER_POS[p]);if(st.indexOf(w)>0&&st.includes(other))at=p;}
     const trig=at==='UFL'?BEGINNER_TRIGGERS.left:BEGINNER_TRIGGERS.right;
     const cols=cnr.st.filter(x=>x!==w).map(name).join(' and ');
-    part(`White, ${cols} corner`,`${u?'Turn the top until the '+name(other)+' tile sits over the '+name(other)+' centre: '+u+'. ':'The '+name(other)+' tile already sits over its centre. '}Hold ${name(other)} in front. The corner is at the top ${at==='UFL'?'left':'right'}, white facing ${at==='UFL'?'left':'right'}. ${trig.name}.`,pre,[u,...trig.moves],{piece:{type:'corner',colors:cnr.st},trigger:trig.id});
+    part(`White, ${cols} corner`,`${u?'Turn the top until the '+name(other)+' tile sits over the '+name(other)+' center: '+u+'. ':'The '+name(other)+' tile already sits over its center. '}Hold ${name(other)} in front. The corner is at the top ${at==='UFL'?'left':'right'}, white facing ${at==='UFL'?'left':'right'}. ${trig.name}.`,pre,[u,...trig.moves],{piece:{type:'corner',colors:cnr.st},trigger:trig.id});
     return true;
   }
   stage(3,'corners','The white corners');
@@ -234,13 +234,13 @@ function solveBeginner(start){
       let k=0,pos=null;
       for(k=0;k<4;k++){const g=after(c,BEG_U_TOK[k]?[BEG_U_TOK[k]]:[]).toFacelets();
         for(let i=0;i<4;i++){const fc=cornerFacelet[i];const st=fc.map(x=>g[x]);if(st[0]!==w||!st.includes(up.st[1])||!st.includes(up.st[2]))continue;
-          // Above its home, a white-up corner shows its side colours crossed: compare as a set.
+          // Above its home, a white-up corner shows its side colors crossed: compare as a set.
           const sides=[g[9*BEG_FACE_OF(fc[1])+4],g[9*BEG_FACE_OF(fc[2])+4]];if(sides.includes(st[1])&&sides.includes(st[2]))pos=CORNER_NAMES[i];}
         if(pos)break;}
       if(!pos)throw new Error('beginner: no home above a white-up corner');
       const u=BEG_U_TOK[k];const pre=BEG_CORNER_TO_URF[pos];
       const cols=up.st.slice(1).map(name).join(' and ');
-      part(`White, ${cols} corner`,`White faces up.${u?' Turn the top until the corner sits between the '+cols+' centres: '+u+'.':' It already sits between its two centres.'} Hold it at the top right of the front. Right Trigger twice. Now white faces out.`,pre,[u,...BEGINNER_TRIGGERS.right.moves,...BEGINNER_TRIGGERS.right.moves],{piece:{type:'corner',colors:up.st},trigger:'right'});
+      part(`White, ${cols} corner`,`White faces up.${u?' Turn the top until the corner sits between the '+cols+' centers: '+u+'.':' It already sits between its two centers.'} Hold it at the top right of the front. Right Trigger twice. Now white faces out.`,pre,[u,...BEGINNER_TRIGGERS.right.moves,...BEGINNER_TRIGGERS.right.moves],{piece:{type:'corner',colors:up.st},trigger:'right'});
     }else{ // all white corners are in the bottom layer, one is wrong: lift it out
       const i=[4,5,6,7].find(j=>!cornerSolved(f,j));const pos=CORNER_NAMES[i];
       const pre={DFR:'',DLF:"y'",DBL:'y2',DRB:'y'}[pos];
@@ -263,7 +263,7 @@ function solveBeginner(start){
       const u=BEG_U_TOK[k];const pre=BEG_TO_FRONT[face];const g=applyAlg(c,[u,pre].filter(Boolean)).toFacelets();
       const right=cen(g,'R')===e.st[0];const cols=`${name(side)} and ${name(e.st[0])}`;
       const first=right?['U',...BEGINNER_TRIGGERS.right.moves]:["U'",...BEGINNER_TRIGGERS.left.moves];
-      part(`${cols[0].toUpperCase()+cols.slice(1)} edge`,`${u?'Turn the top until the '+name(side)+' tile sits over the '+name(side)+' centre: '+u+'. ':''}Hold ${name(side)} in front. The top tile is ${name(e.st[0])}, the colour on the ${right?'right':'left'}. Move ${right?'Right: U, Right Trigger':'Left: U\', Left Trigger'}.`,pre,[u,...first],{piece:{type:'edge',colors:e.st},move:right?'right':'left'});
+      part(`${cols[0].toUpperCase()+cols.slice(1)} edge`,`${u?'Turn the top until the '+name(side)+' tile sits over the '+name(side)+' center: '+u+'. ':''}Hold ${name(side)} in front. The top tile is ${name(e.st[0])}, the color on the ${right?'right':'left'}. Move ${right?'Right: U, Right Trigger':'Left: U\', Left Trigger'}.`,pre,[u,...first],{piece:{type:'edge',colors:e.st},move:right?'right':'left'});
       cur.parts[cur.parts.length-1].text+=' A white corner came up.';
       const p=placeTopCorner();if(p)cur.parts[cur.parts.length-1].title='Put the white corner back';
     }else{ // an edge is stuck in the middle layer: kick it out with a yellow edge
@@ -313,13 +313,13 @@ function solveBeginner(start){
   function aufForCorners(){for(let k=0;k<4;k++){const g=after(c,BEG_U_TOK[k]?[BEG_U_TOK[k]]:[]).toFacelets();if(cornersMatch(g))return k;}return null;}
   for(let guard=0;guard<3;guard++){
     const k=aufForCorners();
-    if(k!=null){if(k)part('Line up the corners',`Turn the top until every corner matches its centres: ${BEG_U_TOK[k]}.`,'',[BEG_U_TOK[k]]);break;}
+    if(k!=null){if(k)part('Line up the corners',`Turn the top until every corner matches its centers: ${BEG_U_TOK[k]}.`,'',[BEG_U_TOK[k]]);break;}
     const f=fl();
     const pairs=[{n:'F',a:18,b:20},{n:'R',a:9,b:11},{n:'B',a:45,b:47},{n:'L',a:36,b:38}];
     const m=pairs.find(x=>f[x.a]===f[x.b]);
     if(m){const col=f[m.a];const face=['F','R','B','L'].find(x=>cen(f,x)===col);
       const kk=(BEG_SIDE_RING.indexOf(face)-BEG_SIDE_RING.indexOf(m.n)+4)%4;const u=BEG_U_TOK[kk];const pre=BEG_TO_LEFT[face];
-      part('Two corners match',`Two corners on one side show ${name(col)}.${u?' Turn the top until they sit over the '+name(col)+' centre: '+u+'.':''} Hold that side on the left. Do the yellow corners algorithm: L', U, R, U', L, U, R'.`,pre,[u,...parseAlg(BEGINNER_ALGS.cornerSwap.alg)],{alg:'cornerSwap'});
+      part('Two corners match',`Two corners on one side show ${name(col)}.${u?' Turn the top until they sit over the '+name(col)+' center: '+u+'.':''} Hold that side on the left. Do the yellow corners algorithm: L', U, R, U', L, U, R'.`,pre,[u,...parseAlg(BEGINNER_ALGS.cornerSwap.alg)],{alg:'cornerSwap'});
     }else{
       part('No corners match','Hold the cube any way. Do the yellow corners algorithm: L\', U, R, U\', L, U, R\'. Two corners will match after the next part.','',BEGINNER_ALGS.cornerSwap.alg,{alg:'cornerSwap'});
     }

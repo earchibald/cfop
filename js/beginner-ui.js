@@ -1,6 +1,6 @@
 // ===== Beginner mode: the method chip, its popover, and the progress panel =====
 // Loads after app.js, enter.js and scan.js. The beginner tabs live in their own files:
-// learn.js (Learn, Cheat sheet), guide.js (Solve my cube), paint.js (Paint the colours),
+// learn.js (Learn, Cheat sheet), guide.js (Solve my cube), paint.js (Paint the colors),
 // practice.js (Practice, Progress). They use the hooks below and the ones app.js exports:
 //   method, setMethod(m), goTab(name), tabShow[tab], setSequence(moves,label,base,drill),
 //   heldCube(), begProgress, stBtn('beg-N'), cycleStatus(id), and the events
@@ -13,14 +13,15 @@ const BEG_STEP_COUNT=8;
 const begStatusId=n=>'beg-'+n;
 
 // ---------- progress: step status in llState.status, counts in cw:begProg ----------
-const begProg=Object.assign({solves:0,practised:0,steps:{}},store.get('begProg',{}));
+const begProg=Object.assign({solves:0,practiced:0,steps:{}},store.get('begProg',{}));
+if(begProg.practised!=null){begProg.practiced+=begProg.practised;delete begProg.practised;} // the key before the US spelling
 var begProgress={ // var: tests read it from the window
   status(n){return llState.status[begStatusId(n)]||'';},
   counts(){let finished=0,learning=0;for(let n=1;n<=BEG_STEP_COUNT;n++){const s=this.status(n);if(s==='finished')finished++;else if(s==='learning')learning++;}return {finished,learning};},
   // The first step that is not finished, the basics included. null when all are finished.
   next(){return BEGINNER_STEPS.find(s=>this.status(s.n)!=='finished')||null;},
   solved(){begProg.solves++;store.set('begProg',begProg);renderProgress();},
-  practised(n){begProg.practised++;begProg.steps[n]=(begProg.steps[n]||0)+1;store.set('begProg',begProg);renderProgress();},
+  practiced(n){begProg.practiced++;begProg.steps[n]=(begProg.steps[n]||0)+1;store.set('begProg',begProg);renderProgress();},
   data(){return begProg;},
 };
 function begStepLabel(s){return s.n===0?'Basics, '+s.name:'Step '+s.n+', '+s.name;}
@@ -29,7 +30,7 @@ function renderProgress(){
   sq.innerHTML=Array.from({length:BEG_STEP_COUNT},(_,i)=>{const n=i+1,s=begProgress.status(n);return `<i class="${s}" title="Step ${n}: ${BEGINNER_STEPS[n].name}, ${s||'unlearned'}"></i>`;}).join('');
   const {finished,learning}=begProgress.counts();
   $('#progText').textContent=finished===BEG_STEP_COUNT?'All eight steps finished.':finished||learning?`${finished} step${finished===1?'':'s'} finished${learning?`, ${learning} in learning`:''}.`:'No steps finished yet.';
-  $('#progSolves').textContent=begProg.solves;$('#progPract').textContent=begProg.practised;
+  $('#progSolves').textContent=begProg.solves;$('#progPract').textContent=begProg.practiced;
   const nx=begProgress.next();$('#progNext').textContent=nx?begStepLabel(nx):'Try CFOP, from the chip in the top bar.';
   const note=$('#mnoteBeg');if(note)note.textContent=finished?`${finished} of ${BEG_STEP_COUNT} steps finished`:'Start here';
 }

@@ -1,7 +1,9 @@
 // ===== Beginner mode: Solve my cube =====
-// Two views in #tab-bsolve. The entry view: three ways to get a real cube in (scan, paint,
-// scramble) and "Start with this scramble". The guide view: solveBeginner(heldCube()) shown one
-// part at a time, with a stage bar, the steps in plain words, the moves, and Done / Show me.
+// Two views in #tab-bsolve. The entry view: the "What does your cube look like?" cards from
+// beghome.js (scan, paint, mix it up, practice on the screen) and "Start with this scramble". The
+// guide view: solveBeginner(heldCube()) shown one part at a time, with a stage bar, the steps in
+// plain words, the moves, and Done / Show me. The cube starts white up: the first part begins with
+// z2, the turn-over, as the guide's own first instruction. From then on the cube is held yellow up.
 // Globals: startGuide() (go to this tab and start the guided solve on the current scramble),
 // guideState (the state, for tests). Every string from data goes through esc().
 
@@ -9,7 +11,7 @@ const GD_SHORT=['Daisy','White cross','White corners','Middle layer','Yellow cro
 const GD_CENTRES=[4,13,22,31,40,49];
 // view: 'entry' | 'guide' | 'done'. parts: the plan flattened, each with its stage and the cube before it.
 const guideState={view:'entry',plan:null,parts:[],i:0,total:0,counted:false,showPlan:false,msg:''};
-let gdWant=false,gdWantTimer=0,gdArrived=false;
+let gdArrived=false;
 
 const gdFaceMoves=ms=>ms.filter(m=>m&&!/^[xyz]/.test(m)).length;
 
@@ -17,12 +19,14 @@ const gdFaceMoves=ms=>ms.filter(m=>m&&!/^[xyz]/.test(m)).length;
 function gdBuild(){
   const g=guideState;g.plan=null;g.parts=[];g.i=0;g.total=0;g.counted=false;g.showPlan=false;g.msg='';
   let plan=null;try{plan=solveBeginner(heldCube());}catch(e){plan=null;}
-  if(!plan||!plan.solved){g.view='entry';g.msg='The app cannot find a solve for this cube. Check the colours, then scan or paint the cube again.';return false;}
-  let c=heldCube(),done=0;
+  if(!plan||!plan.solved){g.view='entry';g.msg='The app cannot find a solve for this cube. Check the colors, then scan or paint the cube again.';return false;}
+  // The first part starts from the cube white up and turns it over (z2) before its own moves.
+  let c=heldCube(),done=0,first=true;
   for(const st of plan.stages)st.parts.forEach((p,k)=>{
-    const seq=[p.pre,...p.moves].filter(Boolean);const before=c;const held=p.pre?applyAlg(before,[p.pre]):before;
-    c=applyAlg(c,seq);
-    g.parts.push({stage:st,k,m:st.parts.length,part:p,seq,before,held,after:c,done});done+=gdFaceMoves(p.moves);
+    const flip=first;first=false;const hold=p.pre?[p.pre]:[];
+    const seq=[...(flip?['z2']:[]),...hold,...p.moves];const before=flip?scr.cube:c;const held=applyAlg(c,hold);
+    c=applyAlg(c,[...hold,...p.moves]);
+    g.parts.push({stage:st,k,m:st.parts.length,part:p,seq,before,held,after:c,done,flip});done+=gdFaceMoves(p.moves);
   });
   g.total=done;g.plan=plan;g.view=g.parts.length?'guide':'done';
   if(g.view==='done')gdCount();
@@ -36,7 +40,7 @@ function gdFindPiece(f,piece){
   for(let i=0;i<tbl.length;i++)if(tbl[i].map(x=>f[x]).sort().join()===key)return {i,fl:tbl[i]};
   return null;
 }
-// The facelets to keep bright: the piece this part moves and the six centres. null lights all.
+// The facelets to keep bright: the piece this part moves and the six centers. null lights all.
 function gdLit(cube,piece){if(!piece)return null;const p=gdFindPiece(cube.toFacelets(),piece);return p?new Set([...p.fl,...GD_CENTRES]):null;}
 function gdThumb(cube,piece){const fade=gdLit(cube,piece);return `<svg viewBox="40 30 320 300" role="img">${renderCube3D(cube.toFacelets(),{yaw:-32,pitch:28,scale:48,fade})}</svg>`;}
 
@@ -56,15 +60,16 @@ function gdWhy(e){
   if(p.move){
     const pc=p.piece&&gdFindPiece(e.held.toFacelets(),p.piece);
     if(pc&&pc.i>=8)return {h:'Why this move?',t:'The edge is stuck in the middle layer. A Move Right with a yellow edge pushes it out.'};
-    return {h:'Why this move?',t:`The top colour matches the ${p.move} centre, so the edge goes to the ${p.move}.`};
+    return {h:'Why this move?',t:`The top color matches the ${p.move} center, so the edge goes to the ${p.move}.`};
   }
   if(p.alg&&BEGINNER_ALGS[p.alg]){const a=BEGINNER_ALGS[p.alg];return {h:'Why this move?',t:`This is the ${a.name.toLowerCase()} algorithm. Say it as one phrase: ${a.say}.`};}
   return null;
 }
 
-// The moves as tiles: the hold change dashed first, the triggers boxed with their name.
-function gdTiles(p){
-  let out=p.pre?`<span class="m gd-rot" title="Turn the whole cube">${fmtMove(p.pre)}</span>`:'';
+// The moves as tiles: the turn-over and the hold change dashed first, the triggers boxed with their name.
+function gdTiles(p,flip){
+  let out=flip?'<span class="m gd-rot" title="Turn the whole cube over">z2</span>':'';
+  out+=p.pre?`<span class="m gd-rot" title="Turn the whole cube">${fmtMove(p.pre)}</span>`:'';
   for(let i=0;i<p.moves.length;i++){
     const ch=p.chunks.find(c=>c.at===i);
     if(ch){out+=`<span class="trig"><b>${esc(ch.label)}</b>${p.moves.slice(i,i+ch.len).map(m=>`<span class="m">${fmtMove(m)}</span>`).join('')}</span>`;i+=ch.len-1;}
@@ -81,10 +86,10 @@ function gdLoadPart(force){
   const g=guideState;if(curTab!=='bsolve')return;
   if(seqState.drill&&!force)return;
   if(g.view==='entry'){showScr();return;}
-  if(g.view==='done'){setSequence(g.plan.moves,'solve · the whole plan',heldCube());return;}
+  if(g.view==='done'){setSequence(['z2',...g.plan.moves],'solve · the whole plan',scr.cube);return;}
   const e=g.parts[g.i];setSequence(e.seq,gdLabel(e),e.before);seqState.idx=0;applySequence();
-  // Light the piece this part moves. With a hold change first, the piece moves with the turn: skip it.
-  if(!e.part.pre){const lit=gdLit(e.before,e.part.piece);if(lit)showCube(cubeAtSeq(0),lit);}
+  // Light the piece this part moves. With a whole-cube turn first, the piece moves with the turn: skip it.
+  if(!e.part.pre&&!e.flip){const lit=gdLit(e.before,e.part.piece);if(lit)showCube(cubeAtSeq(0),lit);}
 }
 function gdShowMe(){
   const e=guideState.parts[guideState.i];if(!e)return;
@@ -107,26 +112,15 @@ function gdPlanList(){
 }
 function gdEntryHTML(){
   const g=guideState;
-  const paintOk=typeof openPaint==='function';
-  const net=`<span class="gd-net" aria-hidden="true">${[null,3,null,null,4,2,1,5,null,0,null,null].map(c=>c==null?'<span></span>':`<span class="face">${Array.from({length:9},(_,k)=>`<i class="${k===4?'WRGYOB'[c]:''}"></i>`).join('')}</span>`).join('')}</span>`;
-  return `<div class="panel"><h2>Solve my cube</h2><p class="muted">Show the app your cube. It then tells you each move, part by part. Pick the way that suits you.</p>${g.msg?`<div class="notice gd-msg">${esc(g.msg)}</div>`:''}</div>
-  <div class="bcards">
-    <div class="panel pick"><svg class="gd-ic" viewBox="0 0 48 36" aria-hidden="true"><rect x="3" y="8" width="42" height="25" rx="5"/><path d="M16 8l3-5h10l3 5"/><circle cx="24" cy="20" r="7"/></svg>
-      <h3>Scan with the camera</h3><p class="muted">Hold each face up to the camera. It takes about a minute. You need a webcam or a phone camera.</p>
-      <button class="primary" id="gdScan">Scan cube</button></div>
-    <div class="panel">${net}
-      <h3>Paint the colours</h3><p class="muted">Tap the colours onto a flat map of the cube. This works on every device. The app checks that the cube is possible.</p>
-      <button id="gdPaint"${paintOk?'':' disabled title="Not built yet"'}>Paint my cube</button></div>
-    <div class="panel"><svg class="gd-ic" viewBox="0 0 48 36" aria-hidden="true"><path d="M4 9h9c8 0 14 18 22 18h9M38 22l6 5-6 5M4 27h9c3 0 5-2 7-5M28 13c2-2 4-4 7-4h9M38 4l6 5-6 5"/></svg>
-      <h3>No cube to hand?</h3><p class="muted">Practise on the screen. The app scrambles a cube for you. You solve it with the same steps.</p>
-      <button id="gdRandom">Scramble one for me</button></div>
-  </div>
-  <div class="panel gd-now"><div><b>Or solve the cube in the player now</b><div class="muted">Scramble <span class="mono" id="gdSeed">${esc(scr.seed)}</span> is in the player.</div></div><button id="gdStart">Start with this scramble</button></div>`;
+  return `<div class="panel"><h2>Solve my cube</h2><p class="muted">Show the app your cube. It then tells you each move, part by part.</p>${g.msg?`<div class="notice gd-msg">${esc(g.msg)}</div>`:''}</div>
+  <div class="panel beg-ask">${typeof begYourCubeHTML==='function'?begYourCubeHTML():''}</div>
+  <div class="panel gd-now"><div><b>Loaded a mix-up as letters?</b><div class="muted">Mix-up <span class="mono" id="gdSeed">${esc(scr.seed)}</span> is loaded now.</div></div><button id="gdStart">Start with this scramble</button></div>`;
 }
 function gdGuideHTML(){
   const g=guideState;const e=g.parts[g.i];const p=e.part;const st=e.stage;
   const col=COLOR_NAMES[e.held.center[2]];
-  const hold=`<li><b>Hold the cube</b> with yellow up and <b>${esc(col)} in front</b>.${p.pre?` Turn the whole cube so ${esc(col)} faces you. The dashed move is this turn.`:' The 3D cube shows this view.'}</li>`;
+  const hold=e.flip?`<li><b>Turn the cube over</b> so the yellow center is on top${p.pre?'':` and <b>${esc(col)} in front</b>`}. ${st.n===1?'The daisy grows around the yellow center. ':''}Yellow stays on top for every step from here.${p.pre?` Then turn the whole cube so ${esc(col)} faces you. The dashed moves are these turns.`:' The dashed move is this turn.'}</li>`
+    :`<li><b>Hold the cube</b> with yellow up and <b>${esc(col)} in front</b>.${p.pre?` Turn the whole cube so ${esc(col)} faces you. The dashed move is this turn.`:' The 3D cube shows this view.'}</li>`;
   const why=gdWhy(e);
   const next=g.parts[g.i+1];
   const lesson=typeof openLesson==='function'?`<button class="small ghost" id="gdLesson">Open the lesson</button>`:'';
@@ -140,7 +134,7 @@ function gdGuideHTML(){
   <div class="panel gd-part">
     <div class="gd-head"><div><div class="muted mono gd-sub">Stage ${st.n} · part ${e.k+1} of ${e.m}</div><h2 id="gdTitle">${esc(p.title)}</h2></div>${lesson}</div>
     <div class="gd-body">
-      <ol class="gd-steps">${hold}<li>${esc(p.text)}</li><li><b>Do the moves:</b><div>${gdTiles(p)}</div></li></ol>
+      <ol class="gd-steps">${hold}<li>${esc(p.text)}</li><li><b>Do the moves:</b><div>${gdTiles(p,e.flip)}</div></li></ol>
       <div class="gd-side">
         <div class="gd-ba"><figure>${gdThumb(e.held,p.piece)}<figcaption class="muted">before</figcaption></figure><span class="gd-arrow" aria-hidden="true">→</span><figure>${gdThumb(e.after,p.piece)}<figcaption class="muted">after</figcaption></figure></div>
         ${why?`<div class="note"><b>${esc(why.h)}</b> ${esc(why.t)}</div>`:''}
@@ -163,9 +157,6 @@ function gdRender(){
   const html=g.view==='guide'?gdGuideHTML():g.view==='done'?gdDoneHTML():gdEntryHTML();
   root.innerHTML=html;
   const on=(sel,fn)=>{const el=root.querySelector(sel);if(el)el.onclick=fn;};
-  on('#gdScan',()=>gdEnter(()=>openScan()));
-  on('#gdPaint',()=>{if(typeof openPaint==='function')gdEnter(()=>openPaint());});
-  on('#gdRandom',()=>{gdWant=true;newScramble();});
   on('#gdStart',()=>gdBegin());
   on('#gdDiff',gdToEntry);
   on('#gdAgain',gdToEntry);
@@ -190,40 +181,33 @@ function gdGo(i){
 // Build the plan on the current scramble and show part 1. force (default true): load the player
 // even over a drill, because the user asked for this guide.
 function gdBegin(force){
-  gdClearWant();gdArrived=false;
+  gdArrived=false;
   gdBuild();gdRender();gdLoadPart(force!==false);
 }
 function gdToEntry(){const g=guideState;g.view='entry';g.plan=null;g.parts=[];g.i=0;g.msg='';gdRender();gdLoadPart(false);}
-// Scan and paint load a scramble later, from a dialog. The guide starts when it arrives.
-// When the dialog closes with no cube, the wait ends.
-function gdEnter(fn){
-  gdWant=true;fn();
-  clearInterval(gdWantTimer);
-  gdWantTimer=setInterval(()=>{if(!document.querySelector('.modal-bg'))gdClearWant();},500);
-}
-function gdClearWant(){gdWant=false;clearInterval(gdWantTimer);gdWantTimer=0;}
 
 // Go to Solve my cube and start the guided solve on the current scramble.
 function startGuide(){
-  gdClearWant();gdBuild();
+  gdBuild();
   if(curTab!=='bsolve')goTab('bsolve');
   gdRender();gdLoadPart(true);
 }
 
 document.addEventListener('cw:scramble',()=>{
-  const g=guideState;
+  const g=guideState;const fromDialog=!!document.querySelector('.modal-bg'); // the scan or paint dialog
   if(curTab!=='bsolve'){
     // scrambleFromCube loads the scramble, then opens this tab at once: start the guide there.
     if(method==='beginner'){gdArrived=true;setTimeout(()=>{gdArrived=false;},0);}
     if(g.view!=='entry'){gdBuild();gdRender();}
     return;
   }
-  // From an entry card, or a new scramble from the seed bar while a guide shows: restart at part 1.
-  if(gdWant||g.view!=='entry'){gdBegin(gdWant);return;}
+  // A cube from the scan or paint dialog, or a new scramble from the seed bar while a guide shows:
+  // start at part 1.
+  if(fromDialog||g.view!=='entry'){gdBegin(fromDialog);return;}
   const s=$('#gdSeed');if(s)s.textContent=scr.seed;
 });
 document.addEventListener('cw:tab',e=>{
-  if(e.detail!=='bsolve'){gdClearWant();return;}
+  if(e.detail!=='bsolve')return;
   if(gdArrived){gdBegin();return;}
   gdRender();
 });

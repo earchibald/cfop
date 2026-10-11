@@ -23,10 +23,10 @@ w.addEventListener('load',async()=>{try{
   const engine=w.scr.cube;
   const held=w.applyAlg(engine,['z2']).toFacelets();
 
-  // Opening the dialog shows the six fixed centres already painted.
+  // Opening the dialog shows the six fixed centers already painted.
   w.openPaint();
   assert.ok($('#paintBg'),'the dialog opens');
-  assert.strictEqual(countText(),'6 of 54 tiles painted.','centres count as painted at the start');
+  assert.strictEqual(countText(),'6 of 54 tiles painted.','centers count as painted at the start');
   assert.ok($('#paintGo').disabled,'Start the solve is disabled until every tile is painted');
 
   // Paint the known cube, tile by tile, from its held (yellow-up, green-front) facelets.
@@ -51,7 +51,7 @@ w.addEventListener('load',async()=>{try{
     assert.deepStrictEqual(w.heldToEngineFacelets(h),c.toFacelets(),'heldToEngineFacelets round-trips for cube '+k);
   }
 
-  // An impossible cube (every non-centre tile painted white) shows an error and stays open.
+  // An impossible cube (every non-center tile painted white) shows an error and stays open.
   w.openPaint();
   for(let i=0;i<54;i++){if(i%9===4)continue;pickColor(0);paintTile(i);}
   assert.strictEqual(countText(),'54 of 54 tiles painted.');
@@ -61,12 +61,12 @@ w.addEventListener('load',async()=>{try{
   assert.ok($('#paintNotice').textContent.length>0,'the notice has text');
   click($('#paintCancel'));assert.ok(!$('#paintBg'),'Cancel closes the dialog');
 
-  // Clear keeps the centres and clears the rest. Escape closes the dialog.
+  // Clear keeps the centers and clears the rest. Escape closes the dialog.
   w.openPaint();
-  pickColor(0);paintTile(0); // paint one non-centre tile (U face, position 0)
+  pickColor(0);paintTile(0); // paint one non-center tile (U face, position 0)
   assert.notStrictEqual(countText(),'6 of 54 tiles painted.');
   click($('#paintClear'));
-  assert.strictEqual(countText(),'6 of 54 tiles painted.','Clear keeps the centres and clears the rest');
+  assert.strictEqual(countText(),'6 of 54 tiles painted.','Clear keeps the centers and clears the rest');
   d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
   assert.ok(!$('#paintBg'),'Escape closes the dialog');
 

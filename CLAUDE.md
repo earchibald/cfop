@@ -22,15 +22,16 @@ The app was called Cubeworks. Keep these old names as they are:
 | `js/algs.js` | Algorithm database |
 | `js/app.js` | UI, trainer, timer, history, `loadScramble` |
 | `js/enter.js` | Enter-a-scramble dialog, `scrambleFromCube(cube, name)` |
-| `js/scan-assemble.js` | Scanner stage 5: face rotations, colour repairs, joint colour read (pure, no DOM) |
+| `js/scan-assemble.js` | Scanner stage 5: face rotations, color repairs, joint color read (pure, no DOM) |
 | `js/scan.js` | Scanner stages 1-4 and the Scan cube dialog |
 | `js/beginner-ui.js` | The method chip and its chooser, `setMethod`, `heldCube`, `begProgress`, the progress panel in the player |
+| `js/beghome.js` | Beginner home above the tabs: Up next, "What does your cube look like?" (scan, paint, mix it up, practice on the screen), the "Mix it up with me" walkthrough, the letters view, the Key panel and the captions under tiles. Owns `body[data-begview]`: `ask`, `mix` or `player` |
 | `js/learn.js` | Beginner Learn tab: the step list, the lesson pages, the Cheat sheet tab, `openLesson(n)` |
-| `js/paint.js` | Paint the colours dialog, `openPaint()`, `heldToEngineFacelets` |
+| `js/paint.js` | Paint the colors dialog, `openPaint()`, `heldToEngineFacelets` |
 | `js/guide.js` | Beginner Solve my cube: the entry cards and the guided solve one part at a time, `startGuide()` |
 | `js/practice.js` | Beginner Practice and Progress tabs, `startPractice(n)` |
 | `js/glossary.js` | Glossary entries, links in description text, the floating card |
-| `test/` | `load.js` jsdom smoke test, `draw.js` (a part turn lands on the moved cube), `tabs.js` (scramble, drills, case cards, clear dialog), `plan.js` (guided solve with rotations), `mobile.js` (phone menu), `glossary.js`, `beginner.js` (the guide's algorithms and 300 beginner solves), `method.js` (the method chip, rails, progress panel), `learn.js`, `guide.js`, `paint.js`, `practice.js` (one per beginner module), and the scanner tests |
+| `test/` | `load.js` jsdom smoke test, `draw.js` (a part turn lands on the moved cube), `tabs.js` (scramble, drills, case cards, clear dialog), `plan.js` (guided solve with rotations), `mobile.js` (phone menu), `glossary.js`, `beginner.js` (the guide's algorithms and 300 beginner solves), `method.js` (the method chip, rails, progress panel), `learn.js`, `guide.js`, `paint.js`, `practice.js`, `home.js` (one per beginner module), and the scanner tests |
 | `docs/` | Design notes and handoff documents. `beginner-mode.md` holds the beginner method plan and its open decisions |
 
 The scripts share one global scope. `index.html` loads them in the order
@@ -38,10 +39,10 @@ above. Add a new script with a `<script src>` tag after the one it depends on.
 
 ## Conventions
 
-- Facelets: an array of 54 colour indices. Index `9*face + pos`, `pos` 0..8
+- Facelets: an array of 54 color indices. Index `9*face + pos`, `pos` 0..8
   reads a face left to right, top to bottom. Face order is U R F D L B.
-  Colour indices match: 0 white, 1 red, 2 green, 3 yellow, 4 orange, 5 blue.
-  The centre of face `i` must be colour `i`.
+  Color indices match: 0 white, 1 red, 2 green, 3 yellow, 4 orange, 5 blue.
+  The center of face `i` must be color `i`.
 - `fromFacelets(f)` returns `{ok, errors, cube}` with plain-English errors
   for illegal cubes.
 - `scrambleFromCube(cube, name)` derives a scramble from a `Cube`, loads it,
@@ -50,11 +51,16 @@ above. Add a new script with a `<script src>` tag after the one it depends on.
   switches, `body[data-method]` mirrors it, and CSS shows one rail (`#rail` or
   `#brail`) and one third player panel (timer or progress). Each method keeps
   its own last tab in `cw:tab`/`cw:btab` (`cw:mtab`/`cw:bmtab` on a phone).
-  In beginner mode `crossRotation()` is always `z2`: the cube is held yellow
-  up, and `heldCube()` is the scramble in that frame. `loadScramble`,
-  `cycleStatus`, the tab buttons and `setMethod` fire `cw:scramble`,
-  `cw:status`, `cw:tab` and `cw:method` events on `document` for the
-  beginner modules. A tab that owns the player registers `tabShow[tab]`.
+  In beginner mode the solver reads `heldCube()`, the scramble after `z2`
+  (yellow up), but the screen never hides that turn: a beginner starts white
+  up, and the first part of the guided solve shows `z2` as its own dashed
+  "turn over" tile. `showScr()` hands beginner mode to `showBegScr()`, which
+  shows the question instead of the player; `setSequence` fires
+  `cw:sequence`, and any loaded moves switch the view to `player`.
+  `loadScramble`, `cycleStatus`, the tab buttons and `setMethod` fire
+  `cw:scramble`, `cw:status`, `cw:tab` and `cw:method` events on `document`
+  for the beginner modules. A tab that owns the player registers
+  `tabShow[tab]`.
 - One current scramble is shared by all tabs. A tab change never replaces it.
   `setSequence(moves, label, base, drill)` loads the player. Pass a `drill`
   name for anything that does not come from the current scramble, such as a
@@ -63,18 +69,19 @@ above. Add a new script with a `<script src>` tag after the one it depends on.
   keyed by the OLL/PLL case id, `f2l-N` for an F2L case, or `beg-N` for a
   beginner step (0 is the basics). `stBtn(id)` draws the button and
   `cycleStatus(id)` changes it. Per-case times use the timer scopes `ll:<id>`
-  and `f2l:<n>`. Beginner counts (solves, rounds practised) live in
+  and `f2l:<n>`. Beginner counts (solves, rounds practiced) live in
   `cw:begProg` through `begProgress`.
 - Phone layout (760px and narrower): the Reference section is the CFOP home
   screen and Learn is the beginner home. The menu button in the top bar opens
   the other sections. `goTab()` switches sections. Mark text for one layout only with `.desktop-only` or
   `.mobile-only`.
 - Prose in the UI follows ASD-STE100 style: short sentences, active voice,
-  one idea per sentence.
+  one idea per sentence. American spelling: color, center, practice,
+  counterclockwise, gray.
 - One word per idea in the UI: "player" (the move panel), "Reveal" (show an
   answer), "details" (the case window), "solved" (not "done"), "plan" (the
   guided solve). Cubing jargon is fine if `js/glossary.js` defines it. Other
-  jargon (maths, code, camera terms) is not: say it in plain words.
+  jargon (math, code, camera terms) is not: say it in plain words.
 
 ## Test and run
 

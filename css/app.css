@@ -1,7 +1,7 @@
 /* Twistwright — the cube is the design.
    Dark mode: a black cube with the original Rubik's stickers.
-   Light mode: a GAN stickerless cube on a light grey desk.
-   Chrome is monochrome; colour carries meaning: yellow = current, green = solved,
+   Light mode: a GAN stickerless cube on a light gray desk.
+   Chrome is monochrome; color carries meaning: yellow = current, green = solved,
    red = warn, orange = drill and prime moves, blue = link. Each section owns a sticker. */
 :root{
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
@@ -46,7 +46,7 @@ a{color:var(--link)}
 h1,h2,h3{margin:0;line-height:1.2;font-weight:600;letter-spacing:-.02em}
 h2{font-size:22px}h3{font-size:17px}
 p{margin:0 0 10px}
-/* section stickers: each section owns a colour */
+/* section stickers: each section owns a color */
 [data-sec="solve"]{--sec:var(--sticker-O)}[data-sec="cross"]{--sec:var(--sticker-W)}[data-sec="f2l"]{--sec:var(--sticker-G)}
 [data-sec="ll"]{--sec:var(--sticker-Y)}[data-sec="lab"]{--sec:var(--sticker-B)}[data-sec="ref"]{--sec:var(--sticker-R)}
 .sec-sq{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--sec,var(--faint));flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
@@ -95,7 +95,7 @@ body.cube-drag,body.cube-drag *{user-select:none!important;-webkit-user-select:n
 .cubebox .viewbtns{position:absolute;top:8px;right:8px;display:flex;border:1px solid var(--line);border-radius:var(--rb);overflow:hidden;background:var(--panel)}
 .cubebox .viewbtns button{padding:3px 9px;font-size:12px;border:0;border-radius:0;background:transparent}
 .cubebox .viewbtns button+button{border-left:1px solid var(--line)}
-/* move tiles: a prime move is coloured whole, so it reads at a glance */
+/* move tiles: a prime move is colored whole, so it reads at a glance */
 .scramble{display:flex;flex-wrap:wrap;gap:4px 5px;font-family:var(--mono);font-size:18px;line-height:1.3}
 .m{min-width:28px;text-align:center}
 .mod{color:var(--mod);font-weight:700}
@@ -185,7 +185,7 @@ th{color:var(--muted);font-weight:500;border-top:0;font-size:14px}
 .pieces div{background:var(--panel2);border-radius:var(--chip);padding:5px 8px;font-family:var(--mono)}
 .pieces div.mv{outline:1px solid var(--accent)}
 .lifted{opacity:.35}
-@media (max-width:1000px){.player{grid-template-columns:260px minmax(0,1fr)}.player .timerpanel,.player .progresspanel{grid-column:1 / -1}}
+@media (max-width:1000px){.player{grid-template-columns:260px minmax(0,1fr)}.player .timerpanel,.player .progresspanel,.player .keypanel{grid-column:1 / -1}}
 @media (max-width:760px){.page{padding:12px}.player{grid-template-columns:1fr}.wrap{grid-template-columns:1fr}nav.rail{position:static;flex-direction:row;overflow-x:auto;gap:2px}nav.rail button{padding:8px 10px;white-space:nowrap}nav.rail button .k{display:none}.grid2{grid-template-columns:1fr}.timer{font-size:44px}.step{grid-template-columns:1fr;gap:4px}.top{padding:10px 12px}}
 
 .modal-bg{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
@@ -234,7 +234,7 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
   #themeBtn{padding:9px 8px}
   /* player: cube and timer side by side, the moves below */
   .player{grid-template-columns:1fr 1fr;grid-template-areas:"cube timer" "seq seq";gap:8px}
-  .player .cubebox{grid-area:cube}.player .timerpanel,.player .progresspanel{grid-area:timer;grid-column:auto;padding:8px}.player .seqpanel{grid-area:seq}
+  .player .cubebox{grid-area:cube}.player .timerpanel,.player .progresspanel,.player .keypanel{grid-area:timer;grid-column:auto;padding:8px}.player .seqpanel{grid-area:seq}
   .cubebox svg{max-height:200px}
   .cubebox .viewbtns{top:4px;right:4px}
   .cubebox .draghint{left:6px;bottom:4px;font-size:11px}
@@ -373,7 +373,6 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
 .bcards .panel>button{margin-top:auto;align-self:flex-start}
 @media (max-width:760px){
   .puzzle{padding:5px 8px}
-  body[data-tab="learn"]:not([data-lesson]) .player,body[data-tab="learn"]:not([data-lesson]) .seedbar{display:none!important}
   .player .progresspanel{padding:10px;gap:6px}
   .psq i{width:18px;height:18px;border-radius:5px}
   .ptiles,.ptimer span{display:none}
@@ -428,8 +427,6 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
 .ln-intro p{margin:6px 0 0;max-width:62ch}
 .ln-steps{display:flex;flex-direction:column;gap:8px}
 .ln-mob{display:none}
-.ln-strip{gap:12px;align-items:center;font-size:14px}
-button.ln-mob{justify-content:center;align-items:center}
 .ln-listhead{justify-content:space-between;align-items:baseline;font-size:13px}.ln-listhead b{font-size:19px}
 .bstep .ln-uses{font-size:13px}
 .bstep .ln-tag{flex:none;margin:0}
@@ -483,7 +480,7 @@ button.ln-mob{justify-content:center;align-items:center}
   .ln-foot .row button{flex:1 1 auto}
 }
 
-/* ---------- beginner: paint the colours ---------- */
+/* ---------- beginner: paint the colors ---------- */
 .modal.paint{display:block;max-width:640px}
 .modal.paint h2{margin-top:0}
 .pt-body{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin-top:10px}
@@ -515,4 +512,100 @@ button.ln-mob{justify-content:center;align-items:center}
 #prTable td{vertical-align:middle}
 @media (max-width:760px){
   #prSteps button{font-size:12px;padding:5px 7px}
+}
+
+/* ---------- beginner: the home (js/beghome.js: Up next, Your cube, Mix it up with me) and the player dress ---------- */
+/* body[data-begview] is ask, mix or player. The home shows on the Learn home and during a mix-up; the
+   player and the seed bar show only when moves are loaded, the seed bar only in the letters view. */
+.beghome{display:flex;flex-direction:column;gap:var(--gap)}
+body:not([data-method="beginner"]) #begHome,body[data-method="beginner"][data-begview="player"] #begHome,
+body[data-method="beginner"]:not([data-begview="mix"]):not([data-tab="learn"]) #begHome,
+body[data-method="beginner"]:not([data-begview="mix"])[data-lesson] #begHome{display:none}
+body[data-begview="mix"] #begNext,body[data-begview="mix"] #begAsk,body:not([data-begview="mix"]) #begMix{display:none}
+body[data-method="beginner"]:not([data-begview="player"]) .player,body[data-method="beginner"]:not([data-begletters]) .seedbar,
+body[data-method="beginner"] #drillNote,body:not([data-method="beginner"]) #begBar{display:none}
+.begbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14px;padding:8px 14px}
+.begbar>span{flex:1;min-width:200px}
+.beg-kicker{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}
+.beg-small{font-size:13px}
+.beg-next{display:flex;flex-wrap:wrap;align-items:center;gap:16px 28px;padding:18px 22px;border-color:color-mix(in srgb,var(--accent) 45%,var(--line));box-shadow:inset 4px 0 0 var(--accent)}
+.beg-next-body{flex:999 1 420px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.beg-next-body h2{font-size:26px}
+.beg-next-body p{margin:0}
+.beg-next .psq i{width:14px;height:14px;border-radius:3px}
+.psq i.cur{outline:2px solid var(--accent);outline-offset:1px}
+.beg-next-count{font-size:13px}
+.beg-ask{display:flex;flex-wrap:wrap;gap:18px 28px;align-items:stretch;padding:18px 22px}
+.beg-hold{flex:0 0 240px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
+.beg-hold p{margin:0;font-size:14px}
+.beg-pic{width:200px}
+.beg-pic svg{display:block;width:100%;height:auto}
+.beg-q{flex:999 1 480px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.beg-q h2{margin-bottom:4px}
+.beg-q>div>p{margin:0}
+.beg-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.beg-card{display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:12px;border:2px solid var(--line);background:var(--panel2)}
+.beg-card .row{gap:12px}
+.beg-card .row b{font-size:18px}
+.beg-card p{margin:0;font-size:14px}
+.beg-card button{text-align:left;padding:11px 16px;font-size:15px}
+.beg-card button.primary{font-size:16px;padding:12px 16px}
+.beg-face{width:45px}
+.beg-known{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 14px;border-radius:12px;border:1px solid var(--good);background:color-mix(in srgb,var(--good) 12%,var(--panel))}
+.beg-mix{display:flex;flex-wrap:wrap;gap:20px 36px;padding:20px 24px}
+.beg-mix-pic{flex:0 0 300px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.beg-mix-pic svg{display:block;width:280px;max-width:100%;height:auto}
+.beg-mix-body{flex:999 1 460px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.beg-mix-body p{margin:0}
+.beg-mix-top{gap:14px}
+.beg-prog{flex:1;min-width:80px;height:8px;border-radius:4px;background:var(--panel3);overflow:hidden;display:block}
+.beg-prog i{display:block;height:100%;background:var(--accent)}
+.beg-mix-turn{display:flex;align-items:center;gap:18px}
+.beg-mix-turn h2{font-size:30px;margin-bottom:4px}
+.beg-mix-sub{font-size:17px;color:var(--muted)}
+.beg-tile{font-family:var(--mono);font-size:44px;font-weight:700;background:var(--panel2);border:1px solid var(--line);border-radius:14px;width:84px;height:84px;display:flex;align-items:center;justify-content:center;flex:none}
+.beg-tile.mod{color:var(--mod);background:color-mix(in srgb,var(--mod) 16%,transparent)}
+.beg-key-line{display:flex;flex-wrap:wrap;gap:6px 24px;padding:12px 16px;border-radius:12px;background:var(--panel2);font-size:14px}
+.beg-mix-done h2{font-size:26px}
+/* the player in beginner dress: a caption under every tile, a Key panel, plain words */
+.scramble .mt{display:inline-flex;flex-direction:column;align-items:center;gap:1px}
+.scramble .mt small{font-family:var(--sans);font-size:10.5px;color:var(--muted);line-height:1.1;white-space:nowrap}
+.scramble .mt .m{min-width:36px}
+body[data-method="beginner"] .scramble{gap:6px 8px}
+body[data-method="beginner"] .cfop-only,body:not([data-method="beginner"]) .beg-only{display:none}
+.seqhead .hint{margin-left:auto}
+body:not([data-method="beginner"]) #keyBtn,body:not([data-method="beginner"]) #keyPanel,body:not([data-key]) #keyPanel{display:none}
+body[data-method="beginner"][data-key] #progressPanel,body[data-method="beginner"][data-key] .timerpanel{display:none}
+#keyBtn[aria-expanded="true"]{background:color-mix(in srgb,var(--accent) 22%,var(--panel));border-color:var(--accent)}
+.keypanel{display:flex;flex-direction:column;gap:8px;border-color:color-mix(in srgb,var(--accent) 60%,var(--line))}
+.keylist{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:14px}
+.keylist dt{font-family:var(--mono);font-weight:600}
+.keylist dt.rot{font-style:italic;font-weight:500;border:1px dashed var(--muted);border-radius:5px;padding:0 5px;text-align:center;color:var(--muted)}
+.keylist dd{margin:0}
+.keylist2{border-top:1px solid var(--line);padding-top:8px}
+#keyLesson{margin-top:auto;align-self:flex-start}
+@media (max-width:760px){
+  body[data-method="beginner"] .top h1{display:flex;font-size:15px;gap:6px}
+  body[data-method="beginner"] .top .mark{width:22px}
+  body[data-method="beginner"] #mtitle{display:none!important}
+  body[data-method="beginner"] .top .spacer{display:block}
+  .beg-next{padding:14px 16px;gap:10px}
+  .beg-next-body h2{font-size:20px}
+  .beg-next .psq{display:none}
+  .beg-next-act{width:100%}.beg-next-act .primary{flex:1}
+  .beg-ask{padding:14px 16px;gap:12px}
+  .beg-hold{flex-basis:100%;flex-direction:row;text-align:left;gap:12px}
+  .beg-pic{width:86px;flex:none}
+  .beg-hold p{font-size:13px}
+  .beg-cards{grid-template-columns:1fr}
+  .beg-card{padding:12px}
+  .beg-mix{padding:14px 16px;gap:12px}
+  .beg-mix-pic{flex-basis:100%}
+  .beg-mix-pic svg{width:220px}
+  .beg-mix-turn h2{font-size:22px}
+  .beg-mix-sub{font-size:15px}
+  .beg-tile{width:64px;height:64px;font-size:34px}
+  .beg-mix-act .primary{flex:1}
+  .keypanel>span.muted{display:none}
+  .keylist{font-size:12px;gap:2px 8px}
 }

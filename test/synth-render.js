@@ -9,7 +9,7 @@ const U=(a,b)=>a+(b-a)*rnd();
 const gauss=()=>{let s=0;for(let i=0;i<6;i++)s+=rnd();return (s-3)*1.41;};
 const toLin=c=>{c/=255;return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4);};
 const toSrgb=l=>{l=Math.max(0,Math.min(1,l));return 255*(l<=0.0031308?12.92*l:1.055*Math.pow(l,1/2.4)-0.055);};
-// Sticker colours as a webcam might see them: close to, but not the same as, the references.
+// Sticker colors as a webcam might see them: close to, but not the same as, the references.
 const PLASTIC=[[236,236,230],[233,60,52],[40,200,72],[236,230,40],[255,122,30],[22,110,230]];
 const PAINT=[[238,238,232],[196,24,44],[14,158,84],[248,212,24],[252,104,22],[16,72,178]];
 
@@ -47,7 +47,7 @@ function render(truth,W=320,H=240,noCube=false,style='stickers'){
             const k=cj*3+ci;col=paint[k];
             if(glare&&glare.cell===k&&(lx-glare.x)**2+(ly-glare.y)**2<glare.r**2)col=[255,255,250];
             const st=stripes[k];if(st){const f=Math.max(0,1-Math.abs(ly-st.y)/st.w);col=col.map(v=>v+0.4*f*(255-v));}
-            // A bright bevel just inside the groove, as on moulded tiles.
+            // A bright bevel just inside the groove, as on molded tiles.
             if(sl&&Math.min(lx-m,1-m-lx,ly-m,1-m-ly)<0.03)col=col.map(v=>Math.min(255,v*1.12));
           }
         }
@@ -61,9 +61,9 @@ function render(truth,W=320,H=240,noCube=false,style='stickers'){
     }
     const j=4*(y*W+x);for(let i=0;i<3;i++)data[j+i]=toSrgb(acc[i]/4)+noise*gauss();data[j+3]=255;
   }
-  // True cell centres in frame pixels, reading order.
-  const centres=[];for(let j=0;j<3;j++)for(let i=0;i<3;i++){const fx=i-1,fy=j-1,w=p*fx+q*fy+1;centres.push({x:(a*fx+b*fy+tx)/w,y:(c*fx+d*fy+ty)/w});}
-  return {width:W,height:H,data,centres,cell:s};
+  // True cell centers in frame pixels, reading order.
+  const centers=[];for(let j=0;j<3;j++)for(let i=0;i<3;i++){const fx=i-1,fy=j-1,w=p*fx+q*fy+1;centers.push({x:(a*fx+b*fy+tx)/w,y:(c*fx+d*fy+ty)/w});}
+  return {width:W,height:H,data,centers,cell:s};
 }
 function inv3(m){
   const [a,b,c]=m[0],[d,e,f]=m[1],[g,h,i]=m[2];const A=e*i-f*h,B=-(d*i-f*g),C=d*h-e*g,det=a*A+b*B+c*C;

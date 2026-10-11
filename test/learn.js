@@ -12,7 +12,8 @@ const moves=()=>$$('#scramble .m').map(e=>e.textContent);
 const drill=()=>!$('#drillNote').classList.contains('hidden');
 const click=el=>{assert.ok(el,'nothing to click');el.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));};
 const card=n=>$(`#tab-learn .bstep[data-n="${n}"]`);
-const cont=()=>$('#lnContinue');
+const cont=()=>$('#begContinue');
+const nextTitle=()=>$('#begNextTitle').textContent;
 const stepName=nx=>nx.n===0?'Basics':'Step '+nx.n;
 
 w.addEventListener('load',async()=>{try{
@@ -21,7 +22,8 @@ w.addEventListener('load',async()=>{try{
   assert.strictEqual(d.body.dataset.tab,'learn','the beginner home is Learn');
   assert.ok($('#tab-learn').classList.contains('on'),'the Learn tab is on');
   assert.strictEqual($$('#tab-learn .bstep').length,9,'nine step cards');
-  assert.strictEqual(cont().textContent,'Start: Basics','Start names the basics');
+  assert.strictEqual(nextTitle(),'Basics: Get to know your cube','Up next names the basics');
+  assert.strictEqual(cont().textContent,'Start →','the first visit says Start');
   assert.ok(card(0).classList.contains('cur'),'the basics card is up next');
   assert.ok(/Left Trigger, Right Trigger/.test(card(3).textContent),'step 3 names its triggers');
   assert.ok(/Move Left, Move Right/.test(card(4).textContent),'step 4 names its moves');
@@ -63,7 +65,8 @@ w.addEventListener('load',async()=>{try{
   assert.ok(!d.body.dataset.lesson,'the list clears the lesson flag');
   assert.strictEqual(card(3).querySelector('.tag').textContent,'finished','the card chip follows');
   let nx=w.begProgress.next();assert.strictEqual(nx.n,0,'the basics are still next');
-  assert.strictEqual(cont().textContent,'Continue: '+stepName(nx),'Continue names the next step');
+  assert.strictEqual(cont().textContent,'Continue →','after a status change the button says Continue');
+  assert.ok(nextTitle().startsWith(stepName(nx)+':'),'Up next names the next step');
 
   // Mark finished on the basics: the next step moves on.
   click(cont());assert.strictEqual($('#tab-learn h2').textContent,'Get to know your cube','Continue opens the basics');
@@ -71,7 +74,7 @@ w.addEventListener('load',async()=>{try{
   click($('#lnMark'));assert.strictEqual(w.begProgress.status(0),'finished','Mark finished sets the status');
   assert.strictEqual($('#tab-learn .stbtn').textContent,'finished','the lesson button follows');
   click($('#tab-learn button[data-ln="list"]'));nx=w.begProgress.next();
-  assert.strictEqual(nx.n,1);assert.strictEqual(cont().textContent,'Continue: Step 1');assert.ok(card(1).classList.contains('cur'));
+  assert.strictEqual(nx.n,1);assert.strictEqual(nextTitle(),'Step 1: The daisy');assert.ok(card(1).classList.contains('cur'));
 
   // The goal pictures come from a real solve: each step's goal holds.
   const g=w.lnGoals().map(c=>c.toFacelets());

@@ -23,16 +23,16 @@ assert.strictEqual(beginnerChunks(ALGS.sune.alg).map(c=>c.at).join(),'0','Sune s
 // ----- the algorithms, as the guide describes them -----
 // A trigger inserts a corner from the top layer into the slot below it.
 {const c=applyAlg(S,invertAlg("R U R'"));const f=fl(c);assert.ok(f2lDone(applyAlg(c,"R U R'")));
-  assert.strictEqual(f[9],3,'before the Right Trigger: bottom colour faces right at the top right');assert.strictEqual(f[20],2,'its front tile matches the front centre');}
-{const c=applyAlg(S,invertAlg("L' U' L"));const f=fl(c);assert.strictEqual(f[38],3,'before the Left Trigger: bottom colour faces left');assert.strictEqual(f[18],2);}
+  assert.strictEqual(f[9],3,'before the Right Trigger: bottom color faces right at the top right');assert.strictEqual(f[20],2,'its front tile matches the front center');}
+{const c=applyAlg(S,invertAlg("L' U' L"));const f=fl(c);assert.strictEqual(f[38],3,'before the Left Trigger: bottom color faces left');assert.strictEqual(f[18],2);}
 // Move Left and Move Right, each with the corner put back by the step 3 rule.
-{const c=applyAlg(S,invertAlg("U' L' U' L y' U R U R'"));const f=fl(c);assert.ok(f[19]===f[22]&&f[7]===f[40],'Move Left starts with the edge at the top of the front, front tile matching, top tile the left colour');assert.ok(f2lDone(applyAlg(c,"U' L' U' L y' U R U R'")));}
-{const c=applyAlg(S,invertAlg("U R U R' y U' L' U' L"));const f=fl(c);assert.ok(f[19]===f[22]&&f[7]===f[13],'Move Right: top tile is the right colour');assert.ok(f2lDone(applyAlg(c,"U R U R' y U' L' U' L")));}
+{const c=applyAlg(S,invertAlg("U' L' U' L y' U R U R'"));const f=fl(c);assert.ok(f[19]===f[22]&&f[7]===f[40],'Move Left starts with the edge at the top of the front, front tile matching, top tile the left color');assert.ok(f2lDone(applyAlg(c,"U' L' U' L y' U R U R'")));}
+{const c=applyAlg(S,invertAlg("U R U R' y U' L' U' L"));const f=fl(c);assert.ok(f[19]===f[22]&&f[7]===f[13],'Move Right: top tile is the right color');assert.ok(f2lDone(applyAlg(c,"U R U R' y U' L' U' L")));}
 // Yellow cross: line (left to right) -> cross; L at the back left -> line.
 {const top=c=>[1,3,5,7].map(i=>fl(c)[i]===0?1:0).join('');
   const line=applyAlg(S,invertAlg(ALGS.yellowCross.alg));assert.strictEqual(top(line),'0110','the alg solves a line held left to right (UB UL UR UF)');
   const L=applyAlg(line,invertAlg(ALGS.yellowCross.alg));assert.strictEqual(top(L),'1100','before that, an L at the back left');}
-// Sune: one corner oriented at the front left, top colour of the front right corner faces front.
+// Sune: one corner oriented at the front left, top color of the front right corner faces front.
 {const c=applyAlg(S,invertAlg(ALGS.sune.alg));const f=fl(c);assert.strictEqual(f[6],0);assert.strictEqual(f[20],0);assert.notStrictEqual(f[0],0);assert.notStrictEqual(f[2],0);assert.notStrictEqual(f[8],0);}
 // Yellow corners: the alg then Sune swaps the two right-hand corners, keeps the left pair and all orientation.
 {const c=applyAlg(S,ALGS.cornerSwap.alg+' '+ALGS.sune.alg);assert.strictEqual(c.cp.join(),'3,1,2,0,4,5,6,7');assert.ok(c.co.every(x=>x===0));assert.ok(c.eo.every(x=>x===0));}

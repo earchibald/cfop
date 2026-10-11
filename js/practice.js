@@ -37,7 +37,7 @@ function prShowPlayer(){
   const g=practiceState;if(!g.built)return;
   const moves=[...g.scrMoves,'z2',...g.prefix];
   const done=g.step>1?'steps 1 to '+(g.step-1):'the hold only';
-  setSequence(moves,'scramble · seed '+g.seed+' · dashed moves are solved for you: '+done+'.');
+  setSequence(moves,'your mixed-up cube · seed '+g.seed+' · dashed moves are solved for you: '+done+'.');
   $$('#scramble .m').forEach((el,i)=>{if(i>=g.scrMoves.length){el.classList.add('rot');el.title='Solved for you, not a scramble move.';}});
 }
 tabShow.practice=()=>{if(practiceState.built)prShowPlayer();else showScr();};
@@ -107,7 +107,7 @@ function prMountPractice(){
   prRenderStepSel();prRenderPanel();
   $('#prNew').onclick=()=>prNewCube();
   $('#prReveal').onclick=()=>{practiceState.revealed=!practiceState.revealed;prRenderPanel();};
-  $('#prSolved').onclick=()=>{begProgress.practised(practiceState.step);prNewCube();};
+  $('#prSolved').onclick=()=>{begProgress.practiced(practiceState.step);prNewCube();};
 }
 
 // Go to Practice, choose step n, and start with a new cube.
@@ -136,7 +136,7 @@ function prRenderProgress(){
   $('#prText').textContent=finished===8?'All eight steps finished.':finished||learning?
     `${finished} step${finished===1?'':'s'} finished${learning?`, ${learning} in learning`:''}.`:'No steps finished yet.';
   const data=begProgress.data();
-  $('#prSolves').textContent=data.solves;$('#prPract').textContent=data.practised;
+  $('#prSolves').textContent=data.solves;$('#prPract').textContent=data.practiced;
   const nx=begProgress.next();$('#prNext').textContent=nx?begStepLabel(nx):'Try CFOP, from the chip in the top bar.';
   const body=$('#prTable tbody');if(body){body.innerHTML=prProgressTableHTML();
     $$('#prTable .pr-stepname').forEach(el=>el.onclick=e=>{e.preventDefault();if(typeof openLesson==='function')openLesson(+el.dataset.n);});}
@@ -144,7 +144,7 @@ function prRenderProgress(){
 function prResetProgress(){
   Object.keys(llState.status).forEach(k=>{if(k.startsWith('beg-'))delete llState.status[k];});
   store.set('llStatus',llState.status);
-  const data=begProgress.data();data.solves=0;data.practised=0;data.steps={};
+  const data=begProgress.data();data.solves=0;data.practiced=0;data.steps={};
   store.set('begProg',data);
   prRenderProgress();
   document.dispatchEvent(new CustomEvent('cw:status',{detail:'beg-0'}));
@@ -155,10 +155,10 @@ function prMountProgress(){
     <h2>Progress</h2>
     <div class="psq" id="prSq" aria-label="The eight steps"></div>
     <div id="prText" style="font-size:14px"></div>
-    <div class="ptiles"><div><span class="muted">cubes solved</span><br><b id="prSolves">0</b></div><div><span class="muted">rounds practised</span><br><b id="prPract">0</b></div></div>
+    <div class="ptiles"><div><span class="muted">cubes solved</span><br><b id="prSolves">0</b></div><div><span class="muted">rounds practiced</span><br><b id="prPract">0</b></div></div>
     <div style="font-size:14px"><b>Up next:</b> <span id="prNext"></span></div>
   </div>
-  <div class="panel"><div class="wide"><table id="prTable"><thead><tr><th>Step</th><th>Name</th><th>Status</th><th>Times practised</th></tr></thead><tbody></tbody></table></div></div>
+  <div class="panel"><div class="wide"><table id="prTable"><thead><tr><th>Step</th><th>Name</th><th>Status</th><th>Times practiced</th></tr></thead><tbody></tbody></table></div></div>
   <div class="panel">
     <h3>Timer</h3>
     <p>Ready to go faster? Time your solves. The timer shows in the player. Times save like in CFOP.</p>

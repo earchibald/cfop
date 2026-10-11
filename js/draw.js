@@ -35,8 +35,8 @@ function moveGeom(move){
   return {n:FACE_GEOM['URFDLB'.indexOf(face)].n,layers,deg:-90*k};
 }
 // The polygons of the cube picture, far to near. Each is {pts,fill} and a sticker also
-// has {stroke,faded}. Options: yaw, pitch, scale, cx, cy (the centre on the page),
-// fade (a Set of facelet indices that keep full colour), color(ci,idx) for the sticker
+// has {stroke,faded}. Options: yaw, pitch, scale, cx, cy (the center on the page),
+// fade (a Set of facelet indices that keep full color), color(ci,idx) for the sticker
 // fill, body for the plastic between stickers, and move with t (0..1) for a part turn.
 //
 // The cube is drawn as slabs: runs of layers along the move axis that move together.

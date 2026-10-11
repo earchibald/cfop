@@ -3,10 +3,10 @@ const $=s=>document.querySelector(s);const $$=s=>[...document.querySelectorAll(s
 const COLOR_NAMES=['white','red','green','yellow','orange','blue'];
 const store={get(k,d){try{const v=localStorage.getItem('cw:'+k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem('cw:'+k,JSON.stringify(v));}catch(e){}}};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-// format a move: a prime move (letter and prime) gets the prime colour; plain and 2 moves keep the text colour
+// format a move: a prime move (letter and prime) gets the prime color; plain and 2 moves keep the text color
 const fmtMove=m=>{const t=esc(m);return t.includes("'")?`<span class="mod">${t}</span>`:t;};
 // A move the app cannot read, as one plain message. extra adds the move kinds a box also accepts.
-function badMoveText(e,extra){const m=String(e&&e.message||'').replace(/^bad move /,'');return (m?`"${m}" is not a move. `:'')+"Use U R F D L B. Add ' to turn counter-clockwise, or 2 for a half turn."+(extra?' '+extra:'');}
+function badMoveText(e,extra){const m=String(e&&e.message||'').replace(/^bad move /,'');return (m?`"${m}" is not a move. `:'')+"Use U R F D L B. Add ' to turn counterclockwise, or 2 for a half turn."+(extra?' '+extra:'');}
 function fmtMoves(ms){return (Array.isArray(ms)?ms:parseAlg(ms)).join(' ');}
 
 // ---------- rotation removal (for physical setups) ----------
@@ -54,7 +54,7 @@ function drawMark(){const el=$('#mark');if(!el)return;
 drawMark();
 // thumbnails
 let _mk=0;
-function thumbTop(cube,mode){ // mode 'eo' (edges only matter), 'oll' (U colour vs grey), 'pll' (real colours + flow arrows)
+function thumbTop(cube,mode){ // mode 'eo' (edges only matter), 'oll' (U color vs gray), 'pll' (real colors + flow arrows)
   const f=cube.toFacelets();const s=16,g=5,o=8;const W=3*s+2*g+2*o+4;let out=`<svg viewBox="0 0 ${W} ${W}">`;
   const uc=f[4];const isCornerFacelet=new Set(cornerFacelet.flat());
   const col=(c,idx)=>{if(mode.startsWith('pll'))return stickerColor(c);if(mode==='eo'&&isCornerFacelet.has(idx))return 'var(--sticker-X)';return c===uc?stickerColor(uc):'var(--sticker-X)';};
@@ -84,28 +84,34 @@ var seqState={moves:[],idx:0,label:'scramble',base:new Cube(),drill:null}; // va
 function setSequence(moves,label,base,drill){stopAuto();seqState.moves=Array.isArray(moves)?moves:parseAlg(moves);seqState.label=label||'';seqState.base=base||new Cube();seqState.idx=seqState.moves.length;
   if(!drill&&seqState.drill){currentLabel=scrLabel;if(/^(ll|f2l):/.test(timer.scope))setScope(TAB_SCOPE[curTab]||'solve');}
   seqState.drill=drill||null;$('#drillNote').classList.toggle('hidden',!drill);$('#drillName').textContent=drill||'';
-  renderSequence();applySequence();}
+  renderSequence();applySequence();document.dispatchEvent(new CustomEvent('cw:sequence',{detail:{drill:seqState.drill}}));}
 function cubeAtSeq(i){return applyAlg(seqState.base,seqState.moves.slice(0,i));}
 function applySequence(){showCube(cubeAtSeq(seqState.idx));$('#scrub').max=seqState.moves.length;$('#scrub').value=seqState.idx;$('#scrubPos').textContent=seqState.idx+' / '+seqState.moves.length;$$('#scramble .m').forEach((el,i)=>{el.classList.toggle('done',i<seqState.idx);el.classList.toggle('cur',i===seqState.idx-1);});}
-function renderSequence(){$('#seqLabel').textContent=seqState.label||'';$('#scramble').innerHTML=seqState.moves.map((m,i)=>`<span class="m${/^[xyz]/.test(m)?' rot':''}" data-i="${i}">${fmtMove(m)}</span>`).join('');
+// In beginner mode every tile carries a caption in words (beghome.js: moveCaption), wrapped so the
+// tile itself keeps its text and its classes.
+function renderSequence(){$('#seqLabel').textContent=seqState.label||'';const cap=method==='beginner'&&typeof moveCaption==='function';
+  $('#scramble').innerHTML=seqState.moves.map((m,i)=>{const t=`<span class="m${/^[xyz]/.test(m)?' rot':''}" data-i="${i}">${fmtMove(m)}</span>`;return cap?`<span class="mt">${t}<small>${esc(moveCaption(m))}</small></span>`:t;}).join('');
   $$('#scramble .m').forEach(el=>el.onclick=()=>{stopAuto();seqState.idx=+el.dataset.i+1;applySequence();});}
 $('#scrub').oninput=e=>{stopAuto();seqState.idx=+e.target.value;applySequence();};
 function focusPlayer(){const p=$('#player');window.scrollTo({top:0,behavior:'smooth'});p.classList.remove('flash');void p.offsetWidth;p.classList.add('flash');}
-function showScr(){const r=crossRotation();const end=applyAlg(scr.cube,r?[r]:[]);
+// In beginner mode the home module shows the cube white up, with no z2 (beghome.js).
+function showScr(){if(method==='beginner'&&typeof showBegScr==='function'){showBegScr();return;}
+  const r=crossRotation();const end=applyAlg(scr.cube,r?[r]:[]);
   setSequence([...scr.moves,...(r?[r]:[])],'scramble · seed '+scr.seed+(r?' · last step '+r+' = solving grip: '+holdText(end).replace(/^Hold /,'').replace(/\.$/,''):''));
   if(r){const el=$$('#scramble .m').pop();el.classList.add('rot');el.title='Rotation only, not a scramble move. '+holdText(end);}}
 // The current scramble as this tab shows it: F2L live adds the rotation and the solved cross.
 // A beginner tab that shows something else registers it in tabShow[tab].
 const tabShow={};
 function showForTab(){if(tabShow[curTab])tabShow[curTab]();else if(curTab==='f2l'&&f2lState.mode==='live')showF2LState();else showScr();}
-$('#showScramble').onclick=()=>{showForTab();focusPlayer();};
+$('#showScramble').onclick=()=>{if(method==='beginner'&&typeof showBegLetters==='function'&&!tabShow[curTab])showBegLetters();else showForTab();focusPlayer();};
 $('#drillBack').onclick=()=>showForTab();
 $('#scrubStart').onclick=()=>{stopAuto();seqState.idx=0;applySequence();};$('#scrubEnd').onclick=()=>{stopAuto();seqState.idx=seqState.moves.length;applySequence();};
 $('#scrubPrev').onclick=()=>{stopAuto();seqState.idx=Math.max(0,seqState.idx-1);applySequence();};$('#scrubNext').onclick=()=>{stopAuto();seqState.idx=Math.min(seqState.moves.length,seqState.idx+1);applySequence();};
 // ---------- auto-step ----------
 var auto={timer:0};
 function autoMs(){return +$('#autoSpeed').value||1000;}
-function stopAuto(){if(auto.timer){clearTimeout(auto.timer);auto.timer=0;}const b=$('#autoPlay');if(b){b.classList.remove('on');b.textContent='▷ Auto-step';}}
+function autoLabel(){return method==='beginner'?'▷ Show me':'▷ Auto-step';}
+function stopAuto(){if(auto.timer){clearTimeout(auto.timer);auto.timer=0;}const b=$('#autoPlay');if(b){b.classList.remove('on');b.textContent=autoLabel();}}
 function autoTick(){if(seqState.idx>=seqState.moves.length){stopAuto();return;}seqState.idx++;applySequence();
   auto.timer=seqState.idx>=seqState.moves.length?(stopAuto(),0):setTimeout(autoTick,autoMs());}
 function startAuto(){if(!seqState.moves.length)return;if(seqState.idx>=seqState.moves.length){seqState.idx=0;applySequence();}
@@ -225,10 +231,10 @@ $('#autoNext').checked=store.get('autoNext',false);$('#autoNext').onchange=()=>s
 $('#inspChk').checked=store.get('insp',false);$('#inspChk').onchange=()=>store.set('insp',$('#inspChk').checked);
 onTimerStop=()=>{if($('#autoNext').checked&&(curTab==='solve'||curTab==='cross'||curTab==='f2l'||curTab==='ll'))setTimeout(nextForTab,150);};
 
-// ---------- cross colour / orientation ----------
+// ---------- cross color / orientation ----------
 const CROSS_ROT={white:'z2',yellow:'',green:"x'",blue:'x',red:'z',orange:"z'"};
 function crossRotation(){if(method==='beginner')return 'z2';return CROSS_ROT[$('#crossColor').value]||'';}
-// Frames. Scrambles are applied white up, green front. To solve with another colour down we rotate the
+// Frames. Scrambles are applied white up, green front. To solve with another color down we rotate the
 // cube by r. A face move M after the rotation is the same as solving X = r' S r in the engine frame.
 function rotCube(){return applyAlg(new Cube(),crossRotation());}
 function toFrame(c){const r=crossRotation();return r?applyAlg(new Cube(),invertAlg(r)).mul(c).mul(MOVES[r]):c;}
@@ -263,7 +269,7 @@ function renderPlan(){
   const seqFor=[];// key -> {cube,moves}
   let cur=p.c0;const P=x=>phys(x);
   steps.push(stepHTML('Cross',`optimal ${p.cross.optimal} moves`,p.crossMoves,'cross',`${p.cross.solutions.length} optimal plan${p.cross.solutions.length>1?'s':''}`));seqFor.push(['cross',cur,p.crossMoves]);cur=applyAlg(cur,p.crossMoves);total+=p.crossMoves.length;
-  // With rotations in the plan, cur carries turned centres. derotate turns it home so slot names apply.
+  // With rotations in the plan, cur carries turned centers. derotate turns it home so slot names apply.
   p.f2l.steps.forEach((s,i)=>{const notes=[`${s.moves.length} moves`];if(s.rot)notes.push(`rotate ${esc(s.rot)} first`);if(s.ref)notes.push(`<a href="#" class="case-link" data-n="${s.ref}">F2L case ${s.ref}</a>`);
     steps.push(stepHTML(`Pair ${i+1}: ${s.slot}`,describePair(derotate(cur),s.slot),s.moves,'f2l'+i,notes.join(' · ')));seqFor.push(['f2l'+i,cur,s.moves]);cur=applyAlg(cur,s.moves);total+=s.moves.length;});
   if(p.ll){for(const s of p.ll.steps){const moves=[...(s.pre?[s.pre]:[]),...parseAlg(s.alg),...(s.post?[s.post]:[])];steps.push(stepHTML(s.stage,s.name,moves,'ll'+s.stage,s.pre?(s.pre[0]==='y'?`rotate ${esc(s.pre)} first`:`AUF ${s.pre} first`):''));seqFor.push(['ll'+s.stage,cur,moves]);cur=applyAlg(cur,moves);total+=moves.length;}}
@@ -284,7 +290,7 @@ function refreshCross(){if(!tablesReady){$('#crossOpt').textContent='…';ensure
   $$('#crossSols .alt').forEach(el=>el.onclick=()=>{const {phys:pc}=orientedScramble();setSequence(parseAlg(el.textContent),'cross plan · '+holdText(pc),pc);seqState.idx=0;applySequence();focusPlayer();});
   $('#crossTryOut').innerHTML='';}
 $('#crossReveal').onclick=()=>{crossState.revealed=!crossState.revealed;refreshCross();};
-$('#crossPlus1').onchange=refreshCross;$('#crossColor').onchange=()=>{store.set('crossColor',$('#crossColor').value);if(!seqState.drill)showForTab();refreshCross();planState.plan=null;renderLLGroups();renderF2LGrid();if(mobileMQ.matches)renderMobileRef();$('#planOut').innerHTML='<p class="muted">Cross colour changed. Press Plan.</p>';};
+$('#crossPlus1').onchange=refreshCross;$('#crossColor').onchange=()=>{store.set('crossColor',$('#crossColor').value);if(!seqState.drill)showForTab();refreshCross();planState.plan=null;renderLLGroups();renderF2LGrid();if(mobileMQ.matches)renderMobileRef();$('#planOut').innerHTML='<p class="muted">Cross color changed. Press Plan.</p>';};
 $('#crossNew').onclick=()=>{ensureTables(()=>{const diff=$('#crossDiff').value;for(let k=0;k<200;k++){const seed=randomSeedName();const moves=randomMoveScramble(seed,+$('#scrLen').value);const c=toFrame(applyAlg(new Cube(),moves));const d=buildCrossTable()[crossIndex(c)];if(diff==='any'||(diff==='easy'&&d<=5)||(diff==='hard'&&d>=7)){newScramble(seed);return;}}newScramble();});};
 $('#crossCheck').onclick=()=>{let ms;try{ms=parseAlg($('#crossTry').value);applyAlg(new Cube(),ms);}catch(e){$('#crossTryOut').innerHTML='<span style="color:var(--warn)">'+esc(badMoveText(e))+'</span>';return;}
   const {cube}=orientedScramble();const c=applyAlg(cube,ms);const ok=crossSolved(c);const opt=crossState.sol?crossState.sol.optimal:'?';const n=ms.filter(m=>!'xyz'.includes(m[0])).length;
@@ -410,7 +416,7 @@ function runLab(name){
   // moves display with trigger borders
   $('#labMoves').innerHTML=moves.map((m,i)=>{const t=trig.findIndex(x=>i>=x.start&&i<x.end);return `<span class="m ${t>=0?'trig'+(t%4+1):''}" data-i="${i}" title="${t>=0?esc(trig[t].name):''}">${fmtMove(m)}</span>`;}).join('');
   $$('#labMoves .m').forEach(el=>el.onclick=()=>{labState.idx=+el.dataset.i+1;labShow();});
-  const cyc=an.cornerCycles.map(x=>`<span class="cycle">${x.cyc.map(i=>CORNER_NAMES[i]).join('<span class="arrow"> → </span>')}<span class="arrow"> → </span>${CORNER_NAMES[x.cyc[0]]}${x.twist?` <span class="muted">+twist ${x.twist}</span>`:''}</span>`).join('')+an.edgeCycles.map(x=>`<span class="cycle">${x.cyc.map(i=>EDGE_NAMES[i]).join('<span class="arrow"> → </span>')}<span class="arrow"> → </span>${EDGE_NAMES[x.cyc[0]]}${x.flip?' <span class="muted">+flip</span>':''}</span>`).join('')+an.twisted.map(t=>`<span class="cycle">${CORNER_NAMES[t.piece]} twists ${t.twist===1?'clockwise':'counter-clockwise'}</span>`).join('')+an.flipped.map(e=>`<span class="cycle">${EDGE_NAMES[e]} flips in place</span>`).join('');
+  const cyc=an.cornerCycles.map(x=>`<span class="cycle">${x.cyc.map(i=>CORNER_NAMES[i]).join('<span class="arrow"> → </span>')}<span class="arrow"> → </span>${CORNER_NAMES[x.cyc[0]]}${x.twist?` <span class="muted">+twist ${x.twist}</span>`:''}</span>`).join('')+an.edgeCycles.map(x=>`<span class="cycle">${x.cyc.map(i=>EDGE_NAMES[i]).join('<span class="arrow"> → </span>')}<span class="arrow"> → </span>${EDGE_NAMES[x.cyc[0]]}${x.flip?' <span class="muted">+flip</span>':''}</span>`).join('')+an.twisted.map(t=>`<span class="cycle">${CORNER_NAMES[t.piece]} twists ${t.twist===1?'clockwise':'counterclockwise'}</span>`).join('')+an.flipped.map(e=>`<span class="cycle">${EDGE_NAMES[e]} flips in place</span>`).join('');
   const inv=invariants(c);
   const kind=[];if(an.affectsOnlyU)kind.push('last-layer only');if(!an.cornerCycles.length&&!an.twisted.length)kind.push('corners untouched');if(!an.edgeCycles.length&&!an.flipped.length)kind.push('edges untouched');if(an.cornerCycles.length===1&&an.cornerCycles[0].cyc.length===3&&!an.edgeCycles.length&&!an.twisted.length&&!an.flipped.length)kind.push('pure corner 3-cycle');if(an.edgeCycles.length===1&&an.edgeCycles[0].cyc.length===3&&!an.cornerCycles.length&&!an.twisted.length&&!an.flipped.length)kind.push('pure edge 3-cycle');
   $('#labOut').innerHTML=`<h3>${esc(name||'Analysis')}</h3><div class="row" style="margin:6px 0">${kind.map(k=>`<span class="tag">${k}</span>`).join('')}<span class="tag">${an.moveCount} moves</span><span class="tag">repeat ${an.order}× to return</span></div>

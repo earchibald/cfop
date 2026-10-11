@@ -1,5 +1,5 @@
 // Stage 5: split random cubes into six faces, turn and shuffle them, and check that
-// assembleScan recovers the cube. Also check the colour-confusion repairs.
+// assembleScan recovers the cube. Also check the color-confusion repairs.
 const assert=require('assert');
 const run=require('./vm-load')('js/engine.js','js/scan-assemble.js');
 const T=run(`({rotateFace,assembleScan,Cube,applyAlg,FACE_MOVES})`);
@@ -33,7 +33,7 @@ for(let n=0;n<M;n++){
   const spots=[];faces.forEach((fc,fi)=>fc.stickers.forEach((x,p)=>{if(p!==4&&(x===1||x===4))spots.push([fi,p]);}));
   const [fi,p]=spots[rnd(spots.length)];faces[fi].stickers[p]=5-faces[fi].stickers[p];faces[fi].margins[p]=1;
   const r=T.assembleScan(faces);if(r.ok&&r.cube.equals(c)&&r.changes.length===1)fixed++;
-  // A red and an orange sticker both misread: colour counts stay right.
+  // A red and an orange sticker both misread: color counts stay right.
   const c2=randomCube(),f2=scanOf(c2);const reds=[],oranges=[];
   f2.forEach((fc,fi)=>fc.stickers.forEach((x,p)=>{if(p!==4&&x===1)reds.push([fi,p]);if(p!==4&&x===4)oranges.push([fi,p]);}));
   const a=reds[rnd(reds.length)],b=oranges[rnd(oranges.length)];
@@ -47,7 +47,7 @@ console.log(`repair: one sticker ${fixed}/${M}, two stickers ${fixed2}/${M}, who
 assert.ok(fixed>=M*0.95&&fixed2>=M*0.9&&faceSwap>=M*0.95,'repair rate too low');
 
 // Joint read: dim light makes five red stickers read as orange. With per-cell Lab values,
-// stage 5 assigns all stickers to the centre colours, nine each, and recovers the cube.
+// stage 5 assigns all stickers to the center colors, nine each, and recovers the cube.
 const LAB=[[95,0,2],[50,62,45],[58,-55,40],[88,-6,80],[64,48,68],[42,12,-60]];
 let joint=0;const J=40;
 for(let n=0;n<J;n++){
@@ -65,5 +65,5 @@ assert.ok(joint>=J-1,'joint read failed');
 const c=randomCube(),faces=scanOf(c);
 assert.match(T.assembleScan(faces.slice(0,5)).errors[0],/^Scan the \w+ face\.$/);
 faces[1]={stickers:faces[0].stickers.slice()};
-assert.match(T.assembleScan(faces).errors[0],/^Two faces have a \w+ centre\.$/);
+assert.match(T.assembleScan(faces).errors[0],/^Two faces have a \w+ center\.$/);
 console.log('scan-assemble: ok');

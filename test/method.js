@@ -33,7 +33,9 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.ok($('#tab-learn').classList.contains('on'));
   assert.strictEqual($$('#brail button').length,5,'five beginner tabs');
   assert.ok($('#brail button[data-tab="learn"]').classList.contains('on'));
-  assert.ok(/z2/.test($('#seqLabel').textContent),'the scramble ends with z2: yellow up');
+  assert.strictEqual(d.body.dataset.begview,'ask','the beginner home asks about the cube; no moves are loaded');
+  assert.ok(!/z2/.test($('#seqLabel').textContent),'no hidden z2: a beginner holds the cube white up');
+  assert.ok(/white on top/.test($('#seqLabel').textContent),'the label says white on top');
   // The beginner player: progress, no timer, until Time my solves.
   assert.strictEqual($('#progSq').children.length,8,'eight progress squares');
   assert.ok(/No steps finished/.test($('#progText').textContent));
@@ -54,9 +56,9 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   w.goTab('progress');w.setMethod('cfop');assert.strictEqual(d.body.dataset.tab,'solve','CFOP returns to its tab');
   w.goTab('f2l');w.setMethod('beginner');assert.strictEqual(d.body.dataset.tab,'progress','the beginner method returns to its tab');
   w.setMethod('cfop');assert.strictEqual(d.body.dataset.tab,'f2l');
-  assert.ok(!/z2/.test($('#seqLabel').textContent)||$('#crossColor').value==='white','CFOP follows the cross colour');
+  assert.ok(!/z2/.test($('#seqLabel').textContent)||$('#crossColor').value==='white','CFOP follows the cross color');
   // Progress counts persist.
-  w.begProgress.solved();w.begProgress.practised(3);
+  w.begProgress.solved();w.begProgress.practiced(3);
   const prog=JSON.parse(w.localStorage.getItem('cw:begProg'));assert.strictEqual(prog.solves,1);assert.strictEqual(prog.steps[3],1);
   assert.deepStrictEqual(errs,[],'no script errors');
   // ----- a second visit: no chooser, the saved method and tab boot -----
@@ -69,6 +71,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ({w,d,errs}=await boot(true));
   w.setMethod('beginner');
   assert.strictEqual(d.body.dataset.tab,'learn','Learn is the phone home');
+  assert.ok($('#begNext h2')&&$('#begAsk .beg-cards'),'the phone home shows Up next and Your cube');
   $('#menuBtn').click();assert.strictEqual($$('#menu button').length,5,'the phone menu lists the five beginner tabs');
   assert.deepStrictEqual(errs,[],'no script errors on the phone');
   console.log('method: chooser, chip, rails, progress panel, timer toggle, tab memory ok');process.exit(0);

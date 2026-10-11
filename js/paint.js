@@ -1,4 +1,4 @@
-// ===== "Paint the colours": enter a real cube by tapping its stickers =====
+// ===== "Paint the colors": enter a real cube by tapping its stickers =====
 // A camera-free way to read a cube. See docs/beginner-mode.md and the shared beginner-mode
 // brief for the other modules (learn.js, guide.js, practice.js).
 //
@@ -10,7 +10,7 @@
 // green-front) array that fromFacelets expects.
 //
 // Every string shown in the dialog goes through esc(). The HTML built here is assembled
-// from this module's own fixed labels and colour names, never from outside input.
+// from this module's own fixed labels and color names, never from outside input.
 
 // Palette order: white, yellow, green, blue, red, orange. Keys 1-6 pick these in order.
 const PAINT_PALETTE=[{c:0,label:'white'},{c:3,label:'yellow'},{c:2,label:'green'},{c:5,label:'blue'},{c:1,label:'red'},{c:4,label:'orange'}];
@@ -19,7 +19,7 @@ let PAINT_PERM=null;
 // The held-index -> engine-index map, found by brute force rather than worked out by hand.
 // For 16 random cubes, compare the cube as held (after z2) with the cube as engine. A held
 // position always lands on the same engine position, on every cube, so 16 cubes are enough
-// to pin each one down against the handful of same-colour stickers elsewhere on the cube.
+// to pin each one down against the handful of same-color stickers elsewhere on the cube.
 function paintPerm(){
   if(PAINT_PERM)return PAINT_PERM;
   const trials=[];
@@ -39,7 +39,7 @@ function paintPerm(){
   PAINT_PERM=perm;
   return perm;
 }
-// H: 54 colours in the held frame (or -1 where not painted yet). Returns the 54 colours
+// H: 54 colors in the held frame (or -1 where not painted yet). Returns the 54 colors
 // in the engine (white-up, green-front) frame, in the order fromFacelets expects.
 function heldToEngineFacelets(H){
   const perm=paintPerm();const E=new Array(54);
@@ -50,9 +50,9 @@ function heldToEngineFacelets(H){
 // ---------- the dialog's own state ----------
 let paintH=null,paintColor=0;
 
-// The held centres: always the same six colours, in held-face order, however the cube is
-// scrambled (centres do not move for a face-turn scramble, so this is the held cube's own
-// centre row, not a guess at the colours).
+// The held centers: always the same six colors, in held-face order, however the cube is
+// scrambled (centers do not move for a face-turn scramble, so this is the held cube's own
+// center row, not a guess at the colors).
 function paintCenters(){return applyAlg(new Cube(),['z2']).center;}
 function paintReset(){
   const centers=paintCenters();const H=new Array(54).fill(-1);
@@ -62,7 +62,7 @@ function paintReset(){
 function paintTileHTML(i){
   const v=paintH[i];const isCenter=i%9===4;
   const bg=v>=0?stickerColor(v):'var(--sticker-X)';
-  return `<button type="button" class="pt-tile${isCenter?' pt-center':''}" data-i="${i}" style="background:${bg}"${isCenter?' disabled aria-label="centre, fixed"':''}></button>`;
+  return `<button type="button" class="pt-tile${isCenter?' pt-center':''}" data-i="${i}" style="background:${bg}"${isCenter?' disabled aria-label="center, fixed"':''}></button>`;
 }
 function paintFaceHTML(face){
   let out=`<div class="pt-face" data-face="${face}">`;
@@ -137,7 +137,7 @@ function openPaint(){
   bg.innerHTML=`<div class="modal paint" role="dialog" aria-label="Paint my cube">
    <button class="close small ghost" id="paintClose" aria-label="Close">✕</button>
    <h2>Paint my cube</h2>
-   <p class="muted" style="margin-top:0">Hold your cube with yellow up and green in front, like the 3D cube. Pick a colour, then tap the tiles. The centres are fixed.</p>
+   <p class="muted" style="margin-top:0">Hold your cube with yellow up and green in front, like the 3D cube. Pick a color, then tap the tiles. The centers are fixed.</p>
    <div class="pt-body">
     <div id="paintNet">${paintNetHTML()}</div>
     <div class="pt-side">

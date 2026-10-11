@@ -18,7 +18,7 @@ cube, not the reverse.
 - One face at a time. The user shows one face, the app reads it, the user
   turns the cube to the next face. Multi-face reads from a corner view are a
   later phase.
-- Any face order. The centre sticker identifies the face.
+- Any face order. The center sticker identifies the face.
 - Browser only, plain JavaScript on a canvas. Do not add OpenCV.js unless the
   hand-rolled detector fails on real footage.
 
@@ -32,30 +32,30 @@ Each stage must be testable on its own with synthetic frames.
 - Convert to a perceptual space (Lab or HSV). Keep RGB for reference.
 - Mark dark pixels (low L). The black plastic between stickers is the
   strongest signal in the frame. Everything else is a candidate.
-- Flood-fill non-dark regions of near-uniform colour. Keep regions that are
+- Flood-fill non-dark regions of near-uniform color. Keep regions that are
   roughly square, roughly the same area as each other, and compact.
-- Output: a list of blobs with centroid, area, mean colour, bounding box.
+- Output: a list of blobs with centroid, area, mean color, bounding box.
 
 ### 2. Fit a 3x3 lattice
 
 - From the candidate centroids, find a set that fits a 3x3 grid under a
   homography. Four or more good stickers are enough to fit it. RANSAC over
   candidate quadruples or a simpler approach: pick the largest cluster of
-  similar-area blobs, estimate the two grid axes from nearest-neighbour
+  similar-area blobs, estimate the two grid axes from nearest-neighbor
   vectors, then solve for the grid origin and spacing.
-- Once fitted, predict all nine cell centres. A finger or glare can hide a
+- Once fitted, predict all nine cell centers. A finger or glare can hide a
   sticker; the lattice fills it in.
 - Reject the frame when fewer than six cells land on a candidate blob or the
   fit residual is high.
 - Output: nine sample points in frame coordinates, plus a confidence.
 
-### 3. Read colours
+### 3. Read colors
 
-- Sample a small disc at each predicted cell centre, not the whole cell. Glare
+- Sample a small disc at each predicted cell center, not the whole cell. Glare
   and edges live at the borders.
 - Estimate the light from the frame: the brightest near-neutral region, or the
   running mean of all nine samples. Correct the samples for it.
-- Classify each sample against the six reference colours in Lab. Return the
+- Classify each sample against the six reference colors in Lab. Return the
   index and the distance to the nearest and second-nearest reference. Low
   margin means low confidence.
 
@@ -66,9 +66,9 @@ Each stage must be testable on its own with synthetic frames.
 - A face is "read" when every cell has a winner with a clear margin over a
   run of about ten frames. Then lock it, flash the net, and prompt for the
   next face.
-- The centre cell decides which face the tally belongs to. If the centre
-  colour matches a face already read, treat it as a retake.
-- Reset the tally when the detected centre colour changes.
+- The center cell decides which face the tally belongs to. If the center
+  color matches a face already read, treat it as a retake.
+- Reset the tally when the detected center color changes.
 
 ### 5. Assemble and repair
 
@@ -77,7 +77,7 @@ Each stage must be testable on its own with synthetic frames.
   rotations; pick the combination that makes `fromFacelets` succeed. Try the
   first face at rotation 0 and search the other five (4^5 = 1024 combos; it
   is cheap).
-- If still illegal, try the two usual colour confusions, red/orange and
+- If still illegal, try the two usual color confusions, red/orange and
   white/yellow, as whole-face swaps.
 - Report what was changed on the status line. Then call `scrambleFromCube`.
 
@@ -86,10 +86,10 @@ Each stage must be testable on its own with synthetic frames.
 - A "Scan cube" button in the top bar beside "Enter a scramble".
 - A modal with: the live video (with a "Mirror" checkbox that flips the
   preview only, never the pixels read), an overlay that draws the fitted
-  lattice and the current colour read for each cell, a 2D net that fills in
+  lattice and the current color read for each cell, a 2D net that fills in
   as faces lock, a status line, and a "Use this cube" button that enables when
   the cube is legal.
-- Clicking a net sticker lets the user correct a colour by cycling through the
+- Clicking a net sticker lets the user correct a color by cycling through the
   six. A corrected sticker is pinned and not overwritten by votes.
 - Keep the camera stream running until the modal closes. Stop all tracks on
   close.
@@ -98,7 +98,7 @@ Each stage must be testable on its own with synthetic frames.
 
 - `test/scan-synth.js`: render synthetic faces to a canvas (node-canvas or a
   pure array renderer) with random tilt, scale, offset, lighting tint and
-  noise. Assert that stage 1-3 return the right nine colours in at least 95%
+  noise. Assert that stage 1-3 return the right nine colors in at least 95%
   of trials.
 - `test/scan-assemble.js`: take a random `Cube`, split its facelets into six
   faces, rotate each face randomly, and check that stage 5 recovers the cube.

@@ -43,7 +43,7 @@ function buildTwoPhase(){
   TP.ready=true;TP.buildMs=Date.now()-t0;
 }
 function _okNext(prev,f){if(prev<0)return true;if(prev===f)return false;if(prev===f+3)return false;return true;} // opposite faces in fixed order only
-// solveTwoPhase(cube, {maxLen, timeMs}) -> array of face moves that solves cube (faces only, centres must be standard)
+// solveTwoPhase(cube, {maxLen, timeMs}) -> array of face moves that solves cube (faces only, centers must be standard)
 function solveTwoPhase(cube,opt={}){
   buildTwoPhase();
   const maxLenStart=opt.maxLen||22,deadline=Date.now()+(opt.timeMs||1500);

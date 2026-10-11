@@ -49,7 +49,7 @@ function lnTiles(moves,big){
   return `<span class="ms${big?' big':''}">${out}</span>`;
 }
 function lnTrigBox(t){return `<span class="ms"><span class="trig"><b class="lbl">${esc(t.name)}</b>${t.moves.map(m=>`<span class="m">${fmtMove(m)}</span>`).join('')}</span></span>`;}
-// The face thumb on a step card: the step's goal, as seen from above. '.' is a grey tile.
+// The face thumb on a step card: the step's goal, as seen from above. '.' is a gray tile.
 const LN_FACES={
   basics:'.W.WWW.W.',daisy:'.W.WYW.W.',cross:'.W.WWW.W.',corners:'WWWWWWWWW',middle:'GGGGGGGGG',
   ycross:'.Y.YYY.Y.',yface:'YYYYYYYYY',ycorners:'YYYYYYYYY',yedges:'YYYYYYYYY'};
@@ -66,17 +66,12 @@ function lnTag(st){return `<span class="tag ln-tag ${esc(st)}">${esc(st||'unlear
 
 // ---------- the Learn home: the nine steps ----------
 const lnView={n:null,why:new Set()}; // n: the open lesson, or null for the step list
+// Up next and the way a real cube gets in live above the tabs, in the beginner home (js/beghome.js).
 function lnHomeHTML(){
   const nx=begProgress.next();
-  const any=BEGINNER_STEPS.some(s=>lnStatus(s.n));
-  const cont=!nx?'':`<button class="primary" data-ln="open" data-n="${nx.n}" id="lnContinue">${any?'Continue':'Start'}: ${esc(lnStepNo(nx))}</button>`;
-  const {finished}=begProgress.counts();
-  const sq=Array.from({length:8},(_,i)=>`<i class="${esc(lnStatus(i+1))}"></i>`).join('');
   const cards=BEGINNER_STEPS.map(s=>{const st=lnStatus(s.n),cur=nx&&nx.n===s.n,uses=lnUses(s);
     return `<button class="bstep${cur?' cur':''}" data-ln="open" data-n="${s.n}">${lnFace(s.id)}<span class="body"><span class="n">${esc(lnStepNo(s))}${cur?' · up next':''}</span><br><b>${esc(s.name)}</b>${uses?` <span class="muted ln-uses">· ${esc(uses)}</span>`:''}<br><span class="desc">${esc(s.goal)}</span></span>${lnTag(st)}</button>`;}).join('');
-  return `<div class="panel ln-intro"><div><h2>Learn: solve the cube in eight steps</h2><p class="muted">Do the steps in order. Each lesson shows the goal, the moves, and the cases you will meet. Mark a step finished when you can do it without the app.</p></div>${cont}</div>
-  <div class="panel ln-mob ln-strip"><div class="psq" aria-label="The eight steps">${sq}</div><span><b>${finished} of 8</b> <span class="muted">finished</span></span></div>
-  <button class="primary big ln-mob" data-ln="solve">Solve my cube</button>
+  return `<div class="panel ln-intro"><div><h2>Learn: the eight steps</h2><p class="muted">Do them in order, or tap any step. Each lesson shows the goal, the moves, and the cases you will meet. Mark a step finished when you can do it without the app.</p></div></div>
   <div class="panel ln-steps"><div class="ln-mob ln-listhead"><b>Learn</b><span class="muted">tap a step</span></div>${cards}</div>
   <div class="panel ln-foot"><div><b>Finished all eight?</b> <span class="muted">Switch to CFOP from the chip in the top bar. Your times and history come with you.</span></div><button class="small" data-ln="cfop">Show me CFOP</button></div>`;
 }
@@ -109,7 +104,7 @@ function lnLessonHTML(n){
   const done=st==='finished';
   const nextBtn=next?`<button class="primary" data-ln="open" data-n="${next.n}">Next: ${esc(lnStepNo(next))}, ${esc(next.name)} →</button>`:`<button class="primary" data-ln="solve">Solve my cube →</button>`;
   const end=`<div class="panel ln-foot"><div><b>Can you do this step on your own cube?</b> <span class="muted">Mark it finished. You can always come back.</span></div>
-    <div class="row"><button data-ln="mark" id="lnMark"${done?' disabled':''}>${done?'Finished':'Mark finished'}</button>${n>0&&typeof startPractice==='function'?'<button data-ln="practice">Practise this step</button>':''}${next?'<button data-ln="solve">Solve my cube</button>':''}${nextBtn}</div></div>`;
+    <div class="row"><button data-ln="mark" id="lnMark"${done?' disabled':''}>${done?'Finished':'Mark finished'}</button>${n>0&&typeof startPractice==='function'?'<button data-ln="practice">Practice this step</button>':''}${next?'<button data-ln="solve">Solve my cube</button>':''}${nextBtn}</div></div>`;
   return head+what+moves+cases+end;
 }
 
@@ -152,13 +147,13 @@ document.addEventListener('cw:status',e=>{if(!String(e.detail).startsWith('beg-'
 const LN_CHEAT={
   1:{rule:'Bring each white edge to the top, white side up. Turn the top first if the spot is taken.',
      list:[['White on the left of the front face',"L'"],['White on the right of the front face','R'],['White at the top of the front face','F R'],['White at the bottom of the front face',"F' R"],['White on the bottom face','F2']]},
-  2:{rule:'Turn the top until an edge sits over the centre of its other colour. Then do a half turn of that face.',list:[['Edge over its centre, in front','F2']]},
-  3:{rule:'Turn the top until the side colour sits over its centre. Matching tile top left: Left Trigger. Top right: Right Trigger. White up: Right Trigger twice.',trigs:['left','right']},
-  4:{rule:'Match the front colour to the front centre. Top colour on the left: Move Left. On the right: Move Right. Then put the white corner back with a trigger.',
+  2:{rule:'Turn the top until an edge sits over the center of its other color. Then do a half turn of that face.',list:[['Edge over its center, in front','F2']]},
+  3:{rule:'Turn the top until the side color sits over its center. Matching tile top left: Left Trigger. Top right: Right Trigger. White up: Right Trigger twice.',trigs:['left','right']},
+  4:{rule:'Match the front color to the front center. Top color on the left: Move Left. On the right: Move Right. Then put the white corner back with a trigger.',
      list:[['Move Left',"U' L' U' L"],['Move Right',"U R U R'"]]},
   5:{rule:'Dot: hold the cube any way. L at the back left. Line left to right. Repeat until you see the cross.'},
   6:{rule:'One yellow corner on top: hold it at the front left. None or two: yellow faces you on the front left corner. Repeat.'},
-  7:{rule:'Matching pair on the left, over its centre. Do the algorithm, then the yellow face algorithm. No pair: do both once, then look again.'},
+  7:{rule:'Matching pair on the left, over its center. Do the algorithm, then the yellow face algorithm. No pair: do both once, then look again.'},
   8:{rule:'Solved side at the back. Do the algorithm. Up to three times.'},
 };
 function lnCheatHTML(){
@@ -168,7 +163,7 @@ function lnCheatHTML(){
     if(c.trigs)body+=c.trigs.map(id=>`<div class="ln-cs-alg">${lnTrigBox(BEGINNER_TRIGGERS[id])}${show('trig',id)}</div>`).join('');
     if(s.algs)body+=s.algs.map(id=>{const a=BEGINNER_ALGS[id];return `<div class="ln-cs-alg"><div class="ln-cs-an"><b>${esc(a.name)}</b><span class="muted"> · ${esc(a.say)}</span></div>${lnTiles(a.alg)}${show('alg',id)}</div>`;}).join('');
     return `<div class="panel ln-cs-step" data-n="${s.n}"><h3><span class="mono muted">Step ${s.n}</span> · ${esc(s.name)}</h3><p class="ln-cs-goal">${esc(s.goal)}</p>${body}<p class="ln-cs-rule">${esc(c.rule||s.how)}</p></div>`;}).join('');
-  return `<div class="panel"><h2>Cheat sheet</h2><p class="muted">Keep this page open while you solve. Yellow on top for every step.</p></div><div class="ln-cs-grid">${panels}</div>`;
+  return `<div class="panel"><h2>Cheat sheet</h2><p class="muted">Keep this page open while you solve. Turn the cube over first: yellow on top for every step.</p></div><div class="ln-cs-grid">${panels}</div>`;
 }
 function lnRenderCheat(){const t=$('#tab-cheat');if(t)t.innerHTML=lnCheatHTML();}
 $('#tab-cheat').addEventListener('click',e=>{

@@ -12,7 +12,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const label=()=>$('#seqLabel').textContent;
 const where=()=>$('#gdWhere').textContent;
 const G=()=>w.eval('guideState');
-const entry=()=>$$('#tab-bsolve .bcards > .panel').length===3&&!!$('#gdStart');
+const entry=()=>$$('#tab-bsolve .beg-card').length===2&&!!$('#gdStart');
 const guide=()=>!!$('#gdBar')&&!!$('#gdDone');
 
 w.addEventListener('load',async()=>{try{
@@ -21,10 +21,12 @@ w.addEventListener('load',async()=>{try{
   assert.ok($('#tab-bsolve').classList.contains('on'),'Solve my cube is the current tab');
   w.newScramble('guide-test-one');
 
-  // The entry view: three cards, scan picked, and the current scramble.
-  assert.ok(entry(),'entry view shows three cards');
-  assert.ok($('#tab-bsolve .bcards .panel.pick #gdScan'),'Scan with the camera is picked');
+  // The entry view: the two "What does your cube look like?" cards and the current scramble.
+  assert.ok(entry(),'entry view shows the two cards');
+  assert.ok($('#tab-bsolve .beg-card .primary[data-beg="scan"]'),'Scan it with the camera is the first choice');
+  assert.ok($('#tab-bsolve [data-beg="mix"]'),'Mix it up with me is offered');
   assert.ok($('#gdSeed').textContent.includes('guide-test-one'),'entry names the current scramble');
+  assert.strictEqual(d.body.dataset.begview,'ask','no player on the entry view');
 
   // Start with this scramble: the guide at part 1, with the stage bar and the part in the player.
   $('#gdStart').click();
@@ -37,6 +39,17 @@ w.addEventListener('load',async()=>{try{
   assert.ok(!w.eval('seqState.drill'),'the guide is not a drill');
   assert.ok($('#gdTitle').textContent.trim().length>0,'the part has a title');
   assert.ok($$('#tab-bsolve .gd-moves .m').length>=1,'at least one move tile');
+  // The cube starts white up. The first part turns it over: z2 is its first, dashed tile.
+  assert.strictEqual(d.body.dataset.begview,'player','the guide shows the player');
+  assert.strictEqual($$('#scramble .m')[0].textContent,'z2','the first tile in the player is the turn-over');
+  assert.ok($$('#scramble .m')[0].classList.contains('rot'),'the turn-over is dashed');
+  assert.strictEqual($('#tab-bsolve .gd-moves .m').textContent,'z2','the part lists the turn-over first');
+  assert.ok(/Turn the cube over/.test($('#tab-bsolve .gd-steps').textContent),'the first instruction says to turn the cube over');
+  assert.strictEqual(w.cubeAtSeq(0).toFacelets()[4],0,'before the turn-over the top center is white');
+  assert.strictEqual(w.cubeAtSeq(1).toFacelets()[4],3,'after the turn-over the top center is yellow');
+  assert.deepStrictEqual(w.cubeAtSeq(w.seqState.moves.length).toFacelets(),first.after.toFacelets(),'the part ends on its after cube');
+  assert.ok($$('#scramble .mt small').length>=1,'beginner tiles carry captions');
+  assert.strictEqual($$('#scramble .mt small')[0].textContent,'turn over','the z2 caption says turn over');
   assert.ok(/^Stage \d of 8 · .+ · part 1 of \d+$/.test(where()),'the this-solve line: '+where());
   assert.ok(/\d+ moves done, about \d+ to go\./.test($('#gdCount').textContent),'moves done and to go');
   assert.ok($('#gdPrev').disabled,'no previous part at part 1');
@@ -76,12 +89,16 @@ w.addEventListener('load',async()=>{try{
 
   // Solve again returns to the entry view.
   $('#gdAgain').click();assert.ok(entry(),'Solve again returns to the entry view');
-  assert.ok(label().includes('scramble'),'the player shows the scramble');
+  assert.ok(label().includes('your cube'),'the player holds the user\'s cube again');assert.strictEqual(d.body.dataset.begview,'ask','and the entry view asks, with no player');
 
-  // Scramble one for me: a new seed and the guide at part 1.
-  const s0=w.eval('scr.seed');$('#gdRandom').click();
-  assert.notStrictEqual(w.eval('scr.seed'),s0,'Scramble one for me changes the seed');
-  assert.ok(guide(),'Scramble one for me starts the guide');assert.strictEqual(G().i,0);
+  // Practice on the screen only: a new seed and the guide at part 1.
+  const s0=w.eval('scr.seed');$('#tab-bsolve [data-beg="screen"]').click();
+  assert.notStrictEqual(w.eval('scr.seed'),s0,'Practice on the screen only changes the seed');
+  assert.ok(guide(),'Practice on the screen only starts the guide');assert.strictEqual(G().i,0);
+  assert.ok(!$$('#tab-bsolve .gd-moves .m').slice(1).some(m=>m.textContent==='z2'),'z2 appears once');
+  $('#gdDone').click();assert.ok(!$$('#scramble .m').some(m=>m.textContent==='z2'),'the second part has no turn-over');assert.strictEqual(G().i,1);
+  assert.strictEqual(w.cubeAtSeq(0).toFacelets()[4],3,'the second part starts yellow up');
+  $('#gdPrev').click();
 
   // A seed-bar New while the guide shows restarts it at stage 1, part 1.
   $('#gdDone').click();$('#gdDone').click();$('#gdDone').click();assert.strictEqual(G().i,3);
