@@ -29,7 +29,7 @@ const MASTER_ALGS={
     why:'The front and back edge pairs swap places. Two edges alone cannot swap on a 3×3; on a 4×4 they can. All the right turns are slice turns.'},
 };
 for(const k in BEGINNER_ALGS){const a=BEGINNER_ALGS[k];MASTER_ALGS[k]=Object.assign({},a,{step:a.step+2});}
-const MASTER_CHUNK_ALGS=Object.values(MASTER_ALGS).map(a=>({id:a.id,name:a.name,moves:parseAlg(a.alg),parts:a.parts})).sort((a,b)=>b.moves.length-a.moves.length);
+const MASTER_CHUNK_ALGS=Object.values(MASTER_ALGS).filter(a=>a.chunk!==false).map(a=>({id:a.id,name:a.name,moves:parseAlg(a.alg),parts:a.parts})).sort((a,b)=>b.moves.length-a.moves.length);
 function masterChunks(moves){
   const ms=Array.isArray(moves)?moves:parseAlg(moves);const out=[];
   for(let i=0;i<ms.length;){

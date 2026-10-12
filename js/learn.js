@@ -42,16 +42,35 @@ const lnGoalBelow=n=>!!begPack().goalBelow[n]; // the white face is below: look 
 // front and the right are both in view. Lesson 0 leaves room round the cube for the rings.
 function lnGoalView(n){return {yaw:-32,pitch:lnGoalBelow(n)?-34:28};}
 function lnGoalBox(n){return n===0?'20 0 340 360':'40 30 320 300';}
-function lnGoalSVG(n,v,fade){v=v||lnGoalView(n);const f=lnGoals()[n].toFacelets();
-  return renderCube3D(f,{...v,...LN_PIC,fade,cls:i=>'pc-'+pieceKind(i,drawN())})+(fade?'':lnFrontMark(v));}
+function lnGoalSVG(n,v,fade,on){v=v||lnGoalView(n);const f=lnGoals()[n].toFacelets();
+  return renderCube3D(f,{...v,...LN_PIC,fade,cls:i=>'pc-'+pieceKind(i,drawN())+(on&&on.has(i)?' hl-on':'')})+(fade?'':lnFrontMark(v));}
 function lnFrontMark(v){
   const proj=p=>{const q=rot3(p,v.yaw,v.pitch);return [LN_PIC.cx+q[0]*LN_PIC.scale,LN_PIC.cy-q[1]*LN_PIC.scale];};
   const [x,y]=proj([0,0,5.3]),[ax,ay]=proj([0,0,1.7]),[bx,by]=proj([0,0,4.3]);const f=n=>n.toFixed(1);
   return `<g class="ln-front" aria-hidden="true"><line x1="${f(ax)}" y1="${f(ay)}" x2="${f(bx)}" y2="${f(by)}"/><circle cx="${f(x)}" cy="${f(y-13)}" r="8"/><path d="M${f(x-14)} ${f(y+12)}a14 14 0 0 1 28 0z"/><text x="${f(x)}" y="${f(y+27)}" text-anchor="middle">front</text></g>`;}
 function lnGoalCap(n){return lnGoalBelow(n)?'Seen from below: the white face.':n===0?'The small figure is you. The face it looks at is the front.':'';}
-// Tap a kind of piece in the lesson text: those pieces stay bright, the rest dim for a moment.
-function lnHighlight(kind){const pic=$('#tab-learn .ln-pic');if(!pic)return;lnRestoreGoal();
-  delete pic.dataset.hl;void pic.offsetWidth;pic.dataset.hl=kind;
+// Where a sticker's cubie sits, in the units of js/draw.js: cubies at -1, 0, 1 on a 3×3.
+function lnCubiePos(idx,n){const nn=n*n,g=FACE_GEOM[Math.floor(idx/nn)],p=idx%nn,hs=1.5/n;
+  const cu=(p%n-(n-1)/2)*2*hs,cv=(Math.floor(p/n)-(n-1)/2)*2*hs;
+  return [0,1,2].map(t=>+(g.n[t]*(1.5-hs)+g.r[t]*cu+g.d[t]*cv).toFixed(3));}
+// The stickers a lesson word lights, on `cube`: whole cubies, so an edge lights both its tiles.
+// ycenter: the yellow center. wedges: the edges with white. top, middle, bottom: a layer.
+function lnMarkSet(key,cube){
+  const n=drawN();let f=cube.toFacelets();const to54=n===2?i=>TWO_FACELET[i]:i=>i;if(n===2&&f.length===54)f=TWO_FACELET.map(i=>f[i]);
+  const top=1.5-1.5/n,cubies={};for(let i=0;i<6*n*n;i++){const k=lnCubiePos(i,n).join();(cubies[k]=cubies[k]||[]).push(i);}
+  const out=new Set();
+  for(const k in cubies){const ids=cubies[k],y=+k.split(',')[1];
+    const on=key==='top'?y>top-1e-6:key==='bottom'?y<-top+1e-6:key==='middle'?Math.abs(y)<top-1e-6:
+      key==='ycenter'?ids.length===1&&f[ids[0]]===3:key==='wedges'?ids.length===2&&ids.some(i=>f[i]===0):false;
+    if(on)ids.forEach(i=>out.add(to54(i)));}
+  return out;
+}
+// Tap a word in the lesson text: those pieces stay bright, the rest dim for a moment. A kind of
+// piece (center, edge, corner) lights by its class; any other word lights the set lnMarkSet gives.
+const LN_KINDS=['center','edge','corner'];
+function lnHighlight(kind){const pic=$('#tab-learn .ln-pic'),svg=$('#lnGoalSvg');if(!pic||!svg)return;lnDemoStop();lnRestoreGoal();
+  const n=lnView.n;svg.innerHTML=LN_KINDS.includes(kind)?lnGoalSVG(n):lnGoalSVG(n,null,null,lnMarkSet(kind,lnGoals()[n]));
+  delete pic.dataset.hl;void pic.offsetWidth;pic.dataset.hl=LN_KINDS.includes(kind)?kind:'on';
   clearTimeout(lnView.hlT);lnView.hlT=setTimeout(()=>{delete pic.dataset.hl;},2200);}
 // Tap a letter: the cube keeps its view. The layer that moves stays bright, the rest dims, and a
 // ring of arrows shows the turn. On the top, front and right the ring sits on the face. The left,
@@ -66,7 +85,7 @@ function lnLayer(face){const g=FACE_GEOM['URFDLB'.indexOf(face)];const s=new Set
     const c=[0,1,2].map(t=>h.n[t]*(1.5-hs)+h.r[t]*(j-(n-1)/2)*2*hs+h.d[t]*(i-(n-1)/2)*2*hs);if(Math.abs(c[0]*g.n[0]+c[1]*g.n[1]+c[2]*g.n[2]-(1.5-hs))<1e-6)s.add(n*n*f+n*i+j);}}
   return s;}
 function lnShowTurn(m){
-  const svg=$('#lnGoalSvg'),cap=$('#lnGoalCap'),pic=$('#tab-learn .ln-pic');if(!svg||!LN_FACE_NAME[m[0]])return;
+  const svg=$('#lnGoalSvg'),cap=$('#lnGoalCap'),pic=$('#tab-learn .ln-pic');if(!svg||!LN_FACE_NAME[m[0]])return;lnDemoStop();
   const n=lnView.n,v=lnGoalView(n);
   delete pic.dataset.hl;svg.innerHTML=lnGoalSVG(n,v,lnLayer(m[0]))+turnRing(m,{...v,...LN_PIC,...LN_RING_AT[m[0]]});pic.dataset.turn=m;
   if(cap)cap.textContent=lnTurnText(m);
@@ -75,6 +94,44 @@ function lnShowTurn(m){
 function lnRestoreGoal(){if(!lnView.turnT)return;clearTimeout(lnView.turnT);lnView.turnT=0;
   const svg=$('#lnGoalSvg'),cap=$('#lnGoalCap'),pic=$('#tab-learn .ln-pic');if(!svg||lnView.n==null)return;
   svg.innerHTML=lnGoalSVG(lnView.n);delete pic.dataset.turn;if(cap)cap.textContent=lnGoalCap(lnView.n);}
+
+// ---------- the goal, made: the moves of a step's demo play on the goal picture ----------
+// The picture starts on the goal with the demo moves undone and turns one move every two
+// seconds (ms), so it ends on the goal. Only the pieces the step cares about stay bright.
+// The caption tells what each part does, and the move tiles below mark the move that turns.
+var lnDemo={on:false,t:0,raf:0,ms:2000}; // var: tests read it and set ms
+const LN_DEMO_KEYS=['wedges','ycenter'];
+function lnDemoFade(c){const s=new Set();for(const k of LN_DEMO_KEYS)for(const i of lnMarkSet(k,c))s.add(i);return s;}
+function lnDemoDraw(c,move,t){const svg=$('#lnGoalSvg');if(!svg)return;const v=lnGoalView(lnView.n);
+  svg.innerHTML=renderCube3D(c.toFacelets(),{...v,...LN_PIC,move,t,fade:lnDemoFade(c)})+lnFrontMark(v);}
+function lnDemoCap(text){const cap=$('#lnGoalCap');if(cap)cap.textContent=text;}
+function lnDemoMark(k){$$('#lnDemoMoves .m').forEach((e,i)=>e.classList.toggle('cur',i===k));}
+function lnDemoBtn(text){const b=$('#tab-learn [data-ln="demo"]');if(b)b.textContent=text;}
+// Stop the demo. With `done`, the picture shows the goal and the caption says so.
+function lnDemoStop(done){
+  const was=lnDemo.on;clearTimeout(lnDemo.t);if(lnDemo.raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(lnDemo.raf);
+  lnDemo.on=false;lnDemo.raf=0;if(!was&&!done)return;
+  const n=lnView.n,s=n==null?null:begPack().steps[n],svg=$('#lnGoalSvg');if(!s||!s.demo||!svg)return;
+  svg.innerHTML=lnGoalSVG(n);lnDemoMark(-1);lnDemoCap(done?s.demo.end:lnGoalCap(n));lnDemoBtn(done?'Watch again':'Watch it');
+}
+function lnDemoPlay(){
+  const n=lnView.n,s=begPack().steps[n];if(!s||!s.demo)return;lnDemoStop();lnRestoreGoal();
+  const pic=$('#tab-learn .ln-pic');if(pic)delete pic.dataset.hl;
+  const ms=parseAlg(s.demo.moves),caps={};let at=0;for(const [len,text] of s.demo.parts){caps[at]=text;at+=len;}
+  const cubes=[applyAlg(lnGoals()[n],invertAlg(ms))];for(const m of ms)cubes.push(applyAlg(cubes[cubes.length-1],[m]));
+  const smooth=!reducedMotion()&&typeof requestAnimationFrame==='function';
+  lnDemo.on=true;lnDemoBtn('Stop');lnDemoDraw(cubes[0]);lnDemoCap(s.demo.start);lnDemoMark(-1);
+  // Move k: the layer turns for about half of the time, then the cube rests until the next move.
+  const move=k=>{if(!lnDemo.on)return;if(k>=ms.length){lnDemoStop(true);return;}
+    if(caps[k])lnDemoCap(caps[k]);lnDemoMark(k);
+    const turn=lnDemo.ms*(ms[k].endsWith('2')?0.65:0.45),t0=performance.now();
+    const step=()=>{if(!lnDemo.on)return;const x=Math.min(1,(performance.now()-t0)/turn);
+      if(x<1){lnDemoDraw(cubes[k],ms[k],0.5-0.5*Math.cos(Math.PI*x));lnDemo.raf=requestAnimationFrame(step);}
+      else{lnDemo.raf=0;lnDemoDraw(cubes[k+1]);}};
+    if(smooth)step();else lnDemoDraw(cubes[k+1]);
+    lnDemo.t=setTimeout(()=>move(k+1),lnDemo.ms);};
+  lnDemo.t=setTimeout(()=>move(0),lnDemo.ms*0.75);
+}
 
 // ---------- small renderers ----------
 const lnStepNo=s=>s.n===0?'Basics':'Step '+s.n;
@@ -110,12 +167,14 @@ function lnHomeHTML(){
 
 // ---------- a lesson ----------
 const LN_FACE_WORDS=[['U','the top face (up)'],['D','the bottom face (down)'],['F','the front face'],['B','the back face'],['R','the right face'],['L','the left face']];
-// The basics lesson's text: the kinds of piece (s.kinds: [word, kind]) are buttons that light those
-// pieces on the goal cube.
-function lnBasicsWhat(s){
-  const act=(k,w)=>`<button class="ln-act" data-ln="hl" data-kind="${k}" title="Show the ${k}s on the goal cube">${w}</button>`;
-  let text=esc(s.what);for(const [word,kind] of (s.kinds||[]))text=text.replace(new RegExp('\\b'+word+'\\b'),act(kind,word));
-  return `<p>${text}</p><p class="muted ln-small">Tap a kind of piece to see it on the goal cube.</p>`;
+// Lesson text with action words: the first time a word of the step's marks (s.kinds for the basics,
+// s.marks for the others: [word, key]) shows, it is a button that lights those pieces on the goal
+// cube. `used` keeps the words already made buttons, across the What, How and note texts.
+function lnMarked(text,s,used){
+  const acts=[];let out=esc(text);
+  for(const [word,key] of (s.kinds||s.marks||[])){if(used.has(word))continue;
+    out=out.replace(new RegExp('\\b'+word+'s?\\b'),w=>{used.add(word);acts.push(`<button class="ln-act" data-ln="hl" data-kind="${esc(key)}" title="Show the ${esc(LN_KINDS.includes(key)?key+"s":word)} on the goal cube">${w}</button>`);return '\u0000'+(acts.length-1)+'\u0000';});}
+  return out.replace(/\u0000(\d+)\u0000/g,(_,i)=>acts[+i]);
 }
 // The six moves: each letter and its mark are buttons that show the turn on the goal cube.
 // The basics show them in the text column, right after How, so no space opens beside the goal.
@@ -130,11 +189,14 @@ function lnLessonHTML(n){
   const head=`<div class="panel ln-head"><div class="ln-title"><button class="ln-link" data-ln="list">← All steps</button><div class="mono muted ln-of">${n===0?'Basics':`Step ${n} of ${pk.count}`}</div><h2>${esc(s.name)}</h2></div>
     <div class="row ln-nav"><span class="ln-st">${stBtn(begStatusId(n))}<span class="muted ln-hint">tap to change</span></span>${prev?`<button class="small" data-ln="open" data-n="${prev.n}">← ${esc(lnStepNo(prev))}</button>`:''}${next?`<button class="small primary" data-ln="open" data-n="${next.n}">${esc(lnStepNo(next))} →</button>`:''}</div></div>`;
   const goal=s.goals?`<ul class="ln-goals">${s.goals.map(g=>`<li>${esc(g)}</li>`).join('')}</ul>`:`<p class="muted">${esc(s.goal)}</p>`;
-  const what=`<div class="panel ln-what"><div class="ln-text"><div><h3>What you do</h3>${n===0?lnBasicsWhat(s):`<p>${esc(s.what)}</p>`}</div><div><h3>How</h3><p>${esc(s.how)}</p></div><div class="note">${esc(s.note)}</div>${n===0?lnSixMoves():''}</div>
-    <div class="ln-goal"><h3>Goal for this step</h3>${goal}<div class="ln-pic"><svg id="lnGoalSvg" viewBox="${lnGoalBox(n)}" aria-hidden="true">${lnGoalSVG(n)}</svg></div><div class="muted ln-cap" id="lnGoalCap">${esc(lnGoalCap(n))}</div><button class="small" data-ln="goal">Show the goal on the cube</button></div></div>`;
+  const used=new Set(),marked=!!(s.kinds||s.marks);
+  const tapNote=marked?`<p class="muted ln-small">${n===0?'Tap a kind of piece to see it on the goal cube.':'Tap an underlined word to see those pieces on the goal cube.'}</p>`:'';
+  const demo=s.demo?`<div class="ln-demo" id="lnDemoMoves">${lnTiles(s.demo.moves)}</div><button class="small" data-ln="demo">Watch it</button>`:'';
+  const what=`<div class="panel ln-what"><div class="ln-text"><div><h3>What you do</h3><p>${lnMarked(s.what,s,used)}</p>${tapNote}</div><div><h3>How</h3><p>${lnMarked(s.how,s,used)}</p></div><div class="note">${lnMarked(s.note,s,used)}</div>${n===0?lnSixMoves():''}</div>
+    <div class="ln-goal"><h3>Goal for this step</h3>${goal}<div class="ln-pic"><svg id="lnGoalSvg" viewBox="${lnGoalBox(n)}" aria-hidden="true">${lnGoalSVG(n)}</svg></div><div class="muted ln-cap" id="lnGoalCap" aria-live="polite">${esc(lnGoalCap(n))}</div>${demo}</div></div>`;
   let moves='';
   if(s.algs)moves+=`<div class="panel ln-panel"><h3>The algorithm${s.algs.length>1?'s':''}</h3><div class="ln-algs">${s.algs.map(id=>{const a=pk.algs[id];const open=lnView.why.has(id);
-    return `<div class="ln-box"><b>${esc(a.name)}</b>${lnTiles(a.alg,true)}<div class="ln-say">Say it as: <b>${esc(a.say)}</b></div><div class="row"><button class="small" data-ln="alg" data-id="${esc(id)}">Show on the cube</button>${a.why?`<button class="small ghost" data-ln="why" data-id="${esc(id)}" aria-expanded="${open}">Why it works</button>`:''}</div>${open?`<p class="ln-why">${esc(a.why)}</p>`:''}</div>`;}).join('')}</div></div>`;
+    return `<div class="ln-box"><b>${esc(a.name)}</b>${a.when?`<div class="ln-when">${esc(a.when)}</div>`:''}${lnTiles(a.alg,true)}<div class="ln-say">Say it as: <b>${esc(a.say)}</b></div><div class="row"><button class="small" data-ln="alg" data-id="${esc(id)}">Show on the cube</button>${a.why?`<button class="small ghost" data-ln="why" data-id="${esc(id)}" aria-expanded="${open}">Why it works</button>`:''}</div>${open?`<p class="ln-why">${esc(a.why)}</p>`:''}</div>`;}).join('')}</div></div>`;
   const cases=s.cases?`<div class="panel ln-panel"><div class="row ln-ch"><h3>${esc(pk.caseTitles[n]||'Where you find the piece, and what to do')}</h3><span class="muted ln-small">Show puts the case on the cube</span></div>
     ${s.cases.map((c,i)=>{const ms=parseAlg(c.moves||'');
       return `<div class="ln-case"><div class="ln-cpic">${ms.length?lnPic(lnCaseStart(n,c),false):''}</div><div class="ln-cbody"><b>${esc(c.name)}</b><div class="muted">${esc(c.text)}</div>${ms.length?`<div class="ln-cmoves">${lnTiles(ms)}</div>`:''}</div>${ms.length?`<button class="small" data-ln="case" data-i="${i}">Show</button>`:''}</div>`;}).join('')}</div>`:'';
@@ -147,7 +209,7 @@ function lnLessonHTML(n){
 
 // ---------- render and actions ----------
 function lnRender(){
-  const t=$('#tab-learn');if(!t)return;clearTimeout(lnView.hlT);clearTimeout(lnView.turnT);lnView.turnT=0;
+  const t=$('#tab-learn');if(!t)return;lnDemoStop();clearTimeout(lnView.hlT);clearTimeout(lnView.turnT);lnView.turnT=0;
   if(lnView.n==null){t.innerHTML=lnHomeHTML();delete document.body.dataset.lesson;}
   else{t.innerHTML=lnLessonHTML(lnView.n);document.body.dataset.lesson='1';}
 }
@@ -169,7 +231,7 @@ $('#tab-learn').addEventListener('click',e=>{
   else if(act==='next')setMethod(pk.next.method);
   else if(act==='practice'){if(typeof startPractice==='function')startPractice(n);}
   else if(act==='mark')lnMarkFinished(n);
-  else if(act==='goal'){setSequence([],'goal of '+lnStepNo(s).toLowerCase(),lnGoals()[n],'Lesson: '+lnStepNo(s).toLowerCase());focusPlayer();}
+  else if(act==='demo'){if(lnDemo.on)lnDemoStop();else lnDemoPlay();}
   else if(act==='moves'){const six=['U','D','F','B','R','L'];lnDrill(six,'the six moves, from the lesson',lnSetup(lnFrame(0),six),'Lesson: the six moves');}
   else if(act==='hl')lnHighlight(b.dataset.kind);
   else if(act==='face')lnShowTurn(b.dataset.m);
@@ -186,7 +248,7 @@ function lnCheatHTML(){
   const pk=begPack();const show=(kind,id)=>`<button class="small" data-cs="${kind}" data-id="${esc(id)}">Show</button>`;
   const panels=pk.steps.filter(s=>s.n>0).map(s=>{const c=pk.cheat[s.n]||{};let body='';
     if(c.list)body+=`<ul class="ln-cs-list">${c.list.map(([t,m])=>`<li><span>${esc(t)}</span><span class="ln-cs-mv">${lnTiles(m)}</span></li>`).join('')}</ul>`;
-    if(s.algs)body+=s.algs.map(id=>{const a=pk.algs[id];return `<div class="ln-cs-alg"><div class="ln-cs-an"><b>${esc(a.name)}</b><span class="muted"> · ${esc(a.say)}</span></div>${lnTiles(a.alg)}${show('alg',id)}</div>`;}).join('');
+    if(s.algs)body+=s.algs.map(id=>{const a=pk.algs[id];return `<div class="ln-cs-alg"><div class="ln-cs-an"><b>${esc(a.name)}</b><span class="muted"> · ${esc(a.when||a.say)}</span></div>${lnTiles(a.alg)}${show('alg',id)}</div>`;}).join('');
     return `<div class="panel ln-cs-step" data-n="${s.n}"><h3><span class="mono muted">Step ${s.n}</span> · ${esc(s.name)}</h3><p class="ln-cs-goal">${esc(s.goal)}</p>${body}<p class="ln-cs-rule">${esc(c.rule||s.how)}</p></div>`;}).join('');
   return `<div class="panel"><h2>Cheat sheet</h2><p class="muted">${esc(pk.cheatIntro)}</p></div><div class="ln-cs-grid">${panels}</div>`;
 }

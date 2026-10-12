@@ -55,8 +55,8 @@ w.addEventListener('load',async()=>{try{
   click($('#tab-learn button[data-ln="case"][data-i="0"]'));assert.deepStrictEqual(moves(),['D','L',"D'","L'"],'the first case loads its moves');assert.ok(drill());
   click($('#tab-learn button[data-ln="case"][data-i="3"]'));assert.deepStrictEqual(moves(),["R'","D'",'R']);
   {const f=w.cubeAtSeq(0).toFacelets();assert.ok(f.slice(0,9).every(x=>x===0),'white face on top');assert.ok(f[9]!==f[13]||f[20]!==f[22],'the top right corner is in the wrong place');}
-  // Show the goal: no moves, the goal cube.
-  click($('#tab-learn button[data-ln="goal"]'));assert.strictEqual(moves().length,0,'the goal has no moves');assert.ok(drill());
+  // No lesson has a button that loads the goal into the player.
+  assert.ok(!$('#tab-learn button[data-ln="goal"]'),'no Show the goal button');
   $('#drillBack').click();assert.ok(!drill(),'Back to scramble');
 
   // The status button cycles; the lesson and the list follow.
@@ -109,6 +109,33 @@ w.addEventListener('load',async()=>{try{
   assert.ok([1,3,4,5,7].every(i=>g[5][i]===3),'step 5: a yellow cross');
   assert.ok([0,1,2,3,4,5,6,7,8].every(i=>g[6][i]===3),'step 6: a yellow face');
   assert.ok(g.every((f,n)=>f[22]===2&&f[4]===(n===3?0:3)),'every goal is held yellow up, green in front, except step 3 white up');
+
+  // The daisy: underlined words light pieces, two algorithms, and the goal shows how it is made.
+  w.openLesson(1);await sleep(50);
+  assert.deepStrictEqual($$('#tab-learn .ln-act').map(e=>e.textContent),['yellow center','white edge','petal','top layer','middle layer','bottom layer'],'the daisy words are actions');
+  const pic=()=>$('#tab-learn .ln-pic'),lit=()=>$$('#lnGoalSvg polygon.hl-on').length;
+  click($('#tab-learn .ln-act[data-kind="ycenter"]'));assert.strictEqual(pic().dataset.hl,'on');assert.strictEqual(lit(),1,'the yellow center lights');
+  click($('#tab-learn .ln-act[data-kind="wedges"]'));assert.strictEqual(lit(),6,'the four petals light: four on top, and the front and right tiles of two');
+  click($('#tab-learn .ln-act[data-kind="top"]'));assert.strictEqual(lit(),15,'the top layer: nine on top, three on the front and the right');
+  click($('#tab-learn .ln-act[data-kind="middle"]'));assert.strictEqual(lit(),6,'the middle layer: three on the front and the right');
+  assert.deepStrictEqual($$('#tab-learn .ln-box > b').map(e=>e.textContent),['Bring it up','Flip the edge'],'F2 and the flip are algorithms');
+  assert.ok(/bottom layer, white facing down/.test($('#tab-learn .ln-when').textContent),'each says when to use it');
+  assert.deepStrictEqual($$('#lnDemoMoves .m').map(e=>e.textContent),['R',"U'",'F2',"R'",'U',"F'"],'the demo moves show under the goal');
+  w.lnDemo.ms=100;const goalF=w.lnGoals()[1].toFacelets();
+  click($('#tab-learn button[data-ln="demo"]'));assert.ok(w.lnDemo.on);
+  assert.strictEqual($('#tab-learn button[data-ln="demo"]').textContent,'Stop');assert.ok(!pic().dataset.hl,'the highlight ends');
+  assert.ok(/One petal/.test($('#lnGoalCap').textContent),'the demo starts with one petal');
+  await sleep(120);assert.ok(/Middle layer/.test($('#lnGoalCap').textContent),'the first part says what it does');
+  assert.ok($('#lnDemoMoves .m.cur'),'the move that turns is marked');
+  await sleep(700);assert.ok(!w.lnDemo.on,'the demo ends');
+  assert.ok(/the daisy/.test($('#lnGoalCap').textContent),'it ends on the daisy');
+  assert.strictEqual($('#tab-learn button[data-ln="demo"]').textContent,'Watch again');assert.ok(!$('#lnDemoMoves .m.cur'));
+  click($('#tab-learn button[data-ln="demo"]'));click($('#tab-learn button[data-ln="demo"]'));assert.ok(!w.lnDemo.on,'Stop stops it');
+  assert.strictEqual($('#tab-learn button[data-ln="demo"]').textContent,'Watch it');assert.ok($('#lnGoalSvg .ln-front'),'the goal picture returns');
+  w.lnDemo.ms=2000;
+  {const ms=w.parseAlg(w.begPack().steps[1].demo.moves);assert.deepStrictEqual(w.applyAlg(w.applyAlg(w.lnGoals()[1],w.invertAlg(ms)),ms).toFacelets(),goalF,'the demo ends on the goal');}
+  // The cheat sheet says when to use each daisy algorithm.
+  assert.ok(/white facing down/.test(w.lnCheatHTML()),'the cheat sheet says when');
 
   // openLesson: an algorithm step.
   w.goTab('practice');w.openLesson(5);

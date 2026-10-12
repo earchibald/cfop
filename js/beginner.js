@@ -15,7 +15,12 @@ const BEGINNER_COLOR_NAMES=['white','red','green','yellow','orange','blue'];
 // The algorithms the guide names, with its sayings. `parts` splits one into the groups the guide
 // chants, for the boxes in the player. `step` is the step that teaches it.
 const BEGINNER_ALGS={
+  // One move, so it is never boxed in a plan: chunk:false.
+  edgeUp:{id:'edgeUp',name:'Bring it up',alg:'F2',say:'F2, the front twice',step:1,chunk:false,
+    when:'A white edge in the bottom layer, white facing down. Hold it under the front.',
+    why:'Two turns of the front bring the edge from the bottom layer to the top layer. White that faced down then faces up. Any side face works the same way: turn the face with the edge twice.'},
   edgeFlip:{id:'edgeFlip',name:'Flip the edge',alg:"R' U F'",say:"R', U, F'",step:1,
+    when:'A white edge in the top layer, white facing out. Hold it on the right.',
     why:"R' brings the edge down to the right of the front. U moves a petal out of its way. F' brings the edge up again, white on top."},
   cornerDown:{id:'cornerDown',name:'Corner down',alg:"R' D' R",say:"R', D', R",step:3,
     why:"R' brings the corner down. D' moves it along the bottom. R brings the right face back up. The corner is in the bottom layer, and the cross stays."},
@@ -45,7 +50,7 @@ const BEGINNER_ALGS={
     why:'The back edge stays. The other three move round counterclockwise, to the right.'},
 };
 // For the chunk finder: the algorithms as move lists, longest first.
-const BEGINNER_CHUNK_ALGS=Object.values(BEGINNER_ALGS).map(a=>({id:a.id,name:a.name,moves:parseAlg(a.alg),parts:a.parts})).sort((a,b)=>b.moves.length-a.moves.length);
+const BEGINNER_CHUNK_ALGS=Object.values(BEGINNER_ALGS).filter(a=>a.chunk!==false).map(a=>({id:a.id,name:a.name,moves:parseAlg(a.alg),parts:a.parts})).sort((a,b)=>b.moves.length-a.moves.length);
 
 // The lessons. Prose is written for the app; the method, the holds, the algorithms and the sayings
 // follow the guide. A case's `setup` is the alg that makes its start from the lesson's base cube;
@@ -60,16 +65,23 @@ const BEGINNER_STEPS=[
    kinds:[['centers','center'],['edges','edge'],['corners','corner']]},
   {n:1,id:'daisy',name:'The daisy',
    goal:'Four white edges around the yellow center, like petals.',
-   what:'Hold the cube with the yellow center on top. Find each white edge and bring it to the top face, white side up, around the yellow center. Leave the ones that are there.',
-   how:'Look at the top layer first, then the middle layer, then the bottom layer. Before you bring an edge up, turn the top to move a petal out of its way, so you do not bump a petal out.',
-   note:'An edge in the top layer with white facing out needs a flip. Hold it on the right and do R\', U, F\'.',
-   algs:['edgeFlip'],
+   goals:['The yellow center on top','Four white edges around it, white side up','The other pieces can go anywhere'],
+   what:'Hold the cube with the yellow center on top. Find a white edge. Bring it up next to the yellow center, white side up. It is now a petal. Do this for all four white edges.',
+   how:'Look in the top layer first, then the middle layer, then the bottom layer. Before you bring an edge up, turn the top. Then no petal is in its way.',
+   note:'Leave a petal where it is. Only the white edges matter in this step.',
+   // Words in the text that light pieces on the goal cube (js/learn.js lnMarkSet).
+   marks:[['yellow center','ycenter'],['white edge','wedges'],['petal','wedges'],['top layer','top'],['middle layer','middle'],['bottom layer','bottom']],
+   // The goal picture plays these moves, from the goal with them undone: one petal, then three
+   // cases, one per part. Each part is [number of moves, caption].
+   demo:{moves:"R U' F2 R' U F'",start:'One petal. Three white edges to bring up.',end:'Four petals around the yellow center: the daisy.',
+     parts:[[1,'Middle layer, white facing you. R brings it up.'],[1,"U' turns the top. The petals move out of the way of the front."],[1,'Bottom layer, white facing down. F2 brings it up.'],[3,"Top layer, white facing out. R', U, F' flips it up."]]},
+   algs:['edgeUp','edgeFlip'],
    cases:[
      {name:'Already on top, white up',text:'Leave it.',moves:''},
      {name:'Middle layer, white facing you',text:'Hold the edge at the front right. Turn the right face up: R.',moves:'R'},
-     {name:'Middle layer, white facing right',text:'Hold the edge at the front right. Turn the top to make room, then the front face back: U\', F\'.',moves:"U' F'"},
-     {name:'Bottom layer, white facing down',text:'Hold it under the front. A half turn of the front: F2.',moves:'F2'},
-     {name:'Bottom layer, white facing you',text:'F2 brings it up, white facing out. Then flip it: hold it on the right, R\', U, F\'.',moves:"F2 y' R' U F'"},
+     {name:'Middle layer, white facing right',text:'Hold the edge at the front right. Turn the top to make room: U\'. Then turn the front face back: F\'.',moves:"U' F'"},
+     {name:'Bottom layer, white facing down',text:'Hold it under the front. Turn the front twice: F2.',moves:'F2'},
+     {name:'Bottom layer, white facing you',text:'Hold it under the front. F2 brings it up, white facing out. Then flip it: hold it on the right, and do R\', U, F\'.',moves:"F2 y' R' U F'"},
      {name:'Top layer, white facing out',text:'Hold the edge on the right. R\', U, F\'.',moves:"R' U F'"},
    ]},
   {n:2,id:'cross',name:'The white cross',

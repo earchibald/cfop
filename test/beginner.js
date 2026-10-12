@@ -34,6 +34,18 @@ assert.strictEqual(J(beginnerChunks("D' D' R' D R").map(c=>[c.label,c.at])),J([[
 {const daisy=applyAlg(Y,['F2','R2','B2','L2']);const c=applyAlg(daisy,invertAlg(ALGS.edgeFlip.alg));const f=fl(c);
   assert.strictEqual(f[10],0,'before the flip: white faces right at the top right');assert.ok([1,3,7].every(i=>f[i]===0),'the other petals stay');
   assert.ok([1,3,5,7].every(i=>fl(applyAlg(c,ALGS.edgeFlip.alg))[i]===0),'after: a daisy');}
+// Bring it up: F2 takes a white edge from under the front, white down, to the top, white up.
+{const daisy=applyAlg(Y,['F2','R2','B2','L2']);const c=applyAlg(daisy,invertAlg(ALGS.edgeUp.alg));
+  assert.strictEqual(fl(c)[28],0,'before: white faces down under the front');assert.ok([1,3,5,7].every(i=>fl(applyAlg(c,ALGS.edgeUp.alg))[i]===0),'after: a daisy');
+  assert.ok(!beginnerChunks(['U','F2','R']).length,'a one-move algorithm is never boxed in a plan');}
+// The daisy demo: from any daisy with its moves undone, one petal, then each part adds one but the turn of the top.
+{const demo=STEPS[1].demo,ms=parseAlg(demo.moves);assert.strictEqual(demo.parts.reduce((n,[len])=>n+len,0),ms.length,'the parts cover the moves');
+  const petals=c=>[1,3,5,7].filter(i=>fl(c)[i]===0).length;
+  for(const seed of ['a','b','c']){const scr=applyAlg(Y,randomMoveScramble(seed,20));const plan=solveBeginner(scr);let c=scr;
+    for(const p of plan.stages[0].parts){if(p.pre)c=applyAlg(c,parseAlg(p.pre));c=applyAlg(c,p.moves);}
+    assert.strictEqual(petals(c),4,'a daisy');c=applyAlg(c,invertAlg(ms));const seen=[petals(c)];let at=0;
+    for(const [len] of demo.parts){c=applyAlg(c,ms.slice(at,at+len));at+=len;seen.push(petals(c));}
+    assert.deepStrictEqual(JSON.stringify(seen),JSON.stringify([1,2,2,3,4]),'one petal, then R, the top turn, F2 and the flip');}}
 // White corners, white up: white at the bottom left or right of the front goes in.
 {const c=applyAlg(S,invertAlg(ALGS.cornerLeft.alg));const f=fl(c);assert.strictEqual(f[24],0,'Corner in, left: white faces you at the bottom left');assert.ok(applyAlg(c,ALGS.cornerLeft.alg).isSolved());}
 {const c=applyAlg(S,invertAlg(ALGS.cornerRight.alg));const f=fl(c);assert.strictEqual(f[26],0,'Corner in, right: white faces you at the bottom right');assert.ok(applyAlg(c,ALGS.cornerRight.alg).isSolved());

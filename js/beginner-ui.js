@@ -33,7 +33,7 @@ const BEG_PACKS={
     cheatIntro:'Keep this page open while you solve. Yellow on top for steps 1 and 2, white on top for step 3, yellow on top from step 4 to the end.',
     cheat:{
       1:{rule:'Yellow on top. Look at the top layer, then the middle, then the bottom. Turn the top to move a petal out of the way first.',
-         list:[['Middle layer, white facing you, at the front right','R'],['Middle layer, white facing right, at the front right',"U' F'"],['Bottom layer, white facing down, under the front','F2'],['Top layer, white facing out: hold it on the right',"R' U F'"]]},
+         list:[['Middle layer, white facing you, at the front right','R'],['Middle layer, white facing right, at the front right',"U' F'"]]},
       2:{rule:'Yellow on top. Turn the top until the front tile of the top edge matches the front center. Then F2. Then flip the cube over.',list:[['Edge over its center, in front','F2']]},
       3:{rule:'White cross on top. Turn the bottom until the corner sits between its centers. Hold white facing you: bottom left or bottom right, then that algorithm. White facing down: white to the front first. Wrong corner on top: corner down first.'},
       4:{rule:'Flip over: white down. Turn the top until a top edge makes a vertical line with the front center. Top tile matches the left center: Moving Left. The right center: Moving Right. Stuck edge: hold it on the right, Moving Right.'},
@@ -92,7 +92,7 @@ const BEG_PACKS={
       1:{rule:'White, yellow, red, green, orange, blue. Target on top. A tile on a side: that side in front, turn it to the lower right. On the bottom: turn it to the lower right. Turn the top until another color is at the upper left. Front tile: Rr, U, R\'r\'. Bottom tile: Rr2, U, Rr2.'},
       2:{rule:'Two pieces of the same colors to the left and right of the front with outside turns. Across from each other, same color facing you: Don\'t Run Fast Unless Running Fast Daily. Not across: R, F\', U, F first.'},
       3:{rule:'Yellow on top. Look at the top layer, then the middle, then the bottom. Turn the top to move a petal out of the way first.',
-         list:[['Middle layer, white facing you, at the front right','R'],['Middle layer, white facing right, at the front right',"U' F'"],['Bottom layer, white facing down, under the front','F2'],['Top layer, white facing out: hold it on the right',"R' U F'"]]},
+         list:[['Middle layer, white facing you, at the front right','R'],['Middle layer, white facing right, at the front right',"U' F'"]]},
       4:{rule:'Yellow on top. Turn the top until the front tile of the top edge matches the front center. Then F2. Then flip the cube over.',list:[['Edge over its center, in front','F2']]},
       5:{rule:'White cross on top. Turn the bottom until the corner sits between its centers. Hold white facing you: bottom left or bottom right, then that algorithm. White facing down: white to the front first. Wrong corner on top: corner down first.'},
       6:{rule:'Flip over: white down. Turn the top until a top edge makes a vertical line with the front center. Top tile matches the left center: Moving Left. The right center: Moving Right. Stuck edge: hold it on the right, Moving Right.'},

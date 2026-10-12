@@ -487,6 +487,10 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
 .ln-pic polygon{transition:opacity .35s}
 .ln-pic[data-hl] polygon{opacity:.15}
 .ln-pic[data-hl="center"] polygon.pc-center,.ln-pic[data-hl="edge"] polygon.pc-edge,.ln-pic[data-hl="corner"] polygon.pc-corner{opacity:1;animation:lnglow 2.2s ease-out}
+.ln-pic[data-hl="on"] polygon.hl-on{opacity:1;animation:lnglow 2.2s ease-out}
+.ln-demo .m{transition:background .2s,color .2s}
+.ln-demo .m.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.ln-when{font-size:14px;color:var(--muted)}
 @keyframes lnglow{0%,55%{stroke:var(--accent);stroke-width:3.2}100%{stroke-width:.6}}
 .ln-front{fill:var(--muted)}
 .ln-front line{stroke:var(--muted);stroke-width:1.4;stroke-dasharray:3 4;stroke-linecap:round}
