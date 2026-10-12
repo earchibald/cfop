@@ -118,9 +118,10 @@ function lnBasicsWhat(s){
   return `<p>${text}</p><p class="muted ln-small">Tap a kind of piece to see it on the goal cube.</p>`;
 }
 // The six moves: each letter and its mark are buttons that show the turn on the goal cube.
+// The basics show them in the text column, right after How, so no space opens beside the goal.
 function lnSixMoves(){
   const tile=m=>`<button class="m ln-mv" data-ln="face" data-m="${esc(m)}" title="Show ${esc(m)} on the goal cube">${fmtMove(m)}</button>`;
-  return `<div class="panel ln-panel"><h3>The six moves</h3><p>Each letter turns one face a quarter turn, clockwise as you look at that face. A letter with a mark, such as <span class="ms"><span class="m">${fmtMove("R'")}</span></span>, turns the other way. Tap a letter to see the turn on the goal cube.</p>
+  return `<div class="ln-panel ln-six"><h3>The six moves</h3><p>Each letter turns one face a quarter turn, clockwise as you look at that face. A letter with a mark, such as <span class="ms"><span class="m">${fmtMove("R'")}</span></span>, turns the other way. Tap a letter to see the turn on the goal cube.</p>
     <ul class="ln-faces">${LN_FACE_WORDS.map(([m,w])=>`<li><span class="ms">${tile(m)}${tile(m+"'")}</span><span>${esc(w)}</span></li>`).join('')}</ul>
     <div class="row"><button class="small" data-ln="moves">Show the six moves on the cube at the top of the page</button></div></div>`;
 }
@@ -129,10 +130,9 @@ function lnLessonHTML(n){
   const head=`<div class="panel ln-head"><div class="ln-title"><button class="ln-link" data-ln="list">← All steps</button><div class="mono muted ln-of">${n===0?'Basics':`Step ${n} of ${pk.count}`}</div><h2>${esc(s.name)}</h2></div>
     <div class="row ln-nav"><span class="ln-st">${stBtn(begStatusId(n))}<span class="muted ln-hint">tap to change</span></span>${prev?`<button class="small" data-ln="open" data-n="${prev.n}">← ${esc(lnStepNo(prev))}</button>`:''}${next?`<button class="small primary" data-ln="open" data-n="${next.n}">${esc(lnStepNo(next))} →</button>`:''}</div></div>`;
   const goal=s.goals?`<ul class="ln-goals">${s.goals.map(g=>`<li>${esc(g)}</li>`).join('')}</ul>`:`<p class="muted">${esc(s.goal)}</p>`;
-  const what=`<div class="panel ln-what"><div class="ln-text"><div><h3>What you do</h3>${n===0?lnBasicsWhat(s):`<p>${esc(s.what)}</p>`}</div><div><h3>How</h3><p>${esc(s.how)}</p></div><div class="note">${esc(s.note)}</div></div>
+  const what=`<div class="panel ln-what"><div class="ln-text"><div><h3>What you do</h3>${n===0?lnBasicsWhat(s):`<p>${esc(s.what)}</p>`}</div><div><h3>How</h3><p>${esc(s.how)}</p></div><div class="note">${esc(s.note)}</div>${n===0?lnSixMoves():''}</div>
     <div class="ln-goal"><h3>Goal for this step</h3>${goal}<div class="ln-pic"><svg id="lnGoalSvg" viewBox="${lnGoalBox(n)}" aria-hidden="true">${lnGoalSVG(n)}</svg></div><div class="muted ln-cap" id="lnGoalCap">${esc(lnGoalCap(n))}</div><button class="small" data-ln="goal">Show the goal on the cube</button></div></div>`;
   let moves='';
-  if(n===0)moves=lnSixMoves();
   if(s.algs)moves+=`<div class="panel ln-panel"><h3>The algorithm${s.algs.length>1?'s':''}</h3><div class="ln-algs">${s.algs.map(id=>{const a=pk.algs[id];const open=lnView.why.has(id);
     return `<div class="ln-box"><b>${esc(a.name)}</b>${lnTiles(a.alg,true)}<div class="ln-say">Say it as: <b>${esc(a.say)}</b></div><div class="row"><button class="small" data-ln="alg" data-id="${esc(id)}">Show on the cube</button>${a.why?`<button class="small ghost" data-ln="why" data-id="${esc(id)}" aria-expanded="${open}">Why it works</button>`:''}</div>${open?`<p class="ln-why">${esc(a.why)}</p>`:''}</div>`;}).join('')}</div></div>`;
   const cases=s.cases?`<div class="panel ln-panel"><div class="row ln-ch"><h3>${esc(pk.caseTitles[n]||'Where you find the piece, and what to do')}</h3><span class="muted ln-small">Show puts the case on the cube</span></div>
