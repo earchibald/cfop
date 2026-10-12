@@ -47,7 +47,7 @@ w.addEventListener('load',async()=>{try{
   assert.ok(/Corner in, right/.test($('#seqLabel').textContent));
   assert.strictEqual(w.cubeAtSeq(0).toFacelets()[4],0,'the step 3 drill is held white up');
   // The drill starts from a solved cube with the algorithm undone: the moves end solved.
-  const end=w.cubeAtSeq(4).toFacelets(),white=w.lnWhiteUp().toFacelets();assert.deepStrictEqual(end,white,'the algorithm ends on the solved cube');
+  const end=w.cubeAtSeq(4).toFacelets(),white=w.lnFrame(3).toFacelets();assert.deepStrictEqual(end,white,'the algorithm ends on the solved cube');
   // Why it works opens and closes.
   click($('#tab-learn button[data-ln="why"][data-id="cornerRight"]'));assert.ok($('#tab-learn .ln-why'),'Why it works opens');
   click($('#tab-learn button[data-ln="why"][data-id="cornerRight"]'));assert.ok(!$('#tab-learn .ln-why'),'Why it works closes');
@@ -127,10 +127,10 @@ w.addEventListener('load',async()=>{try{
   assert.strictEqual($$('#tab-cheat .ln-cs-step').length,8,'eight step panels');
   click($('#tab-cheat button[data-cs="alg"][data-id="yellowEdges"]'));
   assert.strictEqual(moves().length,9,'the yellow edges algorithm loads');assert.ok(drill());
-  assert.deepStrictEqual(w.cubeAtSeq(9).toFacelets(),w.lnHeld().toFacelets(),'it ends on the solved cube');
+  assert.deepStrictEqual(w.cubeAtSeq(9).toFacelets(),w.lnFrame(8).toFacelets(),'it ends on the solved cube');
 
   // Show me CFOP switches the method.
-  w.goTab('learn');assert.ok(!$('#tab-learn button[data-ln="list"]'),'the Learn rail button returns to the step list');click($('#tab-learn button[data-ln="cfop"]'));
+  w.goTab('learn');assert.ok(!$('#tab-learn button[data-ln="list"]'),'the Learn rail button returns to the step list');click($('#tab-learn button[data-ln="next"]'));
   assert.strictEqual(d.body.dataset.method,'cfop','Show me CFOP switches');
 
   assert.deepStrictEqual(errs,[],'no script errors');

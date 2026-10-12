@@ -56,7 +56,7 @@ function showBegLetters(){
 function renderBegBar(){
   const bar=$('#begBar');if(!bar)return;
   let html='';
-  if(method==='beginner'&&document.body.dataset.begview==='player'){
+  if(isBeg()&&document.body.dataset.begview==='player'){
     if(seqState.drill)html=`<span><b>${esc(seqState.drill)}</b> <span class="muted">is on the cube in place of yours. Your own cube is kept.</span></span><button class="small primary" id="begBack">Back to my cube</button>`;
     else if(begState.letters)html=`<span><b>Your cube as letters.</b> <span class="muted">Hold it white on top, green facing you. The bar below gives a new mix-up, a length and the history.</span></span><button class="small primary" id="begSolveNow">Solve it, part by part</button><button class="small" id="begBack">Back to my cube</button>`;
   }
@@ -70,33 +70,35 @@ function begSolveNow(){
 }
 
 // ---------- Up next ----------
-function begNextText(s){return s.n===0?'About five minutes. The three kinds of piece, how to hold the cube, and the six turns. No cube needed yet.':s.goal;}
+function begNextText(s){return s.n===0?begPack().basics:s.goal;}
 function renderBegNext(){
   const el=$('#begNext');if(!el)return;
-  const nx=begProgress.next();const {finished}=begProgress.counts();
-  const any=BEGINNER_STEPS.some(s=>begProgress.status(s.n));
-  const sq=Array.from({length:BEG_STEP_COUNT},(_,i)=>{const n=i+1;return `<i class="${esc(begProgress.status(n))}${nx&&nx.n===n?' cur':''}"></i>`;}).join('');
-  const title=nx?`${nx.n===0?'Basics':'Step '+nx.n}: ${esc(nx.name)}`:'All eight steps finished';
-  const text=nx?esc(begNextText(nx)):'Solve your own cube below, or try CFOP from the chip in the top bar.';
-  el.innerHTML=`<div class="beg-next-body"><div class="row beg-next-row"><span class="beg-kicker">Up next</span><span class="psq" aria-hidden="true">${sq}</span><span class="muted beg-next-count">${finished} of ${BEG_STEP_COUNT} steps finished</span></div><h2 id="begNextTitle">${title}</h2><p id="begNextText">${text}</p></div>
+  const pk=begPack(),N=pk.count;const nx=begProgress.next();const {finished}=begProgress.counts();
+  const any=pk.steps.some(s=>begProgress.status(s.n));
+  const sq=Array.from({length:N},(_,i)=>{const n=i+1;return `<i class="${esc(begProgress.status(n))}${nx&&nx.n===n?' cur':''}"></i>`;}).join('');
+  const title=nx?`${nx.n===0?'Basics':'Step '+nx.n}: ${esc(nx.name)}`:`All ${pk.word} steps finished`;
+  const text=nx?esc(begNextText(nx)):'Solve your own cube below. '+esc(pk.next.text);
+  el.innerHTML=`<div class="beg-next-body"><div class="row beg-next-row"><span class="beg-kicker">Up next</span><span class="psq" aria-hidden="true">${sq}</span><span class="muted beg-next-count">${finished} of ${N} steps finished</span></div><h2 id="begNextTitle">${title}</h2><p id="begNextText">${text}</p></div>
   <div class="row beg-next-act"><button class="primary big" id="begContinue">${nx?(any?'Continue':'Start'):'Solve my cube'} →</button>${nx?'<button id="begPick">Pick another step</button>':''}</div>`;
   $('#begContinue').onclick=()=>{if(!nx){goTab('bsolve');return;}if(typeof openLesson==='function')openLesson(nx.n);};
-  const pk=$('#begPick');if(pk)pk.onclick=()=>{goTab('learn');if(typeof lnShowList==='function')lnShowList();};
+  const pickBtn=$('#begPick');if(pickBtn)pickBtn.onclick=()=>{goTab('learn');if(typeof lnShowList==='function')lnShowList();};
 }
 
 // ---------- Your cube ----------
-function begFaceThumb(p){return `<span class="face beg-face" aria-hidden="true">${[...p].map(ch=>`<i class="${ch}"></i>`).join('')}</span>`;}
+function begFaceThumb(p){return `<span class="face beg-face${p.length===4?' f2':''}" aria-hidden="true">${[...p].map(ch=>`<i class="${ch}"></i>`).join('')}</span>`;}
 function begHoldPic(){return `<svg viewBox="40 30 320 300" aria-hidden="true">${renderCube3D(new Cube().toFacelets(),{yaw:-32,pitch:28,scale:48})}</svg>`;}
 // The question and the two cards. guide.js shows the same cards on the Solve my cube tab.
 function begYourCubeHTML(){
-  const paintOk=typeof openPaint==='function';
+  const pk=begPack(),two=puzzleN()===2;const paintOk=typeof openPaint==='function';const scanOk=pk.scan&&typeof openScan==='function';
   const known=begState.known&&scr.seed;
-  return `<div class="beg-hold"><div class="beg-pic">${begHoldPic()}</div><p><b>Hold it like this.</b> White on top, green facing you. The picture always shows the cube the way you hold it.</p></div>
+  const mixed=scanOk?`<button class="primary" data-beg="scan">Scan it with the camera</button><button data-beg="paint"${paintOk?'':' disabled'}>Paint the colors instead</button><span class="muted beg-small">No camera? Paint works on every device.</span>`
+    :`<button class="primary" data-beg="paint"${paintOk?'':' disabled'}>Paint the colors</button><span class="muted beg-small">Tap the 24 tiles as you see them. It takes a moment.</span>`;
+  return `<div class="beg-hold"><div class="beg-pic">${begHoldPic()}</div><p><b>Hold it like this.</b> ${esc(pk.holdText)} The picture always shows the cube the way you hold it.</p></div>
   <div class="beg-q">
     <div><h2>What does your cube look like right now?</h2><p class="muted">Pick one. The app needs to see your cube before it can guide you.</p></div>
     <div class="beg-cards">
-      <div class="beg-card"><div class="row">${begFaceThumb('RWBYGOGRW')}<b>It is mixed up</b></div><p>Show it to the app. The app then tells you every turn, one part at a time.</p><button class="primary" data-beg="scan">Scan it with the camera</button><button data-beg="paint"${paintOk?'':' disabled'}>Paint the colors instead</button><span class="muted beg-small">No camera? Paint works on every device.</span></div>
-      <div class="beg-card"><div class="row">${begFaceThumb('WWWWWWWWW')}<b>It is solved</b></div><p>Mix it up with me. I say each turn in plain words, one at a time. Then you solve it with the lessons.</p><button class="primary" data-beg="mix">Mix it up with me</button><button data-beg="screen">Practice on the screen only</button><span class="muted beg-small">Or mix it up any way you like, then scan it.</span></div>
+      <div class="beg-card"><div class="row">${begFaceThumb(two?'RWBG':'RWBYGOGRW')}<b>It is mixed up</b></div><p>Show it to the app. The app then tells you every turn, one part at a time.</p>${mixed}</div>
+      <div class="beg-card"><div class="row">${begFaceThumb(two?'WWWW':'WWWWWWWWW')}<b>It is solved</b></div><p>Mix it up with me. I say each turn in plain words, one at a time. Then you solve it with the lessons.</p><button class="primary" data-beg="mix">Mix it up with me</button><button data-beg="screen">Practice on the screen only</button><span class="muted beg-small">Or mix it up any way you like, then scan it.</span></div>
     </div>
     ${known?`<div class="beg-known"><span><b>Your mixed-up cube is loaded:</b> <span class="mono">${esc(scr.seed)}</span>.</span><button class="primary" data-beg="solveNow">Solve it, part by part →</button></div>`:''}
     <div class="muted beg-small">Know the letters already? <button class="ln-link" data-beg="letters">Show the scramble as letters</button>. The seed, length and history live there too.</div>
@@ -199,7 +201,7 @@ $('#keyLesson').onclick=()=>{if(typeof openLesson==='function')openLesson(0);};
 setKey(store.get('begKey',true));
 
 // ---------- events ----------
-document.addEventListener('cw:sequence',()=>{if(method==='beginner')setBegView('player');});
+document.addEventListener('cw:sequence',()=>{if(isBeg())setBegView('player');});
 document.addEventListener('cw:scramble',()=>{
   if(begMix.on&&!begMix.own){begMix.on=false;if(document.body.dataset.begview==='mix')setBegView('ask');}
   // A cube from the scan or paint dialog is the user's own cube. A new seed is not.
@@ -213,4 +215,4 @@ document.addEventListener('cw:tab',()=>{if(begState.letters){begState.letters=fa
 // boot. paint.js loads later, so the cards render again once every script is in.
 renderBegNext();renderBegAsk();
 window.addEventListener('load',renderBegAsk);
-if(method==='beginner')showForTab();
+if(isBeg())showForTab();

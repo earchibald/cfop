@@ -17,18 +17,18 @@ let prOwnScramble=false;
 
 // ---------- building the practice cube ----------
 function prBuild(n){
-  let plan=null;try{plan=solveBeginner(heldCube());}catch(e){plan=null;}
+  let plan=null;try{plan=begPack().solve(heldCube());}catch(e){plan=null;}
   if(!plan){practiceState.built=false;return;}
-  const prefix=[];let up='yellow'; // heldCube() is yellow up
+  const prefix=[];let up=begPack().startUp; // the top of heldCube()
   for(const st of plan.stages){
     if(st.n>=n)break;
-    for(const p of st.parts){if(p.up!==up){prefix.push('z2');up=p.up;}if(p.pre)prefix.push(p.pre);prefix.push(...p.moves);}
+    for(const p of st.parts){if(p.up!==up){prefix.push('z2');up=p.up;}if(p.pre)prefix.push(...parseAlg(p.pre));prefix.push(...p.moves);}
   }
   const stage=plan.stages.find(st=>st.n===n);
   const parts=stage?stage.parts:[];
   let cube=applyAlg(heldCube(),prefix);
   const partCubes=[],partSeqs=[];
-  for(const p of parts){const seq=[];if(p.up!==up){seq.push('z2');up=p.up;}if(p.pre)seq.push(p.pre);seq.push(...p.moves);
+  for(const p of parts){const seq=[];if(p.up!==up){seq.push('z2');up=p.up;}if(p.pre)seq.push(...parseAlg(p.pre));seq.push(...p.moves);
     partCubes.push(cube);partSeqs.push(seq);cube=applyAlg(cube,seq);}
   Object.assign(practiceState,{step:n,plan,prefix,parts,partCubes,partSeqs,seed:scr.seed,scrMoves:scr.moves.slice(),
     revealed:false,built:true});
@@ -37,7 +37,7 @@ function prBuild(n){
 // ---------- the player ----------
 function prShowPlayer(){
   const g=practiceState;if(!g.built)return;
-  const moves=[...g.scrMoves,'z2',...g.prefix];
+  const moves=[...g.scrMoves,...begPack().heldMoves,...g.prefix];
   const done=g.step>1?'steps 1 to '+(g.step-1):'the hold only';
   setSequence(moves,'your mixed-up cube · seed '+g.seed+' · dashed moves are solved for you: '+done+'.');
   $$('#scramble .m').forEach((el,i)=>{if(i>=g.scrMoves.length){el.classList.add('rot');el.title='Solved for you, not a scramble move.';}});
@@ -62,8 +62,8 @@ function prRowHTML(p,i){
 
 // ---------- the Practice tab ----------
 function prStepSelHTML(){
-  return Array.from({length:8},(_,i)=>i+1).map(n=>{
-    const label=n+' '+BEGINNER_STEPS[n].name.replace(/^The /,'');
+  const pk=begPack();return Array.from({length:pk.count},(_,i)=>i+1).map(n=>{
+    const label=n+' '+pk.steps[n].name.replace(/^The /,'');
     return `<button type="button" class="${n===practiceState.step?'on':''}" data-n="${n}">${esc(label)}</button>`;
   }).join('');
 }
@@ -73,7 +73,7 @@ function prRenderStepSel(){
   $$('#prSteps button').forEach(b=>b.onclick=()=>{prSelectStep(+b.dataset.n);});
 }
 function prRenderPanel(){
-  const g=practiceState,n=g.step,st=BEGINNER_STEPS[n];
+  const g=practiceState,n=g.step,st=begPack().steps[n];
   let html=`<h3>Goal</h3><p>${esc(st.goal)}</p>`;
   if(!g.built)html+='<p class="muted">Press New cube to begin.</p>';
   else if(!g.revealed)html+='<p class="muted">Moves hidden. Press Reveal.</p>';
@@ -92,7 +92,7 @@ function prRebuild(){
   prBuild(practiceState.step);prRenderStepSel();prRenderPanel();
   if(curTab==='practice')prShowPlayer();
 }
-function prSelectStep(n){practiceState.step=n;store.set('practiceStep',n);prRebuild();}
+function prSelectStep(n){practiceState.step=Math.min(begPack().count,n);store.set('practiceStep',practiceState.step);prRebuild();}
 function prNewCube(){prOwnScramble=true;newScramble();prOwnScramble=false;prRebuild();}
 
 function prMountPractice(){
@@ -114,7 +114,7 @@ function prMountPractice(){
 
 // Go to Practice, choose step n, and start with a new cube.
 function startPractice(n){
-  goTab('practice');practiceState.step=Math.min(8,Math.max(1,Math.round(+n)||1));
+  goTab('practice');practiceState.step=Math.min(begPack().count,Math.max(1,Math.round(+n)||1));
   store.set('practiceStep',practiceState.step);prNewCube();
 }
 
@@ -127,29 +127,30 @@ document.addEventListener('cw:scramble',()=>{
 // ---------- the Progress tab ----------
 function prProgressTableHTML(){
   const data=begProgress.data();
-  return BEGINNER_STEPS.map(s=>{const n=s.n,times=data.steps[n]||0;
-    return `<tr><td class="mono">${n===0?'Basics':n}</td><td><a href="#" class="pr-stepname" data-n="${n}">${esc(s.name)}</a></td><td>${stBtn('beg-'+n)}</td><td class="mono">${times}</td></tr>`;}).join('');
+  return begPack().steps.map(s=>{const n=s.n,times=data.steps[n]||0;
+    return `<tr><td class="mono">${n===0?'Basics':n}</td><td><a href="#" class="pr-stepname" data-n="${n}">${esc(s.name)}</a></td><td>${stBtn(begStatusId(n))}</td><td class="mono">${times}</td></tr>`;}).join('');
 }
 function prRenderProgress(){
-  const sq=$('#prSq');if(!sq)return;
-  sq.innerHTML=Array.from({length:8},(_,i)=>{const n=i+1,s=begProgress.status(n);
-    return `<i class="${s}" title="Step ${n}: ${esc(BEGINNER_STEPS[n].name)}, ${s||'unlearned'}"></i>`;}).join('');
+  const sq=$('#prSq');if(!sq)return;const pk=begPack();
+  sq.innerHTML=Array.from({length:pk.count},(_,i)=>{const n=i+1,s=begProgress.status(n);
+    return `<i class="${s}" title="Step ${n}: ${esc(pk.steps[n].name)}, ${s||'unlearned'}"></i>`;}).join('');
+  sq.setAttribute('aria-label',`The ${pk.word} steps`);
   const {finished,learning}=begProgress.counts();
-  $('#prText').textContent=finished===8?'All eight steps finished.':finished||learning?
+  $('#prText').textContent=finished===pk.count?`All ${pk.word} steps finished.`:finished||learning?
     `${finished} step${finished===1?'':'s'} finished${learning?`, ${learning} in learning`:''}.`:'No steps finished yet.';
   const data=begProgress.data();
   $('#prSolves').textContent=data.solves;$('#prPract').textContent=data.practiced;
-  const nx=begProgress.next();$('#prNext').textContent=nx?begStepLabel(nx):'Try CFOP, from the chip in the top bar.';
+  const nx=begProgress.next();$('#prNext').textContent=nx?begStepLabel(nx):pk.next.text;
   const body=$('#prTable tbody');if(body){body.innerHTML=prProgressTableHTML();
     $$('#prTable .pr-stepname').forEach(el=>el.onclick=e=>{e.preventDefault();if(typeof openLesson==='function')openLesson(+el.dataset.n);});}
 }
 function prResetProgress(){
-  Object.keys(llState.status).forEach(k=>{if(k.startsWith('beg-'))delete llState.status[k];});
+  const pk=begPack();Object.keys(llState.status).forEach(k=>{if(k.startsWith(pk.prefix))delete llState.status[k];});
   store.set('llStatus',llState.status);
   const data=begProgress.data();data.solves=0;data.practiced=0;data.steps={};
-  store.set('begProg',data);
+  store.set(pk.prog,data);
   prRenderProgress();
-  document.dispatchEvent(new CustomEvent('cw:status',{detail:'beg-0'}));
+  document.dispatchEvent(new CustomEvent('cw:status',{detail:begStatusId(0)}));
 }
 function prMountProgress(){
   const t=$('#tab-progress');if(!t)return;
@@ -178,7 +179,9 @@ function prMountProgress(){
     'Every step goes back to unlearned and the counts go to zero. Your times and scrambles stay.',
     'Reset',prResetProgress);
 }
-document.addEventListener('cw:status',e=>{if(String(e.detail).startsWith('beg-'))prRenderProgress();});
+document.addEventListener('cw:status',e=>{if(/^(beg-|mini-)/.test(String(e.detail)))prRenderProgress();});
+// Another method: its own steps in the picker and the table; a practice cube is built on demand.
+document.addEventListener('cw:method',()=>{practiceState.built=false;practiceState.step=Math.min(begPack().count,practiceState.step);prRenderStepSel();prRenderPanel();prRenderProgress();});
 document.addEventListener('cw:tab',e=>{if(e.detail==='progress')prRenderProgress();});
 
 prMountPractice();

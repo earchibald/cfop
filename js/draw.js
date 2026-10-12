@@ -43,32 +43,39 @@ function moveGeom(move){
 // The cube is drawn as slabs: runs of layers along the move axis that move together.
 // Each slab is a convex box, so its front faces never overlap and need no sort. The
 // slabs are separated by planes across the axis, so they draw far to near along it.
+// The cube is a 3×3 by default. setDrawN(2) draws the 2×2: two cubies a side, each half the
+// cube, with 24 stickers. A 54-sticker array is accepted for either size: the 2×2 shows its
+// corner stickers. Options fade, cls and color always get the 3×3 (54) index of a sticker.
+let DRAW_N=3;function setDrawN(n){DRAW_N=n===2?2:3;}function drawN(){return DRAW_N;}
 function cubePolys(facelets,opts={}){
+  const n=opts.n||DRAW_N;if(n===2&&facelets.length===54)facelets=TWO_FACELET.map(i=>facelets[i]);
+  const to54=n===2?i=>TWO_FACELET[i]:i=>i;
   const yaw=opts.yaw??-32,pitch=opts.pitch??28;const S=opts.scale||52;const cx=opts.cx??200,cy=opts.cy??185;
   const color=opts.color||((ci)=>stickerColor(ci));const body=opts.body||'var(--sticker-line)';
   const proj=p=>{const q=rot3(p,yaw,pitch);return [cx+q[0]*S,cy-q[1]*S];};
-  let n=[0,1,0],slabs=[{lo:-1,hi:1,deg:0}];
-  if(opts.move&&opts.t){const g=moveGeom(opts.move);n=g.n;const deg=g.deg*opts.t;slabs=[];
-    for(let c=-1;c<=1;c++){const moving=g.layers.includes(c);const last=slabs[slabs.length-1];
+  const hs=1.5/n,layerAt=l=>l*(1.5-hs);const LAYERS=n===2?[-1,1]:[-1,0,1]; // half a cubie; a layer's center
+  let nv=[0,1,0],slabs=[{lo:-1,hi:1,deg:0}];
+  if(opts.move&&opts.t){const g=moveGeom(opts.move);nv=g.n;const deg=g.deg*opts.t;slabs=[];
+    for(const c of LAYERS){const moving=g.layers.includes(c);const last=slabs[slabs.length-1];
       if(last&&last.moving===moving)last.hi=c;else slabs.push({lo:c,hi:c,moving,deg:moving?deg:0});}
-    if(rot3(n,yaw,pitch)[2]<0)slabs.reverse();}
-  const k=n.findIndex(v=>v!==0);const polys=[];
+    if(rot3(nv,yaw,pitch)[2]<0)slabs.reverse();}
+  const k=nv.findIndex(v=>v!==0);const polys=[];
   for(const sl of slabs){
     // the slab's box, and the turn it has made
-    const lo=[-1.5,-1.5,-1.5],hi=[1.5,1.5,1.5];const a=sl.lo-0.5,b=sl.hi+0.5;if(n[k]>0){lo[k]=a;hi[k]=b;}else{lo[k]=-b;hi[k]=-a;}
-    const R=sl.deg?p=>rotAxis(p,n,sl.deg):p=>p;
+    const lo=[-1.5,-1.5,-1.5],hi=[1.5,1.5,1.5];const a=layerAt(sl.lo)-hs,b=layerAt(sl.hi)+hs;if(nv[k]>0){lo[k]=a;hi[k]=b;}else{lo[k]=-b;hi[k]=-a;}
+    const R=sl.deg?p=>rotAxis(p,nv,sl.deg):p=>p;
     const faces=[];for(let f=0;f<6;f++){const nz=rot3(R(FACE_GEOM[f].n),yaw,pitch)[2];if(nz>=0.02)faces.push({f,nz});}
     faces.sort((x,y)=>x.nz-y.nz);
     for(const {f} of faces){const g=FACE_GEOM[f];
       // the box face: plastic. A cut face inside the cube has no stickers.
       const corner=(su,sv)=>[0,1,2].map(i=>g.n[i]?(g.n[i]>0?hi[i]:lo[i]):g.r[i]?(g.r[i]*su>0?hi[i]:lo[i]):(g.d[i]*sv>0?hi[i]:lo[i]));
       polys.push({pts:[[-1,-1],[1,-1],[1,1],[-1,1]].map(([su,sv])=>proj(R(corner(su,sv)))),fill:body});
-      for(let i=0;i<3;i++)for(let j=0;j<3;j++){const idx=9*f+3*i+j;const cu=j-1,cv=i-1;
-        const cubie=[0,1,2].map(t=>g.n[t]+g.r[t]*cu+g.d[t]*cv);const c=cubie[0]*n[0]+cubie[1]*n[1]+cubie[2]*n[2];
+      for(let i=0;i<n;i++)for(let j=0;j<n;j++){const idx=n*n*f+n*i+j;const cu=(j-(n-1)/2)*2*hs,cv=(i-(n-1)/2)*2*hs;
+        const cubie=[0,1,2].map(t=>g.n[t]*(1.5-hs)+g.r[t]*cu+g.d[t]*cv);const c=Math.round((cubie[0]*nv[0]+cubie[1]*nv[1]+cubie[2]*nv[2])/(1.5-hs));
         if(c<sl.lo||c>sl.hi)continue; // this cubie is in another slab
-        const h=0.44;const pts=[[cu-h,cv-h],[cu+h,cv-h],[cu+h,cv+h],[cu-h,cv+h]].map(([u,v])=>proj(R([0,1,2].map(t=>g.n[t]*1.5+g.r[t]*u+g.d[t]*v))));
-        const poly={pts,fill:color(facelets[idx],idx),stroke:body,faded:!!(opts.fade&&!opts.fade.has(idx)),idx};
-        if(opts.cls){const c=opts.cls(idx);if(c)poly.cls=c;}
+        const h=0.88*hs,i54=to54(idx);const pts=[[cu-h,cv-h],[cu+h,cv-h],[cu+h,cv+h],[cu-h,cv+h]].map(([u,v])=>proj(R([0,1,2].map(t=>g.n[t]*1.5+g.r[t]*u+g.d[t]*v))));
+        const poly={pts,fill:color(facelets[idx],i54),stroke:body,faded:!!(opts.fade&&!opts.fade.has(i54)),idx:i54};
+        if(opts.cls){const c=opts.cls(i54);if(c)poly.cls=c;}
         polys.push(poly);
       }
     }
@@ -106,8 +113,10 @@ function polysViewBox(polys,margin=0){const xs=polys.flatMap(p=>p.pts.map(q=>q[0
   const x0=Math.min(...xs)-margin,y0=Math.min(...ys)-margin,x1=Math.max(...xs)+margin,y1=Math.max(...ys)+margin;return [x0,y0,x1-x0,y1-y0].map(v=>v.toFixed(2)).join(' ');}
 function renderCube3D(facelets,opts={}){return polysSVG(cubePolys(facelets,opts));}
 function renderNet(facelets,opts={}){
-  const s=opts.size||30;const pos=[[3,0],[6,3],[3,3],[3,6],[0,3],[9,3]];let out='';
-  for(let f=0;f<6;f++){const [px,py]=pos[f];for(let i=0;i<3;i++)for(let j=0;j<3;j++){const idx=9*f+3*i+j;const faded=opts.fade&&!opts.fade.has(idx);
+  const n=opts.n||DRAW_N;if(n===2&&facelets.length===54)facelets=TWO_FACELET.map(i=>facelets[i]);
+  const to54=n===2?i=>TWO_FACELET[i]:i=>i;
+  const s=opts.size||(n===2?45:30);const pos=[[n,0],[2*n,n],[n,n],[n,2*n],[0,n],[3*n,n]];let out='';
+  for(let f=0;f<6;f++){const [px,py]=pos[f];for(let i=0;i<n;i++)for(let j=0;j<n;j++){const idx=n*n*f+n*i+j;const faded=opts.fade&&!opts.fade.has(to54(idx));
     out+=`<rect x="${(px+j)*s+20}" y="${(py+i)*s+20}" width="${s-2}" height="${s-2}" rx="3" fill="${stickerColor(facelets[idx])}" ${faded?'opacity="0.22"':''} stroke="var(--sticker-line)" stroke-width="1"/>`;}}
   return out;
 }

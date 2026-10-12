@@ -48,25 +48,28 @@ function heldToEngineFacelets(H){
 }
 
 // ---------- the dialog's own state ----------
+// A 2×2 has 4 tiles a face and no centers. Its net is in the engine frame (white up, green in
+// front, as the player shows) and goes to twoFromFacelets; the 3×3 net is in the held frame.
 let paintH=null,paintColor=0;
+function paintN(){return puzzleN()===2?4:9;}
 
 // The held centers: always the same six colors, in held-face order, however the cube is
 // scrambled (centers do not move for a face-turn scramble, so this is the held cube's own
 // center row, not a guess at the colors).
 function paintCenters(){return applyAlg(new Cube(),['z2']).center;}
 function paintReset(){
-  const centers=paintCenters();const H=new Array(54).fill(-1);
-  for(let i=0;i<6;i++)H[9*i+4]=centers[i];
+  const n=paintN();const H=new Array(6*n).fill(-1);
+  if(n===9){const centers=paintCenters();for(let i=0;i<6;i++)H[9*i+4]=centers[i];}
   return H;
 }
 function paintTileHTML(i){
-  const v=paintH[i];const isCenter=i%9===4;
+  const v=paintH[i];const isCenter=paintN()===9&&i%9===4;
   const bg=v>=0?stickerColor(v):'var(--sticker-X)';
   return `<button type="button" class="pt-tile${isCenter?' pt-center':''}" data-i="${i}" style="background:${bg}"${isCenter?' disabled aria-label="center, fixed"':''}></button>`;
 }
 function paintFaceHTML(face){
-  let out=`<div class="pt-face" data-face="${face}">`;
-  for(let pos=0;pos<9;pos++)out+=paintTileHTML(9*face+pos);
+  const n=paintN();let out=`<div class="pt-face${n===4?' pt-face2':''}" data-face="${face}">`;
+  for(let pos=0;pos<n;pos++)out+=paintTileHTML(n*face+pos);
   return out+'</div>';
 }
 function paintNetHTML(){
@@ -81,10 +84,10 @@ function paintNetHTML(){
 function paintPaletteHTML(){
   return PAINT_PALETTE.map(p=>`<button type="button" class="pt-swatch${p.c===paintColor?' on':''}" data-c="${p.c}" aria-label="${esc(p.label)}" style="background:${stickerColor(p.c)}"></button>`).join('');
 }
-function paintCountText(){return `${paintH.filter(v=>v>=0).length} of 54 tiles painted.`;}
+function paintCountText(){return `${paintH.filter(v=>v>=0).length} of ${paintH.length} tiles painted.`;}
 function paintUpdate(){
   $('#paintCount').textContent=paintCountText();
-  $('#paintGo').disabled=paintH.filter(v=>v>=0).length<54;
+  $('#paintGo').disabled=paintH.filter(v=>v>=0).length<paintH.length;
 }
 function paintTileClick(e){
   const b=e.target.closest('button[data-i]');if(!b||b.disabled)return;
@@ -113,7 +116,7 @@ function paintNotice(errors){
   el.innerHTML=errors.map(e=>`<div>${esc(e)}</div>`).join('');
 }
 function paintStart(){
-  const res=fromFacelets(heldToEngineFacelets(paintH));
+  const res=paintN()===4?twoFromFacelets(paintH):fromFacelets(heldToEngineFacelets(paintH));
   if(!res.ok){paintNotice(res.errors);return;}
   const sres=scrambleFromCube(res.cube,customName('paint'));
   if(!sres.ok){paintNotice(sres.errors);return;}
@@ -137,7 +140,7 @@ function openPaint(){
   bg.innerHTML=`<div class="modal paint" role="dialog" aria-label="Paint my cube">
    <button class="close small ghost" id="paintClose" aria-label="Close">✕</button>
    <h2>Paint my cube</h2>
-   <p class="muted" style="margin-top:0">Hold your cube with yellow up and green in front, like the 3D cube. Pick a color, then tap the tiles. The centers are fixed.</p>
+   <p class="muted" style="margin-top:0">${paintN()===4?'Hold your cube the way the 3D cube shows: the face on top in the picture is the one on top in your hand. Pick a color, then tap the tiles. Every color is on four tiles.':'Hold your cube with yellow up and green in front, like the 3D cube. Pick a color, then tap the tiles. The centers are fixed.'}</p>
    <div class="pt-body">
     <div id="paintNet">${paintNetHTML()}</div>
     <div class="pt-side">

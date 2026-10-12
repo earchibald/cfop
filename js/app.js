@@ -34,9 +34,9 @@ const view={yaw:-32,pitch:28,mode:'3d'};
 let displayedCube=new Cube();let fadeSet=null;
 // Animation: a layer turns on the player cube when the player steps one move. On by default in
 // beginner mode, off in CFOP; the Animate chip on the cube (or the A key) changes it, per method.
-var anim={pref:Object.assign({beginner:true,cfop:false},store.get('anim',{})),raf:0,move:null,t:0,from:null}; // var: tests read it
-function animOn(){return !!anim.pref[method==='beginner'?'beginner':'cfop'];}
-function setAnim(on){anim.pref[method==='beginner'?'beginner':'cfop']=!!on;store.set('anim',anim.pref);if(!on)stopAnim();renderAnimBtn();}
+var anim={pref:Object.assign({beginner:true,cfop:false,mini:true,speed2:false},store.get('anim',{})),raf:0,move:null,t:0,from:null}; // var: tests read it
+function animOn(){return !!anim.pref[method];}
+function setAnim(on){anim.pref[method]=!!on;store.set('anim',anim.pref);if(!on)stopAnim();renderAnimBtn();}
 function renderAnimBtn(){const b=$('#animBtn');if(!b)return;const on=animOn();b.setAttribute('aria-pressed',String(on));b.title=on?'Moves turn on the cube. Press to show each move at once (A).':'Each move shows at once. Press to turn the layer on the cube (A).';}
 function stopAnim(){if(anim.raf){cancelAnimationFrame(anim.raf);anim.raf=0;}anim.move=null;}
 function reducedMotion(){try{return matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){return false;}}
@@ -69,7 +69,7 @@ function drawMain(){
 const MARK_VIEWBOX='-21.17 -23.45 45.63 46.41';
 function drawMark(){const el=$('#mark');if(!el)return;
   const color=ci=>ci===0?'var(--mk-top)':ci===1?'var(--mk-side)':ci===3?'var(--mk-bottom)':stickerColor(ci);
-  const polys=cubePolys(new Cube().toFacelets(),{move:'R',t:0.5,scale:10,cx:0,cy:0,body:'var(--mk-body)',color});
+  const polys=cubePolys(new Cube().toFacelets(),{move:'R',t:0.5,scale:10,cx:0,cy:0,body:'var(--mk-body)',color,n:3});
   el.setAttribute('viewBox',MARK_VIEWBOX);el.innerHTML=polysSVG(polys);}
 drawMark();
 // thumbnails
@@ -96,13 +96,13 @@ function thumbTop(cube,mode){ // mode 'eo' (edges only matter), 'oll' (U color v
   return out+'</svg>';
 }
 function modeFor(group){return group==='OLL edges'?'eo':group==='OLL corners'?'oll':group==='PLL corners'?'pllc':'plle';}
-function thumb3D(cube){const f=cube.toFacelets();return `<svg viewBox="40 30 320 300">${renderCube3D(f,{yaw:-32,pitch:28,scale:48})}</svg>`;}
+function thumb3D(cube){const f=cube.toFacelets();return `<svg viewBox="40 30 320 300">${renderCube3D(f,{yaw:-32,pitch:28,scale:48,n:3})}</svg>`;}
 
 // ---------- sequence (scramble) panel ----------
 // drill: a name when the player shows a case drill instead of the current scramble. Tab changes keep a drill.
 var seqState={moves:[],idx:0,shown:-1,label:'scramble',base:new Cube(),drill:null}; // var: tests read it from the window
 function setSequence(moves,label,base,drill){stopAuto();seqState.shown=-1;seqState.moves=Array.isArray(moves)?moves:parseAlg(moves);seqState.label=label||'';seqState.base=base||new Cube();seqState.idx=seqState.moves.length;
-  if(!drill&&seqState.drill){currentLabel=scrLabel;if(/^(ll|f2l):/.test(timer.scope))setScope(TAB_SCOPE[curTab]||'solve');}
+  if(!drill&&seqState.drill){currentLabel=scrLabel;if(/^(ll|f2l|two):/.test(timer.scope))setScope(TAB_SCOPE[curTab]||'solve');}
   seqState.drill=drill||null;$('#drillNote').classList.toggle('hidden',!drill);$('#drillName').textContent=drill||'';
   renderSequence();applySequence();document.dispatchEvent(new CustomEvent('cw:sequence',{detail:{drill:seqState.drill}}));}
 function cubeAtSeq(i){return applyAlg(seqState.base,seqState.moves.slice(0,i));}
@@ -114,13 +114,13 @@ function applySequence(){const i=seqState.idx,was=seqState.shown;seqState.shown=
   $('#scrub').max=seqState.moves.length;$('#scrub').value=seqState.idx;$('#scrubPos').textContent=seqState.idx+' / '+seqState.moves.length;$$('#scramble .m').forEach((el,i)=>{el.classList.toggle('done',i<seqState.idx);el.classList.toggle('cur',i===seqState.idx-1);});}
 // In beginner mode every tile carries a caption in words (beghome.js: moveCaption), wrapped so the
 // tile itself keeps its text and its classes.
-function renderSequence(){$('#seqLabel').textContent=seqState.label||'';const cap=method==='beginner'&&typeof moveCaption==='function';
+function renderSequence(){$('#seqLabel').textContent=seqState.label||'';const cap=isBeg()&&typeof moveCaption==='function';
   $('#scramble').innerHTML=seqState.moves.map((m,i)=>{const t=`<span class="m${/^[xyz]/.test(m)?' rot':''}" data-i="${i}">${fmtMove(m)}</span>`;return cap?`<span class="mt">${t}<small>${esc(moveCaption(m))}</small></span>`:t;}).join('');
   $$('#scramble .m').forEach(el=>el.onclick=()=>{stopAuto();seqState.idx=+el.dataset.i+1;applySequence();});}
 $('#scrub').oninput=e=>{stopAuto();seqState.idx=+e.target.value;applySequence();};
 function focusPlayer(){const p=$('#player');window.scrollTo({top:0,behavior:'smooth'});p.classList.remove('flash');void p.offsetWidth;p.classList.add('flash');}
 // In beginner mode the home module shows the cube white up, with no z2 (beghome.js).
-function showScr(){if(method==='beginner'&&typeof showBegScr==='function'){showBegScr();return;}
+function showScr(){if(isBeg()&&typeof showBegScr==='function'){showBegScr();return;}
   const r=crossRotation();const end=applyAlg(scr.cube,r?[r]:[]);
   setSequence([...scr.moves,...(r?[r]:[])],'scramble · seed '+scr.seed+(r?' · last step '+r+' = solving grip: '+holdText(end).replace(/^Hold /,'').replace(/\.$/,''):''));
   if(r){const el=$$('#scramble .m').pop();el.classList.add('rot');el.title='Rotation only, not a scramble move. '+holdText(end);}}
@@ -128,7 +128,7 @@ function showScr(){if(method==='beginner'&&typeof showBegScr==='function'){showB
 // A beginner tab that shows something else registers it in tabShow[tab].
 const tabShow={};
 function showForTab(){if(tabShow[curTab])tabShow[curTab]();else if(curTab==='f2l'&&f2lState.mode==='live')showF2LState();else showScr();}
-$('#showScramble').onclick=()=>{if(method==='beginner'&&typeof showBegLetters==='function'&&!tabShow[curTab])showBegLetters();else showForTab();focusPlayer();};
+$('#showScramble').onclick=()=>{if(isBeg()&&typeof showBegLetters==='function'&&!tabShow[curTab])showBegLetters();else showForTab();focusPlayer();};
 $('#drillBack').onclick=()=>showForTab();
 function seqGo(i){stopAuto();seqState.idx=Math.max(0,Math.min(seqState.moves.length,i));applySequence();}
 $('#scrubStart').onclick=()=>seqGo(0);$('#scrubEnd').onclick=()=>seqGo(seqState.moves.length);
@@ -137,7 +137,7 @@ $('#animBtn').onclick=()=>setAnim(!animOn());
 // ---------- auto-step ----------
 var auto={timer:0};
 function autoMs(){return +$('#autoSpeed').value||1000;}
-function autoLabel(){return method==='beginner'?'▷ Show me':'▷ Auto-step';}
+function autoLabel(){return isBeg()?'▷ Show me':'▷ Auto-step';}
 function stopAuto(){if(auto.timer){clearTimeout(auto.timer);auto.timer=0;}const b=$('#autoPlay');if(b){b.classList.remove('on');b.textContent=autoLabel();}}
 function autoTick(){if(seqState.idx>=seqState.moves.length){stopAuto();return;}seqState.idx++;applySequence();
   auto.timer=seqState.idx>=seqState.moves.length?(stopAuto(),0):setTimeout(autoTick,autoMs());}
@@ -150,8 +150,12 @@ $('#autoSpeed').onchange=()=>{store.set('autoSpeed',autoMs());if(auto.timer){cle
 // scramble state
 var scr={seed:'',moves:[],cube:new Cube()}; // var: tests read it from the window
 let history=store.get('history',[]);
+// The scramble lengths the seed bar offers, per puzzle. A 2×2 mix-up uses R, U and F only.
+const SCR_LENS={3:[20,22,25],2:[9,11,13]};
+function setScrLenOptions(){const sel=$('#scrLen');const lens=SCR_LENS[puzzleN()];if([...sel.options].map(o=>+o.value).join()===lens.join())return;sel.innerHTML=lens.map(n=>`<option${n===lens[1]?' selected':''}>${n}</option>`).join('');}
+function scrambleMoves(seed,n){return puzzleN()===2?twoScramble(seed,n):randomMoveScramble(seed,n);}
 function newScramble(seed){
-  seed=seed||randomSeedName();loadScramble(seed,randomMoveScramble(seed,+$('#scrLen').value),false);}
+  seed=seed||randomSeedName();loadScramble(seed,scrambleMoves(seed,+$('#scrLen').value),false);}
 function loadScramble(seed,moves,custom){
   scr.seed=seed;$('#seed').value=custom?'':seed;$('#seed').placeholder=custom?seed:'seed name';
   scr.moves=Array.isArray(moves)?moves:parseAlg(moves);scr.cube=applyAlg(new Cube(),scr.moves);
@@ -164,6 +168,10 @@ function loadScramble(seed,moves,custom){
 }
 function renderHistory(){$('#history').innerHTML=history.length?'<div class="muted">Recent seeds (click to reload):</div>'+history.map(h=>`<span class="alt" data-s="${esc(h.seed)}"${h.moves?` title="${esc(h.moves)}"`:''}>${esc(h.seed)}</span>`).join(''):'<span class="muted">No history yet.</span>';
   $$('#history .alt').forEach(el=>el.onclick=()=>{const h=history.find(x=>x.seed===el.dataset.s);if(h&&h.moves){loadScramble(h.seed,parseAlg(h.moves),true);return;}$('#seed').value=el.dataset.s;newScramble(el.dataset.s);});}
+// One scramble per puzzle: a 3×3 mix-up is not a 2×2 one. setMethod swaps them when the puzzle changes.
+const puzzleScr={};
+function swapPuzzleScramble(from,to){if(from===to)return;puzzleScr[from]={seed:scr.seed,moves:scr.moves.slice(),custom:!$('#seed').value};
+  const s=puzzleScr[to];if(s)loadScramble(s.seed,s.moves,s.custom);else newScramble();}
 $('#newSeed').onclick=()=>newScramble();$('#reScramble').onclick=()=>newScramble($('#seed').value.trim()||undefined);
 $('#seed').addEventListener('keydown',e=>{if(e.key==='Enter')newScramble($('#seed').value.trim()||undefined);});
 $('#histBtn').onclick=()=>$('#history').classList.toggle('hidden');
@@ -186,13 +194,13 @@ function avg(arr,n){if(arr.length<n)return null;const a=arr.slice(-n).map(x=>x.m
 function renderTimes(){const arr=scopeTimes();$('#stLast').textContent=fmt(arr.length?arr[arr.length-1].ms:null);$('#stAo5').textContent=fmt(avg(arr,5));$('#stAo12').textContent=fmt(avg(arr,12));const best=arr.length?Math.min(...arr.map(x=>x.ms)):null;$('#stBest').textContent=fmt(best);$('#stN').textContent=arr.length;
   $('#times').innerHTML=arr.slice(-40).map((x,i)=>`<span class="${x.ms===best?'best':''}" title="${esc(x.label||'')} · ${new Date(x.t).toLocaleString()}">${fmt(x.ms)}</span>`).reverse().join('');$('#timesScope').textContent='Times: '+scopeName();}
 // The timer scope as words: a tab name, or the case name for a case drill.
-function scopeName(){const s=timer.scope;if(s.startsWith('ll:')){const a=LL_ALL.find(x=>x.id===s.slice(3));return a?a.name:s.slice(3);}if(s.startsWith('f2l:'))return 'F2L case #'+s.slice(4);return {solve:'Solve',cross:'Cross',f2l:'F2L',ll:'OLL · PLL',lab:'Lab',ref:'Reference'}[s]||s;}
+function scopeName(){const s=timer.scope;if(s.startsWith('ll:')){const a=LL_ALL.find(x=>x.id===s.slice(3));return a?a.name:s.slice(3);}if(s.startsWith('f2l:'))return 'F2L case #'+s.slice(4);if(s.startsWith('two:')&&typeof twoCaseName==='function')return twoCaseName(s);return {solve:'Solve',cross:'Cross',f2l:'F2L',ll:'OLL · PLL',lab:'Lab',ref:'Reference',two:'2×2 solve'}[s]||s;}
 function setScope(s){timer.scope=s;renderTimes();}
 function recordTime(ms){const arr=times[timer.scope]||(times[timer.scope]=[]);arr.push({ms,t:Date.now(),label:currentLabel()});store.set('times',times);renderTimes();if(onTimerStop)onTimerStop(ms);}
 let onTimerStop=null;const scrLabel=()=>curTab==='f2l'?'f2l '+scr.seed:scr.seed;let currentLabel=scrLabel;
 const tEl=$('#timer');
 function timerTick(){if(timer.state==='running'){tEl.textContent=fmt(performance.now()-timer.t0);timer.raf=requestAnimationFrame(timerTick);}else if(timer.state==='inspecting'){const left=15-(performance.now()-timer.inspT0)/1000;tEl.textContent=left>0?Math.ceil(left).toString():(left>-2?'+2':'DNF');timer.raf=requestAnimationFrame(timerTick);}}
-function timerHidden(){return method==='beginner'&&!document.body.dataset.begtimer;}
+function timerHidden(){return isBeg()&&!document.body.dataset.begtimer;}
 function timerPress(){ // key/finger down
   if(timerHidden())return;
   if(timer.state==='running'){timer.state='stopped';timer.justStopped=true;cancelAnimationFrame(timer.raf);const ms=performance.now()-timer.t0;tEl.textContent=fmt(ms);tEl.className='timer';recordTime(ms);return;}
@@ -245,28 +253,40 @@ $('#clearTimes').onclick=()=>askConfirm('Clear all times?','This removes every t
 $('#times').onclick=e=>{if(e.target.tagName!=='SPAN')return;const arr=scopeTimes();const shown=arr.slice(-40).reverse();const i=[...e.target.parentNode.children].indexOf(e.target);const item=shown[i];if(item)askConfirm('Delete this time?',fmt(item.ms)+' is removed from '+scopeName()+'. You cannot undo it.','Delete',()=>{arr.splice(arr.indexOf(item),1);store.set('times',times);renderTimes();});};
 
 // ---------- tabs and the method ----------
-// Two methods share the page: CFOP (the rail #rail) and the beginner method (#brail).
-// beginner-ui.js draws the chip that switches them. Each method remembers its own tab.
-let method=store.get('method','cfop')==='beginner'?'beginner':'cfop';document.body.dataset.method=method;
+// Four methods on two puzzles share the page. A method has a puzzle (3x3 or 2x2), a kind (beg:
+// the beginner modules and the beginner player dress; speed: a timer and case drills), a rail of
+// tabs and a key for its last tab. beginner-ui.js draws the chip that switches them.
+const METHODS={
+  beginner:{puzzle:'3x3',kind:'beg',name:'Beginner',rail:'brail',tabKey:'btab'},
+  cfop:{puzzle:'3x3',kind:'speed',name:'CFOP',rail:'rail',tabKey:'tab'},
+  mini:{puzzle:'2x2',kind:'beg',name:'Beginner',rail:'brail',tabKey:'minitab'},
+  speed2:{puzzle:'2x2',kind:'speed',name:'Speed',rail:'srail',tabKey:'speedtab'},
+};
+let method=METHODS[store.get('method','cfop')]?store.get('method','cfop'):'cfop';
+function methodInfo(m){return METHODS[m||method];}
+function isBeg(){return methodInfo().kind==='beg';}
+function puzzleN(){return methodInfo().puzzle==='2x2'?2:3;}
+function applyMethodData(){const i=methodInfo();document.body.dataset.method=method;document.body.dataset.kind=i.kind;document.body.dataset.puzzle=i.puzzle;setDrawN(puzzleN());}
+applyMethodData();
 let curTab='solve';
-const TAB_SCOPE={solve:'solve',cross:'cross',f2l:'f2l',ll:'ll',lab:'lab',ref:'ref',learn:'solve',bsolve:'solve',practice:'solve',progress:'solve',cheat:'solve'};
+const TAB_SCOPE={solve:'solve',cross:'cross',f2l:'f2l',ll:'ll',lab:'lab',ref:'ref',learn:'solve',bsolve:'solve',practice:'solve',progress:'solve',cheat:'solve',ssolve:'two',ortega:'two',cll:'two',sref:'two'};
 const BEGINNER_TABS=['learn','bsolve','practice','progress','cheat'];
-function railButtons(){return $$(method==='beginner'?'#brail button':'#rail button');}
-function tabKey(){return (mobileMQ.matches?'m':'')+(method==='beginner'?'btab':'tab');}
-function homeTab(){return method==='beginner'?'learn':mobileMQ.matches?'ref':'solve';}
+function railButtons(){return $$('#'+methodInfo().rail+' button');}
+function tabKey(){return (mobileMQ.matches?'m':'')+methodInfo().tabKey;}
+function homeTab(){return isBeg()?'learn':method==='speed2'?'ssolve':mobileMQ.matches?'ref':'solve';}
 $$('nav.rail button').forEach(b=>b.onclick=()=>{curTab=b.dataset.tab;$$('nav.rail button').forEach(x=>x.classList.toggle('on',x===b));$$('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+curTab));
   document.body.dataset.tab=curTab;$('#mtitle').textContent=b.lastChild.textContent;store.set(tabKey(),curTab);setScope(TAB_SCOPE[curTab]);onEnterTab(curTab);document.dispatchEvent(new CustomEvent('cw:tab',{detail:curTab}));});
 function goTab(name){const b=$(`nav.rail button[data-tab="${name}"]`);if(b)b.click();}
 function onEnterTab(t){if(!seqState.drill)showForTab();else if(t==='f2l'&&f2lState.mode==='live')showF2LState();if(t==='cross')refreshCross();}
-function nextForTab(){({solve:()=>newScramble(),cross:()=>$('#crossNew').click(),f2l:()=>(f2lState.mode==='live'?$('#f2lNew'):$('#f2lRandomCase')).click(),ll:()=>$('#llNext').click()}[curTab]||(()=>{}))();}
-function hintForTab(){({cross:()=>$('#crossReveal').click(),f2l:()=>(f2lState.mode==='live'?$('#f2lReveal'):$('#f2lCaseReveal')).click(),ll:()=>$('#llHint').click()}[curTab]||(()=>{}))();}
+function nextForTab(){({solve:()=>newScramble(),cross:()=>$('#crossNew').click(),f2l:()=>(f2lState.mode==='live'?$('#f2lNew'):$('#f2lRandomCase')).click(),ll:()=>$('#llNext').click(),ssolve:()=>newScramble(),ortega:()=>{const b=$('#twNextOrtega');if(b)b.click();},cll:()=>{const b=$('#twNextCll');if(b)b.click();}}[curTab]||(()=>{}))();}
+function hintForTab(){({cross:()=>$('#crossReveal').click(),f2l:()=>(f2lState.mode==='live'?$('#f2lReveal'):$('#f2lCaseReveal')).click(),ll:()=>$('#llHint').click(),ortega:()=>{const b=$('#twRevealOrtega');if(b)b.click();},cll:()=>{const b=$('#twRevealCll');if(b)b.click();}}[curTab]||(()=>{}))();}
 $('#autoNext').checked=store.get('autoNext',false);$('#autoNext').onchange=()=>store.set('autoNext',$('#autoNext').checked);
 $('#inspChk').checked=store.get('insp',false);$('#inspChk').onchange=()=>store.set('insp',$('#inspChk').checked);
-onTimerStop=()=>{if($('#autoNext').checked&&(curTab==='solve'||curTab==='cross'||curTab==='f2l'||curTab==='ll'))setTimeout(nextForTab,150);};
+onTimerStop=()=>{if($('#autoNext').checked&&(curTab==='solve'||curTab==='cross'||curTab==='f2l'||curTab==='ll'||curTab==='ssolve'))setTimeout(nextForTab,150);};
 
 // ---------- cross color / orientation ----------
 const CROSS_ROT={white:'z2',yellow:'',green:"x'",blue:'x',red:'z',orange:"z'"};
-function crossRotation(){if(method==='beginner')return 'z2';return CROSS_ROT[$('#crossColor').value]||'';}
+function crossRotation(){if(method==='beginner')return 'z2';if(puzzleN()===2)return '';return CROSS_ROT[$('#crossColor').value]||'';}
 // Frames. Scrambles are applied white up, green front. To solve with another color down we rotate the
 // cube by r. A face move M after the rotation is the same as solving X = r' S r in the engine frame.
 function rotCube(){return applyAlg(new Cube(),crossRotation());}
@@ -392,7 +412,7 @@ renderLLGroups();renderF2LGrid();
 const LL_ORDER=['','learning','finished'];
 function stBtn(id){const s=llState.status[id]||'',nm=s||'unlearned';return `<button class="stbtn ${s}" data-st-id="${esc(id)}" title="Status: ${nm}. Click to change." aria-label="Status: ${nm}. Click to change."><i></i>${nm}</button>`;}
 function cycleStatus(id){const cur=llState.status[id]||'';llState.status[id]=LL_ORDER[(LL_ORDER.indexOf(cur)+1)%3];
-  if(id.startsWith('f2l-')){f2lState.caseSel.add(+id.slice(4));saveF2L();store.set('llStatus',llState.status);renderF2LGrid();}else{llState.sel.add(id);saveLL();renderLLGroups();}
+  if(id.startsWith('f2l-')){f2lState.caseSel.add(+id.slice(4));saveF2L();store.set('llStatus',llState.status);renderF2LGrid();}else if(/^(beg-|mini-|two:)/.test(id)){store.set('llStatus',llState.status);}else{llState.sel.add(id);saveLL();renderLLGroups();}
   renderCaseStats();$$('.modal .stbtn').forEach(b=>{if(b.dataset.stId===id)b.outerHTML=stBtn(id);});document.dispatchEvent(new CustomEvent('cw:status',{detail:id}));}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.stbtn');if(b){e.stopPropagation();cycleStatus(b.dataset.stId);}});
 $('#llSelAll').onclick=()=>{LL_ALL.forEach(a=>llState.sel.add(a.id));saveLL();renderLLGroups();};$('#llSelNone').onclick=()=>{llState.sel.clear();saveLL();renderLLGroups();};
@@ -438,7 +458,7 @@ PLL_FULL.forEach(p=>{const o=document.createElement('option');o.value=p.alg;o.te
 [['Sexy move',"R U R' U'"],['Sledgehammer',"R' F R F'"],['Niklas (corner 3-cycle)',"R U' L' U R' U' L U"],['Twist two corners',"R' D' R D R' D' R D U D' R' D R D' R' D R U'"],['Edge flip (2)',"M' U M' U M' U2 M U M U M U2"],['Corner commutator [R U R\', D]',"R U R' D R U' R' D'"],['Edge 3-cycle [M\', U2]',"M' U2 M U2"]].forEach(([n,a])=>{const o=document.createElement('option');o.value=a;o.textContent=n;$('#labPick').appendChild(o);});
 $('#labPick').onchange=e=>{if(e.target.value){$('#labAlg').value=e.target.value;runLab();}};
 $('#labRun').onclick=()=>runLab();$('#labAlg').addEventListener('keydown',e=>{if(e.key==='Enter')runLab();});
-function loadLab(alg,name){$('#labAlg').value=alg;if(method==='beginner')setMethod('cfop');goTab('lab');runLab(name);}
+function loadLab(alg,name){$('#labAlg').value=alg;if(method!=='cfop')setMethod('cfop');goTab('lab');runLab(name);}
 const PIECE=(i,isEdge)=>isEdge?EDGE_NAMES[i]:CORNER_NAMES[i];
 function invariants(c){const tw=c.co.reduce((a,b)=>a+b,0)%3,fl=c.eo.reduce((a,b)=>a+b,0)%2;const par=p=>{let s=0;const seen=[];for(let i=0;i<p.length;i++){if(seen[i])continue;let j=i,len=0;while(!seen[j]){seen[j]=true;j=p[j];len++;}s+=len-1;}return s%2;};return {tw,fl,cpar:par(c.cp),epar:par(c.ep)};}
 function runLab(name){
@@ -505,7 +525,7 @@ function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why,
       ${o.statusId?`<div class="sec"><b>Status</b>${stBtn(o.statusId)}</div>`:''}
       <div class="sec"><b>What it moves</b><span class="mono" style="font-size:14px">${esc(text)}</span></div>
       <div class="sec"><b>Set up from solved (white up)</b><span class="mono" style="font-size:14px">${esc([...(crossRotation()?[crossRotation()]:[]),...o.setupMoves].join(' '))}</span></div>
-      <div class="row" style="margin-top:14px"><button class="primary" id="modalSetup">Show on cube</button><button id="modalStep">Step through solution</button><button id="modalLab">Open in Lab</button></div>
+      <div class="row" style="margin-top:14px"><button class="primary" id="modalSetup">Show on cube</button><button id="modalStep">Step through solution</button>${o.noLab?'':'<button id="modalLab">Open in Lab</button>'}</div>
       <button class="closebar" id="modalCloseBar">Close</button>
     </div></div>`;
   document.body.appendChild(bg);
@@ -517,7 +537,7 @@ function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why,
   const toPlayer=()=>{if(mobileMQ.matches&&curTab==='ref')goTab(o.tab||'ll');focusPlayer();};
   $('#modalSetup').onclick=()=>{setSequence([...(r?[r]:[]),...o.setupMoves],'setup for '+o.title+' (from solved, white up)',undefined,o.title);close();toPlayer();};
   $('#modalStep').onclick=()=>{const base=applyAlg(new Cube(),[...(r?[r]:[]),...o.setupMoves]);setSequence(removeRotations(parseAlg(o.alg)),'solution: '+o.title+' — press ▶ to step',base,o.title);seqState.idx=0;applySequence();close();toPlayer();};
-  $('#modalLab').onclick=()=>{setSequence([...(r?[r]:[]),...o.setupMoves],'setup for '+o.title,undefined,o.title);$('#labFromSolved').checked=false;loadLab(o.alg,o.title);close();};
+  const lab=$('#modalLab');if(lab)lab.onclick=()=>{setSequence([...(r?[r]:[]),...o.setupMoves],'setup for '+o.title,undefined,o.title);$('#labFromSolved').checked=false;loadLab(o.alg,o.title);close();};
   document.addEventListener('keydown',escClose);
 }
 function escClose(e){if(e.key==='Escape')closeModal();}
@@ -531,7 +551,7 @@ function modalForLL(a){const c=applyAlg(new Cube(),invertAlg(a.alg));return {tit
 function modalForPLL(p){const c=derotate(applyAlg(new Cube(),invertAlg(p.alg)));const two=LL_ALL.find(x=>x.name.startsWith(p.name+' '));return {title:p.name+' perm',tab:'ll',group:'PLL · '+p.type,alg:p.alg,recog:two?two.recog:'',why:two?two.why:'',pic:thumbTop(phys(c),'pll'),setupMoves:removeRotations(parseAlg(invertAlg(p.alg)))};}
 function modalForF2L(f){const c=derotate(applyAlg(new Cube(),invertAlg(f.alg)));const cpos=c.cp.indexOf(4),epos=c.ep.indexOf(8);
   const recog=`Pair for the front-right slot. Corner is at ${CORNER_NAMES[cpos]}${cpos<4?` with its ${COLOR_NAMES[phys(c).toFacelets()[cornerFacelet[cpos][0]]]} sticker on top`:''}; edge is at ${EDGE_NAMES[epos]}.`;
-  return {title:'F2L case #'+f.n,statusId:f2lId(f.n),tab:'f2l',group:f.grp,alg:f.alg,recog,why:F2L_WHY[f.grp]||'',pic:`<svg viewBox="20 10 360 340">${renderCube3D(phys(c).toFacelets(),{yaw:-32,pitch:28,scale:60})}</svg>`,setupMoves:removeRotations(parseAlg(invertAlg(f.alg)))};}
+  return {title:'F2L case #'+f.n,statusId:f2lId(f.n),tab:'f2l',group:f.grp,alg:f.alg,recog,why:F2L_WHY[f.grp]||'',pic:`<svg viewBox="20 10 360 340">${renderCube3D(phys(c).toFacelets(),{yaw:-32,pitch:28,scale:60,n:3})}</svg>`,setupMoves:removeRotations(parseAlg(invertAlg(f.alg)))};}
 
 // ---------- REFERENCE ----------
 function refRow(a,g){return `<div class="rcard ref-row" data-kind="ll" data-id="${a.id}" title="Open details">${thumbTop(caseCube(a),modeFor(a.group))}<div><div class="nm">${esc(a.name)}</div><div class="rec">${esc(a.recog)}</div><div class="alg">${esc(a.alg)}</div></div></div>`;}
@@ -586,7 +606,7 @@ $('#scrLen').onchange=()=>newScramble($('#seed').value||undefined);
 $('#planRef').checked=store.get('planRef',false);$('#planRef').onchange=()=>{store.set('planRef',$('#planRef').checked);if(planState.plan)$('#planBtn').click();};
 $('#f2lPairs').onchange=()=>{if(f2lState.mode==='live')showF2LState();};
 // boot
-$('#crossColor').value=store.get('crossColor','white');
+$('#crossColor').value=store.get('crossColor','white');setScrLenOptions();
 document.body.dataset.tab=curTab;$('#mtitle').textContent='Solve';
 renderTimes();renderHistory();renderAnimBtn();newScramble();applyMobile();setTimeout(()=>{buildCrossTable();tablesReady=true;if(curTab==='cross')refreshCross();},300);
 

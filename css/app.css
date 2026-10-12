@@ -327,11 +327,22 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
    Each file appends its own section below this one; none edits the rules above. */
 [data-sec="learn"]{--sec:var(--sticker-W)}[data-sec="bsolve"]{--sec:var(--sticker-O)}[data-sec="practice"]{--sec:var(--sticker-G)}
 [data-sec="progress"]{--sec:var(--sticker-B)}[data-sec="cheat"]{--sec:var(--sticker-R)}
-body[data-method="beginner"] #rail{display:none}
-body:not([data-method="beginner"]) #brail{display:none}
-body[data-method="beginner"]:not([data-begtimer]) .timerpanel{display:none}
-body:not([data-method="beginner"]) #progressPanel,body[data-begtimer] #progressPanel{display:none}
-body:not([data-method="beginner"]) #timerBack{display:none}
+/* One rail per method: #rail for CFOP, #brail for both beginner methods (data-kind=beg), #srail for the 2×2 speed section. */
+body:not([data-method="cfop"]) #rail{display:none}
+body:not([data-kind="beg"]) #brail{display:none}
+body:not([data-method="speed2"]) #srail{display:none}
+body[data-kind="beg"]:not([data-begtimer]) .timerpanel{display:none}
+body:not([data-kind="beg"]) #progressPanel,body[data-begtimer] #progressPanel{display:none}
+body:not([data-kind="beg"]) #timerBack{display:none}
+/* Text for one puzzle only. */
+body[data-puzzle="2x2"] .three-only,body:not([data-puzzle="2x2"]) .two-only{display:none!important}
+.mgroup{margin:4px 0 -4px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.face.f2{grid-template-columns:repeat(2,1fr)}
+.pt-face2{grid-template-columns:repeat(2,1fr)!important;grid-template-rows:repeat(2,1fr)!important}
+/* A 2×2 plan sits in half the width: the note goes under the moves instead of beside them. */
+.tw-plan .step{grid-template-columns:110px 1fr;grid-template-rows:auto auto}
+.tw-plan .step .nm{grid-row:1 / span 2}
+.tw-plan .step>div:last-child{white-space:normal!important;grid-column:2}
 button.puzzle{cursor:pointer;background:transparent;line-height:1.3;gap:5px}
 button.puzzle:hover,.puzzle[aria-expanded="true"]{border-color:var(--text);color:var(--text);background:var(--panel)}
 .method-pop{position:absolute;top:calc(100% + 6px);left:18px;width:min(560px,calc(100vw - 24px));background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;z-index:30;font-weight:400}
@@ -541,12 +552,12 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
 /* body[data-begview] is ask, mix or player. The home shows on the Learn home and during a mix-up; the
    player and the seed bar show only when moves are loaded, the seed bar only in the letters view. */
 .beghome{display:flex;flex-direction:column;gap:var(--gap)}
-body:not([data-method="beginner"]) #begHome,body[data-method="beginner"][data-begview="player"] #begHome,
-body[data-method="beginner"]:not([data-begview="mix"]):not([data-tab="learn"]) #begHome,
-body[data-method="beginner"]:not([data-begview="mix"])[data-lesson] #begHome{display:none}
+body:not([data-kind="beg"]) #begHome,body[data-kind="beg"][data-begview="player"] #begHome,
+body[data-kind="beg"]:not([data-begview="mix"]):not([data-tab="learn"]) #begHome,
+body[data-kind="beg"]:not([data-begview="mix"])[data-lesson] #begHome{display:none}
 body[data-begview="mix"] #begNext,body[data-begview="mix"] #begAsk,body:not([data-begview="mix"]) #begMix{display:none}
-body[data-method="beginner"]:not([data-begview="player"]) .player,body[data-method="beginner"]:not([data-begletters]) .seedbar,
-body[data-method="beginner"] #drillNote,body:not([data-method="beginner"]) #begBar{display:none}
+body[data-kind="beg"]:not([data-begview="player"]) .player,body[data-kind="beg"]:not([data-begletters]) .seedbar,
+body[data-kind="beg"] #drillNote,body:not([data-kind="beg"]) #begBar{display:none}
 .begbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14px;padding:8px 14px}
 .begbar>span{flex:1;min-width:200px}
 .beg-kicker{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}
@@ -597,11 +608,11 @@ body[data-method="beginner"] #drillNote,body:not([data-method="beginner"]) #begB
 .scramble .mt{display:inline-flex;flex-direction:column;align-items:center;gap:1px}
 .scramble .mt small{font-family:var(--sans);font-size:10.5px;color:var(--muted);line-height:1.1;white-space:nowrap}
 .scramble .mt .m{min-width:36px}
-body[data-method="beginner"] .scramble{gap:6px 8px}
-body[data-method="beginner"] .cfop-only,body:not([data-method="beginner"]) .beg-only{display:none}
+body[data-kind="beg"] .scramble{gap:6px 8px}
+body[data-kind="beg"] .cfop-only,body:not([data-kind="beg"]) .beg-only{display:none}
 .seqhead .hint{margin-left:auto}
-body:not([data-method="beginner"]) #keyBtn,body:not([data-method="beginner"]) #keyPanel,body:not([data-key]) #keyPanel{display:none}
-body[data-method="beginner"][data-key] #progressPanel,body[data-method="beginner"][data-key] .timerpanel{display:none}
+body:not([data-kind="beg"]) #keyBtn,body:not([data-kind="beg"]) #keyPanel,body:not([data-key]) #keyPanel{display:none}
+body[data-kind="beg"][data-key] #progressPanel,body[data-kind="beg"][data-key] .timerpanel{display:none}
 #keyBtn[aria-expanded="true"]{background:color-mix(in srgb,var(--accent) 22%,var(--panel));border-color:var(--accent)}
 .keypanel{display:flex;flex-direction:column;gap:8px;border-color:color-mix(in srgb,var(--accent) 60%,var(--line))}
 .keylist{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:14px}
@@ -611,10 +622,10 @@ body[data-method="beginner"][data-key] #progressPanel,body[data-method="beginner
 .keylist2{border-top:1px solid var(--line);padding-top:8px}
 #keyLesson{margin-top:auto;align-self:flex-start}
 @media (max-width:760px){
-  body[data-method="beginner"] .top h1{display:flex;font-size:15px;gap:6px}
-  body[data-method="beginner"] .top .mark{width:22px}
-  body[data-method="beginner"] #mtitle{display:none!important}
-  body[data-method="beginner"] .top .spacer{display:block}
+  body[data-kind="beg"] .top h1{display:flex;font-size:15px;gap:6px}
+  body[data-kind="beg"] .top .mark{width:22px}
+  body[data-kind="beg"] #mtitle{display:none!important}
+  body[data-kind="beg"] .top .spacer{display:block}
   .beg-next{padding:14px 16px;gap:10px}
   .beg-next-body h2{font-size:20px}
   .beg-next .psq{display:none}
