@@ -345,7 +345,9 @@ body[data-puzzle="2x2"] .three-only,body:not([data-puzzle="2x2"]) .two-only{disp
 .tw-plan .step>div:last-child{white-space:normal!important;grid-column:2}
 button.puzzle{cursor:pointer;background:transparent;line-height:1.3;gap:5px}
 button.puzzle:hover,.puzzle[aria-expanded="true"]{border-color:var(--text);color:var(--text);background:var(--panel)}
-.method-pop{position:absolute;top:calc(100% + 6px);left:18px;width:min(560px,calc(100vw - 24px));background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;z-index:30;font-weight:400}
+.method-pop{position:absolute;top:calc(100% + 6px);left:18px;width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - var(--toph,58px) - 16px);overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;z-index:30;font-weight:400}
+/* While the chooser is open the page behind it stays still, so a swipe scrolls the chooser. */
+body.pop-open{overflow:hidden}
 .mcards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .mcard{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);text-align:left;font-weight:400;line-height:1.4;font-size:14px}
 .mcard b{font-size:17px}
@@ -394,7 +396,7 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
   .player .progresspanel{padding:10px;gap:6px}
   .psq i{width:18px;height:18px;border-radius:5px}
   .ptiles,.ptimer span{display:none}
-  .method-pop{left:8px;right:8px;width:auto}
+  .method-pop{position:fixed;top:calc(var(--toph,58px) + 6px);left:8px;right:8px;width:auto;max-height:calc(100dvh - var(--toph,58px) - 14px)}
   .bcards{grid-template-columns:1fr}
   .stagebar{gap:4px}.stagebar .stage{font-size:0;gap:0}
   button.big{min-height:52px}

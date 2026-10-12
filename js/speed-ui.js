@@ -7,7 +7,7 @@
 // every dynamic string goes through esc(), as in every other module.
 
 const TWO_ALL=[...ORTEGA_ALL,...CLL_CASES];
-function twoCaseName(id){const a=TWO_ALL.find(x=>x.id===id);return a?(a.group?a.group+' '+a.name:a.name):id;}
+function twoCaseName(id){const a=TWO_ALL.find(x=>x.id===id);return a?(a.group?a.group+' '+a.name:(id.startsWith('two:oll:')?'OLL ':'PBL ')+a.name):id;}
 const twoKindOf=a=>a.id.startsWith('two:oll:')?'oll':a.id.startsWith('two:pbl:')?'pbl':'cll';
 const twoModeOf=a=>({oll:'oll',pbl:'both',cll:'pll'})[twoKindOf(a)];
 

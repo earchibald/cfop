@@ -126,9 +126,9 @@ function setMethod(m,opts){
 }
 function openMethodPop(){const pop=$('#methodPop'),chip=$('#methodChip');renderChip();
   if(!mobileMQ.matches)pop.style.left=Math.max(8,chip.offsetLeft)+'px';else pop.style.left='';
-  pop.classList.remove('hidden');chip.setAttribute('aria-expanded','true');
+  pop.classList.remove('hidden');chip.setAttribute('aria-expanded','true');document.body.classList.add('pop-open');pop.scrollTop=0;
   setTimeout(()=>{const c=$('#methodPop .mcard.on');if(c)c.focus();},20);}
-function closeMethodPop(){$('#methodPop').classList.add('hidden');$('#methodChip').setAttribute('aria-expanded','false');}
+function closeMethodPop(){$('#methodPop').classList.add('hidden');$('#methodChip').setAttribute('aria-expanded','false');document.body.classList.remove('pop-open');}
 function methodPopOpen(){return !$('#methodPop').classList.contains('hidden');}
 $('#methodChip').onclick=()=>{if(methodPopOpen())closeMethodPop();else openMethodPop();};
 $$('#methodPop .mcard').forEach(c=>c.onclick=()=>{closeMethodPop();setMethod(c.dataset.method);});
