@@ -27,8 +27,8 @@ The app was called Cubeworks. Keep these old names as they are:
 | `js/speed2.js` | 2x2 speed data and solvers: `ORTEGA_OLL`, `ORTEGA_PBL`, `CLL_CASES`, `twoFindStep`, `solveOrtega`, `solveCLL` (pure, no DOM) |
 | `js/app.js` | UI, trainer, timer, history, `loadScramble` |
 | `js/enter.js` | Enter-a-scramble dialog, `scrambleFromCube(cube, name)` |
-| `js/scan-assemble.js` | Scanner stage 5: face rotations, color repairs, joint color read (pure, no DOM) |
-| `js/scan.js` | Scanner stages 1-4 and the Scan cube dialog |
+| `js/scan-assemble.js` | Scanner stage 5 for the 3x3, the 2x2 and the 4x4: `scanSize(n)` (pieces and the 24 holdings of any size), `assembleScan` (3x3, faces by center), `assembleFree` (2x2 and 4x4, faces placed by their pieces, every fit returned), color repairs, joint color read (pure, no DOM) |
+| `js/scan.js` | Scanner stages 1-4 for any face size and the Scan cube dialog: `readFace(img,{n})`, `makeVoter({n})`, `openScan({n})` |
 | `js/beginner-ui.js` | The method chip and its chooser, `setMethod`, the beginner packs (`BEG_PACKS`, `begPack()`: steps, algorithms, solver, hold, words for the 3x3 and the 2x2), `heldCube`, `begProgress`, the progress panel in the player |
 | `js/beghome.js` | Beginner home above the tabs: Up next, "What does your cube look like?" (scan, paint, mix it up, practice on the screen), the "Mix it up with me" walkthrough, the letters view, the Key panel and the captions under tiles. Owns `body[data-begview]`: `ask`, `mix` or `player` |
 | `js/learn.js` | Beginner Learn tab: the step list, the lesson pages, the Cheat sheet tab, `openLesson(n)` |
@@ -37,7 +37,7 @@ The app was called Cubeworks. Keep these old names as they are:
 | `js/practice.js` | Beginner Practice and Progress tabs, `startPractice(n)` |
 | `js/speed-ui.js` | The 2x2 speed tabs: Solve (Ortega and CLL plans, an optimal solution), Ortega and CLL case drills, Reference; `twoThumb` |
 | `js/glossary.js` | Glossary entries, links in description text, the floating card |
-| `test/` | `load.js` jsdom smoke test, `two.js` (the 2x2 engine), `mini.js` (the Mini guide's algorithms and 300 solves), `speed2.js` (every Ortega and CLL algorithm, the 42 cases cover every state), `two-ui.js` (the 2x2 in the page), `draw.js` (a part turn lands on the moved cube), `tabs.js` (scramble, drills, case cards, clear dialog), `plan.js` (guided solve with rotations), `mobile.js` (phone menu), `glossary.js`, `beginner.js` (the guide's algorithms and 300 beginner solves), `method.js` (the method chip, rails, progress panel), `learn.js`, `guide.js`, `paint.js`, `practice.js`, `home.js` (one per beginner module), and the scanner tests |
+| `test/` | `load.js` jsdom smoke test, `two.js` (the 2x2 engine), `mini.js` (the Mini guide's algorithms and 300 solves), `speed2.js` (every Ortega and CLL algorithm, the 42 cases cover every state), `two-ui.js` (the 2x2 in the page), `draw.js` (a part turn lands on the moved cube), `tabs.js` (scramble, drills, case cards, clear dialog), `plan.js` (guided solve with rotations), `mobile.js` (phone menu), `glossary.js`, `beginner.js` (the guide's algorithms and 300 beginner solves), `method.js` (the method chip, rails, progress panel), `learn.js`, `guide.js`, `paint.js`, `practice.js`, `home.js` (one per beginner module), and the scanner tests: `scan-assemble.js` (stage 5 for all three sizes), `scan-synth.js` (synthetic faces of each size through stages 1-3), `scan-vote.js` (the voter and six faces end to end), `scan-ui.js` (the dialog for each puzzle) |
 | `docs/` | Design notes and handoff documents. `beginner-mode.md` holds the 3x3 beginner method plan and its open decisions; `two-by-two.md` the 2x2 model, both 2x2 methods and the packs |
 
 The scripts share one global scope. `index.html` loads them in the order

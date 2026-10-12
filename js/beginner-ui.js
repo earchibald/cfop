@@ -48,7 +48,7 @@ const BEG_PACKS={
   mini:{
     id:'mini',steps:MINI_STEPS,algs:MINI_ALGS,solve:solveMini,chunks:miniChunks,count:5,word:'five',prefix:'mini-',prog:'miniProg',
     // The 2×2 has no centers: the solver reads the cube as it is, white up, and holds it itself.
-    held:()=>scr.cube,heldMoves:[],startUp:'white',scan:false,
+    held:()=>scr.cube,heldMoves:[],startUp:'white',scan:true,
     holdText:'White on top, green facing you, like the picture. A 2×2 has no centers, so the app follows the corners.',
     basics:'About three minutes. Two layers, eight corners, how to hold the cube, and the six turns. No cube needed yet.',
     short:['First corners','Third corner','Fourth corner','Yellow face','Yellow corners'],

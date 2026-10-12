@@ -36,7 +36,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.ok(/Basics/.test($('#progNext').textContent));
   assert.strictEqual($$('#tab-learn .bstep').length,6,'Basics plus five steps in Learn');
   assert.ok(/the five steps/.test($('#tab-learn').textContent));
-  assert.ok($('#begAsk .beg-cards'),'the home asks about the cube');assert.ok(!$('#begAsk [data-beg="scan"]'),'no camera scan for a 2×2');assert.ok($('#begAsk [data-beg="paint"]'),'paint instead');
+  assert.ok($('#begAsk .beg-cards'),'the home asks about the cube');assert.ok($('#begAsk [data-beg="scan"]'),'the camera scan reads a 2×2 too');assert.ok($('#begAsk [data-beg="paint"]'),'paint as well');
   assert.ok($$('#begAsk .face.f2').length===2,'2×2 face thumbs');
   // The letters view draws a 2×2 in the player.
   click($('#begAsk [data-beg="letters"]'));assert.strictEqual(d.body.dataset.begview,'player');
