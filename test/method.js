@@ -64,6 +64,10 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   $('#helpBtn').click();assert.ok(/–<span class="kbd">5<\/span>/.test($('#helpBox').innerHTML),'the keys card counts five tabs');
   assert.ok(!/timer/.test($('#helpBox').textContent)&&/play, pause/.test($('#helpBox').textContent),'no timer row in beginner mode; space plays');
   assert.ok(/Home/.test($('#helpBox').textContent)&&/five moves/.test($('#helpBox').textContent),'the card lists Home, End and the jump');
+  assert.ok(/\?/.test($('#helpBox').textContent),'the card lists the ? key');
+  $('#helpBtn').click();assert.ok($('#helpBox').classList.contains('hidden'),'the button closes the card');
+  key('keydown','?');assert.ok(!$('#helpBox').classList.contains('hidden'),'? opens the keys card');
+  key('keydown','?');assert.ok($('#helpBox').classList.contains('hidden'),'? again closes it');
   // Each method remembers its tab.
   w.goTab('progress');w.setMethod('cfop');assert.strictEqual(d.body.dataset.tab,'solve','CFOP returns to its tab');
   w.goTab('f2l');w.setMethod('beginner');assert.strictEqual(d.body.dataset.tab,'progress','the beginner method returns to its tab');

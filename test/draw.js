@@ -35,6 +35,25 @@ for(const [yaw,pitch] of views){
     checks++;
   }
 }
+// A turn of a hidden face draws behind the rest of the cube. Half way through D from the
+// player view, the D layer's cut face must not paint over the U stickers: the layer is far,
+// so it is drawn first. The same for every face the camera cannot see, from every view.
+const rot3=(p,yaw,pitch)=>{const a=yaw*Math.PI/180,b=pitch*Math.PI/180;const [x,y,z]=p;const x1=x*Math.cos(a)+z*Math.sin(a),z1=-x*Math.sin(a)+z*Math.cos(a);return [x1,y*Math.cos(b)-z1*Math.sin(b),y*Math.sin(b)+z1*Math.cos(b)];};
+const inside=(pt,poly)=>{let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const [xi,yi]=poly[i],[xj,yj]=poly[j];
+  if((yi>pt[1])!==(yj>pt[1])&&pt[0]<(xj-xi)*(pt[1]-yi)/(yj-yi)+xi)c=!c;}return c;};
+const NORMALS={U:[0,1,0],R:[1,0,0],F:[0,0,1],D:[0,-1,0],L:[-1,0,0],B:[0,0,-1]},OPP={U:'D',R:'L',F:'B',D:'U',L:'R',B:'F'};
+let hiddenChecks=0;
+for(const [yaw,pitch] of views)for(const face of 'URFDLB'){
+  if(rot3(NORMALS[face],yaw,pitch)[2]>=0)continue; // the camera sees this face
+  const front='URFDLB'.indexOf(OPP[face]);
+  for(const m of [face,face+"'",face+'2',face.toLowerCase()]){
+    const polys=T.cubePolys(base.toFacelets(),{yaw,pitch,move:m,t:0.5});
+    polys.forEach((p,i)=>{if(p.idx===undefined||Math.floor(p.idx/9)!==front)return;
+      const c=[p.pts.reduce((a,q)=>a+q[0],0)/4,p.pts.reduce((a,q)=>a+q[1],0)/4];
+      const over=polys.slice(i+1).find(q=>q.idx===undefined&&inside(c,q.pts));
+      assert.ok(!over,`${m} at yaw ${yaw} pitch ${pitch}: plastic drawn over sticker ${p.idx}`);});
+    hiddenChecks++;}}
+assert.ok(hiddenChecks>=20,'hidden faces were checked');
 // A quarter turn and a half turn go the right way: R takes the front-right column up.
 const g=T.moveGeom('R');eq(g,{n:[1,0,0],layers:[1],depths:[0],deg:-90});
 assert.strictEqual(T.moveGeom("U'").deg,90);assert.strictEqual(T.moveGeom('F2').deg,-180);
@@ -46,4 +65,4 @@ const half=T.cubePolys(new T.Cube().toFacelets(),{move:'R',t:0.5});
 assert.ok(half.filter(p=>!p.stroke).length>3,'cut face and strips drawn');
 // The mark's view box is stable
 assert.strictEqual(T.polysViewBox(T.cubePolys(new T.Cube().toFacelets(),{move:'R',t:0.5,scale:10,cx:0,cy:0}),0.5),'-21.17 -23.45 45.63 46.41');
-console.log('draw ok:',checks,'move/view checks');
+console.log('draw ok:',checks,'move/view checks,',hiddenChecks,'hidden-face turns');

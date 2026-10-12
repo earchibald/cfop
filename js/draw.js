@@ -67,7 +67,11 @@ function cubePolys(facelets,opts={}){
   if(opts.move&&opts.t){const g=moveGeom(opts.move,n);nv=g.n;const deg=g.deg*opts.t;slabs=[];const pos=nv[0]+nv[1]+nv[2]>0;
     for(let c=0;c<n;c++){const depth=pos?n-1-c:c;const moving=g.depths.includes(depth);const last=slabs[slabs.length-1];
       if(last&&last.moving===moving)last.hi=c;else slabs.push({lo:c,hi:c,moving,deg:moving?deg:0});}
-    if(rot3(nv,yaw,pitch)[2]<0)slabs.reverse();}
+    // Slabs are listed from the negative end of the axis. Draw far to near: when the positive
+    // end of the axis points away from the camera, the first slab is the nearest, so reverse.
+    // The axis, not the face normal: D, L and B turn about a negative normal, but their slabs
+    // are still counted from the negative end.
+    if(rot3(nv.map(Math.abs),yaw,pitch)[2]<0)slabs.reverse();}
   const k=nv.findIndex(v=>v!==0);const polys=[];
   for(const sl of slabs){
     // the slab's box, and the turn it has made

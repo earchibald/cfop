@@ -230,6 +230,7 @@ document.addEventListener('keydown',e=>{const tag=document.activeElement.tagName
   if(e.key==='Home'){e.preventDefault();seqGo(0);}if(e.key==='End'){e.preventDefault();seqGo(seqState.moves.length);}
   if(e.key==='p'||e.key==='P'){toggleAuto();}if(e.key==='a'||e.key==='A'){setAnim(!animOn());}
   if(e.key==='n'||e.key==='N'){nextForTab();}if(e.key==='h'||e.key==='H'){hintForTab();}
+  if(e.key==='?'){e.preventDefault();$('#helpBtn').click();}
 });
 document.addEventListener('keyup',e=>{if(e.code==='Space'){const tag=document.activeElement.tagName;if(tag==='INPUT'||tag==='TEXTAREA')return;e.preventDefault();if(!timerHidden())timerRelease();}});
 tEl.addEventListener('pointerdown',e=>{e.preventDefault();timerPress();});tEl.addEventListener('pointerup',e=>{e.preventDefault();timerRelease();});
@@ -607,7 +608,7 @@ $('#themeBtn').onclick=()=>{const r=document.documentElement;const cur=r.dataset
 function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHidden();
   const rows=[[k('←')+' '+k('→'),'one move back or forward'],[k('⇧')+' + arrows','five moves at a time'],[k('Home')+' '+k('End'),'the start, the end'],
     [k('space'),beg?'play, pause':'timer: hold, release to start · press to stop'],[k('P'),'play, pause'],[k('A'),'animation on or off'],
-    [k('1')+'–'+k(String(railButtons().length)),'switch tab'],...(beg?[]:[[k('N'),'next scramble / case'],[k('H'),'reveal the answer']]),['drag cube','orbit the view']];
+    [k('1')+'–'+k(String(railButtons().length)),'switch tab'],...(beg?[]:[[k('N'),'next scramble / case'],[k('H'),'reveal the answer']]),[k('?'),'this card'],['drag cube','orbit the view']];
   return `<h3>Keys</h3><table>${rows.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table><p class="muted" style="margin-top:8px;font-size:13px">${beg?'Your progress and seed history are':'Times, case statuses and seed history are'} saved in this browser.</p>`;}
 $('#helpBtn').onclick=()=>{const b=$('#helpBox');b.classList.toggle('hidden');b.innerHTML=helpHTML();};
 document.addEventListener('cw:method',()=>{renderAnimBtn();const b=$('#helpBox');if(b&&!b.classList.contains('hidden'))b.innerHTML=helpHTML();});
