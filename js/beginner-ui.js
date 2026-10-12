@@ -72,6 +72,39 @@ const BEG_PACKS={
     // The guided solve's hold line (fixed strings): the part's own text says how to hold the cube.
     holdLine:e=>e.flip?'<b>Turn the cube over</b> so the yellow face is on top. The dashed move is this turn.':e.part.pre?'<b>Hold the cube</b> as the next line says. The dashed moves turn the whole cube.':'<b>Keep the hold</b> from the part before. The 3D cube shows this view.',
   },
+  master:{
+    id:'master',steps:MASTER_STEPS,algs:MASTER_ALGS,solve:solveMaster,chunks:masterChunks,count:10,word:'ten',prefix:'master-',prog:'masterProg',
+    // The 4×4 has no fixed centers: the solver reads the cube as it is and holds it itself. Every
+    // turn of the whole cube is a part's own `pre`; `up` never changes.
+    held:()=>scr.cube,heldMoves:[],startUp:'white',scan:false,
+    holdText:'White on top, green facing you, like the picture. A 4×4 has no fixed centers, so the app builds them where the corners say they belong.',
+    basics:'About five minutes. The pieces, the color layout, face turns and slice turns. No cube needed yet.',
+    short:['Centers','Edges','Daisy','White cross','White corners','Middle layer','Yellow cross','Yellow face','Yellow corners','Yellow edges'],
+    frame:n=>n<=2||n===5?new FourCube():new FourCube().apply('z2'), // the 3×3 steps as the 3×3 pack holds them, two steps later
+    caseBase(n){const h=this.frame(n);if(n===3)return applyAlg(h,['F2','R2','B2','L2']);if(n===4)return applyAlg(h,['R2','B2','L2']);return h;},
+    goalBelow:{4:true,6:true},
+    lessonStart:()=>new FourCube(fourApply(FOUR_SOLVED,fourScramble('lesson',40))),
+    goalCube(n,c){return c;},
+    faces:{basics:'WWWWWWWWWWWWWWWW',centers:'.....WW..WW.....',edges:'.WW.W..WW..W.WW.',daisy:'.WW.WYYWWYYW.WW.',cross:'.WW.WWWWWWWW.WW.',corners:'WWWWWWWWWWWWWWWW',middle:'GGGGGGGGGGGGGGGG',ycross:'.YY.YYYYYYYY.YY.',yface:'YYYYYYYYYYYYYYYY',ycorners:'YYYYYYYYYYYYYYYY',yedges:'YYYYYYYYYYYYYYYY'},
+    caseTitles:{1:'Where the tile is, and what to do',2:'Where the two pieces are, and what to do',3:'Where you find a white edge, and what to do',4:'Line up each edge, then turn it down',5:'Where you find a white corner, and what to do',6:'Where the edge goes, and what to do',7:'What you see on top, and what to do',8:'What you see on top, and what to do',9:'What you see, and what to do',10:'What you see, and what to do'},
+    cheatIntro:'Keep this page open while you solve. Centers, then edges, then the 3×3 steps: yellow on top for steps 3 and 4, white on top for step 5, yellow on top from step 6 to the end. Two parity fixes: at the yellow cross and at the yellow edges.',
+    cheat:{
+      1:{rule:'White, yellow, red, green, orange, blue. Target on top. A tile on a side: that side in front, turn it to the lower right. On the bottom: turn it to the lower right. Turn the top until another color is at the upper left. Front tile: Rr, U, R\'r\'. Bottom tile: Rr2, U, Rr2.'},
+      2:{rule:'Two pieces of the same colors to the left and right of the front with outside turns. Across from each other, same color facing you: Don\'t Run Fast Unless Running Fast Daily. Not across: R, F\', U, F first.'},
+      3:{rule:'Yellow on top. Look at the top layer, then the middle, then the bottom. Turn the top to move a petal out of the way first.',
+         list:[['Middle layer, white facing you, at the front right','R'],['Middle layer, white facing right, at the front right',"U' F'"],['Bottom layer, white facing down, under the front','F2'],['Top layer, white facing out: hold it on the right',"R' U F'"]]},
+      4:{rule:'Yellow on top. Turn the top until the front tile of the top edge matches the front center. Then F2. Then flip the cube over.',list:[['Edge over its center, in front','F2']]},
+      5:{rule:'White cross on top. Turn the bottom until the corner sits between its centers. Hold white facing you: bottom left or bottom right, then that algorithm. White facing down: white to the front first. Wrong corner on top: corner down first.'},
+      6:{rule:'Flip over: white down. Turn the top until a top edge makes a vertical line with the front center. Top tile matches the left center: Moving Left. The right center: Moving Right. Stuck edge: hold it on the right, Moving Right.'},
+      7:{rule:'One or three yellow edges up: parity. With one up hold it at the back, with three hold the gap at the front, then r2 B2 U2 l U2 r\' U2 r U2 F2 r F2 l\' B2 r2. Then as on a 3×3: dot any way, line left to right, L at the back left, FUR says U\'R\'F\'.'},
+      8:{rule:'One corner: feed the fish, that corner at the front left. None: a yellow tile on the left face, front left. Two: left thumb on a yellow tile on the front, front left. Repeat.'},
+      9:{rule:'Turn the top until two corners are right. Next to each other: tail lights at the back. Across from each other: the chant once, then look again.'},
+      10:{rule:'Two correct edges across from each other: hold them left and right, Are you? Are you you? Are you?. Next to each other: hold them left and back, the parity, then the 3×3 algorithm. Otherwise as on a 3×3: solved side at the back.'},
+    },
+    topNote:{1:'Each center grows on top, one tile at a time.',2:'Outside turns only, between the algorithms.',3:'The daisy grows around the yellow center.',5:'Step 5 works with the white cross on top.',6:'From here to the end, yellow stays on top.'},
+    next:{method:'speed4',name:'Advanced',text:'Try the advanced method, from the chip in the top bar.',foot:'Switch to the 4×4 advanced section from the chip in the top bar: reduction with CFOP, and the way to Yau.',btn:'Show me the advanced method'},
+    holdLine:e=>e.part.pre?'<b>Hold the cube</b> as the next line says. The dashed moves turn the whole cube.':'<b>Keep the hold</b> from the part before. The 3D cube shows this view.',
+  },
 };
 function begPack(){return BEG_PACKS[method]||BEG_PACKS.beginner;}
 // The cube as the beginner holds it for the solver.
@@ -103,7 +136,7 @@ function renderProgress(){
   const d=begProg();$('#progSolves').textContent=d.solves;$('#progPract').textContent=d.practiced;
   const nx=begProgress.next();$('#progNext').textContent=nx?begStepLabel(nx):pk.next.text;
   // The chooser's notes: how far each beginner method is.
-  for(const id of ['beginner','mini']){const note=$('#mnote-'+id);if(!note)continue;const p=BEG_PACKS[id];let f=0;for(let n=1;n<=p.count;n++)if(llState.status[p.prefix+n]==='finished')f++;note.textContent=f?`${f} of ${p.count} steps finished`:'Start here';}
+  for(const id of ['beginner','mini','master']){const note=$('#mnote-'+id);if(!note)continue;const p=BEG_PACKS[id];let f=0;for(let n=1;n<=p.count;n++)if(llState.status[p.prefix+n]==='finished')f++;note.textContent=f?`${f} of ${p.count} steps finished`:'Start here';}
 }
 $('#progSolve').onclick=()=>goTab('bsolve');
 // "Time my solves" puts the timer in the panel. "Progress" on the timer panel brings this back.
@@ -111,10 +144,10 @@ function showBegTimer(on){if(on)document.body.dataset.begtimer='1';else delete d
 $('#progTimer').onclick=()=>showBegTimer(true);
 $('#timerBack').onclick=()=>showBegTimer(false);
 if(store.get('begTimer',false))showBegTimer(true);
-document.addEventListener('cw:status',e=>{if(/^(beg-|mini-)/.test(String(e.detail)))renderProgress();});
+document.addEventListener('cw:status',e=>{if(/^(beg-|mini-|master-)/.test(String(e.detail)))renderProgress();});
 
 // ---------- the method chip and its popover ----------
-function renderChip(){$('#methodName').textContent=methodInfo().name;const pz=$('#puzzleName');if(pz)pz.textContent=(puzzleN()===2?'2×2':'3×3')+' ·';
+function renderChip(){$('#methodName').textContent=methodInfo().name;const pz=$('#puzzleName');if(pz)pz.textContent=puzzleN()+'×'+puzzleN()+' ·';
   $$('#methodPop .mcard').forEach(c=>c.classList.toggle('on',c.dataset.method===method));}
 function setMethod(m,opts){
   if(!METHODS[m])m='cfop';const changed=m!==method;const from=methodInfo().puzzle;method=m;applyMethodData();store.set('method',m);

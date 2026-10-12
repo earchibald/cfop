@@ -21,18 +21,27 @@ function rot3(p,yaw,pitch){const a=yaw*Math.PI/180,b=pitch*Math.PI/180;let [x,y,
 // Turn p about the unit axis n by deg degrees, right-hand rule (Rodrigues).
 function rotAxis(p,n,deg){const a=deg*Math.PI/180,c=Math.cos(a),s=Math.sin(a);const dot=n[0]*p[0]+n[1]*p[1]+n[2]*p[2];
   const x=[n[1]*p[2]-n[2]*p[1],n[2]*p[0]-n[0]*p[2],n[0]*p[1]-n[1]*p[0]];return [0,1,2].map(i=>p[i]*c+x[i]*s+n[i]*dot*(1-c));}
-// What a move turns: the axis (a face normal), the layers along it that move (1 is the
-// face layer, 0 the middle, -1 the far layer), and the whole turn in degrees. A
-// clockwise face turn is -90 about the outward normal.
-function moveGeom(move){
-  const b=move[0],sfx=move.slice(1);let face,layers;
-  if('URFDLB'.includes(b)){face=b;layers=[1];}
-  else if('urfdlb'.includes(b)){face=b.toUpperCase();layers=[0,1];}
-  else if(b==='M'){face='L';layers=[0];}else if(b==='E'){face='D';layers=[0];}else if(b==='S'){face='F';layers=[0];}
-  else if(b==='x'){face='R';layers=[-1,0,1];}else if(b==='y'){face='U';layers=[-1,0,1];}else if(b==='z'){face='F';layers=[-1,0,1];}
-  else throw new Error('bad move '+move);
-  const k=sfx==="'"?-1:sfx==='2'?2:sfx===''?1:NaN;if(isNaN(k))throw new Error('bad move '+move);
-  return {n:FACE_GEOM['URFDLB'.indexOf(face)].n,layers,deg:-90*k};
+// What a move turns: the axis (a face normal), the layers it moves counted from that face
+// (0 is the face's own layer, 1 the slice behind it), and the whole turn in degrees. A
+// clockwise face turn is -90 about the outward normal. The size matters for a small letter:
+// on a 3×3 r is the face and the slice (wide), on a 4×4 it is the inside slice alone, and
+// Rr is both, as the Rubik's Master guide writes it.
+function moveGeom(move,size){
+  const n=size||DRAW_N;let face,depths;
+  let m=/^([URFDLB])'([urfdlb])'$/.exec(move);if(m&&m[1].toLowerCase()===m[2])move=m[1]+m[2]+"'";
+  m=/^([URFDLB])2([urfdlb])2$/.exec(move);if(m&&m[1].toLowerCase()===m[2])move=m[1]+m[2]+'2';
+  m=/^([URFDLB])w(['2]?)$/.exec(move);if(m)move=m[1]+m[1].toLowerCase()+m[2];
+  m=/^([URFDLB])([urfdlb])(['2]?)$/.exec(move);
+  if(m&&m[1].toLowerCase()===m[2]){face=m[1];depths=[0,1];move=m[1]+m[3];}
+  else{const b=move[0];
+    if('URFDLB'.includes(b)){face=b;depths=[0];}
+    else if('urfdlb'.includes(b)){face=b.toUpperCase();depths=n===4?[1]:[0,1];}
+    else if(b==='M'){face='L';depths=[1];}else if(b==='E'){face='D';depths=[1];}else if(b==='S'){face='F';depths=[1];}
+    else if(b==='x'){face='R';depths=[0,1,2,3];}else if(b==='y'){face='U';depths=[0,1,2,3];}else if(b==='z'){face='F';depths=[0,1,2,3];}
+    else throw new Error('bad move '+move);}
+  const sfx=move.slice(1);const k=sfx==="'"?-1:sfx==='2'?2:sfx===''?1:NaN;if(isNaN(k))throw new Error('bad move '+move);
+  const layers=[...new Set(depths.map(d=>d===0?1:d===1?0:-1))].sort((a,b)=>a-b); // the 3×3 names: 1 the face layer, 0 the middle, -1 the far layer
+  return {n:FACE_GEOM['URFDLB'.indexOf(face)].n,layers,depths,deg:-90*k};
 }
 // The polygons of the cube picture, far to near. Each is {pts,fill} and a sticker also
 // has {stroke,faded}. Options: yaw, pitch, scale, cx, cy (the center on the page),
@@ -46,23 +55,23 @@ function moveGeom(move){
 // The cube is a 3×3 by default. setDrawN(2) draws the 2×2: two cubies a side, each half the
 // cube, with 24 stickers. A 54-sticker array is accepted for either size: the 2×2 shows its
 // corner stickers. Options fade, cls and color always get the 3×3 (54) index of a sticker.
-let DRAW_N=3;function setDrawN(n){DRAW_N=n===2?2:3;}function drawN(){return DRAW_N;}
+let DRAW_N=3;function setDrawN(n){DRAW_N=n===2?2:n===4?4:3;}function drawN(){return DRAW_N;}
 function cubePolys(facelets,opts={}){
   const n=opts.n||DRAW_N;if(n===2&&facelets.length===54)facelets=TWO_FACELET.map(i=>facelets[i]);
-  const to54=n===2?i=>TWO_FACELET[i]:i=>i;
+  const to54=n===2?i=>TWO_FACELET[i]:i=>i; // the index the options see: the 3×3 one for a 2×2, the native one otherwise
   const yaw=opts.yaw??-32,pitch=opts.pitch??28;const S=opts.scale||52;const cx=opts.cx??200,cy=opts.cy??185;
   const color=opts.color||((ci)=>stickerColor(ci));const body=opts.body||'var(--sticker-line)';
   const proj=p=>{const q=rot3(p,yaw,pitch);return [cx+q[0]*S,cy-q[1]*S];};
-  const hs=1.5/n,layerAt=l=>l*(1.5-hs);const LAYERS=n===2?[-1,1]:[-1,0,1]; // half a cubie; a layer's center
-  let nv=[0,1,0],slabs=[{lo:-1,hi:1,deg:0}];
-  if(opts.move&&opts.t){const g=moveGeom(opts.move);nv=g.n;const deg=g.deg*opts.t;slabs=[];
-    for(const c of LAYERS){const moving=g.layers.includes(c);const last=slabs[slabs.length-1];
+  const hs=1.5/n,layerAt=k=>-1.5+hs+2*hs*k; // half a cubie; the center of layer k, counted from the negative side
+  let nv=[0,1,0],slabs=[{lo:0,hi:n-1,deg:0}];
+  if(opts.move&&opts.t){const g=moveGeom(opts.move,n);nv=g.n;const deg=g.deg*opts.t;slabs=[];const pos=nv[0]+nv[1]+nv[2]>0;
+    for(let c=0;c<n;c++){const depth=pos?n-1-c:c;const moving=g.depths.includes(depth);const last=slabs[slabs.length-1];
       if(last&&last.moving===moving)last.hi=c;else slabs.push({lo:c,hi:c,moving,deg:moving?deg:0});}
     if(rot3(nv,yaw,pitch)[2]<0)slabs.reverse();}
   const k=nv.findIndex(v=>v!==0);const polys=[];
   for(const sl of slabs){
     // the slab's box, and the turn it has made
-    const lo=[-1.5,-1.5,-1.5],hi=[1.5,1.5,1.5];const a=layerAt(sl.lo)-hs,b=layerAt(sl.hi)+hs;if(nv[k]>0){lo[k]=a;hi[k]=b;}else{lo[k]=-b;hi[k]=-a;}
+    const lo=[-1.5,-1.5,-1.5],hi=[1.5,1.5,1.5];lo[k]=layerAt(sl.lo)-hs;hi[k]=layerAt(sl.hi)+hs; // layers are counted along the axis, so the sign of nv does not matter here
     const R=sl.deg?p=>rotAxis(p,nv,sl.deg):p=>p;
     const faces=[];for(let f=0;f<6;f++){const nz=rot3(R(FACE_GEOM[f].n),yaw,pitch)[2];if(nz>=0.02)faces.push({f,nz});}
     faces.sort((x,y)=>x.nz-y.nz);
@@ -71,8 +80,8 @@ function cubePolys(facelets,opts={}){
       const corner=(su,sv)=>[0,1,2].map(i=>g.n[i]?(g.n[i]>0?hi[i]:lo[i]):g.r[i]?(g.r[i]*su>0?hi[i]:lo[i]):(g.d[i]*sv>0?hi[i]:lo[i]));
       polys.push({pts:[[-1,-1],[1,-1],[1,1],[-1,1]].map(([su,sv])=>proj(R(corner(su,sv)))),fill:body});
       for(let i=0;i<n;i++)for(let j=0;j<n;j++){const idx=n*n*f+n*i+j;const cu=(j-(n-1)/2)*2*hs,cv=(i-(n-1)/2)*2*hs;
-        const cubie=[0,1,2].map(t=>g.n[t]*(1.5-hs)+g.r[t]*cu+g.d[t]*cv);const c=Math.round((cubie[0]*nv[0]+cubie[1]*nv[1]+cubie[2]*nv[2])/(1.5-hs));
-        if(c<sl.lo||c>sl.hi)continue; // this cubie is in another slab
+        const cubie=[0,1,2].map(t=>g.n[t]*(1.5-hs)+g.r[t]*cu+g.d[t]*cv);const along=cubie[0]*Math.abs(nv[0])+cubie[1]*Math.abs(nv[1])+cubie[2]*Math.abs(nv[2]);
+        const c=Math.round((along+1.5-hs)/(2*hs));if(c<sl.lo||c>sl.hi)continue; // this cubie is in another slab
         const h=0.88*hs,i54=to54(idx);const pts=[[cu-h,cv-h],[cu+h,cv-h],[cu+h,cv+h],[cu-h,cv+h]].map(([u,v])=>proj(R([0,1,2].map(t=>g.n[t]*1.5+g.r[t]*u+g.d[t]*v))));
         const poly={pts,fill:color(facelets[idx],i54),stroke:body,faded:!!(opts.fade&&!opts.fade.has(i54)),idx:i54};
         if(opts.cls){const c=opts.cls(i54);if(c)poly.cls=c;}
@@ -84,7 +93,7 @@ function cubePolys(facelets,opts={}){
 }
 function polysSVG(polys){return polys.map(p=>`<polygon${p.cls?` class="${p.cls}"`:''} points="${p.pts.map(q=>q.map(v=>v.toFixed(2)).join(',')).join(' ')}" fill="${p.fill}"${p.faded?' opacity="0.22"':''}${p.stroke?` stroke="${p.stroke}" stroke-width="0.6" stroke-linejoin="round"`:''}/>`).join('');}
 // The kind of piece a facelet belongs to: 'center', 'edge' or 'corner'.
-function pieceKind(idx){const p=idx%9;return p===4?'center':p%2?'edge':'corner';}
+function pieceKind(idx,n){n=n||3;const p=idx%(n*n),i=Math.floor(p/n),j=p%n;const e=x=>x===0||x===n-1;return e(i)&&e(j)?'corner':e(i)||e(j)?'edge':'center';}
 // A ring of three curved arrows in the plane of a face, the way the move turns it: clockwise
 // as you look at that face for a plain move, counterclockwise for a prime. Projected with the
 // same camera as cubePolys (yaw, pitch, scale, cx, cy), so it sits on the face in the picture.
@@ -114,8 +123,8 @@ function polysViewBox(polys,margin=0){const xs=polys.flatMap(p=>p.pts.map(q=>q[0
 function renderCube3D(facelets,opts={}){return polysSVG(cubePolys(facelets,opts));}
 function renderNet(facelets,opts={}){
   const n=opts.n||DRAW_N;if(n===2&&facelets.length===54)facelets=TWO_FACELET.map(i=>facelets[i]);
-  const to54=n===2?i=>TWO_FACELET[i]:i=>i;
-  const s=opts.size||(n===2?45:30);const pos=[[n,0],[2*n,n],[n,n],[n,2*n],[0,n],[3*n,n]];let out='';
+  const to54=n===2?i=>TWO_FACELET[i]:i=>i; // the index the options see: the 3×3 one for a 2×2, the native one otherwise
+  const s=opts.size||(n===2?45:n===4?22.5:30);const pos=[[n,0],[2*n,n],[n,n],[n,2*n],[0,n],[3*n,n]];let out='';
   for(let f=0;f<6;f++){const [px,py]=pos[f];for(let i=0;i<n;i++)for(let j=0;j<n;j++){const idx=n*n*f+n*i+j;const faded=opts.fade&&!opts.fade.has(to54(idx));
     out+=`<rect x="${(px+j)*s+20}" y="${(py+i)*s+20}" width="${s-2}" height="${s-2}" rx="3" fill="${stickerColor(facelets[idx])}" ${faded?'opacity="0.22"':''} stroke="var(--sticker-line)" stroke-width="1"/>`;}}
   return out;

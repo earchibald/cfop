@@ -331,14 +331,17 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
 body:not([data-method="cfop"]) #rail{display:none}
 body:not([data-kind="beg"]) #brail{display:none}
 body:not([data-method="speed2"]) #srail{display:none}
+body:not([data-method="speed4"]) #frail{display:none}
 body[data-kind="beg"]:not([data-begtimer]) .timerpanel{display:none}
 body:not([data-kind="beg"]) #progressPanel,body[data-begtimer] #progressPanel{display:none}
 body:not([data-kind="beg"]) #timerBack{display:none}
 /* Text for one puzzle only. */
-body[data-puzzle="2x2"] .three-only,body:not([data-puzzle="2x2"]) .two-only{display:none!important}
+body:not([data-puzzle="3x3"]) .three-only,body:not([data-puzzle="2x2"]) .two-only,body:not([data-puzzle="4x4"]) .four-only{display:none!important}
 .mgroup{margin:4px 0 -4px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .face.f2{grid-template-columns:repeat(2,1fr)}
+.face.f4{grid-template-columns:repeat(4,1fr);gap:1px;width:52px}
 .pt-face2{grid-template-columns:repeat(2,1fr)!important;grid-template-rows:repeat(2,1fr)!important}
+.pt-face4{grid-template-columns:repeat(4,1fr)!important;grid-template-rows:repeat(4,1fr)!important;gap:1px!important}
 /* A 2×2 plan sits in half the width: the note goes under the moves instead of beside them. */
 .tw-plan .step{grid-template-columns:110px 1fr;grid-template-rows:auto auto}
 .tw-plan .step .nm{grid-row:1 / span 2}

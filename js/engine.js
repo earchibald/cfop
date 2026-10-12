@@ -74,7 +74,7 @@ MOVES["Bw"]=MOVES.b;MOVES["Bw'"]=MOVES["b'"];MOVES["Bw2"]=MOVES.b2;
 function parseAlg(s){
   return s.replace(/[()\[\],]/g,' ').replace(/’|`/g,"'").split(/\s+/).filter(Boolean).map(t=>t.replace(/2'/,'2').replace(/'2/,'2').replace(/3/,"'"));
 }
-function applyAlg(cube,alg){let c=cube;for(const m of (typeof alg==='string'?parseAlg(alg):alg)){if(!MOVES[m])throw new Error('bad move '+m);c=c.mul(MOVES[m]);}return c;}
+function applyAlg(cube,alg){if(cube&&cube.isFour)return cube.apply(alg);let c=cube;for(const m of (typeof alg==='string'?parseAlg(alg):alg)){if(!MOVES[m])throw new Error('bad move '+m);c=c.mul(MOVES[m]);}return c;}
 function invertAlg(alg){const ms=(typeof alg==='string'?parseAlg(alg):alg).slice().reverse();return ms.map(m=>m.endsWith("'")?m.slice(0,-1):m.endsWith('2')?m:m+"'").join(' ');}
 const FACE_MOVES=['U',"U'",'U2','R',"R'",'R2','F',"F'",'F2','D',"D'",'D2','L',"L'",'L2','B',"B'",'B2'];
 function axisOf(m){return 'UD'.includes(m[0])?0:'RL'.includes(m[0])?1:2;}

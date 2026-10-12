@@ -51,7 +51,7 @@ function heldToEngineFacelets(H){
 // A 2×2 has 4 tiles a face and no centers. Its net is in the engine frame (white up, green in
 // front, as the player shows) and goes to twoFromFacelets; the 3×3 net is in the held frame.
 let paintH=null,paintColor=0;
-function paintN(){return puzzleN()===2?4:9;}
+function paintN(){return puzzleN()===2?4:puzzleN()===4?16:9;}
 
 // The held centers: always the same six colors, in held-face order, however the cube is
 // scrambled (centers do not move for a face-turn scramble, so this is the held cube's own
@@ -68,7 +68,7 @@ function paintTileHTML(i){
   return `<button type="button" class="pt-tile${isCenter?' pt-center':''}" data-i="${i}" style="background:${bg}"${isCenter?' disabled aria-label="center, fixed"':''}></button>`;
 }
 function paintFaceHTML(face){
-  const n=paintN();let out=`<div class="pt-face${n===4?' pt-face2':''}" data-face="${face}">`;
+  const n=paintN();let out=`<div class="pt-face${n===4?' pt-face2':n===16?' pt-face4':''}" data-face="${face}">`;
   for(let pos=0;pos<n;pos++)out+=paintTileHTML(n*face+pos);
   return out+'</div>';
 }
@@ -116,7 +116,7 @@ function paintNotice(errors){
   el.innerHTML=errors.map(e=>`<div>${esc(e)}</div>`).join('');
 }
 function paintStart(){
-  const res=paintN()===4?twoFromFacelets(paintH):fromFacelets(heldToEngineFacelets(paintH));
+  const res=paintN()===4?twoFromFacelets(paintH):paintN()===16?fourFromFacelets(paintH):fromFacelets(heldToEngineFacelets(paintH));
   if(!res.ok){paintNotice(res.errors);return;}
   const sres=scrambleFromCube(res.cube,customName('paint'));
   if(!sres.ok){paintNotice(sres.errors);return;}
@@ -140,7 +140,7 @@ function openPaint(){
   bg.innerHTML=`<div class="modal paint" role="dialog" aria-label="Paint my cube">
    <button class="close small ghost" id="paintClose" aria-label="Close">✕</button>
    <h2>Paint my cube</h2>
-   <p class="muted" style="margin-top:0">${paintN()===4?'Hold your cube the way the 3D cube shows: the face on top in the picture is the one on top in your hand. Pick a color, then tap the tiles. Every color is on four tiles.':'Hold your cube with yellow up and green in front, like the 3D cube. Pick a color, then tap the tiles. The centers are fixed.'}</p>
+   <p class="muted" style="margin-top:0">${paintN()===4?'Hold your cube the way the 3D cube shows: the face on top in the picture is the one on top in your hand. Pick a color, then tap the tiles. Every color is on four tiles.':paintN()===16?'Hold your cube the way the 3D cube shows: the face on top in the picture is the one on top in your hand. Pick a color, then tap the tiles. Every color is on sixteen tiles.':'Hold your cube with yellow up and green in front, like the 3D cube. Pick a color, then tap the tiles. The centers are fixed.'}</p>
    <div class="pt-body">
     <div id="paintNet">${paintNetHTML()}</div>
     <div class="pt-side">

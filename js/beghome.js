@@ -19,15 +19,20 @@ var begMix={on:false,i:0,moves:[],own:false,anim:0};
 const BEG_FACE_WORD={U:'top',D:'bottom',F:'front',B:'back',R:'right',L:'left'};
 // The caption under a tile: "right ↻", "front ↺", "top ×2", "turn over".
 function moveCaption(m){
+  const w=/^([URFDLB])([urfdlb])(['2]?)$/.exec(m);if(w&&w[1].toLowerCase()===w[2])return BEG_FACE_WORD[w[1]]+', 2 layers '+(w[3]===''?'↻':w[3]==="'"?'↺':'×2');
   const b=m[0],s=m.slice(1);const turn=s===''?'↻':s==="'"?'↺':'×2';
   if(BEG_FACE_WORD[b])return BEG_FACE_WORD[b]+' '+turn;
+  if(puzzleN()===4&&BEG_FACE_WORD[b.toUpperCase()])return 'inside '+BEG_FACE_WORD[b.toUpperCase()]+' '+turn;
   if(s==='2'&&(b==='z'||b==='x'))return 'turn over';
   if(b==='y'||b==='x'||b==='z')return 'whole cube '+turn;
   return '';
 }
-function begTurnTitle(m){const w=BEG_FACE_WORD[m[0]],s=m.slice(1);return s==='2'?`Turn the ${w} face twice`:s==="'"?`Turn the ${w} face the other way`:`Turn the ${w} face`;}
+// A 4×4 mix-up also turns two layers as one (Rr) or an inside slice (r).
+function begTurnWords(m){const wide=/^([URFDLB])([urfdlb])/.exec(m);if(wide)return {w:BEG_FACE_WORD[wide[1]]+' two layers',s:m.slice(2),thing:'two layers'};
+  if(/^[urfdlb]/.test(m))return {w:'inside '+BEG_FACE_WORD[m[0].toUpperCase()],s:m.slice(1),thing:'slice'};return {w:BEG_FACE_WORD[m[0]],s:m.slice(1),thing:'face'};}
+function begTurnTitle(m){const {w,s,thing}=begTurnWords(m);return s==='2'?`Turn the ${w} ${thing} twice`:s==="'"?`Turn the ${w} ${thing} the other way`:`Turn the ${w} ${thing}`;}
 function begTurnText(m){
-  const w=BEG_FACE_WORD[m[0]],s=m.slice(1);
+  const {w,s}=begTurnWords(m);
   if(s==='2')return `A half turn. Turn the ${w} face twice, either way round.`;
   if(s==="'")return `A quarter turn, counterclockwise. Look straight at the ${w} face: it turns against a clock's hands.`;
   return `A quarter turn, clockwise. Look straight at the ${w} face: it turns the way a clock's hands do.`;
@@ -85,20 +90,20 @@ function renderBegNext(){
 }
 
 // ---------- Your cube ----------
-function begFaceThumb(p){return `<span class="face beg-face${p.length===4?' f2':''}" aria-hidden="true">${[...p].map(ch=>`<i class="${ch}"></i>`).join('')}</span>`;}
-function begHoldPic(){return `<svg viewBox="40 30 320 300" aria-hidden="true">${renderCube3D(new Cube().toFacelets(),{yaw:-32,pitch:28,scale:48})}</svg>`;}
+function begFaceThumb(p){return `<span class="face beg-face${p.length===4?' f2':p.length===16?' f4':''}" aria-hidden="true">${[...p].map(ch=>`<i class="${ch}"></i>`).join('')}</span>`;}
+function begHoldPic(){return `<svg viewBox="40 30 320 300" aria-hidden="true">${renderCube3D(puzzleCube().toFacelets(),{yaw:-32,pitch:28,scale:48})}</svg>`;}
 // The question and the two cards. guide.js shows the same cards on the Solve my cube tab.
 function begYourCubeHTML(){
   const pk=begPack(),two=puzzleN()===2;const paintOk=typeof openPaint==='function';const scanOk=pk.scan&&typeof openScan==='function';
   const known=begState.known&&scr.seed;
   const mixed=scanOk?`<button class="primary" data-beg="scan">Scan it with the camera</button><button data-beg="paint"${paintOk?'':' disabled'}>Paint the colors instead</button><span class="muted beg-small">No camera? Paint works on every device.</span>`
-    :`<button class="primary" data-beg="paint"${paintOk?'':' disabled'}>Paint the colors</button><span class="muted beg-small">Tap the 24 tiles as you see them. It takes a moment.</span>`;
+    :`<button class="primary" data-beg="paint"${paintOk?'':' disabled'}>Paint the colors</button><span class="muted beg-small">Tap the ${6*puzzleN()*puzzleN()} tiles as you see them. It takes a moment.</span>`;
   return `<div class="beg-hold"><div class="beg-pic">${begHoldPic()}</div><p><b>Hold it like this.</b> ${esc(pk.holdText)} The picture always shows the cube the way you hold it.</p></div>
   <div class="beg-q">
     <div><h2>What does your cube look like right now?</h2><p class="muted">Pick one. The app needs to see your cube before it can guide you.</p></div>
     <div class="beg-cards">
-      <div class="beg-card"><div class="row">${begFaceThumb(two?'RWBG':'RWBYGOGRW')}<b>It is mixed up</b></div><p>Show it to the app. The app then tells you every turn, one part at a time.</p>${mixed}</div>
-      <div class="beg-card"><div class="row">${begFaceThumb(two?'WWWW':'WWWWWWWWW')}<b>It is solved</b></div><p>Mix it up with me. I say each turn in plain words, one at a time. Then you solve it with the lessons.</p><button class="primary" data-beg="mix">Mix it up with me</button><button data-beg="screen">Practice on the screen only</button><span class="muted beg-small">Or mix it up any way you like, then scan it.</span></div>
+      <div class="beg-card"><div class="row">${begFaceThumb(two?'RWBG':puzzleN()===4?'RWBYGOGRWBYROGWB':'RWBYGOGRW')}<b>It is mixed up</b></div><p>Show it to the app. The app then tells you every turn, one part at a time.</p>${mixed}</div>
+      <div class="beg-card"><div class="row">${begFaceThumb(two?'WWWW':'W'.repeat(puzzleN()*puzzleN()))}<b>It is solved</b></div><p>Mix it up with me. I say each turn in plain words, one at a time. Then you solve it with the lessons.</p><button class="primary" data-beg="mix">Mix it up with me</button><button data-beg="screen">Practice on the screen only</button><span class="muted beg-small">Or mix it up any way you like, then scan it.</span></div>
     </div>
     ${known?`<div class="beg-known"><span><b>Your mixed-up cube is loaded:</b> <span class="mono">${esc(scr.seed)}</span>.</span><button class="primary" data-beg="solveNow">Solve it, part by part →</button></div>`:''}
     <div class="muted beg-small">Know the letters already? <button class="ln-link" data-beg="letters">Show the scramble as letters</button>. The seed, length and history live there too.</div>
@@ -114,19 +119,19 @@ function begMixStart(){
 }
 // known: the mix-up ended, so the cube on the screen is the user's own.
 function begMixEnd(known){begMix.on=false;if(known)begState.known=true;setBegView('ask');renderBegAsk();}
-function begMixCubeAt(i){return applyAlg(new Cube(),begMix.moves.slice(0,i));}
+function begMixCubeAt(i){return applyAlg(puzzleCube(),begMix.moves.slice(0,i));}
 // The camera turns to show a face the normal view hides. The cube itself stays as held.
 const BEG_MIX_VIEW={L:{yaw:32,pitch:28,cap:'Seen from the left.'},B:{yaw:-148,pitch:28,cap:'Seen from behind.'},D:{yaw:-32,pitch:-34,cap:'Seen from below.'}};
 function begMixView(m){return (m&&BEG_MIX_VIEW[m[0]])||{yaw:-32,pitch:28,cap:''};}
 // The cube before the turn: the face that turns is bright, the rest is dim, an arrow shows the way.
 function begMixPicSVG(cube,m){
   const v=begMixView(m);let fade=null;
-  if(m){const fi='URFDLB'.indexOf(m[0]);fade=new Set();for(let k=0;k<9;k++)fade.add(9*fi+k);}
+  if(m){const fi='URFDLB'.indexOf(m[0].toUpperCase());const nn=drawN()*drawN();fade=new Set();for(let k=0;k<nn;k++)fade.add(nn*fi+k);}
   return renderCube3D(cube.toFacelets(),{yaw:v.yaw,pitch:v.pitch,scale:52,fade})+(m?begMixArrow(m,v):'');
 }
 // A curved arrow just above the face, clockwise or counterclockwise as the face sees it.
 function begMixArrow(m,v){
-  const g=FACE_GEOM['URFDLB'.indexOf(m[0])];const S=52,cx=200,cy=185;
+  const g=FACE_GEOM['URFDLB'.indexOf(m[0].toUpperCase())];const S=52,cx=200,cy=185;
   const proj=p=>{const q=rot3(p,v.yaw,v.pitch);return [cx+q[0]*S,cy-q[1]*S];};
   const dir=m.endsWith("'")?-1:1,span=m.endsWith('2')?300:230,a0=dir>0?-140:-40,r=1.05,N=28;
   const pts=[];for(let k=0;k<=N;k++){const a=(a0+dir*span*k/N)*Math.PI/180;pts.push(proj([0,1,2].map(i=>g.n[i]*1.62+g.r[i]*r*Math.cos(a)+g.d[i]*r*Math.sin(a))));}
@@ -152,7 +157,7 @@ function renderBegMix(){
     <div class="beg-mix-turn"><span class="beg-tile${m.includes("'")?' mod':''}">${esc(m)}</span><div><h2 id="begMixTitle">${esc(begTurnTitle(m))}</h2><span class="beg-mix-sub">${esc(begTurnText(m))}</span></div></div>
     <p class="muted">Hold the rest of the cube still. Only the one face moves. The picture shows the result when you press Next.</p>
     <div class="row beg-mix-act"><button data-beg="mixBack"${i?'':' disabled'}>← Back</button><button class="primary big" data-beg="mixNext">Next turn →</button><button class="ghost" data-beg="mixEnd">Skip to the end</button></div>
-    <div class="beg-key-line"><span><b class="mono">${esc(f)}</b> is the ${esc(BEG_FACE_WORD[f])} face. The six letters: U top, D bottom, F front, B back, R right, L left.</span><span><b class="mono mod">${esc(f)}'</b> with a mark means counterclockwise.</span><span><b class="mono">${esc(f)}2</b> with a 2 means twice: a half turn.</span></div>
+    <div class="beg-key-line"><span><b class="mono">${esc(f.toUpperCase())}</b> is the ${esc(BEG_FACE_WORD[f.toUpperCase()])} face. The six letters: U top, D bottom, F front, B back, R right, L left.</span>${puzzleN()===4?'<span>Two letters, like <b class="mono">Rr</b>, turn the face and the slice behind it as one.</span>':''}<span><b class="mono mod">${esc(f)}'</b> with a mark means counterclockwise.</span><span><b class="mono">${esc(f)}2</b> with a 2 means twice: a half turn.</span></div>
   </div>`;
 }
 // Go to turn i. anim: play the turn just done on the picture, then show the next step.

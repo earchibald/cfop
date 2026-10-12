@@ -6,6 +6,7 @@ function customName(kind){const d=new Date();const p=n=>String(n).padStart(2,'0'
 // Derive a scramble from a solved-relative cube state, then load it like a seed.
 // Kept for the future cube reader. cube: a Cube in the standard (white up, green front) frame.
 function scrambleFromCube(cube,name){
+  if(puzzleN()===4){loadState(name||customName('cube'),cube);goSolveTab();return {ok:true,moves:[]};} // the state itself is the mix-up
   if(puzzleN()===2){ // the corners only: face moves from a solved cube, white up, that give them
     const scr=twoScrambleFor(cube);if(!scr)return {ok:false,errors:['No scramble found.']};
     loadScramble(name||customName('cube'),scr,true);goSolveTab();return {ok:true,moves:scr};}
@@ -17,7 +18,7 @@ function scrambleFromCube(cube,name){
   if(!applyAlg(new Cube(),scr).equals(res.cube))return {ok:false,errors:['The scramble does not match the cube.']};
   loadScramble(name||customName('cube'),scr,true);goSolveTab();return {ok:true,moves:scr};
 }
-function goSolveTab(){const t=isBeg()?'bsolve':method==='speed2'?'ssolve':'solve';if(curTab!==t)goTab(t);focusPlayer();}
+function goSolveTab(){const t=isBeg()?'bsolve':method==='speed2'?'ssolve':method==='speed4'?'fsolve':'solve';if(curTab!==t)goTab(t);focusPlayer();}
 
 function openEnter(){
   if($('#enterBg'))return;

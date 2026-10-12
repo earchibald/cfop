@@ -18,8 +18,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const ev=s=>w.eval(s);const click=el=>{assert.ok(el,'element to click');el.dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true}));};
   const stickers=()=>$$('#cube polygon').filter(p=>p.getAttribute('stroke')).length; // sticker polygons carry a stroke
   // ----- the chooser -----
-  assert.strictEqual($$('#methodPop .mcard').length,4,'four cards: two puzzles, two methods each');
-  assert.deepStrictEqual($$('#methodPop .mcard').map(c=>c.dataset.method),['beginner','cfop','mini','speed2']);
+  assert.strictEqual($$('#methodPop .mcard').length,6,'six cards: three puzzles, two methods each');
+  assert.deepStrictEqual($$('#methodPop .mcard').map(c=>c.dataset.method),['beginner','cfop','mini','speed2','master','speed4']);
   assert.strictEqual($('#puzzleName').textContent,'3×3 ·');
   const scr3=w.scr.moves.join(' ');assert.strictEqual(stickers(),27,'a 3×3 shows 27 stickers');
   assert.deepStrictEqual($$('#scrLen option').map(o=>o.textContent),['20','22','25']);

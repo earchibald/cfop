@@ -43,7 +43,7 @@ const lnGoalBelow=n=>!!begPack().goalBelow[n]; // the white face is below: look 
 function lnGoalView(n){return {yaw:-32,pitch:lnGoalBelow(n)?-34:28};}
 function lnGoalBox(n){return n===0?'20 0 340 360':'40 30 320 300';}
 function lnGoalSVG(n,v,fade){v=v||lnGoalView(n);const f=lnGoals()[n].toFacelets();
-  return renderCube3D(f,{...v,...LN_PIC,fade,cls:i=>'pc-'+pieceKind(i)})+(fade?'':lnFrontMark(v));}
+  return renderCube3D(f,{...v,...LN_PIC,fade,cls:i=>'pc-'+pieceKind(i,drawN())})+(fade?'':lnFrontMark(v));}
 function lnFrontMark(v){
   const proj=p=>{const q=rot3(p,v.yaw,v.pitch);return [LN_PIC.cx+q[0]*LN_PIC.scale,LN_PIC.cy-q[1]*LN_PIC.scale];};
   const [x,y]=proj([0,0,5.3]),[ax,ay]=proj([0,0,1.7]),[bx,by]=proj([0,0,4.3]);const f=n=>n.toFixed(1);
@@ -61,9 +61,9 @@ const LN_RING_AT={L:{at:[-3.4,0,0],r:1.15},D:{at:[0,-3.3,0]},B:{at:[0,2.35,-1.66
 const LN_FACE_NAME={U:'top',D:'bottom',F:'front',B:'back',R:'right',L:'left'};
 function lnTurnText(m){return `${m}: the ${LN_FACE_NAME[m[0]]} face turns ${m.endsWith("'")?'counterclockwise':'clockwise'}, as you look at it.`+(LN_RING_AT[m[0]]?' That face is hidden here. The ring floats next to it.':'');}
 // The stickers of the cubies in the layer a face move turns.
-function lnLayer(face){const g=FACE_GEOM['URFDLB'.indexOf(face)];const s=new Set();
-  for(let f=0;f<6;f++){const h=FACE_GEOM[f];for(let i=0;i<3;i++)for(let j=0;j<3;j++){
-    const c=[0,1,2].map(t=>h.n[t]+h.r[t]*(j-1)+h.d[t]*(i-1));if(c[0]*g.n[0]+c[1]*g.n[1]+c[2]*g.n[2]===1)s.add(9*f+3*i+j);}}
+function lnLayer(face){const g=FACE_GEOM['URFDLB'.indexOf(face)];const s=new Set();const n=drawN(),hs=1.5/n;
+  for(let f=0;f<6;f++){const h=FACE_GEOM[f];for(let i=0;i<n;i++)for(let j=0;j<n;j++){
+    const c=[0,1,2].map(t=>h.n[t]*(1.5-hs)+h.r[t]*(j-(n-1)/2)*2*hs+h.d[t]*(i-(n-1)/2)*2*hs);if(Math.abs(c[0]*g.n[0]+c[1]*g.n[1]+c[2]*g.n[2]-(1.5-hs))<1e-6)s.add(n*n*f+n*i+j);}}
   return s;}
 function lnShowTurn(m){
   const svg=$('#lnGoalSvg'),cap=$('#lnGoalCap'),pic=$('#tab-learn .ln-pic');if(!svg||!LN_FACE_NAME[m[0]])return;
@@ -90,8 +90,8 @@ function lnTiles(moves,big){
   return `<span class="ms${big?' big':''}">${out}</span>`;
 }
 // The face thumb on a step card: the step's goal, as seen from above. '.' is a gray tile.
-function lnFace(id){const p=begPack().faces[id]||(puzzleN()===2?'....':'.........');
-  return `<span class="face${p.length===4?' f2':''}" aria-hidden="true">${[...p].map(ch=>`<i${ch==='.'?'':` class="${ch}"`}></i>`).join('')}</span>`;}
+function lnFace(id){const p=begPack().faces[id]||'.'.repeat(puzzleN()*puzzleN());
+  return `<span class="face${p.length===4?' f2':p.length===16?' f4':''}" aria-hidden="true">${[...p].map(ch=>`<i${ch==='.'?'':` class="${ch}"`}></i>`).join('')}</span>`;}
 // The algorithm names a step uses.
 function lnUses(s){return s.algs?s.algs.map(a=>begPack().algs[a].name).join(' · '):'';}
 function lnTag(st){return `<span class="tag ln-tag ${esc(st)}">${esc(st||'unlearned')}</span>`;}
@@ -177,7 +177,7 @@ $('#tab-learn').addEventListener('click',e=>{
   else if(act==='alg'){const a=pk.algs[b.dataset.id];lnDrill(a.alg,a.name+' algorithm, from the lesson',lnAlgStart(a),'Lesson: '+a.name);}
   else if(act==='case'){const c=s.cases[+b.dataset.i];lnDrill(c.moves,c.name+', from the lesson',lnCaseStart(n,c),'Lesson: '+lnStepNo(s).toLowerCase());}
 });
-document.addEventListener('cw:status',e=>{if(!/^(beg-|mini-)/.test(String(e.detail)))return;
+document.addEventListener('cw:status',e=>{if(!/^(beg-|mini-|master-)/.test(String(e.detail)))return;
   const a=document.activeElement,refocus=a&&a.classList&&a.classList.contains('stbtn')&&a.closest('#tab-learn');
   lnRender();if(refocus){const b=$('#tab-learn .stbtn');if(b)b.focus({preventScroll:true});}});
 

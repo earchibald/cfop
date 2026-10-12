@@ -23,7 +23,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.strictEqual(d.body.dataset.method,'cfop','CFOP until a method is chosen');
   assert.strictEqual($('#methodName').textContent,'CFOP');
   assert.ok($('#methodPop .mcard[data-method="cfop"]').classList.contains('on'),'the current card is marked');
-  assert.strictEqual($$('#methodPop .mcard').length,4,'two puzzles, two methods each');
+  assert.strictEqual($$('#methodPop .mcard').length,6,'three puzzles, two methods each');
   d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.ok(!popOpen(),'Escape closes the chooser');assert.ok(!d.body.classList.contains('pop-open'),'and unlocks the page');
   $('#methodChip').click();assert.ok(popOpen(),'the chip opens it again');
   $('#methodPop .mcard[data-method="beginner"]').click();

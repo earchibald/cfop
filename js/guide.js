@@ -42,7 +42,7 @@ function gdFindPiece(f,piece){
   return null;
 }
 // The facelets to keep bright: the piece this part moves and the six centers. null lights all.
-function gdLit(cube,piece){if(!piece)return null;const p=gdFindPiece(cube.toFacelets(),piece);return p?new Set([...p.fl,...GD_CENTRES]):null;}
+function gdLit(cube,piece){if(!piece||cube.isFour)return null;const p=gdFindPiece(cube.toFacelets(),piece);return p?new Set([...p.fl,...GD_CENTRES]):null;}
 function gdThumb(cube,piece){const fade=gdLit(cube,piece);return `<svg viewBox="40 30 320 300" role="img">${renderCube3D(cube.toFacelets(),{yaw:-32,pitch:28,scale:48,fade})}</svg>`;}
 
 // Why this part uses these moves: the guide's own words for its algorithm. null when there is nothing to add.
@@ -103,7 +103,7 @@ function gdEntryHTML(){
 }
 function gdGuideHTML(){
   const g=guideState,pk=begPack();const e=g.parts[g.i];const p=e.part;const st=e.stage;
-  const col=COLOR_NAMES[e.held.center[2]];
+  const col=e.held.center?COLOR_NAMES[e.held.center[2]]:''; // a 4×4 state has no centers; its pack writes its own hold line
   const topNote=pk.topNote[st.n]||'';
   const hold=pk.holdLine?`<li>${pk.holdLine(e)}${topNote&&(e.flip||e.k===0)?' '+esc(topNote):''}</li>`
     :e.flip?`<li><b>Turn the cube over</b> so the ${esc(p.up)} center is on top${p.pre?'':` and <b>${esc(col)} in front</b>`}.${topNote?' '+topNote:''}${p.pre?` Then turn the whole cube so ${esc(col)} faces you. The dashed moves are these turns.`:' The dashed move is this turn.'}</li>`

@@ -36,7 +36,7 @@ for(const [yaw,pitch] of views){
   }
 }
 // A quarter turn and a half turn go the right way: R takes the front-right column up.
-const g=T.moveGeom('R');eq(g,{n:[1,0,0],layers:[1],deg:-90});
+const g=T.moveGeom('R');eq(g,{n:[1,0,0],layers:[1],depths:[0],deg:-90});
 assert.strictEqual(T.moveGeom("U'").deg,90);assert.strictEqual(T.moveGeom('F2').deg,-180);
 eq(T.moveGeom('r').layers,[0,1]);eq(T.moveGeom('M').layers,[0]);eq(T.moveGeom('M').n,[-1,0,0]);
 eq(T.moveGeom('x').layers,[-1,0,1]);

@@ -176,7 +176,9 @@ const BEG_CORNER_TO_DFR={DFR:'',DLF:"y'",DBL:'y2',DRB:'y'};
 const BEG_EDGE_TO_FR={FR:'',FL:"y'",BL:'y2',BR:'y'};
 const begCap=s=>s[0].toUpperCase()+s.slice(1);
 
-function solveBeginner(start){
+// opts.stages: run these steps only (the 4×4 runs the 3×3 steps in groups round its parity fixes).
+function solveBeginner(start,opts){
+  const only=opts&&opts.stages;const want=n=>!only||only.includes(n);
   let c=start;const stages=[];let cur=null;let up='yellow';
   const name=x=>BEGINNER_COLOR_NAMES[x];
   const fl=()=>c.toFacelets();
@@ -202,6 +204,7 @@ function solveBeginner(start){
   const room=u=>u?' Turn the top to move a petal out of the way: '+u+'.':'';
 
   // ----- Step 1: the daisy (yellow up) -----
+  if(want(1)){
   stage(1,'daisy','The daisy');
   for(let guard=0;guard<16;guard++){
     const f=fl(),w=W();
@@ -223,7 +226,9 @@ function solveBeginner(start){
     }
   }
 
+  }
   // ----- Step 2: the white cross (yellow up) -----
+  if(want(2)){
   stage(2,'cross','The white cross');
   for(let guard=0;guard<4;guard++){
     const f=fl(),w=W();
@@ -236,7 +241,9 @@ function solveBeginner(start){
     part(`White and ${name(col)} edge`,`Hold ${name(col)} in front.${u?' Turn the top until the front tile of the top edge matches the '+name(col)+' center: '+u+'.':' The front tile of the top edge already matches the '+name(col)+' center.'} Turn the front twice: F2. The white tile is now on the bottom.`,pre,[u,'F2'],{piece:{type:'edge',colors:e.st}});
   }
 
+  }
   // ----- Step 3: the white corners (white up) -----
+  if(want(3)){
   stage(3,'corners','The white corners');
   turnOver('white');
   for(let guard=0;guard<24;guard++){
@@ -274,7 +281,9 @@ function solveBeginner(start){
   }
   turnOver('yellow');
 
+  }
   // ----- Step 4: the middle layer (yellow up) -----
+  if(want(4)){
   stage(4,'middle','The middle layer');
   for(let guard=0;guard<16;guard++){
     const f=fl(),t=T();
@@ -292,7 +301,9 @@ function solveBeginner(start){
     }
   }
 
+  }
   // ----- Step 5: the yellow cross -----
+  if(want(5)){
   stage(5,'ycross','The yellow cross');
   const upEdges=f=>{const t=f[4];const o={};for(const s of ['UF','UL','UB','UR'])o[s]=f[edgeFacelet[BEG_EDGE_POS[s]][0]]===t;return o;};
   for(let guard=0;guard<4;guard++){
@@ -305,7 +316,9 @@ function solveBeginner(start){
     part(`${shape==='dot'?'A dot':shape==='L'?'An L':'A line'} on top`,`${hold} Yellow cross: FUR says U'R'F'. F, U, R, U', R', F'.`,pre,BEGINNER_ALGS.yellowCross.alg,{alg:'yellowCross',shape});
   }
 
+  }
   // ----- Step 6: the yellow face -----
+  if(want(6)){
   stage(6,'yface','The yellow face');
   const SUNE=parseAlg(BEGINNER_ALGS.yellowFace.alg);
   // The guide's holds: one corner up, at the front left (feed the fish). None up: a yellow tile on the
@@ -328,7 +341,9 @@ function solveBeginner(start){
     part(`${step.n} ${step.n===1?'corner':'corners'} yellow on top`,`${how} Yellow face: R, U, R', U, R, U2, R'.`,step.r,BEGINNER_ALGS.yellowFace.alg,{alg:'yellowFace',count:step.n});
   }
 
+  }
   // ----- Step 7: the yellow corners -----
+  if(want(7)){
   stage(7,'ycorners','The yellow corners');
   const cornerPlaced=(f,i)=>cornerFacelet[i].slice(1).every(x=>f[x]===f[9*BEG_FACE_OF(x)+4]);
   const AP=parseAlg(BEGINNER_ALGS.yellowCorners.alg);const chant=BEGINNER_ALGS.yellowCorners.say;
@@ -348,7 +363,9 @@ function solveBeginner(start){
     }else part('Two corners across from each other are right',`${lined}Hold the cube any way. Do the chant once: ${chant}. Then two corners next to each other are right, and you do it once more.`,'',[u,...AP],{alg:'yellowCorners'});
   }
 
+  }
   // ----- Step 8: the yellow edges -----
+  if(want(8)){
   stage(8,'yedges','The yellow edges');
   for(let guard=0;guard<4;guard++){
     const f=fl();const done=['UF','UR','UB','UL'].filter(s=>{const [a,b]=edgeFacelet[BEG_EDGE_POS[s]];return f[b]===f[9*BEG_FACE_OF(b)+4];});
@@ -360,6 +377,7 @@ function solveBeginner(start){
     }else part('No side is solved',`Hold the cube any way. Do the algorithm once: ${BEGINNER_ALGS.yellowEdges.say}. Then one side is solved.`,'',BEGINNER_ALGS.yellowEdges.alg,{alg:'yellowEdges'});
   }
 
+  }
   // The flat move list, from the cube as held: z2 where the top changes.
   const moves=[];let o='yellow';
   for(const s of stages)for(const p of s.parts){if(p.up!==o){moves.push('z2');o=p.up;}if(p.pre)moves.push(p.pre);moves.push(...p.moves);}

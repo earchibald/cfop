@@ -179,7 +179,7 @@ function prMountProgress(){
     'Every step goes back to unlearned and the counts go to zero. Your times and scrambles stay.',
     'Reset',prResetProgress);
 }
-document.addEventListener('cw:status',e=>{if(/^(beg-|mini-)/.test(String(e.detail)))prRenderProgress();});
+document.addEventListener('cw:status',e=>{if(/^(beg-|mini-|master-)/.test(String(e.detail)))prRenderProgress();});
 // Another method: its own steps in the picker and the table; a practice cube is built on demand.
 document.addEventListener('cw:method',()=>{practiceState.built=false;practiceState.step=Math.min(begPack().count,practiceState.step);prRenderStepSel();prRenderPanel();prRenderProgress();});
 document.addEventListener('cw:tab',e=>{if(e.detail==='progress')prRenderProgress();});

@@ -34,7 +34,7 @@ const view={yaw:-32,pitch:28,mode:'3d'};
 let displayedCube=new Cube();let fadeSet=null;
 // Animation: a layer turns on the player cube when the player steps one move. On by default in
 // beginner mode, off in CFOP; the Animate chip on the cube (or the A key) changes it, per method.
-var anim={pref:Object.assign({beginner:true,cfop:false,mini:true,speed2:false},store.get('anim',{})),raf:0,move:null,t:0,from:null}; // var: tests read it
+var anim={pref:Object.assign({beginner:true,cfop:false,mini:true,speed2:false,master:true,speed4:false},store.get('anim',{})),raf:0,move:null,t:0,from:null}; // var: tests read it
 function animOn(){return !!anim.pref[method];}
 function setAnim(on){anim.pref[method]=!!on;store.set('anim',anim.pref);if(!on)stopAnim();renderAnimBtn();}
 function renderAnimBtn(){const b=$('#animBtn');if(!b)return;const on=animOn();b.setAttribute('aria-pressed',String(on));b.title=on?'Moves turn on the cube. Press to show each move at once (A).':'Each move shows at once. Press to turn the layer on the cube (A).';}
@@ -101,8 +101,8 @@ function thumb3D(cube){const f=cube.toFacelets();return `<svg viewBox="40 30 320
 // ---------- sequence (scramble) panel ----------
 // drill: a name when the player shows a case drill instead of the current scramble. Tab changes keep a drill.
 var seqState={moves:[],idx:0,shown:-1,label:'scramble',base:new Cube(),drill:null}; // var: tests read it from the window
-function setSequence(moves,label,base,drill){stopAuto();seqState.shown=-1;seqState.moves=Array.isArray(moves)?moves:parseAlg(moves);seqState.label=label||'';seqState.base=base||new Cube();seqState.idx=seqState.moves.length;
-  if(!drill&&seqState.drill){currentLabel=scrLabel;if(/^(ll|f2l|two):/.test(timer.scope))setScope(TAB_SCOPE[curTab]||'solve');}
+function setSequence(moves,label,base,drill){stopAuto();seqState.shown=-1;seqState.moves=Array.isArray(moves)?moves:parseAlg(moves);seqState.label=label||'';seqState.base=base||puzzleCube();seqState.idx=seqState.moves.length;
+  if(!drill&&seqState.drill){currentLabel=scrLabel;if(/^(ll|f2l|two|four):/.test(timer.scope))setScope(TAB_SCOPE[curTab]||'solve');}
   seqState.drill=drill||null;$('#drillNote').classList.toggle('hidden',!drill);$('#drillName').textContent=drill||'';
   renderSequence();applySequence();document.dispatchEvent(new CustomEvent('cw:sequence',{detail:{drill:seqState.drill}}));}
 function cubeAtSeq(i){return applyAlg(seqState.base,seqState.moves.slice(0,i));}
@@ -151,27 +151,32 @@ $('#autoSpeed').onchange=()=>{store.set('autoSpeed',autoMs());if(auto.timer){cle
 var scr={seed:'',moves:[],cube:new Cube()}; // var: tests read it from the window
 let history=store.get('history',[]);
 // The scramble lengths the seed bar offers, per puzzle. A 2×2 mix-up uses R, U and F only.
-const SCR_LENS={3:[20,22,25],2:[9,11,13]};
+const SCR_LENS={3:[20,22,25],2:[9,11,13],4:[30,40,50]};
 function setScrLenOptions(){const sel=$('#scrLen');const lens=SCR_LENS[puzzleN()];if([...sel.options].map(o=>+o.value).join()===lens.join())return;sel.innerHTML=lens.map(n=>`<option${n===lens[1]?' selected':''}>${n}</option>`).join('');}
-function scrambleMoves(seed,n){return puzzleN()===2?twoScramble(seed,n):randomMoveScramble(seed,n);}
+function scrambleMoves(seed,n){return puzzleN()===2?twoScramble(seed,n):puzzleN()===4?fourScramble(seed,n):randomMoveScramble(seed,n);}
 function newScramble(seed){
   seed=seed||randomSeedName();loadScramble(seed,scrambleMoves(seed,+$('#scrLen').value),false);}
 function loadScramble(seed,moves,custom){
   scr.seed=seed;$('#seed').value=custom?'':seed;$('#seed').placeholder=custom?seed:'seed name';
-  scr.moves=Array.isArray(moves)?moves:parseAlg(moves);scr.cube=applyAlg(new Cube(),scr.moves);
+  scr.moves=Array.isArray(moves)?moves:parseAlg(moves);scr.cube=applyAlg(puzzleCube(),scr.moves);
   const ent={seed,len:scr.moves.length,t:Date.now()};if(custom)ent.moves=scr.moves.join(' ');
   history=[ent,...history.filter(h=>h.seed!==seed)].slice(0,30);store.set('history',history);renderHistory();
   showForTab();
   planState.plan=null;$('#planOut').innerHTML='<p class="muted">New scramble. Press Plan.</p>';
-  crossState.revealed=false;refreshCross();
+  crossState.revealed=false;if(puzzleN()===3)refreshCross();
   document.dispatchEvent(new CustomEvent('cw:scramble'));
+}
+// A cube read from a painted 4×4: there is no scramble behind it, the state itself is the mix-up.
+function loadState(name,cube){
+  scr.seed=name;$('#seed').value='';$('#seed').placeholder=name;scr.moves=[];scr.cube=cube;
+  showForTab();document.dispatchEvent(new CustomEvent('cw:scramble'));
 }
 function renderHistory(){$('#history').innerHTML=history.length?'<div class="muted">Recent seeds (click to reload):</div>'+history.map(h=>`<span class="alt" data-s="${esc(h.seed)}"${h.moves?` title="${esc(h.moves)}"`:''}>${esc(h.seed)}</span>`).join(''):'<span class="muted">No history yet.</span>';
   $$('#history .alt').forEach(el=>el.onclick=()=>{const h=history.find(x=>x.seed===el.dataset.s);if(h&&h.moves){loadScramble(h.seed,parseAlg(h.moves),true);return;}$('#seed').value=el.dataset.s;newScramble(el.dataset.s);});}
 // One scramble per puzzle: a 3×3 mix-up is not a 2×2 one. setMethod swaps them when the puzzle changes.
 const puzzleScr={};
-function swapPuzzleScramble(from,to){if(from===to)return;puzzleScr[from]={seed:scr.seed,moves:scr.moves.slice(),custom:!$('#seed').value};
-  const s=puzzleScr[to];if(s)loadScramble(s.seed,s.moves,s.custom);else newScramble();}
+function swapPuzzleScramble(from,to){if(from===to)return;puzzleScr[from]={seed:scr.seed,moves:scr.moves.slice(),custom:!$('#seed').value,cube:scr.cube};
+  const s=puzzleScr[to];if(!s)newScramble();else if(s.moves.length)loadScramble(s.seed,s.moves,s.custom);else loadState(s.seed,s.cube);} // a painted 4×4 has a state and no moves
 $('#newSeed').onclick=()=>newScramble();$('#reScramble').onclick=()=>newScramble($('#seed').value.trim()||undefined);
 $('#seed').addEventListener('keydown',e=>{if(e.key==='Enter')newScramble($('#seed').value.trim()||undefined);});
 $('#histBtn').onclick=()=>$('#history').classList.toggle('hidden');
@@ -194,7 +199,7 @@ function avg(arr,n){if(arr.length<n)return null;const a=arr.slice(-n).map(x=>x.m
 function renderTimes(){const arr=scopeTimes();$('#stLast').textContent=fmt(arr.length?arr[arr.length-1].ms:null);$('#stAo5').textContent=fmt(avg(arr,5));$('#stAo12').textContent=fmt(avg(arr,12));const best=arr.length?Math.min(...arr.map(x=>x.ms)):null;$('#stBest').textContent=fmt(best);$('#stN').textContent=arr.length;
   $('#times').innerHTML=arr.slice(-40).map((x,i)=>`<span class="${x.ms===best?'best':''}" title="${esc(x.label||'')} · ${new Date(x.t).toLocaleString()}">${fmt(x.ms)}</span>`).reverse().join('');$('#timesScope').textContent='Times: '+scopeName();}
 // The timer scope as words: a tab name, or the case name for a case drill.
-function scopeName(){const s=timer.scope;if(s.startsWith('ll:')){const a=LL_ALL.find(x=>x.id===s.slice(3));return a?a.name:s.slice(3);}if(s.startsWith('f2l:'))return 'F2L case #'+s.slice(4);if(s.startsWith('two:')&&typeof twoCaseName==='function')return twoCaseName(s);return {solve:'Solve',cross:'Cross',f2l:'F2L',ll:'OLL · PLL',lab:'Lab',ref:'Reference',two:'2×2 solve'}[s]||s;}
+function scopeName(){const s=timer.scope;if(s.startsWith('ll:')){const a=LL_ALL.find(x=>x.id===s.slice(3));return a?a.name:s.slice(3);}if(s.startsWith('f2l:'))return 'F2L case #'+s.slice(4);if(s.startsWith('two:')&&typeof twoCaseName==='function')return twoCaseName(s);if(s.startsWith('four:')&&typeof fourCaseName==='function')return fourCaseName(s);return {solve:'Solve',cross:'Cross',f2l:'F2L',ll:'OLL · PLL',lab:'Lab',ref:'Reference',two:'2×2 solve',four:'4×4 solve'}[s]||s;}
 function setScope(s){timer.scope=s;renderTimes();}
 function recordTime(ms){const arr=times[timer.scope]||(times[timer.scope]=[]);arr.push({ms,t:Date.now(),label:currentLabel()});store.set('times',times);renderTimes();if(onTimerStop)onTimerStop(ms);}
 let onTimerStop=null;const scrLabel=()=>curTab==='f2l'?'f2l '+scr.seed:scr.seed;let currentLabel=scrLabel;
@@ -261,32 +266,36 @@ const METHODS={
   cfop:{puzzle:'3x3',kind:'speed',name:'CFOP',rail:'rail',tabKey:'tab'},
   mini:{puzzle:'2x2',kind:'beg',name:'Beginner',rail:'brail',tabKey:'minitab'},
   speed2:{puzzle:'2x2',kind:'speed',name:'Speed',rail:'srail',tabKey:'speedtab'},
+  master:{puzzle:'4x4',kind:'beg',name:'Beginner',rail:'brail',tabKey:'mastertab'},
+  speed4:{puzzle:'4x4',kind:'speed',name:'Advanced',rail:'frail',tabKey:'fourtab'},
 };
 let method=METHODS[store.get('method','cfop')]?store.get('method','cfop'):'cfop';
 function methodInfo(m){return METHODS[m||method];}
 function isBeg(){return methodInfo().kind==='beg';}
-function puzzleN(){return methodInfo().puzzle==='2x2'?2:3;}
+function puzzleN(){const p=methodInfo().puzzle;return p==='2x2'?2:p==='4x4'?4:3;}
+// A solved cube of the current puzzle: a Cube for the 3×3 and the 2×2, a FourCube for the 4×4.
+function puzzleCube(){return puzzleN()===4?new FourCube():new Cube();}
 function applyMethodData(){const i=methodInfo();document.body.dataset.method=method;document.body.dataset.kind=i.kind;document.body.dataset.puzzle=i.puzzle;setDrawN(puzzleN());}
 applyMethodData();
 let curTab='solve';
-const TAB_SCOPE={solve:'solve',cross:'cross',f2l:'f2l',ll:'ll',lab:'lab',ref:'ref',learn:'solve',bsolve:'solve',practice:'solve',progress:'solve',cheat:'solve',ssolve:'two',ortega:'two',cll:'two',sref:'two'};
+const TAB_SCOPE={solve:'solve',cross:'cross',f2l:'f2l',ll:'ll',lab:'lab',ref:'ref',learn:'solve',bsolve:'solve',practice:'solve',progress:'solve',cheat:'solve',ssolve:'two',ortega:'two',cll:'two',sref:'two',fsolve:'four',parity:'four',fref:'four'};
 const BEGINNER_TABS=['learn','bsolve','practice','progress','cheat'];
 function railButtons(){return $$('#'+methodInfo().rail+' button');}
 function tabKey(){return (mobileMQ.matches?'m':'')+methodInfo().tabKey;}
-function homeTab(){return isBeg()?'learn':method==='speed2'?'ssolve':mobileMQ.matches?'ref':'solve';}
+function homeTab(){return isBeg()?'learn':method==='speed2'?'ssolve':method==='speed4'?'fsolve':mobileMQ.matches?'ref':'solve';}
 $$('nav.rail button').forEach(b=>b.onclick=()=>{curTab=b.dataset.tab;$$('nav.rail button').forEach(x=>x.classList.toggle('on',x===b));$$('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+curTab));
   document.body.dataset.tab=curTab;$('#mtitle').textContent=b.lastChild.textContent;store.set(tabKey(),curTab);setScope(TAB_SCOPE[curTab]);onEnterTab(curTab);document.dispatchEvent(new CustomEvent('cw:tab',{detail:curTab}));});
 function goTab(name){const b=$(`nav.rail button[data-tab="${name}"]`);if(b)b.click();}
 function onEnterTab(t){if(!seqState.drill)showForTab();else if(t==='f2l'&&f2lState.mode==='live')showF2LState();if(t==='cross')refreshCross();}
-function nextForTab(){({solve:()=>newScramble(),cross:()=>$('#crossNew').click(),f2l:()=>(f2lState.mode==='live'?$('#f2lNew'):$('#f2lRandomCase')).click(),ll:()=>$('#llNext').click(),ssolve:()=>newScramble(),ortega:()=>{const b=$('#twNextOrtega');if(b)b.click();},cll:()=>{const b=$('#twNextCll');if(b)b.click();}}[curTab]||(()=>{}))();}
-function hintForTab(){({cross:()=>$('#crossReveal').click(),f2l:()=>(f2lState.mode==='live'?$('#f2lReveal'):$('#f2lCaseReveal')).click(),ll:()=>$('#llHint').click(),ortega:()=>{const b=$('#twRevealOrtega');if(b)b.click();},cll:()=>{const b=$('#twRevealCll');if(b)b.click();}}[curTab]||(()=>{}))();}
+function nextForTab(){({solve:()=>newScramble(),cross:()=>$('#crossNew').click(),f2l:()=>(f2lState.mode==='live'?$('#f2lNew'):$('#f2lRandomCase')).click(),ll:()=>$('#llNext').click(),ssolve:()=>newScramble(),ortega:()=>{const b=$('#twNextOrtega');if(b)b.click();},cll:()=>{const b=$('#twNextCll');if(b)b.click();},fsolve:()=>newScramble(),parity:()=>{const b=$('#fwNext');if(b)b.click();}}[curTab]||(()=>{}))();}
+function hintForTab(){({cross:()=>$('#crossReveal').click(),f2l:()=>(f2lState.mode==='live'?$('#f2lReveal'):$('#f2lCaseReveal')).click(),ll:()=>$('#llHint').click(),ortega:()=>{const b=$('#twRevealOrtega');if(b)b.click();},cll:()=>{const b=$('#twRevealCll');if(b)b.click();},parity:()=>{const b=$('#fwReveal');if(b)b.click();}}[curTab]||(()=>{}))();}
 $('#autoNext').checked=store.get('autoNext',false);$('#autoNext').onchange=()=>store.set('autoNext',$('#autoNext').checked);
 $('#inspChk').checked=store.get('insp',false);$('#inspChk').onchange=()=>store.set('insp',$('#inspChk').checked);
-onTimerStop=()=>{if($('#autoNext').checked&&(curTab==='solve'||curTab==='cross'||curTab==='f2l'||curTab==='ll'||curTab==='ssolve'))setTimeout(nextForTab,150);};
+onTimerStop=()=>{if($('#autoNext').checked&&(curTab==='solve'||curTab==='cross'||curTab==='f2l'||curTab==='ll'||curTab==='ssolve'||curTab==='fsolve'))setTimeout(nextForTab,150);};
 
 // ---------- cross color / orientation ----------
 const CROSS_ROT={white:'z2',yellow:'',green:"x'",blue:'x',red:'z',orange:"z'"};
-function crossRotation(){if(method==='beginner')return 'z2';if(puzzleN()===2)return '';return CROSS_ROT[$('#crossColor').value]||'';}
+function crossRotation(){if(method==='beginner')return 'z2';if(puzzleN()!==3)return '';return CROSS_ROT[$('#crossColor').value]||'';}
 // Frames. Scrambles are applied white up, green front. To solve with another color down we rotate the
 // cube by r. A face move M after the rotation is the same as solving X = r' S r in the engine frame.
 function rotCube(){return applyAlg(new Cube(),crossRotation());}
