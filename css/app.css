@@ -86,6 +86,12 @@ nav.rail button.on .sec-sq{opacity:1}
 .cubebox svg:active{cursor:grabbing}
 .cubebox svg,.cubebox .draghint{user-select:none;-webkit-user-select:none}
 body.cube-drag,body.cube-drag *{user-select:none!important;-webkit-user-select:none!important;cursor:grabbing}
+/* the Animate chip: on, a layer turns on the cube for each move. Same on-state as the Key button. */
+.cubebox .animbtn{position:absolute;right:8px;bottom:8px;display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 7px;font-size:12px;font-weight:500;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--muted);line-height:1.4}
+.cubebox .animbtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cubebox .animbtn:hover{color:var(--text);border-color:var(--muted)}
+.cubebox .animbtn[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--panel))}
+.cubebox .animbtn[aria-pressed="true"] svg{color:var(--accent-ink)}
 /* a gentle "drag to rotate" hint; app.js hides it after the first drag of the session */
 .cubebox .draghint{position:absolute;left:10px;bottom:8px;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);pointer-events:none;opacity:.85;transition:opacity .4s}
 .cubebox .draghint svg{width:22px;height:15px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;animation:draghint 3s ease-in-out infinite}
@@ -238,6 +244,7 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
   .cubebox svg{max-height:200px}
   .cubebox .viewbtns{top:4px;right:4px}
   .cubebox .draghint{left:6px;bottom:4px;font-size:11px}
+  .cubebox .animbtn{right:4px;bottom:4px;font-size:11px;padding:2px 8px 2px 6px}
   .timer{font-size:36px;padding:6px 0 2px}
   .timerhint{font-size:11px}
   .timerpanel .row{font-size:11px!important;gap:4px 8px}
@@ -301,8 +308,8 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
 .modal-bg.scan-bg{background:rgba(0,0,0,.92)}
 
 /* glossary */
-.gl{border-bottom:1px dotted color-mix(in srgb,currentColor 45%,transparent);cursor:help;border-radius:2px}
-.gl:hover,.gl:focus-visible{color:var(--link);border-bottom-color:var(--link)}
+.gl{text-decoration:underline dotted var(--link);text-decoration-thickness:1.5px;text-underline-offset:3px;cursor:help;border-radius:2px}
+.gl:hover,.gl:focus-visible{color:var(--link);text-decoration-style:solid}
 .gl-back{position:fixed;inset:0;z-index:40}
 .gl-pop{position:fixed;z-index:41;width:max-content;max-width:min(360px,calc(100vw - 24px));background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;box-shadow:var(--shadow);font-size:15px;line-height:1.45}
 .gl-pop:focus{outline:none}
@@ -453,7 +460,22 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
 .ln-box{display:flex;flex-direction:column;gap:8px;align-items:flex-start;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--panel2)}
 .ln-why{font-size:14px;margin:0;padding-top:6px;border-top:1px solid var(--line)}
 .ln-say{font-size:14px}
-.ln-faces{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px 14px;font-size:14px}
+.ln-goals{margin:4px 0 0;padding-left:1.25em;display:flex;flex-direction:column;gap:3px;font-size:15px}
+.ln-act{background:none;border:0;border-radius:3px;padding:0 2px;margin:0 -2px;font:inherit;font-weight:600;color:var(--text);text-decoration:underline var(--accent);text-decoration-thickness:2px;text-underline-offset:3px;cursor:pointer;line-height:inherit}
+.ln-act:hover,.ln-act:focus-visible{background:color-mix(in srgb,var(--accent) 28%,transparent);text-decoration-style:solid}
+.ln-faces{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:15px}
+.ln-faces li{display:flex;align-items:center;gap:14px}
+.ln-faces .ms{gap:5px;font-size:16px;flex-wrap:nowrap;flex:none}
+.ln-mv{cursor:pointer;min-width:40px;line-height:1.3}
+.ln-mv:hover,.ln-mv:focus-visible{border-color:var(--accent)}
+.ln-pic polygon{transition:opacity .35s}
+.ln-pic[data-hl] polygon{opacity:.15}
+.ln-pic[data-hl="center"] polygon.pc-center,.ln-pic[data-hl="edge"] polygon.pc-edge,.ln-pic[data-hl="corner"] polygon.pc-corner{opacity:1;animation:lnglow 2.2s ease-out}
+@keyframes lnglow{0%,55%{stroke:var(--accent);stroke-width:3.2}100%{stroke-width:.6}}
+.ln-front{fill:var(--muted)}
+.ln-front text{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.04em}
+.turn-ring{animation:lnring .45s ease-out}
+@keyframes lnring{from{opacity:0;transform:scale(.92);transform-origin:50% 50%}to{opacity:1}}
 .ln-case{display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px;border-radius:12px;background:var(--panel2)}
 .ln-cpic svg{display:block;width:84px;height:auto}
 .ln-cbody{display:flex;flex-direction:column;gap:2px;font-size:14px}.ln-cbody b{font-size:15px}
@@ -528,9 +550,12 @@ body[data-method="beginner"] #drillNote,body:not([data-method="beginner"]) #begB
 .begbar>span{flex:1;min-width:200px}
 .beg-kicker{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}
 .beg-small{font-size:13px}
-.beg-next{display:flex;flex-wrap:wrap;align-items:center;gap:16px 28px;padding:18px 22px;border-color:color-mix(in srgb,var(--accent) 45%,var(--line));box-shadow:inset 4px 0 0 var(--accent)}
+.beg-next{display:flex;flex-wrap:wrap;align-items:center;gap:16px 28px;padding:20px 24px;border-color:color-mix(in srgb,var(--accent) 70%,var(--line));
+  background:linear-gradient(115deg,color-mix(in srgb,var(--accent) 18%,var(--panel)),var(--panel) 62%);box-shadow:inset 6px 0 0 var(--accent),0 10px 30px color-mix(in srgb,var(--accent) 18%,transparent)}
+.beg-next .beg-kicker{background:var(--accent);color:var(--accent-ink);padding:2px 9px;border-radius:999px;font-weight:600}
 .beg-next-body{flex:999 1 420px;min-width:0;display:flex;flex-direction:column;gap:8px}
-.beg-next-body h2{font-size:26px}
+.beg-next-body h2{font-size:30px;letter-spacing:-.025em}
+.beg-next-body p{font-size:17px}
 .beg-next-body p{margin:0}
 .beg-next .psq i{width:14px;height:14px;border-radius:3px}
 .psq i.cur{outline:2px solid var(--accent);outline-offset:1px}

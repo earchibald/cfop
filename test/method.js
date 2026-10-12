@@ -43,6 +43,15 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.ok(!d.body.dataset.begtimer,'no timer at first');
   const key=(type,k,code)=>d.dispatchEvent(new w.KeyboardEvent(type,{key:k,code:code||k,bubbles:true,cancelable:true}));
   key('keydown',' ','Space');key('keyup',' ','Space');assert.ok(!$('#timer').classList.contains('run'),'space does not start a hidden timer');
+  assert.ok(w.auto.timer,'space plays the moves in beginner mode');key('keydown',' ','Space');key('keyup',' ','Space');assert.ok(!w.auto.timer,'space again pauses');
+  // Animation: on by default in beginner mode, off in CFOP, each method keeps its own setting.
+  assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'true','animation is on in beginner mode');
+  w.seqGo(0);w.seqGo(1);assert.ok(w.anim.move,'one step forward turns the layer');
+  await sleep(600);assert.ok(!w.anim.move,'the turn ends');assert.ok(w.eval('displayedCube').toFacelets().join()===w.cubeAtSeq(1).toFacelets().join(),'the picture lands on the cube after the move');
+  w.seqGo(0);assert.strictEqual(w.anim.move,w.invertAlg([w.seqState.moves[0]]),'one step back turns the layer the other way');
+  w.seqGo(6);assert.ok(!w.anim.move,'a jump does not animate');
+  key('keydown','a');assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'false','A turns animation off');
+  w.seqGo(7);assert.ok(!w.anim.move,'no turn when off');
   $('#progTimer').click();assert.strictEqual(d.body.dataset.begtimer,'1','Time my solves shows the timer');
   $('#timerBack').click();assert.ok(!d.body.dataset.begtimer,'Progress brings the panel back');
   // Status buttons for the steps feed the panel.
@@ -52,10 +61,17 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   // Keys 1 to 5 pick beginner tabs; the keys card says so.
   key('keydown','3');assert.strictEqual(d.body.dataset.tab,'practice','key 3 opens Practice');
   $('#helpBtn').click();assert.ok(/–<span class="kbd">5<\/span>/.test($('#helpBox').innerHTML),'the keys card counts five tabs');
+  assert.ok(!/timer/.test($('#helpBox').textContent)&&/play, pause/.test($('#helpBox').textContent),'no timer row in beginner mode; space plays');
+  assert.ok(/Home/.test($('#helpBox').textContent)&&/five moves/.test($('#helpBox').textContent),'the card lists Home, End and the jump');
   // Each method remembers its tab.
   w.goTab('progress');w.setMethod('cfop');assert.strictEqual(d.body.dataset.tab,'solve','CFOP returns to its tab');
   w.goTab('f2l');w.setMethod('beginner');assert.strictEqual(d.body.dataset.tab,'progress','the beginner method returns to its tab');
   w.setMethod('cfop');assert.strictEqual(d.body.dataset.tab,'f2l');
+  assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'false','animation is off in CFOP by default');
+  assert.ok(/timer/.test(w.helpHTML()),'the CFOP keys card has the timer row');
+  $('#animBtn').click();assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'true','the chip turns it on');
+  w.setMethod('beginner');assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'false','the beginner setting is kept apart');
+  w.setMethod('cfop');assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'true','and so is the CFOP one');$('#animBtn').click();
   assert.ok(!/z2/.test($('#seqLabel').textContent)||$('#crossColor').value==='white','CFOP follows the cross color');
   // Progress counts persist.
   w.begProgress.solved();w.begProgress.practiced(3);

@@ -65,6 +65,13 @@ above. Add a new script with a `<script src>` tag after the one it depends on.
   `cw:scramble`, `cw:status`, `cw:tab` and `cw:method` events on `document`
   for the beginner modules. A tab that owns the player registers
   `tabShow[tab]`.
+- The player's keys read like a media player: arrows step, Shift+arrows jump
+  five, Home and End go to the ends, P plays. Space is the timer in CFOP and
+  play/pause in beginner mode, where there is no timer. `helpHTML()` draws the
+  Keys card for the current method. A one-move step turns the layer on the 3D
+  cube (`showCubeMoved`, `anim` in `app.js`); the Animate chip on the cube and
+  the A key switch it, per method, saved in `cw:anim`. On by default in beginner
+  mode, off in CFOP.
 - One current scramble is shared by all tabs. A tab change never replaces it.
   `setSequence(moves, label, base, drill)` loads the player. Pass a `drill`
   name for anything that does not come from the current scramble, such as a

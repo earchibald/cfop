@@ -81,6 +81,13 @@ w.addEventListener('load',async()=>{try{
   key('keydown',' ','Space');key('keyup',' ','Space');assert.ok($('#askBg'),'Space leaves the dialog open');assert.ok(!$('#timer').classList.contains('run'),'Space does not start the timer');
   key('keydown','Escape');assert.ok(!$('#askBg'),'Escape closes the dialog');
   $('#clearTimes').click();key('keydown','Enter');assert.ok(!$('#askBg'),'Enter closes the dialog');assert.strictEqual($('#stN').textContent,'0','Enter clears the times');
+  // The player's keys: arrows step, Shift jumps five, Home and End go to the ends.
+  const n=w.seqState.moves.length;key('keydown','Home');assert.strictEqual(w.seqState.idx,0,'Home goes to the start');
+  key('keydown','ArrowRight');assert.strictEqual(w.seqState.idx,1,'→ steps forward');
+  d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',shiftKey:true,bubbles:true,cancelable:true}));assert.strictEqual(w.seqState.idx,6,'Shift+→ jumps five');
+  d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowLeft',shiftKey:true,bubbles:true,cancelable:true}));assert.strictEqual(w.seqState.idx,1,'Shift+← jumps back five');
+  key('keydown','End');assert.strictEqual(w.seqState.idx,n,'End goes to the end');key('keydown','ArrowRight');assert.strictEqual(w.seqState.idx,n,'→ stops at the end');
+  assert.ok(!w.anim.move,'CFOP does not animate by default');
   // The "Drag to rotate" hint shows in the 3D view and goes away after the first drag of the session.
   const hint=()=>!$('#dragHint').classList.contains('hidden');const pev=(t,x,y)=>$('#cube').dispatchEvent(new w.MouseEvent(t,{clientX:x,clientY:y,bubbles:true,cancelable:true}));
   assert.ok(hint(),'hint shows at boot');$('#viewNet').click();assert.ok(!hint(),'no hint in the net view');$('#viewTop').click();assert.ok(hint(),'hint returns in the 3D view');

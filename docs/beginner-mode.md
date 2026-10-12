@@ -27,7 +27,8 @@ Built on 2026-10-11 with every recommended option from the canvas.
 | Practice one step, Progress, reset | Done, `js/practice.js`, `test/practice.js` |
 | Glossary entries: daisy, white and yellow cross, Moving Left and Right, FUR, feed the fish, tail lights, the chant | Done, `js/glossary.js` |
 | Beginner home: Up next, "What does your cube look like?", Mix it up with me, the player dress | Done 2026-10-11 (later), `js/beghome.js`, `test/home.js`. Mockups A, B and C on https://claude.ai/artifact/XKxia4KPAybq49UEcUQdZT; A was built |
-| The method moved to the current guide: holds, algorithms, sayings, turn-overs | Done 2026-10-11 (latest). `js/beginner.js`, `test/beginner.js`; the guide, Learn, Practice and the glossary follow |
+| The method moved to the current guide: holds, algorithms, sayings, turn-overs | Done 2026-10-11. `js/beginner.js`, `test/beginner.js`; the guide, Learn, Practice and the glossary follow |
+| Player keys, animation, the basics lesson as actions | Done 2026-10-11 (latest). Media-player keys and a per-method Keys card; a layer turns on the cube for each step, on by default here, off in CFOP, the Animate chip on the cube. Lesson 0: the three kinds of piece and the twelve letters are buttons that light the goal cube (`lnHighlight`, `lnShowTurn`, `turnRing` in `js/draw.js`); a small figure marks the front |
 
 Still open: the Paint net on a phone has tiles of about 26px, smaller than a
 44px touch target, because four faces sit side by side.

@@ -37,7 +37,8 @@ function moveGeom(move){
 // The polygons of the cube picture, far to near. Each is {pts,fill} and a sticker also
 // has {stroke,faded}. Options: yaw, pitch, scale, cx, cy (the center on the page),
 // fade (a Set of facelet indices that keep full color), color(ci,idx) for the sticker
-// fill, body for the plastic between stickers, and move with t (0..1) for a part turn.
+// fill, body for the plastic between stickers, cls(idx) for a class on each sticker, and
+// move with t (0..1) for a part turn.
 //
 // The cube is drawn as slabs: runs of layers along the move axis that move together.
 // Each slab is a convex box, so its front faces never overlap and need no sort. The
@@ -66,13 +67,35 @@ function cubePolys(facelets,opts={}){
         const cubie=[0,1,2].map(t=>g.n[t]+g.r[t]*cu+g.d[t]*cv);const c=cubie[0]*n[0]+cubie[1]*n[1]+cubie[2]*n[2];
         if(c<sl.lo||c>sl.hi)continue; // this cubie is in another slab
         const h=0.44;const pts=[[cu-h,cv-h],[cu+h,cv-h],[cu+h,cv+h],[cu-h,cv+h]].map(([u,v])=>proj(R([0,1,2].map(t=>g.n[t]*1.5+g.r[t]*u+g.d[t]*v))));
-        polys.push({pts,fill:color(facelets[idx],idx),stroke:body,faded:!!(opts.fade&&!opts.fade.has(idx))});
+        const poly={pts,fill:color(facelets[idx],idx),stroke:body,faded:!!(opts.fade&&!opts.fade.has(idx)),idx};
+        if(opts.cls){const c=opts.cls(idx);if(c)poly.cls=c;}
+        polys.push(poly);
       }
     }
   }
   return polys;
 }
-function polysSVG(polys){return polys.map(p=>`<polygon points="${p.pts.map(q=>q.map(v=>v.toFixed(2)).join(',')).join(' ')}" fill="${p.fill}"${p.faded?' opacity="0.22"':''}${p.stroke?` stroke="${p.stroke}" stroke-width="0.6" stroke-linejoin="round"`:''}/>`).join('');}
+function polysSVG(polys){return polys.map(p=>`<polygon${p.cls?` class="${p.cls}"`:''} points="${p.pts.map(q=>q.map(v=>v.toFixed(2)).join(',')).join(' ')}" fill="${p.fill}"${p.faded?' opacity="0.22"':''}${p.stroke?` stroke="${p.stroke}" stroke-width="0.6" stroke-linejoin="round"`:''}/>`).join('');}
+// The kind of piece a facelet belongs to: 'center', 'edge' or 'corner'.
+function pieceKind(idx){const p=idx%9;return p===4?'center':p%2?'edge':'corner';}
+// A ring of three curved arrows just above a face, the way the move turns it: clockwise as
+// you look at that face for a plain move, counterclockwise for a prime. Projected with the
+// same camera as cubePolys (yaw, pitch, scale, cx, cy), so it sits on the face in the picture.
+function turnRing(move,opts={}){
+  const yaw=opts.yaw??-32,pitch=opts.pitch??28;const S=opts.scale||52;const cx=opts.cx??200,cy=opts.cy??185;
+  const g=FACE_GEOM['URFDLB'.indexOf(move[0])];if(!g)return '';
+  const proj=p=>{const q=rot3(p,yaw,pitch);return [cx+q[0]*S,cy-q[1]*S];};
+  const dir=move.endsWith("'")?-1:1,r=0.95,lift=1.66,span=78,N=12;const f=n=>n.toFixed(1);
+  let out='';
+  for(let k=0;k<3;k++){const a0=-90+k*120-dir*span/2;const pts=[];
+    for(let i=0;i<=N;i++){const a=(a0+dir*span*i/N)*Math.PI/180;pts.push(proj([0,1,2].map(t=>g.n[t]*lift+g.r[t]*r*Math.cos(a)+g.d[t]*r*Math.sin(a))));}
+    const [x1,y1]=pts[N-1],[x2,y2]=pts[N];let dx=x2-x1,dy=y2-y1;const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
+    const head=s=>{const c=Math.cos(s),sn=Math.sin(s);return [x2-0.26*S*(dx*c-dy*sn),y2-0.26*S*(dx*sn+dy*c)];};
+    const [hx1,hy1]=head(0.55),[hx2,hy2]=head(-0.55);
+    out+=`<polyline points="${pts.map(p=>f(p[0])+','+f(p[1])).join(' ')}"/><polyline points="${f(hx1)},${f(hy1)} ${f(x2)},${f(y2)} ${f(hx2)},${f(hy2)}"/>`;}
+  // A dark halo under a white stroke: the ring reads on every sticker color, in both themes.
+  return `<g class="turn-ring" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="rgba(0,0,0,.78)" stroke-width="${(0.2*S).toFixed(1)}">${out}</g><g stroke="#fff" stroke-width="${(0.09*S).toFixed(1)}">${out}</g></g>`;
+}
 // The box round the polygons, with a margin, as a viewBox string.
 function polysViewBox(polys,margin=0){const xs=polys.flatMap(p=>p.pts.map(q=>q[0])),ys=polys.flatMap(p=>p.pts.map(q=>q[1]));
   const x0=Math.min(...xs)-margin,y0=Math.min(...ys)-margin,x1=Math.max(...xs)+margin,y1=Math.max(...ys)+margin;return [x0,y0,x1-x0,y1-y0].map(v=>v.toFixed(2)).join(' ');}

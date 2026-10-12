@@ -53,8 +53,9 @@ const BEGINNER_CHUNK_ALGS=Object.values(BEGINNER_ALGS).map(a=>({id:a.id,name:a.n
 const BEGINNER_STEPS=[
   {n:0,id:'basics',name:'Get to know your cube',
    goal:'Know the three kinds of piece, how to hold the cube, and the six moves.',
-   what:'A cube has centers, edges and corners. A center has one color and never moves. An edge has two colors. A corner has three. Every piece has one home, next to the centers of its colors.',
-   how:'Each step says how to hold the cube before its first move: yellow on top for the daisy and the white cross, white on top for the white corners, yellow on top from the middle layer to the end. The face that looks at you is the front. A letter is a quarter turn of that face, clockwise as you look at it. A letter with a mark, such as R\', turns the other way. A 2 means a half turn.',
+   goals:['Learn the three kinds of pieces','How to hold the cube','The six moves'],
+   what:'A cube has three kinds of pieces: centers, edges and corners. There are 6 centers, one for every color, and they never move in relation to each other. An edge has two colors. A corner has three colors.',
+   how:'Every step in the solution tells you how to hold the cube: which side should be the Front (F, toward you) and which side should be Up (U, on top).',
    note:'The centers tell you the color of each face. White is always opposite yellow, green opposite blue, red opposite orange. Keep the same front face for a whole algorithm.'},
   {n:1,id:'daisy',name:'The daisy',
    goal:'Four white edges around the yellow center, like petals.',

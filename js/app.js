@@ -32,13 +32,33 @@ function removeRotations(moves){
 // ---------- SVG cube rendering: js/draw.js ----------
 const view={yaw:-32,pitch:28,mode:'3d'};
 let displayedCube=new Cube();let fadeSet=null;
-function showCube(cube,fade){displayedCube=cube;fadeSet=fade||null;drawMain();}
+// Animation: a layer turns on the player cube when the player steps one move. On by default in
+// beginner mode, off in CFOP; the Animate chip on the cube (or the A key) changes it, per method.
+var anim={pref:Object.assign({beginner:true,cfop:false},store.get('anim',{})),raf:0,move:null,t:0,from:null}; // var: tests read it
+function animOn(){return !!anim.pref[method==='beginner'?'beginner':'cfop'];}
+function setAnim(on){anim.pref[method==='beginner'?'beginner':'cfop']=!!on;store.set('anim',anim.pref);if(!on)stopAnim();renderAnimBtn();}
+function renderAnimBtn(){const b=$('#animBtn');if(!b)return;const on=animOn();b.setAttribute('aria-pressed',String(on));b.title=on?'Moves turn on the cube. Press to show each move at once (A).':'Each move shows at once. Press to turn the layer on the cube (A).';}
+function stopAnim(){if(anim.raf){cancelAnimationFrame(anim.raf);anim.raf=0;}anim.move=null;}
+function reducedMotion(){try{return matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){return false;}}
+function showCube(cube,fade){stopAnim();displayedCube=cube;fadeSet=fade||null;drawMain();}
+// Show `cube` by turning `move` on `from` first. The picture ends on `cube`, as showCube would.
+function showCubeMoved(from,move,cube,fade){
+  displayedCube=cube;fadeSet=fade||null;
+  if(!animOn()||view.mode!=='3d'||reducedMotion()||typeof requestAnimationFrame!=='function'){stopAnim();drawMain();return;}
+  stopAnim();const half=move.endsWith('2');let dur=half?420:300;if(auto.timer)dur=Math.min(dur,autoMs()*0.7);
+  anim.from=from;anim.move=move;anim.t=0;const t0=performance.now();
+  const step=()=>{const x=Math.min(1,(performance.now()-t0)/dur);anim.t=x<1?0.5-0.5*Math.cos(Math.PI*x):1; // ease in and out
+    if(x>=1){anim.raf=0;anim.move=null;drawMain();return;}
+    drawMain();anim.raf=requestAnimationFrame(step);};
+  anim.raf=requestAnimationFrame(step);
+}
 // The "Drag to rotate" hint shows in the 3D view until the first drag of the session.
 let dragHintDone=false;
-function drawDragHint(){const h=$('#dragHint');if(h)h.classList.toggle('hidden',dragHintDone||view.mode!=='3d');}
+function drawDragHint(){const h=$('#dragHint');if(h)h.classList.toggle('hidden',dragHintDone||view.mode!=='3d');const a=$('#animBtn');if(a)a.classList.toggle('hidden',view.mode!=='3d');}
 function drawMain(){
   const f=displayedCube.toFacelets();const svg=$('#cube');
   if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');svg.innerHTML=renderNet(f,{fade:fadeSet});}
+  else if(anim.move&&anim.t<1){svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(anim.from.toFacelets(),{yaw:view.yaw,pitch:view.pitch,fade:fadeSet,move:anim.move,t:Math.max(anim.t,0.01)});}
   else{svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(f,{yaw:view.yaw,pitch:view.pitch,fade:fadeSet});}
   drawDragHint();
 }
@@ -80,13 +100,18 @@ function thumb3D(cube){const f=cube.toFacelets();return `<svg viewBox="40 30 320
 
 // ---------- sequence (scramble) panel ----------
 // drill: a name when the player shows a case drill instead of the current scramble. Tab changes keep a drill.
-var seqState={moves:[],idx:0,label:'scramble',base:new Cube(),drill:null}; // var: tests read it from the window
-function setSequence(moves,label,base,drill){stopAuto();seqState.moves=Array.isArray(moves)?moves:parseAlg(moves);seqState.label=label||'';seqState.base=base||new Cube();seqState.idx=seqState.moves.length;
+var seqState={moves:[],idx:0,shown:-1,label:'scramble',base:new Cube(),drill:null}; // var: tests read it from the window
+function setSequence(moves,label,base,drill){stopAuto();seqState.shown=-1;seqState.moves=Array.isArray(moves)?moves:parseAlg(moves);seqState.label=label||'';seqState.base=base||new Cube();seqState.idx=seqState.moves.length;
   if(!drill&&seqState.drill){currentLabel=scrLabel;if(/^(ll|f2l):/.test(timer.scope))setScope(TAB_SCOPE[curTab]||'solve');}
   seqState.drill=drill||null;$('#drillNote').classList.toggle('hidden',!drill);$('#drillName').textContent=drill||'';
   renderSequence();applySequence();document.dispatchEvent(new CustomEvent('cw:sequence',{detail:{drill:seqState.drill}}));}
 function cubeAtSeq(i){return applyAlg(seqState.base,seqState.moves.slice(0,i));}
-function applySequence(){showCube(cubeAtSeq(seqState.idx));$('#scrub').max=seqState.moves.length;$('#scrub').value=seqState.idx;$('#scrubPos').textContent=seqState.idx+' / '+seqState.moves.length;$$('#scramble .m').forEach((el,i)=>{el.classList.toggle('done',i<seqState.idx);el.classList.toggle('cur',i===seqState.idx-1);});}
+// seqState.shown is the index the picture showed last. One step away from it turns the layer.
+function applySequence(){const i=seqState.idx,was=seqState.shown;seqState.shown=i;
+  if(was===i-1&&i>0)showCubeMoved(cubeAtSeq(i-1),seqState.moves[i-1],cubeAtSeq(i));
+  else if(was===i+1&&i<seqState.moves.length)showCubeMoved(cubeAtSeq(i+1),invertAlg([seqState.moves[i]]),cubeAtSeq(i));
+  else showCube(cubeAtSeq(i));
+  $('#scrub').max=seqState.moves.length;$('#scrub').value=seqState.idx;$('#scrubPos').textContent=seqState.idx+' / '+seqState.moves.length;$$('#scramble .m').forEach((el,i)=>{el.classList.toggle('done',i<seqState.idx);el.classList.toggle('cur',i===seqState.idx-1);});}
 // In beginner mode every tile carries a caption in words (beghome.js: moveCaption), wrapped so the
 // tile itself keeps its text and its classes.
 function renderSequence(){$('#seqLabel').textContent=seqState.label||'';const cap=method==='beginner'&&typeof moveCaption==='function';
@@ -105,8 +130,10 @@ const tabShow={};
 function showForTab(){if(tabShow[curTab])tabShow[curTab]();else if(curTab==='f2l'&&f2lState.mode==='live')showF2LState();else showScr();}
 $('#showScramble').onclick=()=>{if(method==='beginner'&&typeof showBegLetters==='function'&&!tabShow[curTab])showBegLetters();else showForTab();focusPlayer();};
 $('#drillBack').onclick=()=>showForTab();
-$('#scrubStart').onclick=()=>{stopAuto();seqState.idx=0;applySequence();};$('#scrubEnd').onclick=()=>{stopAuto();seqState.idx=seqState.moves.length;applySequence();};
-$('#scrubPrev').onclick=()=>{stopAuto();seqState.idx=Math.max(0,seqState.idx-1);applySequence();};$('#scrubNext').onclick=()=>{stopAuto();seqState.idx=Math.min(seqState.moves.length,seqState.idx+1);applySequence();};
+function seqGo(i){stopAuto();seqState.idx=Math.max(0,Math.min(seqState.moves.length,i));applySequence();}
+$('#scrubStart').onclick=()=>seqGo(0);$('#scrubEnd').onclick=()=>seqGo(seqState.moves.length);
+$('#scrubPrev').onclick=()=>seqGo(seqState.idx-1);$('#scrubNext').onclick=()=>seqGo(seqState.idx+1);
+$('#animBtn').onclick=()=>setAnim(!animOn());
 // ---------- auto-step ----------
 var auto={timer:0};
 function autoMs(){return +$('#autoSpeed').value||1000;}
@@ -178,14 +205,20 @@ function timerRelease(){
   if(timer.state==='idle'){if($('#inspChk').checked){timer.state='inspecting';timer.inspT0=performance.now();tEl.className='timer insp';timerTick();return;}stopAuto();timer.state='running';timer.t0=performance.now();tEl.className='timer run';timerTick();return;}
   if(timer.state==='inspecting'){cancelAnimationFrame(timer.raf);stopAuto();timer.state='running';timer.t0=performance.now();tEl.className='timer run';timerTick();}
 }
+// The player's keys read like a media player: arrows step, Shift jumps five, Home and End go to
+// the ends, P plays. Space is the timer; without a timer (beginner mode) Space plays and pauses.
 document.addEventListener('keydown',e=>{const tag=document.activeElement.tagName;if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
-  if(e.code==='Space'){e.preventDefault();if(e.repeat)return;timerPress();return;}
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  if(e.code==='Space'){e.preventDefault();if(e.repeat)return;if(timerHidden())toggleAuto();else timerPress();return;}
   if(timer.state==='running')return;
   if(e.key>='1'&&e.key<='6'){const b=railButtons()[+e.key-1];if(b)b.click();}
-  if(e.key==='ArrowLeft'){$('#scrubPrev').click();}if(e.key==='ArrowRight'){$('#scrubNext').click();}
-  if(e.key==='p'||e.key==='P'){toggleAuto();}if(e.key==='n'||e.key==='N'){nextForTab();}if(e.key==='h'||e.key==='H'){hintForTab();}
+  const jump=e.shiftKey?5:1;
+  if(e.key==='ArrowLeft'){e.preventDefault();seqGo(seqState.idx-jump);}if(e.key==='ArrowRight'){e.preventDefault();seqGo(seqState.idx+jump);}
+  if(e.key==='Home'){e.preventDefault();seqGo(0);}if(e.key==='End'){e.preventDefault();seqGo(seqState.moves.length);}
+  if(e.key==='p'||e.key==='P'){toggleAuto();}if(e.key==='a'||e.key==='A'){setAnim(!animOn());}
+  if(e.key==='n'||e.key==='N'){nextForTab();}if(e.key==='h'||e.key==='H'){hintForTab();}
 });
-document.addEventListener('keyup',e=>{if(e.code==='Space'){const tag=document.activeElement.tagName;if(tag==='INPUT'||tag==='TEXTAREA')return;e.preventDefault();timerRelease();}});
+document.addEventListener('keyup',e=>{if(e.code==='Space'){const tag=document.activeElement.tagName;if(tag==='INPUT'||tag==='TEXTAREA')return;e.preventDefault();if(!timerHidden())timerRelease();}});
 tEl.addEventListener('pointerdown',e=>{e.preventDefault();timerPress();});tEl.addEventListener('pointerup',e=>{e.preventDefault();timerRelease();});
 $('#delLast').onclick=()=>{const arr=scopeTimes();arr.pop();store.set('times',times);renderTimes();};
 // A themed yes/no dialog in place of the browser confirm box. Enter confirms, Escape cancels.
@@ -541,13 +574,19 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();});
 // ---------- misc ----------
 $('#themeBtn').onclick=()=>{const r=document.documentElement;const cur=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');r.dataset.theme=cur==='dark'?'light':'dark';store.set('theme',r.dataset.theme);};
 (()=>{const t=store.get('theme',null);if(t)document.documentElement.dataset.theme=t;})();
-$('#helpBtn').onclick=()=>{const b=$('#helpBox');b.classList.toggle('hidden');
-  b.innerHTML=`<h3>Keys</h3><table><tr><td><span class="kbd">space</span></td><td>hold, release to start · press to stop</td></tr><tr><td><span class="kbd">1</span>–<span class="kbd">${railButtons().length}</span></td><td>switch tab</td></tr><tr><td><span class="kbd">N</span></td><td>next scramble / case</td></tr><tr><td><span class="kbd">H</span></td><td>reveal the answer</td></tr><tr><td><span class="kbd">←</span> <span class="kbd">→</span></td><td>step through the player</td></tr><tr><td>drag cube</td><td>orbit the view</td></tr></table><p class="muted" style="margin-top:8px;font-size:13px">Times, case statuses and seed history are saved in this browser.</p>`;};
+// The keys card. Beginner mode has no timer, so Space plays there and the timer row is left out.
+function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHidden();
+  const rows=[[k('←')+' '+k('→'),'one move back or forward'],[k('⇧')+' + arrows','five moves at a time'],[k('Home')+' '+k('End'),'the start, the end'],
+    [k('space'),beg?'play, pause':'timer: hold, release to start · press to stop'],[k('P'),'play, pause'],[k('A'),'animation on or off'],
+    [k('1')+'–'+k(String(railButtons().length)),'switch tab'],...(beg?[]:[[k('N'),'next scramble / case'],[k('H'),'reveal the answer']]),['drag cube','orbit the view']];
+  return `<h3>Keys</h3><table>${rows.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table><p class="muted" style="margin-top:8px;font-size:13px">${beg?'Your progress and seed history are':'Times, case statuses and seed history are'} saved in this browser.</p>`;}
+$('#helpBtn').onclick=()=>{const b=$('#helpBox');b.classList.toggle('hidden');b.innerHTML=helpHTML();};
+document.addEventListener('cw:method',()=>{renderAnimBtn();const b=$('#helpBox');if(b&&!b.classList.contains('hidden'))b.innerHTML=helpHTML();});
 $('#scrLen').onchange=()=>newScramble($('#seed').value||undefined);
 $('#planRef').checked=store.get('planRef',false);$('#planRef').onchange=()=>{store.set('planRef',$('#planRef').checked);if(planState.plan)$('#planBtn').click();};
 $('#f2lPairs').onchange=()=>{if(f2lState.mode==='live')showF2LState();};
 // boot
 $('#crossColor').value=store.get('crossColor','white');
 document.body.dataset.tab=curTab;$('#mtitle').textContent='Solve';
-renderTimes();renderHistory();newScramble();applyMobile();setTimeout(()=>{buildCrossTable();tablesReady=true;if(curTab==='cross')refreshCross();},300);
+renderTimes();renderHistory();renderAnimBtn();newScramble();applyMobile();setTimeout(()=>{buildCrossTable();tablesReady=true;if(curTab==='cross')refreshCross();},300);
 

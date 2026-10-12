@@ -74,6 +74,20 @@ w.addEventListener('load',async()=>{try{
   // Mark finished on the basics: the next step moves on.
   click(cont());assert.strictEqual($('#tab-learn h2').textContent,'Get to know your cube','Continue opens the basics');
   assert.ok($('#tab-learn button[data-ln="moves"]'),'the basics show the six moves');
+  assert.strictEqual($('#tab-learn button[data-ln="moves"]').textContent,'Show the six moves on the cube at the top of the page');
+  assert.deepStrictEqual($$('#tab-learn .ln-goals li').map(e=>e.textContent),['Learn the three kinds of pieces','How to hold the cube','The six moves'],'the goal is a list');
+  assert.deepStrictEqual($$('#tab-learn .ln-act').map(e=>e.textContent),['centers','edges','corners'],'the three kinds of piece are actions');
+  assert.ok(/Every step in the solution tells you how to hold the cube/.test($('#tab-learn .ln-text').textContent),'the How text is the short one');
+  assert.ok($('#lnGoalSvg .ln-front'),'the goal picture marks the front');
+  assert.strictEqual($$('#lnGoalSvg polygon.pc-center').length,3,'three centers in view carry their kind');
+  click($('#tab-learn .ln-act[data-kind="edge"]'));assert.strictEqual($('#tab-learn .ln-pic').dataset.hl,'edge','tapping edges lights the edges');
+  assert.strictEqual($$('#tab-learn .ln-mv').length,12,'twelve move tiles, a letter and its mark');
+  assert.deepStrictEqual($$('#tab-learn .ln-faces li').map(li=>[...li.querySelectorAll('.ln-mv')].map(b=>b.textContent).join(' ')),['U U\'','D D\'','F F\'','B B\'','R R\'','L L\''],'one row per face');
+  click($('#tab-learn .ln-mv[data-m="U\'"]'));assert.ok($('#lnGoalSvg .turn-ring'),'a letter shows the ring of arrows');
+  assert.ok(!$('#tab-learn .ln-pic').dataset.hl,'the piece highlight ends when a turn shows');
+  assert.ok(/counterclockwise/.test($('#lnGoalCap').textContent),'the caption says which way');
+  click($('#tab-learn .ln-mv[data-m="L"]'));assert.ok(/Seen from the left/.test($('#lnGoalCap').textContent),'a hidden face turns the view');
+  w.lnRestoreGoal();assert.ok(!$('#lnGoalSvg .turn-ring')&&$('#lnGoalSvg .ln-front'),'the picture returns');
   click($('#lnMark'));assert.strictEqual(w.begProgress.status(0),'finished','Mark finished sets the status');
   assert.strictEqual($('#tab-learn .stbtn').textContent,'finished','the lesson button follows');
   click($('#tab-learn button[data-ln="list"]'));nx=w.begProgress.next();
