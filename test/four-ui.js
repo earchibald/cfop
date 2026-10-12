@@ -28,7 +28,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.ok(w.scr.cube.isFour,'the scramble state is a 4×4');
   assert.strictEqual($('#progSq').children.length,10,'ten progress squares');
   assert.strictEqual($$('#tab-learn .bstep').length,11,'Basics plus ten steps in Learn');assert.ok(/the ten steps/.test($('#tab-learn').textContent));
-  assert.ok($$('#begAsk .face.f4').length===2,'4×4 face thumbs');assert.ok(!$('#begAsk [data-beg="scan"]'));
+  assert.ok($$('#begAsk .face.f4').length===2,'4×4 face thumbs');assert.ok($('#begAsk [data-beg="scan"]'),'the 4×4 home offers the camera');
   click($('#begAsk [data-beg="letters"]'));w.seqGo(w.seqState.moves.length);assert.strictEqual(stickers(),48,'a 4×4 shows 48 stickers');
   assert.ok($$('#scramble .mt small').some(el=>/2 layers|inside/.test(el.textContent)),'captions name the two-layer and inside turns');
   // the mix-up walkthrough names a wide turn

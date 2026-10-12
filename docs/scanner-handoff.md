@@ -81,6 +81,37 @@ Each stage must be testable on its own with synthetic frames.
   white/yellow, as whole-face swaps.
 - Report what was changed on the status line. Then call `scrambleFromCube`.
 
+## The 2x2 and the 4x4
+
+The scanner reads all three sizes. The face size `n` (2, 3 or 4) runs
+through every stage: `readFace(img, {n})`, `makeVoter({n})`, and the net.
+`openScan()` takes it from `puzzleN()`; `openScan({n})` sets it directly.
+
+| Stage | 3x3 | 2x2 and 4x4 |
+|---|---|---|
+| 1 Blobs | A sticker is at most 3/4 of the frame over 9 cells | The same, over 4 or 16 cells. The 4x4 works on a 480 px frame (`scanWidth`), as its tiles are small. |
+| 2 Lattice | 6 of 9 cells on a blob | 3 of 4, or 8 of 16. Three blobs fix a 2x2 lattice exactly, so the fit must also be square, at sticker spacing, with the fourth cell on a lit sticker. |
+| 3 Colors | The center is read in a ring (a logo) | Every cell the same way |
+| 4 Vote | The center color names the face | No fixed centers. A face is named by a number in the order read. A reading belongs to the face in view when most cells agree (3 of 4, 12 of 16), to a face read before when every cell agrees (a retake), else it starts a new face. A seventh face can sit beside a misread one until stage 5 drops the one that fits nowhere. |
+| 5 Assemble | `assembleScan`: each face at its center's side, four turns each | `assembleFree`: the first reading is held on top; the other five go to R F D L B in some order at some turn, pruned by the pieces (every corner a real one, once; every edge pair a real one, twice on the 4x4; each color n*n times; the twists add up). The result is turned to put the most white on top. |
+
+Without centers, more than one cube can fit the same six faces: about one
+2x2 state in fourteen. `assembleFree` returns every distinct fit (the same
+cube held another way is one fit), the dialog shows the first, and a "Next
+fit" button steps through the rest so the user can match the net to the
+cube in hand. The 4x4 showed no such case in 120 random states.
+
+Stage 5 for the 4x4 gives the 96 stickers (`facelets`, index
+`16*face + 4*row + column`) and, when `js/four.js` is loaded, a `FourCube`
+from `fourFromFacelets`. "Use this cube" hands it to `scrambleFromCube`, which
+loads the state itself: there is no 4x4 scramble finder. The status says
+"cannot load a 4x4 yet" only when `js/four.js` is not loaded.
+
+Pieces for any size come from `scanSize(n)` in `js/scan-assemble.js`: each
+sticker has a place in space, stickers at one spot make a piece, and the 24
+ways to hold the cube are sticker permutations. At n=3 it reproduces the
+engine's corner and edge tables, which `test/scan-assemble.js` checks.
+
 ## UI
 
 - A "Scan cube" button in the top bar beside "Enter a scramble".
@@ -102,6 +133,12 @@ Each stage must be testable on its own with synthetic frames.
   of trials.
 - `test/scan-assemble.js`: take a random `Cube`, split its facelets into six
   faces, rotate each face randomly, and check that stage 5 recovers the cube.
+  The same for random 2x2 and 4x4 states held any way, where the cube must be
+  among the fits.
+- `test/scan-vote.js`: the voter on hand-made readings, then six synthetic
+  faces end to end for each size and style.
+- `test/scan-ui.js`: the dialog in jsdom for each puzzle; a scanned 2x2 goes
+  through "Use this cube" to a scramble that gives the same cube.
 - Keep `npm test` green.
 
 ## Files to create

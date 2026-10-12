@@ -79,7 +79,7 @@ top-layer states exactly once; the probability weights match the state counts.
 | 1 | Where the puzzle lives | In the method chip: two groups of two cards. `method` is `beginner`, `cfop`, `mini` or `speed2`; `METHODS` maps each to a puzzle, a kind (`beg` or `speed`), a rail and a tab key. `body[data-kind]` drives the beginner CSS, `body[data-puzzle]` the puzzle-only text. |
 | 2 | One scramble or one per puzzle | One per puzzle, swapped by the chip. |
 | 3 | The 2×2 frame | No centers, so the user's hold is the frame: the picture shows the top face on top. The guide's first instruction is a hold. A painted cube keeps its stickers; the scramble behind it is face moves. |
-| 4 | Scanner | 3×3 only. The 2×2 home offers Paint as the primary way in. |
+| 4 | Scanner | Reads the 2×2 too (`scan:true` in the pack). A 2×2 has no centers, so the six faces are placed by their corner pieces once all are read; about one state in fourteen fits more than one cube, and the dialog then offers Next fit. See `docs/scanner-handoff.md`. |
 | 5 | The Lab | 3×3 only; 2×2 case windows have no Lab button. |
 
 Open: EG-1 and EG-2 (86 more cases) are described in the Reference but not trained. The CLL

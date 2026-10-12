@@ -48,7 +48,7 @@ const BEG_PACKS={
   mini:{
     id:'mini',steps:MINI_STEPS,algs:MINI_ALGS,solve:solveMini,chunks:miniChunks,count:5,word:'five',prefix:'mini-',prog:'miniProg',
     // The 2×2 has no centers: the solver reads the cube as it is, white up, and holds it itself.
-    held:()=>scr.cube,heldMoves:[],startUp:'white',scan:false,
+    held:()=>scr.cube,heldMoves:[],startUp:'white',scan:true,
     holdText:'White on top, green facing you, like the picture. A 2×2 has no centers, so the app follows the corners.',
     basics:'About three minutes. Two layers, eight corners, how to hold the cube, and the six turns. No cube needed yet.',
     short:['First corners','Third corner','Fourth corner','Yellow face','Yellow corners'],
@@ -76,7 +76,7 @@ const BEG_PACKS={
     id:'master',steps:MASTER_STEPS,algs:MASTER_ALGS,solve:solveMaster,chunks:masterChunks,count:10,word:'ten',prefix:'master-',prog:'masterProg',
     // The 4×4 has no fixed centers: the solver reads the cube as it is and holds it itself. Every
     // turn of the whole cube is a part's own `pre`; `up` never changes.
-    held:()=>scr.cube,heldMoves:[],startUp:'white',scan:false,
+    held:()=>scr.cube,heldMoves:[],startUp:'white',scan:true,
     holdText:'White on top, green facing you, like the picture. A 4×4 has no fixed centers, so the app builds them where the corners say they belong.',
     basics:'About five minutes. The pieces, the color layout, face turns and slice turns. No cube needed yet.',
     short:['Centers','Edges','Daisy','White cross','White corners','Middle layer','Yellow cross','Yellow face','Yellow corners','Yellow edges'],
