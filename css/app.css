@@ -473,7 +473,8 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
 .ln-pic[data-hl="center"] polygon.pc-center,.ln-pic[data-hl="edge"] polygon.pc-edge,.ln-pic[data-hl="corner"] polygon.pc-corner{opacity:1;animation:lnglow 2.2s ease-out}
 @keyframes lnglow{0%,55%{stroke:var(--accent);stroke-width:3.2}100%{stroke-width:.6}}
 .ln-front{fill:var(--muted)}
-.ln-front text{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.04em}
+.ln-front line{stroke:var(--muted);stroke-width:1.4;stroke-dasharray:3 4;stroke-linecap:round}
+.ln-front text{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.04em}
 .turn-ring{animation:lnring .45s ease-out}
 @keyframes lnring{from{opacity:0;transform:scale(.92);transform-origin:50% 50%}to{opacity:1}}
 .ln-case{display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px;border-radius:12px;background:var(--panel2)}

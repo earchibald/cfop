@@ -86,7 +86,13 @@ w.addEventListener('load',async()=>{try{
   click($('#tab-learn .ln-mv[data-m="U\'"]'));assert.ok($('#lnGoalSvg .turn-ring'),'a letter shows the ring of arrows');
   assert.ok(!$('#tab-learn .ln-pic').dataset.hl,'the piece highlight ends when a turn shows');
   assert.ok(/counterclockwise/.test($('#lnGoalCap').textContent),'the caption says which way');
-  click($('#tab-learn .ln-mv[data-m="L"]'));assert.ok(/Seen from the left/.test($('#lnGoalCap').textContent),'a hidden face turns the view');
+  assert.strictEqual($$('#lnGoalSvg polygon[class]:not([opacity])').length,15,'the whole top layer stays bright: nine on top, three each on the front and right');
+  click($('#tab-learn .ln-mv[data-m="L"]'));assert.ok(/hidden here/.test($('#lnGoalCap').textContent),'a hidden face says so');
+  assert.ok($('#lnGoalSvg .turn-ring')&&$$('#lnGoalSvg polygon.pc-center').length===3,'the cube keeps its view and a ring still shows');
+  assert.strictEqual($$('#lnGoalSvg polygon[class]:not([opacity])').length,6,'the left layer stays bright: three on the front, three on top');
+  const lx=Math.max(...$('#lnGoalSvg .turn-ring polyline').getAttribute('points').split(' ').map(q=>+q.split(',')[0]));
+  const cx=Math.min(...$$('#lnGoalSvg polygon').flatMap(p=>p.getAttribute('points').split(' ').map(q=>+q.split(',')[0])));
+  assert.ok(lx<cx,'the ring for L floats left of the cube');
   w.lnRestoreGoal();assert.ok(!$('#lnGoalSvg .turn-ring')&&$('#lnGoalSvg .ln-front'),'the picture returns');
   click($('#lnMark'));assert.strictEqual(w.begProgress.status(0),'finished','Mark finished sets the status');
   assert.strictEqual($('#tab-learn .stbtn').textContent,'finished','the lesson button follows');

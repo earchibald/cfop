@@ -46,30 +46,38 @@ function lnPic(cube,below){const f=cube.toFacelets();
   return `<svg viewBox="40 30 320 300" aria-hidden="true">${renderCube3D(f,{yaw:-32,pitch:below?-34:28,...LN_PIC})}</svg>`;}
 const LN_GOAL_BELOW={2:true,4:true}; // the white face is below: look from below. Step 3 holds it on top.
 // The goal picture: every sticker carries its kind of piece, and a small figure stands in front
-// of the front face, so the front is clear when the front and the right are both in view.
+// of the cube at the end of a dashed line from the front face, so the front is clear when the
+// front and the right are both in view. Lesson 0 leaves room round the cube for the rings.
 function lnGoalView(n){return {yaw:-32,pitch:LN_GOAL_BELOW[n]?-34:28};}
+function lnGoalBox(n){return n===0?'20 0 340 360':'40 30 320 300';}
 function lnGoalSVG(n,v,fade){v=v||lnGoalView(n);const f=lnGoals()[n].toFacelets();
   return renderCube3D(f,{...v,...LN_PIC,fade,cls:i=>'pc-'+pieceKind(i)})+(fade?'':lnFrontMark(v));}
 function lnFrontMark(v){
   const proj=p=>{const q=rot3(p,v.yaw,v.pitch);return [LN_PIC.cx+q[0]*LN_PIC.scale,LN_PIC.cy-q[1]*LN_PIC.scale];};
-  const [x,y]=proj([0,-1.05,2.75]);const f=n=>n.toFixed(1);
-  return `<g class="ln-front" aria-hidden="true"><circle cx="${f(x)}" cy="${f(y-10)}" r="6"/><path d="M${f(x-10)} ${f(y+9)}a10 10 0 0 1 20 0z"/><text x="${f(x)}" y="${f(y+24)}" text-anchor="middle">front</text></g>`;}
+  const [x,y]=proj([0,0,5.3]),[ax,ay]=proj([0,0,1.7]),[bx,by]=proj([0,0,4.3]);const f=n=>n.toFixed(1);
+  return `<g class="ln-front" aria-hidden="true"><line x1="${f(ax)}" y1="${f(ay)}" x2="${f(bx)}" y2="${f(by)}"/><circle cx="${f(x)}" cy="${f(y-13)}" r="8"/><path d="M${f(x-14)} ${f(y+12)}a14 14 0 0 1 28 0z"/><text x="${f(x)}" y="${f(y+27)}" text-anchor="middle">front</text></g>`;}
 function lnGoalCap(n){return LN_GOAL_BELOW[n]?'Seen from below: the white face.':n===0?'The small figure is you. The face it looks at is the front.':'';}
 // Tap a kind of piece in the lesson text: those pieces stay bright, the rest dim for a moment.
 function lnHighlight(kind){const pic=$('#tab-learn .ln-pic');if(!pic)return;lnRestoreGoal();
   delete pic.dataset.hl;void pic.offsetWidth;pic.dataset.hl=kind;
   clearTimeout(lnView.hlT);lnView.hlT=setTimeout(()=>{delete pic.dataset.hl;},2200);}
-// Tap a letter: that face stays bright with a ring of arrows the way it turns. A face the picture
-// hides is shown from the left, from behind or from below, with a caption, then the view returns.
-const LN_FACE_VIEW={L:{yaw:32,pitch:28,cap:'Seen from the left.'},B:{yaw:-148,pitch:28,cap:'Seen from behind.'},D:{yaw:-32,pitch:-34,cap:'Seen from below.'}};
+// Tap a letter: the cube keeps its view. The layer that moves stays bright, the rest dims, and a
+// ring of arrows shows the turn. On the top, front and right the ring sits on the face. The left,
+// bottom and back are hidden, so their ring floats beside the cube in the plane of that face:
+// to the left, below, and standing behind the top edge.
+const LN_RING_AT={L:{at:[-3.4,0,0],r:1.15},D:{at:[0,-3.3,0]},B:{at:[0,2.35,-1.66]}};
 const LN_FACE_NAME={U:'top',D:'bottom',F:'front',B:'back',R:'right',L:'left'};
-function lnTurnText(m){return `${m}: the ${LN_FACE_NAME[m[0]]} face turns ${m.endsWith("'")?'counterclockwise':'clockwise'}, as you look at it.`;}
+function lnTurnText(m){return `${m}: the ${LN_FACE_NAME[m[0]]} face turns ${m.endsWith("'")?'counterclockwise':'clockwise'}, as you look at it.`+(LN_RING_AT[m[0]]?' That face is hidden here. The ring floats next to it.':'');}
+// The stickers of the cubies in the layer a face move turns.
+function lnLayer(face){const g=FACE_GEOM['URFDLB'.indexOf(face)];const s=new Set();
+  for(let f=0;f<6;f++){const h=FACE_GEOM[f];for(let i=0;i<3;i++)for(let j=0;j<3;j++){
+    const c=[0,1,2].map(t=>h.n[t]+h.r[t]*(j-1)+h.d[t]*(i-1));if(c[0]*g.n[0]+c[1]*g.n[1]+c[2]*g.n[2]===1)s.add(9*f+3*i+j);}}
+  return s;}
 function lnShowTurn(m){
   const svg=$('#lnGoalSvg'),cap=$('#lnGoalCap'),pic=$('#tab-learn .ln-pic');if(!svg||!LN_FACE_NAME[m[0]])return;
-  const n=lnView.n;const v=LN_FACE_VIEW[m[0]]||{...lnGoalView(n),cap:''};
-  const fi='URFDLB'.indexOf(m[0]);const fade=new Set();for(let k=0;k<9;k++)fade.add(9*fi+k);
-  delete pic.dataset.hl;svg.innerHTML=lnGoalSVG(n,v,fade)+turnRing(m,{...v,...LN_PIC});pic.dataset.turn=m;
-  if(cap)cap.textContent=(v.cap?v.cap+' ':'')+lnTurnText(m);
+  const n=lnView.n,v=lnGoalView(n);
+  delete pic.dataset.hl;svg.innerHTML=lnGoalSVG(n,v,lnLayer(m[0]))+turnRing(m,{...v,...LN_PIC,...LN_RING_AT[m[0]]});pic.dataset.turn=m;
+  if(cap)cap.textContent=lnTurnText(m);
   clearTimeout(lnView.turnT);lnView.turnT=setTimeout(lnRestoreGoal,2800);
 }
 function lnRestoreGoal(){if(!lnView.turnT)return;clearTimeout(lnView.turnT);lnView.turnT=0;
@@ -134,7 +142,7 @@ function lnLessonHTML(n){
     <div class="row ln-nav"><span class="ln-st">${stBtn('beg-'+n)}<span class="muted ln-hint">tap to change</span></span>${prev?`<button class="small" data-ln="open" data-n="${prev.n}">← ${esc(lnStepNo(prev))}</button>`:''}${next?`<button class="small primary" data-ln="open" data-n="${next.n}">${esc(lnStepNo(next))} →</button>`:''}</div></div>`;
   const goal=s.goals?`<ul class="ln-goals">${s.goals.map(g=>`<li>${esc(g)}</li>`).join('')}</ul>`:`<p class="muted">${esc(s.goal)}</p>`;
   const what=`<div class="panel ln-what"><div class="ln-text"><div><h3>What you do</h3>${n===0?lnBasicsWhat(s):`<p>${esc(s.what)}</p>`}</div><div><h3>How</h3><p>${esc(s.how)}</p></div><div class="note">${esc(s.note)}</div></div>
-    <div class="ln-goal"><h3>Goal for this step</h3>${goal}<div class="ln-pic"><svg id="lnGoalSvg" viewBox="40 30 320 300" aria-hidden="true">${lnGoalSVG(n)}</svg></div><div class="muted ln-cap" id="lnGoalCap">${esc(lnGoalCap(n))}</div><button class="small" data-ln="goal">Show the goal on the cube</button></div></div>`;
+    <div class="ln-goal"><h3>Goal for this step</h3>${goal}<div class="ln-pic"><svg id="lnGoalSvg" viewBox="${lnGoalBox(n)}" aria-hidden="true">${lnGoalSVG(n)}</svg></div><div class="muted ln-cap" id="lnGoalCap">${esc(lnGoalCap(n))}</div><button class="small" data-ln="goal">Show the goal on the cube</button></div></div>`;
   let moves='';
   if(n===0)moves=lnSixMoves();
   if(s.algs)moves+=`<div class="panel ln-panel"><h3>The algorithm${s.algs.length>1?'s':''}</h3><div class="ln-algs">${s.algs.map(id=>{const a=BEGINNER_ALGS[id];const open=lnView.why.has(id);

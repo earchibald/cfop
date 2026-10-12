@@ -78,17 +78,22 @@ function cubePolys(facelets,opts={}){
 function polysSVG(polys){return polys.map(p=>`<polygon${p.cls?` class="${p.cls}"`:''} points="${p.pts.map(q=>q.map(v=>v.toFixed(2)).join(',')).join(' ')}" fill="${p.fill}"${p.faded?' opacity="0.22"':''}${p.stroke?` stroke="${p.stroke}" stroke-width="0.6" stroke-linejoin="round"`:''}/>`).join('');}
 // The kind of piece a facelet belongs to: 'center', 'edge' or 'corner'.
 function pieceKind(idx){const p=idx%9;return p===4?'center':p%2?'edge':'corner';}
-// A ring of three curved arrows just above a face, the way the move turns it: clockwise as
-// you look at that face for a plain move, counterclockwise for a prime. Projected with the
+// A ring of three curved arrows in the plane of a face, the way the move turns it: clockwise
+// as you look at that face for a plain move, counterclockwise for a prime. Projected with the
 // same camera as cubePolys (yaw, pitch, scale, cx, cy), so it sits on the face in the picture.
+// By default the ring floats just above the face center. Pass at:[x,y,z] to put its center
+// somewhere else in space, for example beside the cube when the face is hidden; the ring
+// keeps the plane of the face, so the arrows still show the true turn from this camera.
+// Pass r for a wider ring where the camera sees the plane at a slant.
 function turnRing(move,opts={}){
   const yaw=opts.yaw??-32,pitch=opts.pitch??28;const S=opts.scale||52;const cx=opts.cx??200,cy=opts.cy??185;
   const g=FACE_GEOM['URFDLB'.indexOf(move[0])];if(!g)return '';
   const proj=p=>{const q=rot3(p,yaw,pitch);return [cx+q[0]*S,cy-q[1]*S];};
-  const dir=move.endsWith("'")?-1:1,r=0.95,lift=1.66,span=78,N=12;const f=n=>n.toFixed(1);
+  const dir=move.endsWith("'")?-1:1,r=opts.r||0.95,span=78,N=12;const f=n=>n.toFixed(1);
+  const at=opts.at||g.n.map(v=>v*1.66);
   let out='';
   for(let k=0;k<3;k++){const a0=-90+k*120-dir*span/2;const pts=[];
-    for(let i=0;i<=N;i++){const a=(a0+dir*span*i/N)*Math.PI/180;pts.push(proj([0,1,2].map(t=>g.n[t]*lift+g.r[t]*r*Math.cos(a)+g.d[t]*r*Math.sin(a))));}
+    for(let i=0;i<=N;i++){const a=(a0+dir*span*i/N)*Math.PI/180;pts.push(proj([0,1,2].map(t=>at[t]+g.r[t]*r*Math.cos(a)+g.d[t]*r*Math.sin(a))));}
     const [x1,y1]=pts[N-1],[x2,y2]=pts[N];let dx=x2-x1,dy=y2-y1;const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
     const head=s=>{const c=Math.cos(s),sn=Math.sin(s);return [x2-0.26*S*(dx*c-dy*sn),y2-0.26*S*(dx*sn+dy*c)];};
     const [hx1,hy1]=head(0.55),[hx2,hy2]=head(-0.55);
