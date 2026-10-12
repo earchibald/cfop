@@ -384,8 +384,14 @@ function scanStatus(t){const e=$('#scanStatus');if(e)e.textContent=t;}
 async function startCamera(){
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){scanStatus('This browser cannot use the camera on this page. Try another browser, or open Twistwright from its web address.');return;}
   try{
-    const s=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:false});
+    // A phone or tablet points its rear camera at the cube; a computer uses its webcam.
+    const rear=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
+    const s=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:rear?{ideal:'environment'}:'user'},audio:false});
     if(!$('#scanBg')){s.getTracks().forEach(t=>t.stop());return;} // closed while the prompt was open
+    // Mirror the preview for a camera that faces the user, not for a rear camera.
+    const tr=s.getVideoTracks()[0],fm=tr&&tr.getSettings?tr.getSettings().facingMode:'';
+    const mir=fm?fm==='user':!rear;
+    $('#scanMirror').checked=mir;$('#scanView').classList.toggle('mirror',mir);
     scanStream=s;const v=$('#scanVideo');v.srcObject=s;await v.play().catch(()=>{});
     scanStatus('Show a face to the camera.');scanLoop();
   }catch(e){

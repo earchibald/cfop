@@ -153,6 +153,9 @@ engine's corner and edge tables, which `test/scan-assemble.js` checks.
   a prompt. GitHub Pages serves the page top-level, so `getUserMedia` should
   prompt normally. Confirm this first with a two-line test before building
   the detector.
+- On a touch device (`pointer: coarse`) the scanner asks for the rear camera
+  and turns the mirror off. A computer asks for the webcam and mirrors it.
+  The track's reported `facingMode` decides the mirror when the browser gives it.
 - `getUserMedia` needs a secure context. `npm run serve` on localhost counts.
 - The Mac webcam is often 1280x720 at 30 fps. Downscale before processing or
   the frame loop will stall.
@@ -160,5 +163,5 @@ engine's corner and edge tables, which `test/scan-assemble.js` checks.
 ## Later phases (not now)
 
 - Read two or three faces from one corner view.
-- Mobile layout and rear camera.
+- Mobile layout.
 - Smart-cube input over Web Bluetooth (Chrome only) as an alternative path.
