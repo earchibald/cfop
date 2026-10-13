@@ -215,6 +215,16 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
 .rcard .nm{font-weight:600}
 .rcard .rec{color:var(--muted);font-size:13.5px;line-height:1.4;margin:2px 0 6px}
 .rcard .alg{font-family:var(--mono);font-size:15px;line-height:1.5}
+/* Reference spoilers: the first move shows, a bar covers the rest. body.refall uncovers every line. */
+.spoil{cursor:pointer}
+.sp-rest{background:var(--muted);color:transparent;border-radius:5px;padding:0 3px;-webkit-box-decoration-break:clone;box-decoration-break:clone;user-select:none;transition:background .15s,color .15s}
+.spoil:hover .sp-rest{background:var(--text)}
+.sp-btn{font-family:var(--sans);font-size:12.5px;padding:1px 8px;margin-left:2px;vertical-align:1px;color:var(--muted)}
+.spoil:hover .sp-btn{color:var(--text)}
+.spoil.open .sp-rest,.refall .sp-rest{background:none;color:inherit;user-select:auto;padding:0}
+.spoil.open .sp-btn,.refall .sp-btn{display:none}
+.refall .spoil{cursor:inherit}
+.refall-box{display:inline-flex;align-items:center;gap:6px;font-weight:500;cursor:pointer;margin-top:4px}
 
 /* mobile: a fixed top bar with a menu button; the Reference section is the home screen */
 #mnav,#refMobile,#menuBtn,#mtitle,.mobile-only{display:none}

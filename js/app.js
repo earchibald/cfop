@@ -564,13 +564,27 @@ function modalForF2L(f){const c=derotate(applyAlg(new Cube(),invertAlg(f.alg)));
   return {title:'F2L case #'+f.n,statusId:f2lId(f.n),tab:'f2l',group:f.grp,alg:f.alg,recog,why:F2L_WHY[f.grp]||'',pic:`<svg viewBox="20 10 360 340">${renderCube3D(phys(c).toFacelets(),{yaw:-32,pitch:28,scale:60,n:3})}</svg>`,setupMoves:removeRotations(parseAlg(invertAlg(f.alg)))};}
 
 // ---------- REFERENCE ----------
-function refRow(a,g){return `<div class="rcard ref-row" data-kind="ll" data-id="${a.id}" title="Open details">${thumbTop(caseCube(a),modeFor(a.group))}<div><div class="nm">${esc(a.name)}</div><div class="rec">${esc(a.recog)}</div><div class="alg">${esc(a.alg)}</div></div></div>`;}
+// Each reference algorithm shows its first move; a spoiler covers the rest. A click on the line
+// reveals it, a second click covers it again. "Show all moves" uncovers every Reference tab (cw:refAll).
+const isRot=m=>/^[xyz]/.test(m);
+function spoilAlg(alg){const t=alg.trim().split(/\s+/);let k=0;while(k<t.length-1&&isRot(t[k]))k++; // a lead rotation is a hold: show the turn after it too
+  const rest=t.slice(k+1),n=rest.filter(m=>!isRot(m)).length;if(!n)return esc(alg);
+  return `<span class="spoil" title="Click to reveal the moves">${esc(t.slice(0,k+1).join(' '))} <span class="sp-rest">${esc(rest.join(' '))}</span> <button type="button" class="small sp-btn">Reveal ${n} more move${n>1?'s':''}</button></span>`;}
+function refAllBox(){return `<label class="refall-box"><input type="checkbox" class="refAll"${store.get('refAll',false)?' checked':''}> Show all moves</label>`;}
+function setRefAll(on){store.set('refAll',on);document.body.classList.toggle('refall',on);$$('.refAll').forEach(b=>b.checked=on);$$('.spoil.open').forEach(s=>s.classList.remove('open'));}
+document.body.classList.toggle('refall',store.get('refAll',false));
+document.addEventListener('change',e=>{if(e.target.classList&&e.target.classList.contains('refAll'))setRefAll(e.target.checked);});
+// Capture phase: a click on a covered line must not also open the case details under it.
+document.addEventListener('click',e=>{const s=e.target.closest&&e.target.closest('.spoil');if(!s||document.body.classList.contains('refall'))return;
+  e.stopPropagation();e.preventDefault();s.classList.toggle('open');},true);
+$('#refDesktop .panel').insertAdjacentHTML('beforeend',refAllBox());
+function refRow(a,g){return `<div class="rcard ref-row" data-kind="ll" data-id="${a.id}" title="Open details">${thumbTop(caseCube(a),modeFor(a.group))}<div><div class="nm">${esc(a.name)}</div><div class="rec">${esc(a.recog)}</div><div class="alg">${spoilAlg(a.alg)}</div></div></div>`;}
 $('#refOLLe').innerHTML=ALG_DB.eo.map(a=>refRow(a,'OLL')).join('');
 $('#refOLLc').innerHTML=ALG_DB.co.map(a=>refRow(a,'OLL')).join('');
 $('#refPLLc').innerHTML=ALG_DB.cp.map(a=>refRow(a,'PLL')).join('');
 $('#refPLLe').innerHTML=ALG_DB.ep.map(a=>refRow(a,'PLL')).join('');
-$('#refPLL').innerHTML='<tr><th></th><th>Perm</th><th>Type</th><th>Algorithm</th></tr>'+PLL_FULL.map(p=>`<tr class="ref-row" data-kind="pll" data-id="${p.name}" style="cursor:pointer"><td style="width:70px">${thumbTop(phys(derotate(applyAlg(new Cube(),invertAlg(p.alg)))),'pll')}</td><td><b>${p.name}</b></td><td class="muted">${p.type}</td><td class="ref-alg">${esc(p.alg)}</td></tr>`).join('');
-$('#refF2L').innerHTML='<tr><th></th><th>#</th><th>Group</th><th>Algorithm</th></tr>'+F2L_CASES.map(f=>`<tr class="ref-row" data-kind="f2l" data-id="${f.n}" style="cursor:pointer"><td style="width:64px">${thumb3D(caseSetupCube(f))}</td><td>${f.n}</td><td class="muted">${esc(f.grp)}</td><td class="ref-alg">${esc(f.alg)}</td></tr>`).join('');
+$('#refPLL').innerHTML='<tr><th></th><th>Perm</th><th>Type</th><th>Algorithm</th></tr>'+PLL_FULL.map(p=>`<tr class="ref-row" data-kind="pll" data-id="${p.name}" style="cursor:pointer"><td style="width:70px">${thumbTop(phys(derotate(applyAlg(new Cube(),invertAlg(p.alg)))),'pll')}</td><td><b>${p.name}</b></td><td class="muted">${p.type}</td><td class="ref-alg">${spoilAlg(p.alg)}</td></tr>`).join('');
+$('#refF2L').innerHTML='<tr><th></th><th>#</th><th>Group</th><th>Algorithm</th></tr>'+F2L_CASES.map(f=>`<tr class="ref-row" data-kind="f2l" data-id="${f.n}" style="cursor:pointer"><td style="width:64px">${thumb3D(caseSetupCube(f))}</td><td>${f.n}</td><td class="muted">${esc(f.grp)}</td><td class="ref-alg">${spoilAlg(f.alg)}</td></tr>`).join('');
 $$('.ref-row').forEach(el=>el.onclick=()=>{const k=el.dataset.kind,id=el.dataset.id;if(k==='ll')openCaseModal(modalForLL(LL_ALL.find(a=>a.id===id)));else if(k==='pll')openCaseModal(modalForPLL(PLL_FULL.find(p=>p.name===id)));else openCaseModal(modalForF2L(F2L_CASES.find(f=>f.n===+id)));});
 
 
