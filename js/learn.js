@@ -112,7 +112,7 @@ function lnDemoStop(done){
   const was=lnDemo.on;clearTimeout(lnDemo.t);if(lnDemo.raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(lnDemo.raf);
   lnDemo.on=false;lnDemo.raf=0;if(!was&&!done)return;
   const n=lnView.n,s=n==null?null:begPack().steps[n],svg=$('#lnGoalSvg');if(!s||!s.demo||!svg)return;
-  svg.innerHTML=lnGoalSVG(n);lnDemoMark(-1);lnDemoCap(done?s.demo.end:lnGoalCap(n));lnDemoBtn(done?'Watch again':'Watch it');
+  svg.innerHTML=lnGoalSVG(n);lnDemoMark(-1);lnDemoCap(done?s.demo.end:lnGoalCap(n));lnDemoBtn('Watch');
 }
 function lnDemoPlay(){
   const n=lnView.n,s=begPack().steps[n];if(!s||!s.demo)return;lnDemoStop();lnRestoreGoal();
@@ -121,7 +121,7 @@ function lnDemoPlay(){
   const cubes=[applyAlg(lnGoals()[n],invertAlg(ms))];for(const m of ms)cubes.push(applyAlg(cubes[cubes.length-1],[m]));
   const smooth=!reducedMotion()&&typeof requestAnimationFrame==='function';
   const list=$('#lnDemoMoves');if(list)list.classList.remove('hidden');
-  lnDemo.on=true;lnDemoBtn('Stop');lnDemoDraw(cubes[0]);lnDemoCap(s.demo.start);lnDemoMark(-1);
+  lnDemo.on=true;lnDemoBtn('Skip');lnDemoDraw(cubes[0]);lnDemoCap(s.demo.start);lnDemoMark(-1);
   // Move k: the layer turns for about half of the time, then the cube rests until the next move.
   const move=k=>{if(!lnDemo.on)return;if(k>=ms.length){lnDemoStop(true);return;}
     if(caps[k])lnDemoCap(caps[k]);lnDemoMark(k);
@@ -136,7 +136,7 @@ function lnDemoPlay(){
 
 // ---------- small renderers ----------
 // The demo moves under the goal. The goal shows the step solved, so the moves stay hidden until
-// Watch it plays them. With a `list`, each move is a row that says what it does.
+// Watch plays them. With a `list`, each move is a row that says what it does.
 function lnDemoMoves(d){
   if(!d.list)return `<div class="ln-demo hidden" id="lnDemoMoves">${lnTiles(d.moves)}</div>`;
   const row=([m,text])=>`<li><span class="ms"><span class="m">${fmtMove(m)}</span></span><span>${esc(text)}</span></li>`;
@@ -199,9 +199,10 @@ function lnLessonHTML(n){
   const goal=s.goals?`<ul class="ln-goals">${s.goals.map(g=>`<li>${esc(g)}</li>`).join('')}</ul>`:`<p class="muted">${esc(s.goal)}</p>`;
   const used=new Set(),marked=!!(s.kinds||s.marks);
   const tapNote=marked?`<p class="muted ln-small">${n===0?'Tap a kind of piece to see it on the goal cube.':'Tap an underlined word to see those pieces on the goal cube.'}</p>`:'';
-  const demo=s.demo?`${lnDemoMoves(s.demo)}<button class="small" data-ln="demo">Watch it</button>`:'';
+  // Watch sits on the picture, top right. While the demo plays it says Skip, which jumps to the goal.
+  const demo=s.demo?lnDemoMoves(s.demo):'',watch=s.demo?'<button class="small ln-watch" data-ln="demo">Watch</button>':'';
   const what=`<div class="panel ln-what"><div class="ln-text"><div><h3>What you do</h3><p>${lnMarked(s.what,s,used)}</p>${tapNote}</div><div><h3>How</h3><p>${lnMarked(s.how,s,used)}</p></div><div class="note">${lnMarked(s.note,s,used)}</div>${n===0?lnSixMoves():''}</div>
-    <div class="ln-goal"><h3>Goal for this step</h3>${goal}<div class="ln-pic"><svg id="lnGoalSvg" viewBox="${lnGoalBox(n)}" aria-hidden="true">${lnGoalSVG(n)}</svg></div><div class="muted ln-cap" id="lnGoalCap" aria-live="polite">${esc(lnGoalCap(n))}</div>${demo}</div></div>`;
+    <div class="ln-goal"><h3>Goal for this step</h3>${goal}<div class="ln-pic"><svg id="lnGoalSvg" viewBox="${lnGoalBox(n)}" aria-hidden="true">${lnGoalSVG(n)}</svg>${watch}</div><div class="muted ln-cap" id="lnGoalCap" aria-live="polite">${esc(lnGoalCap(n))}</div>${demo}</div></div>`;
   let moves='';
   if(s.algs)moves+=`<div class="panel ln-panel"><h3>The algorithm${s.algs.length>1?'s':''}</h3><div class="ln-algs">${s.algs.map(id=>{const a=pk.algs[id];const open=lnView.why.has(id);
     return `<div class="ln-box"><b>${esc(a.name)}</b>${a.when?`<div class="ln-when">${esc(a.when)}</div>`:''}${lnTiles(a.alg,true)}<div class="ln-say">Say it as: <b>${esc(a.say)}</b></div><div class="row"><button class="small" data-ln="alg" data-id="${esc(id)}">Show on the cube</button>${a.why?`<button class="small ghost" data-ln="why" data-id="${esc(id)}" aria-expanded="${open}">Why it works</button>`:''}</div>${open?`<p class="ln-why">${esc(a.why)}</p>`:''}</div>`;}).join('')}</div></div>`;
@@ -239,7 +240,7 @@ $('#tab-learn').addEventListener('click',e=>{
   else if(act==='next')setMethod(pk.next.method);
   else if(act==='practice'){if(typeof startPractice==='function')startPractice(n);}
   else if(act==='mark')lnMarkFinished(n);
-  else if(act==='demo'){if(lnDemo.on)lnDemoStop();else lnDemoPlay();}
+  else if(act==='demo'){if(lnDemo.on)lnDemoStop(true);else lnDemoPlay();}
   else if(act==='moves'){const six=['U','D','F','B','R','L'];lnDrill(six,'the six moves, from the lesson',lnSetup(lnFrame(0),six),'Lesson: the six moves');}
   else if(act==='hl')lnHighlight(b.dataset.kind);
   else if(act==='face')lnShowTurn(b.dataset.m);

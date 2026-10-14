@@ -491,7 +491,8 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
 .ln-text{display:flex;flex-direction:column;gap:12px}
 .ln-text p,.ln-goal p{margin:4px 0 0}
 .ln-goal{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
-.ln-pic{width:100%;background:var(--panel2);border-radius:var(--rb);padding:6px}
+.ln-pic{position:relative;width:100%;background:var(--panel2);border-radius:var(--rb);padding:6px}
+.ln-pic .ln-watch{position:absolute;top:6px;right:6px}
 .ln-pic svg{display:block;width:100%;max-width:220px;height:auto;margin:0 auto}
 .ln-cap,.ln-small{font-size:13px}
 .ln-panel{display:flex;flex-direction:column;gap:10px}

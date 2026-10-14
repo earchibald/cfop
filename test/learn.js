@@ -131,16 +131,17 @@ w.addEventListener('load',async()=>{try{
   assert.deepStrictEqual($$('#lnDemoMoves li:not(.grp)').map(li=>li.textContent),['RMove blue-white to Up.',"U'Turn the Up face to leave a space for red-white.",'F2Move red-white to Up.',"R'Move green-white down to the side.",'UTurn the Up face to leave a space for green-white.',"F'Move green-white to Up."],'each move says what it does');
   assert.strictEqual($('#lnDemoMoves li.grp b').textContent,'Flip the edge','the last three moves are the flip');
   w.lnDemo.ms=100;const goalF=w.lnGoals()[1].toFacelets();
-  click($('#tab-learn button[data-ln="demo"]'));assert.ok(w.lnDemo.on);assert.ok(!$('#lnDemoMoves').classList.contains('hidden'),'Watch it shows the moves');
-  assert.strictEqual($('#tab-learn button[data-ln="demo"]').textContent,'Stop');assert.ok(!pic().dataset.hl,'the highlight ends');
+  assert.ok($('#tab-learn .ln-pic button[data-ln="demo"]'),'Watch sits on the picture');assert.strictEqual($('#tab-learn button[data-ln="demo"]').textContent,'Watch');
+  click($('#tab-learn button[data-ln="demo"]'));assert.ok(w.lnDemo.on);assert.ok(!$('#lnDemoMoves').classList.contains('hidden'),'Watch shows the moves');
+  assert.strictEqual($('#tab-learn button[data-ln="demo"]').textContent,'Skip');assert.ok(!pic().dataset.hl,'the highlight ends');
   assert.ok(/One petal/.test($('#lnGoalCap').textContent),'the demo starts with one petal');
   await sleep(120);assert.ok(/Middle layer/.test($('#lnGoalCap').textContent),'the first part says what it does');
   assert.ok($('#lnDemoMoves .m.cur'),'the move that turns is marked');
   await sleep(700);assert.ok(!w.lnDemo.on,'the demo ends');
   assert.ok(/the daisy/.test($('#lnGoalCap').textContent),'it ends on the daisy');
-  assert.strictEqual($('#tab-learn button[data-ln="demo"]').textContent,'Watch again');assert.ok(!$('#lnDemoMoves .m.cur'));
-  click($('#tab-learn button[data-ln="demo"]'));click($('#tab-learn button[data-ln="demo"]'));assert.ok(!w.lnDemo.on,'Stop stops it');
-  assert.strictEqual($('#tab-learn button[data-ln="demo"]').textContent,'Watch it');assert.ok($('#lnGoalSvg .ln-front'),'the goal picture returns');
+  assert.strictEqual($('#tab-learn button[data-ln="demo"]').textContent,'Watch','no Watch again');assert.ok(!$('#lnDemoMoves .m.cur'));
+  click($('#tab-learn button[data-ln="demo"]'));click($('#tab-learn button[data-ln="demo"]'));assert.ok(!w.lnDemo.on,'Skip ends it');
+  assert.strictEqual($('#tab-learn button[data-ln="demo"]').textContent,'Watch');assert.ok($('#lnGoalSvg .ln-front'),'the goal picture returns');assert.ok(/the daisy/.test($('#lnGoalCap').textContent),'Skip jumps to the end');
   w.lnDemo.ms=2000;
   {const ms=w.parseAlg(w.begPack().steps[1].demo.moves);assert.deepStrictEqual(w.applyAlg(w.applyAlg(w.lnGoals()[1],w.invertAlg(ms)),ms).toFacelets(),goalF,'the demo ends on the goal');}
   // The cheat sheet says when to use each daisy algorithm.
