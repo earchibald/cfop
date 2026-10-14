@@ -106,8 +106,8 @@ function gdGuideHTML(){
   const col=e.held.center?COLOR_NAMES[e.held.center[2]]:''; // a 4×4 state has no centers; its pack writes its own hold line
   const topNote=pk.topNote[st.n]||'';
   const hold=pk.holdLine?`<li>${pk.holdLine(e)}${topNote&&(e.flip||e.k===0)?' '+esc(topNote):''}</li>`
-    :e.flip?`<li><b>Turn the cube over</b> so the ${esc(p.up)} center is on top${p.pre?'':` and <b>${esc(col)} in front</b>`}.${topNote?' '+topNote:''}${p.pre?` Then turn the whole cube so ${esc(col)} faces you. The dashed moves are these turns.`:' The dashed move is this turn.'}</li>`
-    :`<li><b>Hold the cube</b> with ${esc(p.up)} up and <b>${esc(col)} in front</b>.${p.pre?` Turn the whole cube so ${esc(col)} faces you. The dashed move is this turn.`:' The 3D cube shows this view.'}</li>`;
+    :e.flip?`<li><b>Turn the cube over</b> (z2) so the ${esc(p.up)} center is on top${p.pre?'':` and <b>${esc(col)} in front</b>`}.${topNote?' '+topNote:''}${p.pre?` Then turn the whole cube so the ${esc(col)} center faces you (${esc(p.pre)}). The dashed moves are these turns.`:' The dashed move is this turn.'}</li>`
+    :`<li><b>Hold the cube</b> with ${esc(p.up)} up and <b>${esc(col)} in front</b>.${p.pre?` Turn the whole cube so the ${esc(col)} center faces you (${esc(p.pre)}). The dashed move is this turn.`:' The 3D cube shows this view.'}</li>`;
   const why=gdWhy(e);
   const next=g.parts[g.i+1];
   const lesson=typeof openLesson==='function'?`<button class="small ghost" id="gdLesson">Open the lesson</button>`:'';
@@ -121,7 +121,7 @@ function gdGuideHTML(){
   <div class="panel gd-part">
     <div class="gd-head"><div><div class="muted mono gd-sub">Stage ${st.n} · part ${e.k+1} of ${e.m}</div><h2 id="gdTitle">${esc(p.title)}</h2></div>${lesson}</div>
     <div class="gd-body">
-      <ol class="gd-steps">${hold}<li>${esc(p.text)}</li><li><b>Do the moves:</b><div>${gdTiles(p,e.flip)}</div></li></ol>
+      <ol class="gd-steps">${hold}${p.short?`<li>${esc(p.short)}<div>${gdTiles(p,e.flip)}</div></li>`:`<li>${esc(p.text)}</li><li><b>Do the moves:</b><div>${gdTiles(p,e.flip)}</div></li>`}</ol>
       <div class="gd-side">
         <div class="gd-ba"><figure>${gdThumb(e.held,p.piece)}<figcaption class="muted">before</figcaption></figure><span class="gd-arrow" aria-hidden="true">→</span><figure>${gdThumb(e.after,p.piece)}<figcaption class="muted">after</figcaption></figure></div>
         ${why?`<div class="note"><b>${esc(why.h)}</b> ${esc(why.t)}</div>`:''}

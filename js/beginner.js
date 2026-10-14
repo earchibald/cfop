@@ -220,6 +220,8 @@ function solveBeginner(start,opts){
   function freeTop(f,slot,w){const idx=BEG_U_EDGE_RING.indexOf(slot);
     for(const k of [0,1,3,2]){const from=BEG_U_EDGE_RING[(idx-k+4)%4];if(f[edgeFacelet[BEG_EDGE_POS[from]][0]]!==w)return BEG_U_TOK[k];}return '';}
   const room=u=>u?' Turn the top to move a petal out of the way: '+u+'.':'';
+  // The guided solve shows `short` in place of the text: one line that names the moves.
+  const bring=(other,u,m,more)=>({short:`${u?`Turn the top so no petal is in the way (${u}). Then turn`:'Turn'} the ${other}-white edge to the top (${m}).${more?' '+more:''}`});
 
   // ----- Step 1: the daisy (yellow up) -----
   if(want(1)){
@@ -232,15 +234,15 @@ function solveBeginner(start,opts){
     for(const i of [0,1,2,3,8,9,10,11,4,5,6,7]){const st=edgeSt(f,i);const k=st.indexOf(w);if(k<0)continue;if(EDGE_NAMES[i][0]==='U'&&k===0)continue;e={i,k,st};break;}
     const other=name(e.st[1-e.k]);const en=EDGE_NAMES[e.i];const whiteFace=en[e.k];const piece={type:'edge',colors:e.st};
     if(en[0]==='U'){ // top layer, white facing out: hold it on the right and flip it
-      part(`White and ${other} edge: flip it`,`It is in the top layer, but white faces out. Hold the cube so this edge is on the right. Then R', U, F': the edge comes back up with white on top.`,BEG_TO_RIGHT[whiteFace],BEGINNER_ALGS.edgeFlip.alg,{piece,alg:'edgeFlip'});
+      part(`White and ${other} edge: flip it`,`It is in the top layer, but white faces out. Hold the cube so this edge is on the right. Then R', U, F': the edge comes back up with white on top.`,BEG_TO_RIGHT[whiteFace],BEGINNER_ALGS.edgeFlip.alg,{piece,alg:'edgeFlip',short:`Flip the ${other}-white edge so white is on top (R', U, F').`});
     }else if(en[0]==='D'){ // bottom layer: hold it under the front, F2
       const pre=BEG_TO_FRONT[en[1]];const g=after(c,pre?[pre]:[]).toFacelets();const u=freeTop(g,'UF',w);
-      if(e.k===0)part(`White and ${other} edge`,`It is in the bottom layer, under the front, white facing down.${room(u)} A half turn of the front brings it up: F2.`,pre,[u,'F2'],{piece});
-      else part(`White and ${other} edge`,`It is in the bottom layer, under the front, white facing you.${room(u)} A half turn of the front brings it up: F2. White then faces out, so the next part flips it.`,pre,[u,'F2'],{piece});
+      if(e.k===0)part(`White and ${other} edge`,`It is in the bottom layer, under the front, white facing down.${room(u)} A half turn of the front brings it up: F2.`,pre,[u,'F2'],{piece,...bring(other,u,'F2')});
+      else part(`White and ${other} edge`,`It is in the bottom layer, under the front, white facing you.${room(u)} A half turn of the front brings it up: F2. White then faces out, so the next part flips it.`,pre,[u,'F2'],{piece,...bring(other,u,'F2','White then faces out, so the next part flips it.')});
     }else{ // middle layer: hold it at the front right
       const pre=BEG_EDGE_TO_FR[en];const g=after(c,pre?[pre]:[]).toFacelets();const st=edgeSt(g,BEG_EDGE_POS.FR);
-      if(st[0]===w){const u=freeTop(g,'UR',w);part(`White and ${other} edge`,`It is in the middle layer. Hold it at the front right: white faces you.${room(u)} Turn the right face up: R.`,pre,[u,'R'],{piece});}
-      else{const u=freeTop(g,'UF',w);part(`White and ${other} edge`,`It is in the middle layer. Hold it at the front right: white faces right.${room(u)} Turn the front face back: F'.`,pre,[u,"F'"],{piece});}
+      if(st[0]===w){const u=freeTop(g,'UR',w);part(`White and ${other} edge`,`It is in the middle layer. Hold it at the front right: white faces you.${room(u)} Turn the right face up: R.`,pre,[u,'R'],{piece,...bring(other,u,'R')});}
+      else{const u=freeTop(g,'UF',w);part(`White and ${other} edge`,`It is in the middle layer. Hold it at the front right: white faces right.${room(u)} Turn the front face back: F'.`,pre,[u,"F'"],{piece,...bring(other,u,"F'")});}
     }
   }
 

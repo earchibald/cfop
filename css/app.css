@@ -449,7 +449,7 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
 .gd-body{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:var(--gap);margin-top:12px;align-items:start}
 .gd-steps{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:10px;font-size:17px;line-height:1.45}
 .gd-steps .ms{margin-top:6px}
-.gd-moves .m.gd-rot{font-style:italic;border-style:dashed;background:transparent}
+.gd-moves .m.gd-rot{font-style:italic;border:1.5px dashed var(--muted);background:transparent}
 .gd-side{display:flex;flex-direction:column;gap:10px}
 .gd-ba{display:flex;align-items:center;gap:4px}
 .gd-ba figure{margin:0;flex:1;min-width:0;text-align:center}

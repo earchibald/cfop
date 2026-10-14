@@ -45,6 +45,11 @@ w.addEventListener('load',async()=>{try{
   assert.ok($$('#scramble .m')[0].classList.contains('rot'),'the turn-over is dashed');
   assert.strictEqual($('#tab-bsolve .gd-moves .m').textContent,'z2','the part lists the turn-over first');
   assert.ok(/Turn the cube over/.test($('#tab-bsolve .gd-steps').textContent),'the first instruction says to turn the cube over');
+  // A daisy part: two lines. The hold names its turns, then one line names the moves above the tiles.
+  const li=$$('#tab-bsolve .gd-steps > li');assert.strictEqual(li.length,2,'a daisy part has two lines');
+  assert.ok(/Turn the cube over \(z2\)/.test(li[0].textContent),'the hold line names z2');
+  assert.ok(/^(Flip|Turn) .*the \w+-white edge .*\(.+\)\./.test(li[1].textContent),'the second line names the edge and its moves');
+  assert.ok(li[1].querySelector('.gd-moves'),'the tiles sit under the second line');
   assert.strictEqual(w.cubeAtSeq(0).toFacelets()[4],0,'before the turn-over the top center is white');
   assert.strictEqual(w.cubeAtSeq(1).toFacelets()[4],3,'after the turn-over the top center is yellow');
   assert.deepStrictEqual(w.cubeAtSeq(w.seqState.moves.length).toFacelets(),first.after.toFacelets(),'the part ends on its after cube');
