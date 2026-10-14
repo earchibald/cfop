@@ -94,6 +94,11 @@ above. Add a new script with a `<script src>` tag after the one it depends on.
   cube (`showCubeMoved`, `anim` in `app.js`); the Animate chip on the cube and
   the A key switch it, per method, saved in `cw:anim`. On by default in beginner
   mode, off in CFOP.
+  Auto-step turns each move at the start of its interval, so Play shows the
+  first move at once. D deletes the last time and C clears the times; both do
+  nothing while the timer runs or where there is no timer. Every control with
+  a key carries a `.hk` badge after its label (`<span class="hk">A</span>`);
+  CSS hides the badges where there is no keyboard. Add one with any new key.
 - One current scramble is shared by all tabs. A tab change never replaces it.
   `setSequence(moves, label, base, drill)` loads the player. Pass a `drill`
   name for anything that does not come from the current scramble, such as a

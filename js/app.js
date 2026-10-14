@@ -45,7 +45,7 @@ function showCube(cube,fade){stopAnim();displayedCube=cube;fadeSet=fade||null;dr
 function showCubeMoved(from,move,cube,fade){
   displayedCube=cube;fadeSet=fade||null;
   if(!animOn()||view.mode!=='3d'||reducedMotion()||typeof requestAnimationFrame!=='function'){stopAnim();drawMain();return;}
-  stopAnim();const half=move.endsWith('2');let dur=half?420:300;if(auto.timer)dur=Math.min(dur,autoMs()*0.7);
+  stopAnim();const half=move.endsWith('2');let dur=half?420:300;if(auto.on)dur=Math.min(dur,autoMs()*0.7);
   anim.from=from;anim.move=move;anim.t=0;const t0=performance.now();
   const step=()=>{const x=Math.min(1,(performance.now()-t0)/dur);anim.t=x<1?0.5-0.5*Math.cos(Math.PI*x):1; // ease in and out
     if(x>=1){anim.raf=0;anim.move=null;drawMain();return;}
@@ -135,15 +135,19 @@ $('#scrubStart').onclick=()=>seqGo(0);$('#scrubEnd').onclick=()=>seqGo(seqState.
 $('#scrubPrev').onclick=()=>seqGo(seqState.idx-1);$('#scrubNext').onclick=()=>seqGo(seqState.idx+1);
 $('#animBtn').onclick=()=>setAnim(!animOn());
 // ---------- auto-step ----------
-var auto={timer:0};
+// Each step turns its move at the start of the interval, then the cube rests for the rest of it.
+// Play turns the first move at once; from the end it shows the start first, for a short pause.
+var auto={timer:0,on:false};
 function autoMs(){return +$('#autoSpeed').value||1000;}
 function autoLabel(){return isBeg()?'▷ Show me':'▷ Auto-step';}
-function stopAuto(){if(auto.timer){clearTimeout(auto.timer);auto.timer=0;}const b=$('#autoPlay');if(b){b.classList.remove('on');b.textContent=autoLabel();}}
-function autoTick(){if(seqState.idx>=seqState.moves.length){stopAuto();return;}seqState.idx++;applySequence();
-  auto.timer=seqState.idx>=seqState.moves.length?(stopAuto(),0):setTimeout(autoTick,autoMs());}
-function startAuto(){if(!seqState.moves.length)return;if(seqState.idx>=seqState.moves.length){seqState.idx=0;applySequence();}
-  const b=$('#autoPlay');b.classList.add('on');b.textContent='⏸ Pause';auto.timer=setTimeout(autoTick,autoMs());}
-function toggleAuto(){if(auto.timer)stopAuto();else startAuto();}
+function renderAutoBtn(){const b=$('#autoPlay');if(!b)return;b.classList.toggle('on',auto.on);b.firstChild.textContent=(auto.on?'⏸ Pause':autoLabel())+' ';}
+function stopAuto(){if(auto.timer){clearTimeout(auto.timer);auto.timer=0;}auto.on=false;renderAutoBtn();}
+function autoTick(){auto.timer=0;if(seqState.idx>=seqState.moves.length){stopAuto();return;}seqState.idx++;applySequence();
+  if(seqState.idx>=seqState.moves.length)stopAuto();else auto.timer=setTimeout(autoTick,autoMs());}
+function startAuto(){if(!seqState.moves.length)return;auto.on=true;renderAutoBtn();
+  if(seqState.idx>=seqState.moves.length){seqState.idx=0;applySequence();auto.timer=setTimeout(autoTick,Math.min(autoMs(),700));}
+  else autoTick();}
+function toggleAuto(){if(auto.on)stopAuto();else startAuto();}
 $('#autoPlay').onclick=toggleAuto;
 $('#autoSpeed').value=String(store.get('autoSpeed',1000));
 $('#autoSpeed').onchange=()=>{store.set('autoSpeed',autoMs());if(auto.timer){clearTimeout(auto.timer);auto.timer=setTimeout(autoTick,autoMs());}};
@@ -231,10 +235,13 @@ document.addEventListener('keydown',e=>{const tag=document.activeElement.tagName
   if(e.key==='p'||e.key==='P'){toggleAuto();}if(e.key==='a'||e.key==='A'){setAnim(!animOn());}
   if(e.key==='n'||e.key==='N'){nextForTab();}if(e.key==='h'||e.key==='H'){hintForTab();}
   if(e.key==='?'){e.preventDefault();$('#helpBtn').click();}
+  if(!timerHidden()){if(e.key==='d'||e.key==='D')deleteLast();if(e.key==='c'||e.key==='C')clearTimes();}
 });
 document.addEventListener('keyup',e=>{if(e.code==='Space'){const tag=document.activeElement.tagName;if(tag==='INPUT'||tag==='TEXTAREA')return;e.preventDefault();if(!timerHidden())timerRelease();}});
 tEl.addEventListener('pointerdown',e=>{e.preventDefault();timerPress();});tEl.addEventListener('pointerup',e=>{e.preventDefault();timerRelease();});
-$('#delLast').onclick=()=>{const arr=scopeTimes();arr.pop();store.set('times',times);renderTimes();};
+// Delete last (D) and Clear (C) do nothing while the timer runs: the solve is not over.
+function deleteLast(){if(timer.state==='running')return;const arr=scopeTimes();arr.pop();store.set('times',times);renderTimes();}
+$('#delLast').onclick=deleteLast;
 // A themed yes/no dialog in place of the browser confirm box. Enter confirms, Escape cancels.
 // Space is swallowed while it is open so the timer does not start or stop behind it.
 function askConfirm(title,text,yesLabel,onYes){
@@ -255,7 +262,8 @@ function askConfirm(title,text,yesLabel,onYes){
   document.addEventListener('keydown',keys,true);document.addEventListener('keyup',keys,true);
   setTimeout(()=>$('#askYes').focus(),20);
 }
-$('#clearTimes').onclick=()=>askConfirm('Clear all times?','This removes every time for '+scopeName()+'. You cannot undo it.','Clear',()=>{times[timer.scope]=[];store.set('times',times);renderTimes();});
+function clearTimes(){if(timer.state==='running'||!scopeTimes().length)return;askConfirm('Clear all times?','This removes every time for '+scopeName()+'. You cannot undo it.','Clear',()=>{times[timer.scope]=[];store.set('times',times);renderTimes();});}
+$('#clearTimes').onclick=clearTimes;
 $('#times').onclick=e=>{if(e.target.tagName!=='SPAN')return;const arr=scopeTimes();const shown=arr.slice(-40).reverse();const i=[...e.target.parentNode.children].indexOf(e.target);const item=shown[i];if(item)askConfirm('Delete this time?',fmt(item.ms)+' is removed from '+scopeName()+'. You cannot undo it.','Delete',()=>{arr.splice(arr.indexOf(item),1);store.set('times',times);renderTimes();});};
 
 // ---------- tabs and the method ----------
@@ -630,7 +638,7 @@ $('#themeBtn').onclick=()=>{const r=document.documentElement;const cur=r.dataset
 // The keys card. Beginner mode has no timer, so Space plays there and the timer row is left out.
 function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHidden();
   const rows=[[k('←')+' '+k('→'),'one move back or forward'],[k('⇧')+' + arrows','five moves at a time'],[k('Home')+' '+k('End'),'the start, the end'],
-    [k('space'),beg?'play, pause':'timer: hold, release to start · press to stop'],[k('P'),'play, pause'],[k('A'),'animation on or off'],
+    [k('space'),beg?'play, pause':'timer: hold, release to start · press to stop'],[k('P'),'play, pause'],[k('A'),'animation on or off'],...(beg?[]:[[k('D'),'delete the last time'],[k('C'),'clear all times']]),
     [k('1')+'–'+k(String(railButtons().length)),'switch tab'],...(beg?[]:[[k('N'),'next scramble / case'],[k('H'),'reveal the answer']]),[k('?'),'this card'],['drag cube','orbit the view']];
   return `<h3>Keys</h3><table>${rows.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table><p class="muted" style="margin-top:8px;font-size:13px">${beg?'Your progress and seed history are':'Times, case statuses and seed history are'} saved in this browser.</p>`;}
 $('#helpBtn').onclick=()=>{const b=$('#helpBox');b.classList.toggle('hidden');b.innerHTML=helpHTML();};

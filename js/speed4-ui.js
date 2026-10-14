@@ -61,7 +61,7 @@ function fourRenderStats(){const t=$('#fwStats');if(!t)return;const rows=statsRo
 function fourMountParity(){
   $('#tab-parity').innerHTML=`<div class="panel"><div class="row" style="justify-content:space-between">
       <div><h2>Parity</h2><p class="muted" style="margin:0">The two things a 4×4 does that a 3×3 cannot: one edge pair turned over (OLL parity) and two edge pairs swapped (PLL parity). Learn to see them and to fix them without breaking stride. The button under each case changes its status. Click a case to open it.</p></div>
-      <div class="row"><button class="primary" id="fwNext">Next case</button><button id="fwReveal">Reveal</button></div></div></div>
+      <div class="row"><button class="primary" id="fwNext">Next case<span class="hk" aria-hidden="true">N</span></button><button id="fwReveal">Reveal<span class="hk" aria-hidden="true">H</span></button></div></div></div>
     <div class="panel" id="fwCur"></div>
     <div class="panel"><h3>Cases</h3><div id="fwGrid"></div></div>
     <div class="panel"><h3>Per-case times</h3><div class="wide"><table id="fwStats"></table></div></div>`;

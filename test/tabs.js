@@ -81,6 +81,20 @@ w.addEventListener('load',async()=>{try{
   key('keydown',' ','Space');key('keyup',' ','Space');assert.ok($('#askBg'),'Space leaves the dialog open');assert.ok(!$('#timer').classList.contains('run'),'Space does not start the timer');
   key('keydown','Escape');assert.ok(!$('#askBg'),'Escape closes the dialog');
   $('#clearTimes').click();key('keydown','Enter');assert.ok(!$('#askBg'),'Enter closes the dialog');assert.strictEqual($('#stN').textContent,'0','Enter clears the times');
+  // D deletes the last time and C opens the Clear dialog. Neither works while the timer runs.
+  w.recordTime(11110);w.recordTime(10100);key('keydown','d');assert.strictEqual($('#stN').textContent,'1','D deletes the last time');
+  key('keydown','c');assert.ok($('#askBg'),'C opens the Clear dialog');key('keydown','Escape');
+  key('keydown',' ','Space');key('keyup',' ','Space');assert.strictEqual(w.eval('timer.state'),'running','the timer runs');
+  key('keydown','d');key('keydown','c');assert.ok(!$('#askBg'),'C does nothing while the timer runs');
+  key('keydown',' ','Space');key('keyup',' ','Space');assert.strictEqual($('#stN').textContent,'2','D does nothing while the timer runs');
+  w.eval('times[timer.scope]=[];renderTimes()');
+  // Every control with a key carries a badge with that key.
+  for(const [id,k] of [['animBtn','A'],['autoPlay','P'],['delLast','D'],['clearTimes','C'],['helpBtn','?'],['newSeed','N']])
+    assert.strictEqual($('#'+id+' .hk').textContent,k,id+' shows its key');
+  // Auto-step turns the first move at once, then waits the interval. The intervals go up to 5 s.
+  assert.ok([...$('#autoSpeed').options].some(o=>o.value==='5000'),'a 5 s interval');
+  key('keydown','Home');key('keydown','p');assert.strictEqual(w.seqState.idx,1,'the first move shows at once');assert.ok(w.auto.on,'auto-step is on');
+  assert.ok($('#autoPlay .hk'),'the badge stays on the Pause button');key('keydown','p');assert.ok(!w.auto.on&&!w.auto.timer,'P pauses');
   // The player's keys: arrows step, Shift jumps five, Home and End go to the ends.
   const n=w.seqState.moves.length;key('keydown','Home');assert.strictEqual(w.seqState.idx,0,'Home goes to the start');
   key('keydown','ArrowRight');assert.strictEqual(w.seqState.idx,1,'→ steps forward');

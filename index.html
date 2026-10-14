@@ -36,7 +36,7 @@
   <div class="spacer"></div>
   <nav id="mnav" aria-label="Jump to section"><button data-go="mg-ollE" title="OLL edges">OLL 1</button><button data-go="mg-ollC" title="OLL corners">OLL 2</button><button data-go="mg-pllC" title="PLL corners">PLL 1</button><button data-go="mg-pllE" title="PLL edges">PLL 2</button></nav>
   <button class="small ghost" id="themeBtn" title="Toggle light/dark">Theme</button>
-  <button class="small ghost" id="helpBtn" title="The keys (?)">Keys</button>
+  <button class="small ghost" id="helpBtn" title="The keys (?)">Keys<span class="hk" aria-hidden="true">?</span></button>
 </header>
 <div id="menuBg" class="menu-bg hidden"><nav id="menu" class="menu" aria-label="Sections"></nav></div>
 <div class="page">
@@ -50,14 +50,14 @@
     <div class="panel tight cubebox">
       <svg id="cube" viewBox="0 0 400 360" aria-label="Cube view"></svg>
       <div class="viewbtns"><button id="viewTop" title="Normal view">Top</button><button id="viewBottom" title="Look at the cross">Bottom</button><button id="viewNet" title="Unfolded">Net</button></div>
-      <button class="animbtn" id="animBtn" aria-pressed="false" title="Turn the layer on the cube for each move (A)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6"/><path d="M18 3v4h-4"/><path d="M20 12a8 8 0 0 1-13.7 5.6"/><path d="M6 21v-4h4"/></svg>Animate</button>
+      <button class="animbtn" id="animBtn" aria-pressed="false" title="Turn the layer on the cube for each move (A)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6"/><path d="M18 3v4h-4"/><path d="M20 12a8 8 0 0 1-13.7 5.6"/><path d="M6 21v-4h4"/></svg>Animate<span class="hk" aria-hidden="true">A</span></button>
       <div class="draghint" id="dragHint" aria-hidden="true"><svg viewBox="0 0 24 16"><path d="M3 12a9 9 0 0 1 18 0"/><path d="M3 12l-1.6-3.2M3 12l3.3-1.3"/><path d="M21 12l1.6-3.2M21 12l-3.3-1.3"/></svg><span>Drag to rotate</span></div>
     </div>
     <div class="panel seqpanel">
       <div class="seqhead"><span class="lbl" id="seqLabel">scramble</span><span class="muted desktop-only hint" style="font-size:13px"><span class="cfop-only">Click a move, drag the slider, or use ← → to step. Press P to auto-step. The cube shows the state after the highlighted move.</span><span class="beg-only">Press ▶ or → to step. Space plays. The cube shows the state after the bright turn.</span></span><button class="small" id="keyBtn" aria-expanded="false" aria-controls="keyPanel" title="What the letters mean">Key</button></div>
       <div class="scramble" id="scramble"></div>
       <div class="scrub"><button class="small" id="scrubStart" title="Go to the start (Home)">⏮</button><button class="small" id="scrubPrev" title="One move back (←)">◀</button><input type="range" id="scrub" min="0" max="0" value="0"><button class="small" id="scrubNext" title="One move forward (→)">▶</button><button class="small" id="scrubEnd" title="Go to the end (End)">⏭</button><span class="mono muted" style="font-size:13px;min-width:48px;text-align:right" id="scrubPos">0 / 0</span></div>
-      <div class="autoplay"><button class="small" id="autoPlay" title="Play the moves one by one (P, or Space in beginner mode)">▷ Auto-step</button><label class="muted" for="autoSpeed">one <span class="cfop-only">move</span><span class="beg-only">turn</span> every</label><select id="autoSpeed"><option value="250">0.25 s</option><option value="500">0.5 s</option><option value="750">0.75 s</option><option value="1000">1 s</option><option value="1500">1.5 s</option><option value="2000">2 s</option><option value="3000">3 s</option></select></div>
+      <div class="autoplay"><button class="small" id="autoPlay" title="Play the moves one by one (P, or Space in beginner mode)">▷ Auto-step <span class="hk" aria-hidden="true">P</span></button><label class="muted" for="autoSpeed">one <span class="cfop-only">move</span><span class="beg-only">turn</span> every</label><select id="autoSpeed"><option value="250">0.25 s</option><option value="500">0.5 s</option><option value="750">0.75 s</option><option value="1000">1 s</option><option value="1500">1.5 s</option><option value="2000">2 s</option><option value="3000">3 s</option><option value="5000">5 s</option></select></div>
     </div>
     <div class="panel timerpanel">
       <div class="timer" id="timer">0.00</div>
@@ -68,7 +68,7 @@
       </div>
       <div class="stats"><div>last<b id="stLast">—</b></div><div>ao5<b id="stAo5">—</b></div><div>ao12<b id="stAo12">—</b></div><div>best<b id="stBest">—</b></div><div>n<b id="stN">0</b></div></div>
       <div class="times" id="times"></div>
-      <div class="row" style="margin-top:4px;justify-content:space-between"><span class="muted" style="font-size:13px" id="timesScope">times: solve</span><span><button class="small ghost" id="timerBack" title="Show your progress in this panel">Progress</button><button class="small ghost" id="delLast">Delete last</button><button class="small ghost" id="clearTimes">Clear</button></span></div>
+      <div class="row" style="margin-top:4px;justify-content:space-between"><span class="muted" style="font-size:13px" id="timesScope">times: solve</span><span><button class="small ghost" id="timerBack" title="Show your progress in this panel">Progress</button><button class="small ghost" id="delLast" title="Delete the last time (D)">Delete last<span class="hk" aria-hidden="true">D</span></button><button class="small ghost" id="clearTimes" title="Clear all times (C)">Clear<span class="hk" aria-hidden="true">C</span></button></span></div>
     </div>
     <div class="panel progresspanel" id="progressPanel">
       <span class="lbl">your progress</span>
@@ -92,7 +92,7 @@
     <span class="lbl">Scramble</span>
     <div class="seedrow">
       <input id="seed" placeholder="seed name" title="Type any word to get a repeatable scramble">
-      <button class="small" id="newSeed">New</button>
+      <button class="small" id="newSeed">New<span class="hk" aria-hidden="true">N</span></button>
       <button class="small" id="reScramble" title="Apply this seed">Go</button>
       <select id="scrLen" class="small" title="Scramble length"><option>20</option><option selected>22</option><option>25</option></select>
       <button class="small ghost" id="histBtn">History</button>
@@ -152,9 +152,9 @@
         <h2>Cross tuning</h2>
         <p class="muted">The cube on the left shows the full scramble. Plan the cross in your head, then check against every optimal solution. Use the Bottom view to inspect the cross directly.</p>
         <div class="row">
-          <button class="primary" id="crossNew">New cross scramble</button>
+          <button class="primary" id="crossNew">New cross scramble<span class="hk" aria-hidden="true">N</span></button>
           <label>Difficulty <select id="crossDiff"><option value="any">any</option><option value="easy">easy (≤5)</option><option value="hard">hard (≥7)</option></select></label>
-          <button id="crossReveal">Reveal</button>
+          <button id="crossReveal">Reveal<span class="hk" aria-hidden="true">H</span></button>
           <label style="font-size:14px"><input type="checkbox" id="crossPlus1"> include 1-move-longer plans</label>
         </div>
         <div class="row" style="margin-top:10px"><span>Optimal length: <b class="big" id="crossOpt">—</b></span><span class="muted" id="crossCount"></span></div>
@@ -179,12 +179,12 @@
       </div>
       <div class="panel" id="f2lLive">
         <p class="muted">The current scramble is solved through the cross for you. The dashed moves in the player show that part. Solve F2L, then compare with the pair plan. The app finds short inserts for each pair. They often differ from the textbook algorithm. Both are correct, so learn why each one works.</p>
-        <div class="row"><button class="primary" id="f2lNew">New scramble</button><button id="f2lReveal">Reveal</button><label>Pairs left <select id="f2lPairs"><option>4</option><option>3</option><option>2</option><option>1</option></select></label></div>
+        <div class="row"><button class="primary" id="f2lNew">New scramble<span class="hk" aria-hidden="true">N</span></button><button id="f2lReveal">Reveal<span class="hk" aria-hidden="true">H</span></button><label>Pairs left <select id="f2lPairs"><option>4</option><option>3</option><option>2</option><option>1</option></select></label></div>
         <div id="f2lPlan" style="margin-top:10px"></div>
       </div>
       <div class="panel hidden" id="f2lCases">
         <p class="muted">The 41 standard cases for the front-right slot. Select cases, then train. The button under each case changes its status: unlearned → learning → finished. Click a case to open its details. Shift-click a case to add it to training or remove it.</p>
-        <div class="row"><button class="primary" id="f2lRandomCase">Next case</button><button id="f2lCaseReveal">Reveal</button><select id="f2lGroup"><option value="all">All groups</option></select></div>
+        <div class="row"><button class="primary" id="f2lRandomCase">Next case<span class="hk" aria-hidden="true">N</span></button><button id="f2lCaseReveal">Reveal<span class="hk" aria-hidden="true">H</span></button><select id="f2lGroup"><option value="all">All groups</option></select></div>
       </div>
       <div class="panel hidden" id="f2lCaseOut"><p class="muted">Press Next case to start a drill. The cube shows the case with a random U turn, so you recognize it and do not memorize the setup. Your scramble is kept. Press Back to scramble to return to it.</p></div>
       <div class="panel hidden" id="f2lCaseList">
@@ -201,7 +201,7 @@
           <div class="row">
             <select id="llProb"><option value="balanced">Balanced</option><option value="realistic">Realistic probability</option></select>
             <label style="font-size:14px"><input type="checkbox" id="llRealState" checked> Realistic rest-of-layer</label>
-            <button class="primary" id="llNext">Next case</button><button id="llHint">Reveal</button>
+            <button class="primary" id="llNext">Next case<span class="hk" aria-hidden="true">N</span></button><button id="llHint">Reveal<span class="hk" aria-hidden="true">H</span></button>
           </div>
         </div>
       </div>

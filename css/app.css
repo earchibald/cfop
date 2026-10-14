@@ -164,6 +164,11 @@ body.cube-drag,body.cube-drag *{user-select:none!important;-webkit-user-select:n
 .big{font-size:22px;font-family:var(--mono)}
 .hidden{display:none!important}
 .kbd{font-family:var(--mono);font-size:13px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 5px}
+/* The hotkey badge: one small key cap after the label of every control that has a key. Hidden where there is no keyboard. */
+.hk{display:inline-block;margin-left:6px;min-width:15px;padding:0 3px;font-family:var(--mono);font-size:10px;font-weight:500;line-height:13px;text-align:center;color:var(--muted);border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;vertical-align:1px;box-sizing:border-box}
+button.primary .hk,#autoPlay.on .hk{color:inherit;opacity:.8;border-color:color-mix(in srgb,currentColor 40%,transparent)}
+.animbtn .hk{margin-left:2px}
+@media (hover:none),(max-width:760px){.hk{display:none}}
 .cycle{display:inline-flex;align-items:center;gap:4px;background:var(--panel2);border-radius:var(--chip);padding:4px 8px;margin:3px 6px 3px 0;font-family:var(--mono);font-size:14px}
 .cycle .arrow{color:var(--accent)}
 .lab-moves{display:flex;flex-wrap:wrap;gap:4px;font-family:var(--mono);font-size:17px}
