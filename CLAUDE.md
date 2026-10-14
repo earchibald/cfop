@@ -42,7 +42,7 @@ The app was called Cubeworks. Keep these old names as they are:
 | `js/speed-ui.js` | The 2x2 speed tabs: Solve (Ortega and CLL plans, an optimal solution), Ortega and CLL case drills, Reference; `twoThumb` |
 | `js/speed4-ui.js` | The 4x4 advanced tabs: Solve (the plan), Parity (drills), Reference |
 | `js/glossary.js` | Glossary entries, links in description text, the floating card |
-| `test/` | `load.js` jsdom smoke test, `two.js` (the 2x2 engine), `mini.js` (the Mini guide's algorithms and 300 solves), `speed2.js` (every Ortega and CLL algorithm, the 42 cases cover every state), `two-ui.js` (the 2x2 in the page), `four.js` (the 4x4 engine), `master.js` (the Master guide's algorithms and 40 solves), `speed4.js` (parity algorithms, outside-turn last layer, plans), `four-ui.js` (the 4x4 in the page), `draw.js` (a part turn lands on the moved cube), `tabs.js` (scramble, drills, case cards, clear dialog), `refspoil.js` (Reference spoilers: first move only, one move per click, Show all moves), `plan.js` (guided solve with rotations), `mobile.js` (phone menu), `glossary.js`, `beginner.js` (the guide's algorithms and 300 beginner solves), `method.js` (the method chip, rails, progress panel), `learn.js`, `guide.js`, `paint.js`, `practice.js`, `home.js` (one per beginner module), and the scanner tests: `scan-assemble.js` (stage 5 for all three sizes), `scan-synth.js` (synthetic faces of each size through stages 1-3), `scan-vote.js` (the voter and six faces end to end), `scan-ui.js` (the dialog for each puzzle) |
+| `test/` | `load.js` jsdom smoke test, `two.js` (the 2x2 engine), `mini.js` (the Mini guide's algorithms and 300 solves), `speed2.js` (every Ortega and CLL algorithm, the 42 cases cover every state), `two-ui.js` (the 2x2 in the page), `four.js` (the 4x4 engine), `master.js` (the Master guide's algorithms and 40 solves), `speed4.js` (parity algorithms, outside-turn last layer, plans), `four-ui.js` (the 4x4 in the page), `draw.js` (a part turn lands on the moved cube), `tabs.js` (scramble, drills, case cards, clear dialog), `refspoil.js` (Reference spoilers: first move only, one move per click, Show all moves), `refmoves.js` (What it moves in the details: plain parts, a clean picture, one part at a time), `plan.js` (guided solve with rotations), `mobile.js` (phone menu), `glossary.js`, `beginner.js` (the guide's algorithms and 300 beginner solves), `method.js` (the method chip, rails, progress panel), `learn.js`, `guide.js`, `paint.js`, `practice.js`, `home.js` (one per beginner module), and the scanner tests: `scan-assemble.js` (stage 5 for all three sizes), `scan-synth.js` (synthetic faces of each size through stages 1-3), `scan-vote.js` (the voter and six faces end to end), `scan-ui.js` (the dialog for each puzzle) |
 | `docs/` | Design notes and handoff documents. `beginner-mode.md` holds the 3x3 beginner method plan and its open decisions; `two-by-two.md` the 2x2 model, both 2x2 methods and the packs; `four-by-four.md` the 4x4 model and both 4x4 methods; `scanner-handoff.md` the scanner |
 
 The scripts share one global scope. `index.html` loads them in the order
@@ -99,6 +99,11 @@ above. Add a new script with a `<script src>` tag after the one it depends on.
   nothing while the timer runs or where there is no timer. Every control with
   a key carries a `.hk` badge after its label (`<span class="hk">A</span>`);
   CSS hides the badges where there is no keyboard. Add one with any new key.
+- What it moves, in the case details: `caseParts` lists the parts in plain
+  words ("Two corners swap: front right, back right"), only for what the step
+  cares about. The picture carries one hidden mark group per part (`moveMarks`);
+  a choice of a part shows its one arrow and outlines its pieces (`mvShow`).
+  The small Reference cards carry no marks. Do not put marks on a picture at rest.
 - One current scramble is shared by all tabs. A tab change never replaces it.
   `setSequence(moves, label, base, drill)` loads the player. Pass a `drill`
   name for anything that does not come from the current scramble, such as a

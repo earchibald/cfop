@@ -209,6 +209,13 @@ th{color:var(--muted);font-weight:500;border-top:0;font-size:14px}
 .modal .close{position:absolute;top:10px;right:10px}
 .modal .sec{margin-top:12px}
 .modal .sec b{display:block;margin-bottom:2px;font-size:14px;color:var(--muted)}
+/* What it moves: one button per part. The picture shows no marks until a part is chosen; then its arrow shows and its pieces get an outline. */
+.modal .mvparts{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:4px}
+.modal .mvpart{font-size:14px;font-weight:400;padding:4px 12px;border-radius:999px;text-align:left}
+.modal .mvpart.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.modal .mvhint{font-size:13px;margin-top:4px}
+svg .mv{display:none}svg .mv.on{display:inline}
+svg .fc.lit{stroke:var(--text);stroke-width:2.5px;vector-effect:non-scaling-stroke;paint-order:stroke}
 @media (max-width:700px){.modal{grid-template-columns:1fr}}
 
 .refcols{align-items:start}

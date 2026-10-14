@@ -74,16 +74,18 @@ function drawMark(){const el=$('#mark');if(!el)return;
 drawMark();
 // thumbnails
 let _mk=0;
-function thumbTop(cube,mode){ // mode 'eo' (edges only matter), 'oll' (U color vs gray), 'pll' (real colors + flow arrows)
+function thumbTop(cube,mode,parts){ // mode 'eo' (edges only matter), 'oll' (U color vs gray), 'pll' (real colors + flow arrows); parts: the What it moves marks of the details, in place of the flow arrows
   const f=cube.toFacelets();const s=16,g=5,o=8;const W=3*s+2*g+2*o+4;let out=`<svg viewBox="0 0 ${W} ${W}">`;
   const uc=f[4];const isCornerFacelet=new Set(cornerFacelet.flat());
   const col=(c,idx)=>{if(mode.startsWith('pll'))return stickerColor(c);if(mode==='eo'&&isCornerFacelet.has(idx))return 'var(--sticker-X)';return c===uc?stickerColor(uc):'var(--sticker-X)';};
   const cx=j=>o+2+j*(s+1)+s/2,cy=i=>o+2+i*(s+1)+s/2;
-  for(let i=0;i<3;i++)for(let j=0;j<3;j++){const idx=3*i+j;out+=`<rect x="${o+2+j*(s+1)}" y="${o+2+i*(s+1)}" width="${s}" height="${s}" rx="2" fill="${col(f[idx],idx)}"/>`;}
-  const strip=(idxs,fx,vert)=>idxs.forEach((idx,k)=>{const [x,y]=fx(k);out+=`<rect x="${x}" y="${y}" width="${vert?g:s}" height="${vert?s:g}" rx="1.5" fill="${col(f[idx],idx)}"/>`;});
+  const at={},fc=idx=>parts?` class="fc f${idx}"`:'';
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++){const idx=3*i+j;at[idx]=[cx(j),cy(i)];out+=`<rect${fc(idx)} x="${o+2+j*(s+1)}" y="${o+2+i*(s+1)}" width="${s}" height="${s}" rx="2" fill="${col(f[idx],idx)}"/>`;}
+  const strip=(idxs,fx,vert)=>idxs.forEach((idx,k)=>{const [x,y]=fx(k);const w=vert?g:s,h=vert?s:g;at[idx]=[x+w/2,y+h/2];out+=`<rect${fc(idx)} x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5" fill="${col(f[idx],idx)}"/>`;});
   strip([47,46,45],k=>[o+2+k*(s+1),0],false);strip([18,19,20],k=>[o+2+k*(s+1),o+2+3*(s+1)+1],false);
   strip([36,37,38],k=>[0,o+2+k*(s+1)],true);strip([11,10,9],k=>[o+2+3*(s+1)+1,o+2+k*(s+1)],true);
-  if(mode.startsWith('pll')){ // flow arrows: piece at U position p must travel to its home q ('pllc' corners only, 'plle' edges only)
+  if(parts)out+=moveMarks(parts,{pt:i=>at[i],side:s,mid:at[4],anchor:(k,p)=>(k==='c'?cornerFacelet:edgeFacelet)[p].find(i=>i<9)});
+  else if(mode.startsWith('pll')){ // flow arrows: piece at U position p must travel to its home q ('pllc' corners only, 'plle' edges only)
     const S=rotCube();const id='ah'+(_mk++);
     out+=`<defs><marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#111"/></marker></defs>`;
     const pos=idx=>[cx(idx%3),cy(Math.floor(idx/3))];const done=new Set();
@@ -95,6 +97,76 @@ function thumbTop(cube,mode){ // mode 'eo' (edges only matter), 'oll' (U color v
   }
   return out+'</svg>';
 }
+// ---------- What it moves ----------
+// The details list what the algorithm moves in plain words, one part per line, and the picture stays
+// clean until the reader chooses a part. Then that part's pieces get an outline and its one arrow
+// shows. A part covers only what the step cares about: OLL edges lists the edges that flip, OLL
+// corners the corners that twist, PLL the pieces that change places, F2L the pair going into the
+// slot. c is the case in the frame the moves are written in, so its positions match the picture;
+// f is the picture's stickers.
+const POS_WORD={U:'top',D:'bottom',F:'front',B:'back',R:'right',L:'left'};
+const COUNT_WORD=['','One','Two','Three','Four'];
+function posWords(k,p,top){const n=[...(k==='c'?CORNER_NAMES:EDGE_NAMES)[p]];const by=set=>n.filter(x=>set.includes(x));
+  return [...(top?[]:by('UD')),...by('FB'),...by('RL')].map(x=>POS_WORD[x]).join(' ');}
+function caseParts(c,f,mode){const parts=[],fac=k=>k==='c'?cornerFacelet:edgeFacelet,noun=(k,n)=>(k==='c'?'corner':'edge')+(n>1?'s':'');
+  if(mode==='f2l'){ // the pair: each piece goes from where it is into its slot, or turns in the slot
+    // The slot is the one the algorithm fills. After a y in the algorithm, it is not the front-right slot of the picture.
+    const SLOT_EDGE={4:8,5:9,6:10,7:11},dc=f[31],out=(k,q)=>k==='c'?c.cp.indexOf(q)!==q||c.co[q]:c.ep.indexOf(q)!==q||c.eo[q];
+    const sc=[4,5,6,7].find(q=>out('c',q)||out('e',SLOT_EDGE[q]));if(sc==null)return parts;
+    [['c',c.cp.indexOf(sc),sc],['e',c.ep.indexOf(SLOT_EDGE[sc]),SLOT_EDGE[sc]]].forEach(([k,p,slot])=>{const N=k==='c'?'Corner':'Edge';
+      if(p!==slot){parts.push({k,text:`${N} goes into the slot: from ${posWords(k,p)}`,pieces:[p,slot],arrows:[[p,slot,false]]});return;}
+      if(k==='c'){const w=cornerFacelet[p].findIndex(i=>f[i]===dc);if(w>0)parts.push({k,text:'Corner twists in the slot',pieces:[p],twists:[[p,3-w]]});}
+      else{const i=edgeFacelet[p][0];if(f[i]!==f[9*Math.floor(i/9)+4])parts.push({k,text:'Edge flips in the slot',pieces:[p],flips:[p]});}});
+    return parts;}
+  const uc=f[4],U=[0,1,2,3];
+  if(mode==='oll'){const tw=U.map(p=>[p,cornerFacelet[p].findIndex(i=>f[i]===uc)]).filter(x=>x[1]>0);
+    if(tw.length)parts.push({k:'c',text:`${COUNT_WORD[tw.length]} ${noun('c',tw.length)} twist${tw.length>1&&tw.every(x=>x[1]===tw[0][1])?' the same way':''}: ${tw.map(x=>posWords('c',x[0],1)).join(', ')}`,
+      pieces:tw.map(x=>x[0]),twists:tw.map(([p,w])=>[p,3-w])});}
+  if(mode==='eo'){const fl=U.filter(p=>f[edgeFacelet[p][0]]!==uc);
+    if(fl.length)parts.push({k:'e',text:`${COUNT_WORD[fl.length]} ${noun('e',fl.length)} flip: ${fl.map(p=>posWords('e',p,1)).join(', ')}`,pieces:fl,flips:fl});}
+  if(mode.startsWith('pll'))[['c',c.cp],['e',c.ep]].forEach(([k,perm])=>{if(mode==='pllc'&&k==='e'||mode==='plle'&&k==='c')return;const seen=new Set();
+    U.forEach(a=>{if(seen.has(a)||perm[a]===a)return;const cyc=[];for(let p=a;!seen.has(p);p=perm[p]){seen.add(p);cyc.push(p);} // the piece at p goes to its home, perm[p]
+      const n=cyc.length,names=cyc.map(p=>posWords(k,p,1));
+      parts.push({k,text:n===2?`Two ${noun(k,2)} swap: ${names.join(', ')}`:`${COUNT_WORD[n]} ${noun(k,n)} move around: ${names.join(' → ')}`,
+        pieces:cyc,arrows:n===2?[[cyc[0],cyc[1],true]]:cyc.map((p,j)=>[p,cyc[(j+1)%n],false])});});});
+  return parts;}
+// The marks for those parts: a dark arrow on a light halo from where a piece is to where it goes
+// (two heads for a swap), a curved arrow on a corner that twists, a two-way arrow across an edge
+// that flips. pt(facelet) is the center of that sticker in the picture, side is its size, mid the
+// middle of the picture, anchor(kind, position) the sticker that stands for the piece. Each part is
+// a hidden group that names its stickers; mvShow shows one.
+function moveMarks(parts,{pt,side,mid,anchor}){
+  const u=side/16,id='mh'+(_mk++),fac=k=>k==='c'?cornerFacelet:edgeFacelet,f2=v=>v.toFixed(2);
+  let out=`<defs><marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#111"/></marker></defs>`;
+  const stroke=(d,both)=>`<path d="${d}" fill="none" stroke="#fff" stroke-width="${f2(4*u)}" stroke-linecap="round" opacity=".85"/><path d="${d}" fill="none" stroke="#111" stroke-width="${f2(1.8*u)}" marker-end="url(#${id})"${both?` marker-start="url(#${id})"`:''}/>`;
+  // bow>0 bends the arrow to its left on screen.
+  const line=(a,b,both,t0=4*u,t1=4*u,bow=0)=>{const d=Math.hypot(b[0]-a[0],b[1]-a[1])||1,ux=(b[0]-a[0])/d,uy=(b[1]-a[1])/d;
+    const A=[a[0]+ux*t0,a[1]+uy*t0],B=[b[0]-ux*t1,b[1]-uy*t1];
+    if(!bow)return stroke(`M${f2(A[0])} ${f2(A[1])} L${f2(B[0])} ${f2(B[1])}`,both);
+    const C=[(A[0]+B[0])/2+uy*bow*d,(A[1]+B[1])/2-ux*bow*d];return stroke(`M${f2(A[0])} ${f2(A[1])} Q${f2(C[0])} ${f2(C[1])} ${f2(B[0])} ${f2(B[1])}`,both);};
+  const side_=(A,B,M)=>(B[0]-A[0])*(M[1]-A[1])-(B[1]-A[1])*(M[0]-A[0]); // >0: M is on the arrow's right on screen
+  parts.forEach((p,i)=>{let g='';const at=q=>pt(anchor(p.k,q));
+    const P=(p.arrows||[]).flatMap(([a,b])=>[at(a),at(b)]),cm=P.length>2?[0,1].map(t=>P.reduce((x,q)=>x+q[t],0)/P.length):mid;
+    (p.arrows||[]).forEach(([a,b,both])=>{const A=at(a),B=at(b);let bow=0;
+      // An arrow bends away from the middle of its cycle, or for a swap from the middle of the picture, so it does not cover the pieces between its ends.
+      if(cm){const s=side_(A,B,cm),L=Math.hypot(B[0]-A[0],B[1]-A[1])||1;if(Math.abs(s)/L>0.15*side)bow=(s>0?1:-1)*(P.length>2?0.18:0.15);}
+      g+=line(A,B,both,4*u,4*u,bow);});
+    (p.twists||[]).forEach(([q,d])=>{const a=anchor('c',q),A=pt(a),fs=fac('c')[q],k0=fs.indexOf(a),T=[0,1,2].map(m=>pt(fs[(k0+m*d)%3]));
+      // The arc turns the way the twist moves the stickers on screen.
+      const cw=(T[1][0]-T[0][0])*(T[2][1]-T[0][1])-(T[1][1]-T[0][1])*(T[2][0]-T[0][0])>0;
+      const r=0.34*side,a0=-Math.PI*0.75,a1=a0+(cw?1:-1)*Math.PI*1.5,xy=t=>`${f2(A[0]+r*Math.cos(t))} ${f2(A[1]+r*Math.sin(t))}`;
+      g+=stroke(`M${xy(a0)} A${f2(r)} ${f2(r)} 0 1 ${cw?1:0} ${xy(a1)}`,false);});
+    (p.flips||[]).forEach(q=>{const a=anchor('e',q),b=fac('e')[q].find(x=>x!==a);g+=line(pt(a),pt(b),true,-0.3*side,-0.1*side);});
+    out+=`<g class="mv" data-mv="${i}" data-f="${p.pieces.flatMap(q=>fac(p.k)[q]).join(' ')}">${g}</g>`;});
+  return out;}
+// The F2L case on the 3D cube with its hidden marks. A piece stands for itself on its top sticker, or else on the sticker that faces the camera most.
+function thumb3DMarks(cube,parts,{scale=60,viewBox='20 10 360 340'}={}){const v={yaw:-32,pitch:28,scale};
+  const anchor=(k,p)=>{const fs=(k==='c'?cornerFacelet:edgeFacelet)[p];if(fs[0]<9)return fs[0];
+    let best=fs[0],bz=-1;for(const i of fs){const z=faceFacing(Math.floor(i/9),v);if(z>bz){bz=z;best=i;}}return best;};
+  return `<svg viewBox="${viewBox}">${renderCube3D(cube.toFacelets(),{...v,n:3,cls:i=>'fc f'+i})}${moveMarks(parts,{pt:i=>faceletPt(i,v),side:0.88*scale,anchor})}</svg>`;}
+// Show one part of What it moves on a details picture, or none (i null).
+function mvShow(svg,i){if(!svg)return;svg.querySelectorAll('.fc.lit').forEach(e=>e.classList.remove('lit'));
+  svg.querySelectorAll('.mv').forEach(g=>{const on=g.dataset.mv===i;g.classList.toggle('on',on);if(on)g.dataset.f.split(' ').forEach(f=>svg.querySelectorAll('.f'+f).forEach(e=>e.classList.add('lit')));});}
 function modeFor(group){return group==='OLL edges'?'eo':group==='OLL corners'?'oll':group==='PLL corners'?'pllc':'plle';}
 function thumb3D(cube){const f=cube.toFacelets();return `<svg viewBox="40 30 320 300">${renderCube3D(f,{yaw:-32,pitch:28,scale:48,n:3})}</svg>`;}
 
@@ -541,12 +613,16 @@ function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why,
       ${o.recog?`<div class="sec"><b>Recognise</b>${esc(o.recog)}</div>`:''}
       ${o.why?`<div class="sec"><b>Why it works</b>${esc(o.why)}</div>`:''}
       ${o.statusId?`<div class="sec"><b>Status</b>${stBtn(o.statusId)}</div>`:''}
-      <div class="sec"><b>What it moves</b><span class="mono" style="font-size:14px">${esc(text)}</span></div>
+      <div class="sec"><b>What it moves</b>${o.parts&&o.parts.length?`<div class="mvparts">${o.parts.map((p,i)=>`<button type="button" class="mvpart" data-mv="${i}" aria-pressed="false">${esc(p.text)}</button>`).join('')}</div><div class="muted mvhint">Choose a part to show it on the picture.</div>`:`<span class="mono" style="font-size:14px">${esc(text)}</span>`}</div>
       <div class="sec"><b>Set up from solved (white up)</b><span class="mono" style="font-size:14px">${esc([...(crossRotation()?[crossRotation()]:[]),...o.setupMoves].join(' '))}</span></div>
       <div class="row" style="margin-top:14px"><button class="primary" id="modalSetup">Show on cube</button><button id="modalStep">Step through solution</button>${o.noLab?'':'<button id="modalLab">Open in Lab</button>'}</div>
       <button class="closebar" id="modalCloseBar">Close</button>
     </div></div>`;
   document.body.appendChild(bg);
+  const pic=bg.querySelector('.pic svg'),hint=bg.querySelector('.mvhint');
+  bg.querySelectorAll('.mvpart').forEach(b=>b.onclick=()=>{const on=b.getAttribute('aria-pressed')!=='true';
+    bg.querySelectorAll('.mvpart').forEach(x=>{x.classList.toggle('on',on&&x===b);x.setAttribute('aria-pressed',String(on&&x===b));});
+    mvShow(pic,on?b.dataset.mv:null);hint.textContent=on?'Choose it again to clear the picture.':'Choose a part to show it on the picture.';});
   const close=()=>closeModal();bg.addEventListener('click',e=>{if(e.target===bg)close();});$('#modalClose').onclick=close;$('#modalCloseBar').onclick=close;
   if(mobileMQ.matches){bg.querySelector('.modal').addEventListener('click',e=>{if(e.target.closest('button, a, input, select, textarea'))return;close();});}
   try{window.history.pushState({modal:1},'');}catch(e){}window.addEventListener('popstate',popClose);
@@ -565,11 +641,12 @@ try{window.history.scrollRestoration='manual';}catch(e){}
 function goNext(){const id=modalNext;modalNext=null;if(!id||!mobileMQ.matches)return;setTimeout(()=>{const t=document.getElementById(id);if(t)t.scrollIntoView({behavior:'smooth',block:'start'});},60);}
 function popClose(){const b=$('#modalBg');if(b){b.remove();document.removeEventListener('keydown',escClose);}window.removeEventListener('popstate',popClose);goNext();}
 function closeModal(){const b=$('#modalBg');if(!b)return;b.remove();document.removeEventListener('keydown',escClose);window.removeEventListener('popstate',popClose);if(window.history.state&&window.history.state.modal){try{window.history.back();}catch(e){}}goNext();}
-function modalForLL(a){const c=applyAlg(new Cube(),invertAlg(a.alg));return {title:a.name,statusId:a.id,tab:'ll',group:a.group,alg:a.alg,recog:a.recog,why:a.why,pic:thumbTop(phys(c),modeFor(a.group)),setupMoves:removeRotations(parseAlg(invertAlg(a.alg)))};}
-function modalForPLL(p){const c=derotate(applyAlg(new Cube(),invertAlg(p.alg)));const two=LL_ALL.find(x=>x.name.startsWith(p.name+' '));return {title:p.name+' perm',tab:'ll',group:'PLL · '+p.type,alg:p.alg,recog:two?two.recog:'',why:two?two.why:'',pic:thumbTop(phys(c),'pll'),setupMoves:removeRotations(parseAlg(invertAlg(p.alg)))};}
+function caseWithParts(c,mode){const P=phys(c),parts=caseParts(c,P.toFacelets(),mode);return {parts,pic:mode==='f2l'?thumb3DMarks(P,parts):thumbTop(P,mode,parts)};}
+function modalForLL(a){const c=applyAlg(new Cube(),invertAlg(a.alg));return {title:a.name,statusId:a.id,tab:'ll',group:a.group,alg:a.alg,recog:a.recog,why:a.why,...caseWithParts(c,modeFor(a.group)),setupMoves:removeRotations(parseAlg(invertAlg(a.alg)))};}
+function modalForPLL(p){const c=derotate(applyAlg(new Cube(),invertAlg(p.alg)));const two=LL_ALL.find(x=>x.name.startsWith(p.name+' '));return {title:p.name+' perm',tab:'ll',group:'PLL · '+p.type,alg:p.alg,recog:two?two.recog:'',why:two?two.why:'',...caseWithParts(c,'pll'),setupMoves:removeRotations(parseAlg(invertAlg(p.alg)))};}
 function modalForF2L(f){const c=derotate(applyAlg(new Cube(),invertAlg(f.alg)));const cpos=c.cp.indexOf(4),epos=c.ep.indexOf(8);
   const recog=`Pair for the front-right slot. Corner is at ${CORNER_NAMES[cpos]}${cpos<4?` with its ${COLOR_NAMES[phys(c).toFacelets()[cornerFacelet[cpos][0]]]} sticker on top`:''}; edge is at ${EDGE_NAMES[epos]}.`;
-  return {title:'F2L case #'+f.n,statusId:f2lId(f.n),tab:'f2l',group:f.grp,alg:f.alg,recog,why:F2L_WHY[f.grp]||'',pic:`<svg viewBox="20 10 360 340">${renderCube3D(phys(c).toFacelets(),{yaw:-32,pitch:28,scale:60,n:3})}</svg>`,setupMoves:removeRotations(parseAlg(invertAlg(f.alg)))};}
+  return {title:'F2L case #'+f.n,statusId:f2lId(f.n),tab:'f2l',group:f.grp,alg:f.alg,recog,why:F2L_WHY[f.grp]||'',...caseWithParts(c,'f2l'),setupMoves:removeRotations(parseAlg(invertAlg(f.alg)))};}
 
 // ---------- REFERENCE ----------
 // Each reference algorithm shows its first move; a spoiler covers each move after it. A click on the line
