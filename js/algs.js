@@ -37,7 +37,7 @@ const ALG_DB={
   ],
   cp:[
     {id:'pll-T',name:'T perm',group:'PLL corners',alg:"R U R' U' R' F R2 U' R' U' R U R' F'",prob:2,
-     recog:'Headlights on one side. Hold headlights on the left. Swaps the two right corners. It also swaps the left and right edges. This step ignores edges, so the picture shows corner arrows only.',
+     recog:'Headlights on one side. Hold headlights on the left. Swaps the two right corners. It also swaps the left and right edges. This step ignores edges.',
      why:"T perm is the sexy move, then a longer sledgehammer: (R U R' U') (R' F R2 U' R' U' R U R' F'). The second part is a sledgehammer with extra moves that also repair the edges. T perm swaps two corners side by side, and two edges. In two-look PLL, you only need its corner swap. Do T perm twice and the cube is back where it started."},
     {id:'pll-Y',name:'Y perm',group:'PLL corners',alg:"F R U' R' U' R U R' F' R U R' U' R' F R F'",prob:1,
      recog:'No headlights on any side. Swaps diagonal corners (front-left with back-right as held). It also swaps two edges. This step ignores edges.',
