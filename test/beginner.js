@@ -80,7 +80,10 @@ for(let i=0;i<300;i++){
   for(const s of plan.stages)for(const p of s.parts){parts++;assert.ok(p.title&&p.text,'every part has a title and text');
     assert.strictEqual(p.up,s.n===3?'white':'yellow','step 3 works white up, the rest yellow up');
     for(const m of [p.pre,...p.moves].filter(Boolean))assert.ok(ALLOWED.test(m),'move '+m);
-    if(p.pre)assert.ok(/^y/.test(p.pre),'a hold is a y rotation');}
+    if(p.pre)assert.ok(/^y/.test(p.pre),'a hold is a y rotation');
+    // The guided solve shows `short`: the moves in parentheses, in order, name every move of the part.
+    const named=[...p.short.matchAll(/\(([^)]+)\)/g)].flatMap(m=>m[1].split(', '));
+    assert.deepStrictEqual(named,[...p.moves],'the short line names the moves: '+p.short);}
   // Follow the plan with its turn-overs. Step 1 ends with a daisy, 2 with a cross, 3 with the first
   // layer, 4 with two layers, 6 with a yellow face, 8 solved.
   let c=start,up='yellow';const atEnd=[];

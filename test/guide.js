@@ -50,6 +50,12 @@ w.addEventListener('load',async()=>{try{
   assert.ok(/Turn the cube over \(z2\)/.test(li[0].textContent),'the hold line names z2');
   assert.ok(/^(Flip|Turn) .*the \w+-white edge .*\(.+\)\./.test(li[1].textContent),'the second line names the edge and its moves');
   assert.ok(li[1].querySelector('.gd-moves'),'the tiles sit under the second line');
+  // A part in a later stage has the same two lines.
+  const later=G().parts.findIndex(x=>x.stage.n>2);
+  w.eval(`guideState.i=${later};gdRender()`);
+  const li2=$$('#tab-bsolve .gd-steps > li');assert.strictEqual(li2.length,2,'a later part has two lines');
+  assert.ok(/\(.+\)\./.test(li2[1].textContent)&&li2[1].querySelector('.gd-moves'),'its second line names the moves above the tiles');
+  w.eval('guideState.i=0;gdRender()');
   assert.strictEqual(w.cubeAtSeq(0).toFacelets()[4],0,'before the turn-over the top center is white');
   assert.strictEqual(w.cubeAtSeq(1).toFacelets()[4],3,'after the turn-over the top center is yellow');
   assert.deepStrictEqual(w.cubeAtSeq(w.seqState.moves.length).toFacelets(),first.after.toFacelets(),'the part ends on its after cube');

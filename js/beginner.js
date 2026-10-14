@@ -221,6 +221,7 @@ function solveBeginner(start,opts){
     for(const k of [0,1,3,2]){const from=BEG_U_EDGE_RING[(idx-k+4)%4];if(f[edgeFacelet[BEG_EDGE_POS[from]][0]]!==w)return BEG_U_TOK[k];}return '';}
   const room=u=>u?' Turn the top to move a petal out of the way: '+u+'.':'';
   // The guided solve shows `short` in place of the text: one line that names the moves.
+  const ml=a=>(Array.isArray(a)?a:parseAlg(a)).filter(Boolean).join(', ');
   const bring=(other,u,m,more)=>({short:`${u?`Turn the top so no petal is in the way (${u}). Then turn`:'Turn'} the ${other}-white edge to the top (${m}).${more?' '+more:''}`});
 
   // ----- Step 1: the daisy (yellow up) -----
@@ -258,7 +259,8 @@ function solveBeginner(start,opts){
     const g=after(c,pre?[pre]:[]).toFacelets();
     let slot=null;for(const s of BEG_U_EDGE_RING){const st=edgeSt(g,BEG_EDGE_POS[s]);if(st[0]===w&&st[1]===col)slot=s;}
     const k=(BEG_U_EDGE_RING.indexOf('UF')-BEG_U_EDGE_RING.indexOf(slot)+4)%4;const u=BEG_U_TOK[k];
-    part(`White and ${name(col)} edge`,`Hold ${name(col)} in front.${u?' Turn the top until the front tile of the top edge matches the '+name(col)+' center: '+u+'.':' The front tile of the top edge already matches the '+name(col)+' center.'} Turn the front twice: F2. The white tile is now on the bottom.`,pre,[u,'F2'],{piece:{type:'edge',colors:e.st}});
+    part(`White and ${name(col)} edge`,`Hold ${name(col)} in front.${u?' Turn the top until the front tile of the top edge matches the '+name(col)+' center: '+u+'.':' The front tile of the top edge already matches the '+name(col)+' center.'} Turn the front twice: F2. The white tile is now on the bottom.`,pre,[u,'F2'],{piece:{type:'edge',colors:e.st},
+      short:`${u?`Turn the top until the ${name(col)}-white edge is over the ${name(col)} center (${u}). Then turn it`:`Turn the ${name(col)}-white edge`} down to the bottom (F2).`});
   }
 
   }
@@ -276,7 +278,7 @@ function solveBeginner(start,opts){
       const wrong=(()=>{for(let i=0;i<4;i++){const st=cornerSt(f,i);if(st.includes(w)&&!cornerSolved(f,i))return {i,st};}return null;})();
       if(!wrong)throw new Error('beginner: no white corner left to place');
       const cols=wrong.st.filter(x=>x!==w).map(name).join(' and ');
-      part(`White, ${cols} corner: bring it down`,`It is in the top layer, but not in its place. Hold it at the top right of the front. R', D', R brings it down to the bottom layer. The cross stays.`,BEG_CORNER_TO_URF[CORNER_NAMES[wrong.i]],BEGINNER_ALGS.cornerDown.alg,{piece:{type:'corner',colors:wrong.st},alg:'cornerDown'});
+      part(`White, ${cols} corner: bring it down`,`It is in the top layer, but not in its place. Hold it at the top right of the front. R', D', R brings it down to the bottom layer. The cross stays.`,BEG_CORNER_TO_URF[CORNER_NAMES[wrong.i]],BEGINNER_ALGS.cornerDown.alg,{piece:{type:'corner',colors:wrong.st},alg:'cornerDown',short:`Turn the white, ${cols} corner down to the bottom layer (${ml(BEGINNER_ALGS.cornerDown.alg)}).`});
       continue;}
     const sides=cnr.st.filter(x=>x!==w);const cols=sides.map(name).join(' and ');const piece={type:'corner',colors:cnr.st};
     // Turn the bottom until the corner sits between its two centers.
@@ -287,16 +289,17 @@ function solveBeginner(start,opts){
       if(pos!=null)break;}
     if(pos==null)throw new Error('beginner: no home under a white corner');
     const d=BEG_D_TOK[k];const turned=d?'Turn the bottom until the corner sits between the '+cols+' centers: '+d+'. ':'It already sits between the '+cols+' centers. ';
+    const under=then=>`${d?`Turn the bottom until the corner sits between the ${cols} centers (${d}). Then ${then}`:begCap(then)}`;
     const g=after(c,d?[d]:[]).toFacelets();const fc=cornerFacelet[pos];const wk=fc.map(x=>g[x]).indexOf(w);
     if(wk===0){ // white faces down: hold the corner at the bottom right, turn white to the front, then put it in
-      part(`White, ${cols} corner: turn white to the front`,`${turned}White faces down. Hold the corner at the bottom right of the front. F, D', F', D2 turns it so white faces you.`,BEG_CORNER_TO_DFR[CORNER_NAMES[pos]],[d,...parseAlg(BEGINNER_ALGS.cornerFront.alg)],{piece,alg:'cornerFront'});
-      part(`White, ${cols} corner: put it in`,`White faces you at the bottom right of the front. D', R', D, R.`,'',BEGINNER_ALGS.cornerRight.alg,{piece,alg:'cornerRight'});
+      part(`White, ${cols} corner: turn white to the front`,`${turned}White faces down. Hold the corner at the bottom right of the front. F, D', F', D2 turns it so white faces you.`,BEG_CORNER_TO_DFR[CORNER_NAMES[pos]],[d,...parseAlg(BEGINNER_ALGS.cornerFront.alg)],{piece,alg:'cornerFront',short:under(`turn white to the front (${ml(BEGINNER_ALGS.cornerFront.alg)}).`)});
+      part(`White, ${cols} corner: put it in`,`White faces you at the bottom right of the front. D', R', D, R.`,'',BEGINNER_ALGS.cornerRight.alg,{piece,alg:'cornerRight',short:`Put the corner in (${ml(BEGINNER_ALGS.cornerRight.alg)}).`});
     }else{
       const face=BEG_FACE_LETTER[BEG_FACE_OF(fc[wk])];const pre=BEG_TO_FRONT[face];
       const h=applyAlg(c,[d,pre].filter(Boolean)).toFacelets();
       const atLeft=(()=>{const st=cornerSt(h,BEG_CORNER_POS.DLF);return st.includes(w)&&st.includes(sides[0])&&st.includes(sides[1]);})();
       const a=atLeft?BEGINNER_ALGS.cornerLeft:BEGINNER_ALGS.cornerRight;
-      part(`White, ${cols} corner`,`${turned}Hold the cube so white faces you: the corner is at the bottom ${atLeft?'left':'right'} of the front. ${a.say}.`,pre,[d,...parseAlg(a.alg)],{piece,alg:a.id});
+      part(`White, ${cols} corner`,`${turned}Hold the cube so white faces you: the corner is at the bottom ${atLeft?'left':'right'} of the front. ${a.say}.`,pre,[d,...parseAlg(a.alg)],{piece,alg:a.id,short:under(`put the corner in (${ml(a.alg)}).`)});
     }
   }
   turnOver('yellow');
@@ -314,10 +317,11 @@ function solveBeginner(start,opts){
       let k=0;for(k=0;k<4;k++){const g=after(c,BEG_U_TOK[k]?[BEG_U_TOK[k]]:[]).toFacelets();const slot={F:'UF',L:'UL',B:'UB',R:'UR'}[face];const st=edgeSt(g,BEG_EDGE_POS[slot]);if(st[0]===e.st[0]&&st[1]===side)break;}
       const u=BEG_U_TOK[k];const pre=BEG_TO_FRONT[face];const g=applyAlg(c,[u,pre].filter(Boolean)).toFacelets();
       const right=cen(g,'R')===e.st[0];const a=right?BEGINNER_ALGS.moveRight:BEGINNER_ALGS.moveLeft;
-      part(`${begCap(name(side))} and ${name(e.st[0])} edge`,`${u?'Turn the top until the edge makes a vertical line with the '+name(side)+' center: '+u+'. ':'The edge already makes a vertical line with the '+name(side)+' center. '}Hold ${name(side)} in front. The top tile is ${name(e.st[0])}, the color of the ${right?'right':'left'} center. ${a.name}: ${a.say}.`,pre,[u,...parseAlg(a.alg)],{piece:{type:'edge',colors:e.st},alg:a.id});
+      part(`${begCap(name(side))} and ${name(e.st[0])} edge`,`${u?'Turn the top until the edge makes a vertical line with the '+name(side)+' center: '+u+'. ':'The edge already makes a vertical line with the '+name(side)+' center. '}Hold ${name(side)} in front. The top tile is ${name(e.st[0])}, the color of the ${right?'right':'left'} center. ${a.name}: ${a.say}.`,pre,[u,...parseAlg(a.alg)],{piece:{type:'edge',colors:e.st},alg:a.id,
+        short:`${u?`Turn the top until the edge lines up with the ${name(side)} center (${u}). Then do`:'Do'} ${a.name} (${ml(a.alg)}).`});
     }else{ // every top edge has yellow: an edge is stuck in the middle layer
       const i=[8,9,10,11].find(j=>!edgeSolved(f,j));const st=edgeSt(f,i);const a=BEGINNER_ALGS.moveRight;
-      part(`${begCap(name(st[0]))} and ${name(st[1])} edge: it is stuck`,`Every top edge has yellow, so no vertical line is possible. This edge sits in the middle layer in the wrong place. Hold it on the right, at the front right. ${a.name} with the top edge that is there: ${a.say}. The stuck edge comes up.`,BEG_EDGE_TO_FR[EDGE_NAMES[i]],a.alg,{piece:{type:'edge',colors:st},alg:a.id});
+      part(`${begCap(name(st[0]))} and ${name(st[1])} edge: it is stuck`,`Every top edge has yellow, so no vertical line is possible. This edge sits in the middle layer in the wrong place. Hold it on the right, at the front right. ${a.name} with the top edge that is there: ${a.say}. The stuck edge comes up.`,BEG_EDGE_TO_FR[EDGE_NAMES[i]],a.alg,{piece:{type:'edge',colors:st},alg:a.id,short:`Do ${a.name} to bring the stuck edge up (${ml(a.alg)}).`});
     }
   }
 
@@ -333,7 +337,8 @@ function solveBeginner(start,opts){
     if(n===2){for(const r of ['','y',"y'",'y2']){const g=after(c,r?[r]:[]).toFacelets();const u2=upEdges(g);
         if(u2.UB&&u2.UL){pre=r;shape='L';hold='An L: hold it at the back left, like a person sitting.';break;}
         if(u2.UL&&u2.UR){pre=r;shape='line';hold='A line: hold it left to right, like a person lying down.';break;}}}
-    part(`${shape==='dot'?'A dot':shape==='L'?'An L':'A line'} on top`,`${hold} Yellow cross: FUR says U'R'F'. F, U, R, U', R', F'.`,pre,BEGINNER_ALGS.yellowCross.alg,{alg:'yellowCross',shape});
+    part(`${shape==='dot'?'A dot':shape==='L'?'An L':'A line'} on top`,`${hold} Yellow cross: FUR says U'R'F'. F, U, R, U', R', F'.`,pre,BEGINNER_ALGS.yellowCross.alg,{alg:'yellowCross',shape,
+      short:`${shape==='L'?'The L is at the back left. ':shape==='line'?'The line goes left to right. ':''}Do Yellow cross (${ml(BEGINNER_ALGS.yellowCross.alg)}).`});
   }
 
   }
@@ -358,7 +363,8 @@ function solveBeginner(start,opts){
     const how=step.n===1?'One corner has yellow on top. Feed the fish: hold the cube so that corner is at the front left, and the fish eats out of your left hand.'
       :step.n===0?'No corner has yellow on top. None, left: hold the cube with a yellow tile on the left face, at the front left corner.'
       :'Two corners have yellow on top. I see two, my left thumb\'s on you: hold the cube so your left thumb covers a yellow tile on the front face, at the front left corner.';
-    part(`${step.n} ${step.n===1?'corner':'corners'} yellow on top`,`${how} Yellow face: R, U, R', U, R, U2, R'.`,step.r,BEGINNER_ALGS.yellowFace.alg,{alg:'yellowFace',count:step.n});
+    part(`${step.n} ${step.n===1?'corner':'corners'} yellow on top`,`${how} Yellow face: R, U, R', U, R, U2, R'.`,step.r,BEGINNER_ALGS.yellowFace.alg,{alg:'yellowFace',count:step.n,
+      short:`${step.n===1?'The yellow corner is at the front left.':step.n===0?'A yellow tile is on the left face, at the front left corner.':'A yellow tile is on the front face, at the front left corner.'} Do Yellow face (${ml(BEGINNER_ALGS.yellowFace.alg)}).`});
   }
 
   }
@@ -373,14 +379,17 @@ function solveBeginner(start,opts){
     for(let j=0;j<4&&k==null;j++){const g=after(c,BEG_U_TOK[j]?[BEG_U_TOK[j]]:[]).toFacelets();const o=[0,1,2,3].filter(i=>cornerPlaced(g,i));if(o.length===4||o.length===2){k=j;ok=o;}}
     if(k==null)throw new Error('beginner: no hold with two corners placed');
     const u=BEG_U_TOK[k];
-    if(ok.length===4){if(u)part('Line up the corners',`Turn the top until every corner sits between its centers: ${u}.`,'',[u]);break;}
+    if(ok.length===4){if(u)part('Line up the corners',`Turn the top until every corner sits between its centers: ${u}.`,'',[u],{short:`Turn the top until every corner sits between its centers (${u}).`});break;}
     const lined=u?'Turn the top until two corners sit in their places: '+u+'. ':'';
+    const lineUp=then=>u?`Turn the top until two corners sit in their places (${u}). Then ${then}`:begCap(then);
     const adjacent=!((ok.includes(0)&&ok.includes(2))||(ok.includes(1)&&ok.includes(3)));
     if(adjacent){ // the tail lights go at the back
       let pre='';for(const r of ['','y','y2',"y'"]){const h=after(c,[u,r].filter(Boolean)).toFacelets();if(cornerPlaced(h,2)&&cornerPlaced(h,3)){pre=r;break;}}
       const col=name(cen(after(c,[u,pre].filter(Boolean)).toFacelets(),'B'));
-      part('Two corners next to each other are right',`${lined}They are the tail lights: hold them at the back, on the ${col} side. Then the chant: ${chant}.`,pre,[u,...AP],{alg:'yellowCorners'});
-    }else part('Two corners across from each other are right',`${lined}Hold the cube any way. Do the chant once: ${chant}. Then two corners next to each other are right, and you do it once more.`,'',[u,...AP],{alg:'yellowCorners'});
+      part('Two corners next to each other are right',`${lined}They are the tail lights: hold them at the back, on the ${col} side. Then the chant: ${chant}.`,pre,[u,...AP],{alg:'yellowCorners',
+        short:lineUp(`do Yellow corners with those two corners at the back (${ml(AP)}).`)});
+    }else part('Two corners across from each other are right',`${lined}Hold the cube any way. Do the chant once: ${chant}. Then two corners next to each other are right, and you do it once more.`,'',[u,...AP],{alg:'yellowCorners',
+      short:lineUp(`do Yellow corners once (${ml(AP)}). Then two corners next to each other are right.`)});
   }
 
   }
@@ -393,8 +402,10 @@ function solveBeginner(start,opts){
     if(done.length){
       const pre=BEG_TO_BACK[done[0][1]];const g=after(c,pre?[pre]:[]).toFacelets();
       const front=edgeSt(g,BEG_EDGE_POS.UF)[1];const left=front===cen(g,'L');const a=left?BEGINNER_ALGS.yellowEdges:BEGINNER_ALGS.yellowEdgesRight;
-      part('One side is solved',`The ${name(cen(f,done[0][1]))} side is solved: hold it at the back. The front edge is ${name(front)}, the color of the ${left?'left':'right'} center, so ${left?'do the algorithm as it is':'change the two U turns to U\''}: ${a.say}.`,pre,a.alg,{alg:a.id});
-    }else part('No side is solved',`Hold the cube any way. Do the algorithm once: ${BEGINNER_ALGS.yellowEdges.say}. Then one side is solved.`,'',BEGINNER_ALGS.yellowEdges.alg,{alg:'yellowEdges'});
+      part('One side is solved',`The ${name(cen(f,done[0][1]))} side is solved: hold it at the back. The front edge is ${name(front)}, the color of the ${left?'left':'right'} center, so ${left?'do the algorithm as it is':'change the two U turns to U\''}: ${a.say}.`,pre,a.alg,{alg:a.id,
+        short:`The solved side is at the back. The front edge matches the ${left?'left':'right'} center, so do ${a.name} (${ml(a.alg)}).`});
+    }else part('No side is solved',`Hold the cube any way. Do the algorithm once: ${BEGINNER_ALGS.yellowEdges.say}. Then one side is solved.`,'',BEGINNER_ALGS.yellowEdges.alg,{alg:'yellowEdges',
+      short:`Do Yellow edges once (${ml(BEGINNER_ALGS.yellowEdges.alg)}). Then one side is solved.`});
   }
 
   }
