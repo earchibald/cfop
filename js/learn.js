@@ -201,19 +201,20 @@ function lnLessonHTML(n){
   const tapNote=marked?`<p class="muted ln-small">${n===0?'Tap a kind of piece to see it on the goal cube.':'Tap an underlined word to see those pieces on the goal cube.'}</p>`:'';
   // Watch sits on the picture, top right. While the demo plays it says Skip, which jumps to the goal.
   const demo=s.demo?lnDemoMoves(s.demo):'',watch=s.demo?'<button class="small ln-watch" data-ln="demo">Watch</button>':'';
-  const what=`<div class="panel ln-what"><div class="ln-text"><div><h3>What you do</h3><p>${lnMarked(s.what,s,used)}</p>${tapNote}</div><div><h3>How</h3><p>${lnMarked(s.how,s,used)}</p></div><div class="note">${lnMarked(s.note,s,used)}</div>${n===0?lnSixMoves():''}</div>
-    <div class="ln-goal"><h3>Goal for this step</h3>${goal}<div class="ln-pic"><svg id="lnGoalSvg" viewBox="${lnGoalBox(n)}" aria-hidden="true">${lnGoalSVG(n)}</svg>${watch}</div><div class="muted ln-cap" id="lnGoalCap" aria-live="polite">${esc(lnGoalCap(n))}</div>${demo}</div></div>`;
   let moves='';
-  if(s.algs)moves+=`<div class="panel ln-panel"><h3>The algorithm${s.algs.length>1?'s':''}</h3><div class="ln-algs">${s.algs.map(id=>{const a=pk.algs[id];const open=lnView.why.has(id);
+  if(s.algs)moves+=`<div class="${s.algsInText?'':'panel '}ln-panel"><h3>The algorithm${s.algs.length>1?'s':''}</h3><div class="ln-algs">${s.algs.map(id=>{const a=pk.algs[id];const open=lnView.why.has(id);
     return `<div class="ln-box"><b>${esc(a.name)}</b>${a.when?`<div class="ln-when">${esc(a.when)}</div>`:''}${lnTiles(a.alg,true)}<div class="ln-say">Say it as: <b>${esc(a.say)}</b></div><div class="row"><button class="small" data-ln="alg" data-id="${esc(id)}">Show on the cube</button>${a.why?`<button class="small ghost" data-ln="why" data-id="${esc(id)}" aria-expanded="${open}">Why it works</button>`:''}</div>${open?`<p class="ln-why">${esc(a.why)}</p>`:''}</div>`;}).join('')}</div></div>`;
+  const what=`<div class="panel ln-what"><div class="ln-text"><div><h3>What you do</h3><p>${lnMarked(s.what,s,used)}</p>${tapNote}</div><div><h3>How</h3><p>${lnMarked(s.how,s,used)}</p></div><div class="note">${lnMarked(s.note,s,used)}</div>${n===0?lnSixMoves():''}${s.algsInText?moves:''}</div>
+    <div class="ln-goal"><h3>Goal for this step</h3>${goal}<div class="ln-pic"><svg id="lnGoalSvg" viewBox="${lnGoalBox(n)}" aria-hidden="true">${lnGoalSVG(n)}</svg>${watch}</div><div class="muted ln-cap" id="lnGoalCap" aria-live="polite">${esc(lnGoalCap(n))}</div>${demo}</div></div>`;
   const cases=s.cases?`<div class="panel ln-panel"><div class="row ln-ch"><h3>${esc(pk.caseTitles[n]||'Where you find the piece, and what to do')}</h3><span class="muted ln-small">Show puts the case on the cube</span></div>
     ${s.cases.map((c,i)=>{const ms=parseAlg(c.moves||'');
       return `<div class="ln-case"><div class="ln-cpic">${ms.length?lnPic(lnCaseStart(n,c),false):''}</div><div class="ln-cbody"><b>${esc(c.name)}</b><div class="muted">${esc(c.text)}</div>${ms.length?`<div class="ln-cmoves">${lnTiles(ms)}</div>`:''}</div>${ms.length?`<button class="small" data-ln="case" data-i="${i}">Show</button>`:''}</div>`;}).join('')}</div>`:'';
   const done=st==='finished';
-  const nextBtn=next?`<button class="primary" data-ln="open" data-n="${next.n}">Next: ${esc(lnStepNo(next))}, ${esc(next.name)} →</button>`:`<button class="primary" data-ln="solve">Solve my cube →</button>`;
-  const end=`<div class="panel ln-foot"><div><b>Can you do this step on your own cube?</b> <span class="muted">Mark it finished. You can always come back.</span></div>
-    <div class="row"><button data-ln="mark" id="lnMark"${done?' disabled':''}>${done?'Finished':'Mark finished'}</button>${n>0&&typeof startPractice==='function'?'<button data-ln="practice">Practice this step</button>':''}${next?'<button data-ln="solve">Solve my cube</button>':''}${nextBtn}</div></div>`;
-  return head+what+moves+cases+end;
+  const nextBtn=next?`<button class="primary" data-ln="open" data-n="${next.n}">Next: ${esc(lnStepNo(next))}, ${esc(next.name)} →</button>`:'';
+  const ask=n===0?'<b>Mark finished if this makes sense to you.</b> <span class="muted">You can always come back!</span>':'<b>Can you do this step on your own cube?</b> <span class="muted">Mark it finished. You can always come back.</span>';
+  const end=`<div class="panel ln-foot"><div>${ask}</div>
+    <div class="row"><button data-ln="mark" id="lnMark"${done?' disabled':''}>${done?'Finished':'Mark finished'}</button>${nextBtn}</div></div>`;
+  return head+what+(s.algsInText?'':moves)+(s.hideCases?'':cases)+end;
 }
 
 // ---------- render and actions ----------
@@ -236,9 +237,7 @@ $('#tab-learn').addEventListener('click',e=>{
   const pk=begPack();const n=lnView.n,s=pk.steps[n],act=b.dataset.ln;
   if(act==='open')openLesson(+b.dataset.n);
   else if(act==='list')lnShowList();
-  else if(act==='solve')goTab('bsolve');
   else if(act==='next')setMethod(pk.next.method);
-  else if(act==='practice'){if(typeof startPractice==='function')startPractice(n);}
   else if(act==='mark')lnMarkFinished(n);
   else if(act==='demo'){if(lnDemo.on)lnDemoStop(true);else{lnDemoPlay();lnScrollTop($('#tab-learn .ln-pic'),true);}}
   else if(act==='moves'){const six=['U','D','F','B','R','L'];lnDrill(six,'the six moves, from the lesson',lnSetup(lnFrame(0),six),'Lesson: the six moves');}

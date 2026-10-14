@@ -38,6 +38,8 @@ w.addEventListener('load',async()=>{try{
   assert.strictEqual($$('#tab-learn .ln-algs .ln-box').length,4,'four algorithm boxes');
   assert.strictEqual($$('#tab-learn .ln-case').length,4,'four cases');
   assert.strictEqual($$('#tab-learn .ln-case button[data-ln="case"]').length,4,'each case has Show');
+  assert.ok(!$('#tab-learn [data-ln="practice"]')&&!$('#tab-learn [data-ln="solve"]'),'no Practice or Solve my cube in a lesson');
+  assert.ok(!$('#tab-learn .ln-text .ln-algs'),'step 3 keeps its algorithms in their own panel');
 
   // Show on the cube: Corner in, right, as a drill, from the start. Step 3 is held white up.
   click($('#tab-learn button[data-ln="alg"][data-id="cornerRight"]'));
@@ -74,6 +76,7 @@ w.addEventListener('load',async()=>{try{
   // Mark finished on the basics: the next step moves on.
   click(cont());assert.strictEqual($('#tab-learn h2').textContent,'Get to know your cube','Continue opens the basics');
   assert.ok($('#tab-learn button[data-ln="moves"]'),'the basics show the six moves');
+  assert.ok(/^Mark finished if this makes sense to you\. You can always come back!$/.test($('#tab-learn .ln-foot > div').textContent),'the basics ask if it makes sense');
   assert.strictEqual($('#tab-learn button[data-ln="moves"]').textContent,'Show the six moves on the cube at the top of the page');
   assert.deepStrictEqual($$('#tab-learn .ln-goals li').map(e=>e.textContent),['Learn the three kinds of pieces','How to hold the cube','The six moves'],'the goal is a list');
   assert.deepStrictEqual($$('#tab-learn .ln-act').map(e=>e.textContent),['centers','edges','corners'],'the three kinds of piece are actions');
@@ -118,6 +121,8 @@ w.addEventListener('load',async()=>{try{
 
   // The daisy: underlined words light pieces, two algorithms, and the goal shows how it is made.
   w.openLesson(1);await sleep(50);
+  assert.strictEqual($$('#tab-learn .ln-text .ln-algs .ln-box').length,2,'the daisy algorithms sit under How');
+  assert.ok(!$('#tab-learn .ln-case'),'the daisy has no case list: the demo shows the cases');
   assert.deepStrictEqual($$('#tab-learn .ln-act').map(e=>e.textContent),['yellow center','white edge','petal','top layer','middle layer','bottom layer'],'the daisy words are actions');
   const pic=()=>$('#tab-learn .ln-pic'),lit=()=>$$('#lnGoalSvg polygon.hl-on').length;
   click($('#tab-learn .ln-act[data-kind="ycenter"]'));assert.strictEqual(pic().dataset.hl,'on');assert.strictEqual(lit(),1,'the yellow center lights');

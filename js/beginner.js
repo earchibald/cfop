@@ -79,6 +79,9 @@ const BEGINNER_STEPS=[
      list:[['R','Move blue-white to Up.'],["U'",'Turn the Up face to leave a space for red-white.'],['F2','Move red-white to Up.'],
        {group:'Flip the edge',rows:[["R'",'Move green-white down to the side.'],['U','Turn the Up face to leave a space for green-white.'],["F'",'Move green-white to Up.']]}]},
    algs:['edgeUp','edgeFlip'],
+   // The lesson puts the algorithms in the text column, under How, and leaves out the case list:
+   // the demo shows each case.
+   algsInText:true,hideCases:true,
    cases:[
      {name:'Already on top, white up',text:'Leave it.',moves:''},
      {name:'Middle layer, white facing you',text:'Hold the edge at the front right. Turn the right face up: R.',moves:'R'},
