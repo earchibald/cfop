@@ -74,11 +74,11 @@ function lnHighlight(kind){const pic=$('#tab-learn .ln-pic'),svg=$('#lnGoalSvg')
   clearTimeout(lnView.hlT);lnView.hlT=setTimeout(()=>{delete pic.dataset.hl;},2200);}
 // Tap a letter: the cube keeps its view. The layer that moves stays bright, the rest dims, and a
 // ring of arrows shows the turn. On the top, front and right the ring sits on the face. The left,
-// bottom and back are hidden, so their ring floats beside the cube in the plane of that face:
-// to the left, below, and standing behind the top edge.
-const LN_RING_AT={L:{at:[-3.4,0,0],r:1.15},D:{at:[0,-3.3,0]},B:{at:[0,2.35,-1.66]}};
+// bottom and back are hidden, so their ring sits in the plane of that face at the center of the
+// cube, over the dimmed layers: above the bottom layer, right of the left one, in front of the back.
+const LN_RING_AT={L:{at:[0,0,0],r:1.3},D:{at:[0,0,0],r:1.3},B:{at:[0,0,0],r:1.3}};
 const LN_FACE_NAME={U:'top',D:'bottom',F:'front',B:'back',R:'right',L:'left'};
-function lnTurnText(m){return `${m}: the ${LN_FACE_NAME[m[0]]} face turns ${m.endsWith("'")?'counterclockwise':'clockwise'}, as you look at it.`+(LN_RING_AT[m[0]]?' That face is hidden here. The ring floats next to it.':'');}
+function lnTurnText(m){return `${m}: the ${LN_FACE_NAME[m[0]]} face turns ${m.endsWith("'")?'counterclockwise':'clockwise'}, as you look at it.`+(LN_RING_AT[m[0]]?' That face is hidden here. The ring shows the turn through the cube.':'');}
 // The stickers of the cubies in the layer a face move turns.
 function lnLayer(face){const g=FACE_GEOM['URFDLB'.indexOf(face)];const s=new Set();const n=drawN(),hs=1.5/n;
   for(let f=0;f<6;f++){const h=FACE_GEOM[f];for(let i=0;i<n;i++)for(let j=0;j<n;j++){
@@ -105,7 +105,7 @@ function lnDemoFade(c){const s=new Set();for(const k of LN_DEMO_KEYS)for(const i
 function lnDemoDraw(c,move,t){const svg=$('#lnGoalSvg');if(!svg)return;const v=lnGoalView(lnView.n);
   svg.innerHTML=renderCube3D(c.toFacelets(),{...v,...LN_PIC,move,t,fade:lnDemoFade(c)})+lnFrontMark(v);}
 function lnDemoCap(text){const cap=$('#lnGoalCap');if(cap)cap.textContent=text;}
-function lnDemoMark(k){$$('#lnDemoMoves .m').forEach((e,i)=>e.classList.toggle('cur',i===k));}
+function lnDemoMark(k){$$('#lnDemoMoves .m').forEach((e,i)=>{e.classList.toggle('cur',i===k);const li=e.closest('li');if(li)li.classList.toggle('cur',i===k);});}
 function lnDemoBtn(text){const b=$('#tab-learn [data-ln="demo"]');if(b)b.textContent=text;}
 // Stop the demo. With `done`, the picture shows the goal and the caption says so.
 function lnDemoStop(done){
@@ -120,6 +120,7 @@ function lnDemoPlay(){
   const ms=parseAlg(s.demo.moves),caps={};let at=0;for(const [len,text] of s.demo.parts){caps[at]=text;at+=len;}
   const cubes=[applyAlg(lnGoals()[n],invertAlg(ms))];for(const m of ms)cubes.push(applyAlg(cubes[cubes.length-1],[m]));
   const smooth=!reducedMotion()&&typeof requestAnimationFrame==='function';
+  const list=$('#lnDemoMoves');if(list)list.classList.remove('hidden');
   lnDemo.on=true;lnDemoBtn('Stop');lnDemoDraw(cubes[0]);lnDemoCap(s.demo.start);lnDemoMark(-1);
   // Move k: the layer turns for about half of the time, then the cube rests until the next move.
   const move=k=>{if(!lnDemo.on)return;if(k>=ms.length){lnDemoStop(true);return;}
@@ -134,6 +135,13 @@ function lnDemoPlay(){
 }
 
 // ---------- small renderers ----------
+// The demo moves under the goal. The goal shows the step solved, so the moves stay hidden until
+// Watch it plays them. With a `list`, each move is a row that says what it does.
+function lnDemoMoves(d){
+  if(!d.list)return `<div class="ln-demo hidden" id="lnDemoMoves">${lnTiles(d.moves)}</div>`;
+  const row=([m,text])=>`<li><span class="ms"><span class="m">${fmtMove(m)}</span></span><span>${esc(text)}</span></li>`;
+  return `<ol class="ln-demo ln-demo-list hidden" id="lnDemoMoves">${d.list.map(r=>r.group?`<li class="grp"><b>${esc(r.group)}</b><ol>${r.rows.map(row).join('')}</ol></li>`:row(r)).join('')}</ol>`;
+}
 const lnStepNo=s=>s.n===0?'Basics':'Step '+s.n;
 const lnStatus=n=>begProgress.status(n);
 // Move tiles. The guide's algorithms inside the moves show as boxes with their name.
@@ -191,7 +199,7 @@ function lnLessonHTML(n){
   const goal=s.goals?`<ul class="ln-goals">${s.goals.map(g=>`<li>${esc(g)}</li>`).join('')}</ul>`:`<p class="muted">${esc(s.goal)}</p>`;
   const used=new Set(),marked=!!(s.kinds||s.marks);
   const tapNote=marked?`<p class="muted ln-small">${n===0?'Tap a kind of piece to see it on the goal cube.':'Tap an underlined word to see those pieces on the goal cube.'}</p>`:'';
-  const demo=s.demo?`<div class="ln-demo" id="lnDemoMoves">${lnTiles(s.demo.moves)}</div><button class="small" data-ln="demo">Watch it</button>`:'';
+  const demo=s.demo?`${lnDemoMoves(s.demo)}<button class="small" data-ln="demo">Watch it</button>`:'';
   const what=`<div class="panel ln-what"><div class="ln-text"><div><h3>What you do</h3><p>${lnMarked(s.what,s,used)}</p>${tapNote}</div><div><h3>How</h3><p>${lnMarked(s.how,s,used)}</p></div><div class="note">${lnMarked(s.note,s,used)}</div>${n===0?lnSixMoves():''}</div>
     <div class="ln-goal"><h3>Goal for this step</h3>${goal}<div class="ln-pic"><svg id="lnGoalSvg" viewBox="${lnGoalBox(n)}" aria-hidden="true">${lnGoalSVG(n)}</svg></div><div class="muted ln-cap" id="lnGoalCap" aria-live="polite">${esc(lnGoalCap(n))}</div>${demo}</div></div>`;
   let moves='';

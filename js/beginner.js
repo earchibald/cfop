@@ -74,7 +74,10 @@ const BEGINNER_STEPS=[
    // The goal picture plays these moves, from the goal with them undone: one petal, then three
    // cases, one per part. Each part is [number of moves, caption].
    demo:{moves:"R U' F2 R' U F'",start:'One petal. Three white edges to bring up.',end:'Four petals around the yellow center: the daisy.',
-     parts:[[1,'Middle layer, white facing you. R brings it up.'],[1,"U' turns the top. The petals move out of the way of the front."],[1,'Bottom layer, white facing down. F2 brings it up.'],[3,"Top layer, white facing out. R', U, F' flips it up."]]},
+     parts:[[1,'Middle layer, white facing you. R brings it up.'],[1,"U' turns the top. The petals move out of the way of the front."],[1,'Bottom layer, white facing down. F2 brings it up.'],[3,"Top layer, white facing out. R', U, F' flips it up."]],
+     // What each move does, shown beside its tile once the demo plays. A group is an algorithm.
+     list:[['R','Move blue-white to Up.'],["U'",'Turn the Up face to leave a space for red-white.'],['F2','Move red-white to Up.'],
+       {group:'Flip the edge',rows:[["R'",'Move green-white down to the side.'],['U','Turn the Up face to leave a space for green-white.'],["F'",'Move green-white to Up.']]}]},
    algs:['edgeUp','edgeFlip'],
    cases:[
      {name:'Already on top, white up',text:'Leave it.',moves:''},

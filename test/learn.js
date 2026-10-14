@@ -90,9 +90,15 @@ w.addEventListener('load',async()=>{try{
   click($('#tab-learn .ln-mv[data-m="L"]'));assert.ok(/hidden here/.test($('#lnGoalCap').textContent),'a hidden face says so');
   assert.ok($('#lnGoalSvg .turn-ring')&&$$('#lnGoalSvg polygon.pc-center').length===3,'the cube keeps its view and a ring still shows');
   assert.strictEqual($$('#lnGoalSvg polygon[class]:not([opacity])').length,6,'the left layer stays bright: three on the front, three on top');
-  const lx=Math.max(...$('#lnGoalSvg .turn-ring polyline').getAttribute('points').split(' ').map(q=>+q.split(',')[0]));
-  const cx=Math.min(...$$('#lnGoalSvg polygon').flatMap(p=>p.getAttribute('points').split(' ').map(q=>+q.split(',')[0])));
-  assert.ok(lx<cx,'the ring for L floats left of the cube');
+  // A hidden face's ring sits over the cube, not beside it: every point is inside the cube's outline.
+  const xy=s=>s.split(' ').map(q=>q.split(',').map(Number));
+  const ringIn=()=>{const box=$$('#lnGoalSvg polygon').flatMap(p=>xy(p.getAttribute('points')));const xs=box.map(p=>p[0]),ys=box.map(p=>p[1]);
+    return $$('#lnGoalSvg .turn-ring polyline').flatMap(p=>xy(p.getAttribute('points'))).every(([x,y])=>x>Math.min(...xs)&&x<Math.max(...xs)&&y>Math.min(...ys)&&y<Math.max(...ys));};
+  assert.ok(ringIn(),'the ring for L sits over the cube');
+  click($('#tab-learn .ln-mv[data-m="D\'"]'));assert.ok(ringIn(),'the ring for D sits over the cube');
+  const midY=q=>{const ys=q.flatMap(p=>xy(p.getAttribute('points')).map(v=>v[1]));return ys.reduce((a,b)=>a+b,0)/ys.length;};
+  assert.ok(midY($$('#lnGoalSvg .turn-ring polyline'))<midY($$('#lnGoalSvg polygon[class]:not([opacity])'))-30,'the ring for D sits above the bottom layer');
+  click($('#tab-learn .ln-mv[data-m="B"]'));assert.ok(ringIn(),'the ring for B sits over the cube');
   w.lnRestoreGoal();assert.ok(!$('#lnGoalSvg .turn-ring')&&$('#lnGoalSvg .ln-front'),'the picture returns');
   click($('#lnMark'));assert.strictEqual(w.begProgress.status(0),'finished','Mark finished sets the status');
   assert.strictEqual($('#tab-learn .stbtn').textContent,'finished','the lesson button follows');
@@ -120,9 +126,12 @@ w.addEventListener('load',async()=>{try{
   click($('#tab-learn .ln-act[data-kind="middle"]'));assert.strictEqual(lit(),6,'the middle layer: three on the front and the right');
   assert.deepStrictEqual($$('#tab-learn .ln-box > b').map(e=>e.textContent),['Bring it up','Flip the edge'],'F2 and the flip are algorithms');
   assert.ok(/bottom layer, white facing down/.test($('#tab-learn .ln-when').textContent),'each says when to use it');
-  assert.deepStrictEqual($$('#lnDemoMoves .m').map(e=>e.textContent),['R',"U'",'F2',"R'",'U',"F'"],'the demo moves show under the goal');
+  assert.deepStrictEqual($$('#lnDemoMoves .m').map(e=>e.textContent),['R',"U'",'F2',"R'",'U',"F'"],'the demo moves sit under the goal');
+  assert.ok($('#lnDemoMoves').classList.contains('hidden'),'the goal is solved, so the moves stay hidden until the demo plays');
+  assert.deepStrictEqual($$('#lnDemoMoves li:not(.grp)').map(li=>li.textContent),['RMove blue-white to Up.',"U'Turn the Up face to leave a space for red-white.",'F2Move red-white to Up.',"R'Move green-white down to the side.",'UTurn the Up face to leave a space for green-white.',"F'Move green-white to Up."],'each move says what it does');
+  assert.strictEqual($('#lnDemoMoves li.grp b').textContent,'Flip the edge','the last three moves are the flip');
   w.lnDemo.ms=100;const goalF=w.lnGoals()[1].toFacelets();
-  click($('#tab-learn button[data-ln="demo"]'));assert.ok(w.lnDemo.on);
+  click($('#tab-learn button[data-ln="demo"]'));assert.ok(w.lnDemo.on);assert.ok(!$('#lnDemoMoves').classList.contains('hidden'),'Watch it shows the moves');
   assert.strictEqual($('#tab-learn button[data-ln="demo"]').textContent,'Stop');assert.ok(!pic().dataset.hl,'the highlight ends');
   assert.ok(/One petal/.test($('#lnGoalCap').textContent),'the demo starts with one petal');
   await sleep(120);assert.ok(/Middle layer/.test($('#lnGoalCap').textContent),'the first part says what it does');

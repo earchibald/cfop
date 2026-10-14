@@ -515,6 +515,14 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
 .ln-pic[data-hl="on"] polygon.hl-on{opacity:1;animation:lnglow 2.2s ease-out}
 .ln-demo .m{transition:background .2s,color .2s}
 .ln-demo .m.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.ln-demo-list,.ln-demo-list ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.ln-demo-list{margin:8px 0}
+.ln-demo-list li{display:flex;align-items:center;gap:10px}
+.ln-demo-list li.grp{flex-direction:column;align-items:stretch;gap:4px;margin-top:4px}
+.ln-demo-list li.grp>ol{padding-left:12px;border-left:2px solid var(--line)}
+.ln-demo-list .ms{flex:none;min-width:40px}
+.ln-demo-list li:not(.grp){color:var(--muted);transition:color .2s}
+.ln-demo-list li.cur{color:var(--text)}
 .ln-when{font-size:14px;color:var(--muted)}
 @keyframes lnglow{0%,55%{stroke:var(--accent);stroke-width:3.2}100%{stroke-width:.6}}
 .ln-front{fill:var(--muted)}
