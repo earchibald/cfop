@@ -9,7 +9,7 @@
 // Axes: x right (R), y up (U), z toward the viewer (F). Cubies sit at -1, 0, 1 on
 // each axis. Stickers lie on the surface at 1.5.
 const COLOR_VARS=['W','R','G','Y','O','B'];
-function stickerColor(ci){return `var(--sticker-${COLOR_VARS[ci]})`;}
+function stickerColor(ci){return `var(--sticker-${COLOR_VARS[ci]||'X'})`;} // an unknown color is gray
 // For each face in the order U R F D L B: the outward normal, the direction a row
 // reads left to right, and the direction rows go down. Facelet 9*f+3*i+j sits at
 // n*1.5 + r*(j-1) + d*(i-1).

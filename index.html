@@ -101,6 +101,7 @@
       <button class="small" id="scanBtn" title="Type a scramble in standard notation">Enter a scramble</button>
       <button class="small" id="camBtn" title="Read a real cube with the webcam">Scan cube</button>
       <button class="small" id="paintBtn" title="Tap the colors of a real cube onto a map">Paint cube</button>
+      <button class="small three-only" id="smartBtn" title="Read a GAN smart cube with Bluetooth">Smart cube</button>
     </div>
     <span class="muted desktop-only" style="font-size:13px"><span class="three-only">White up, green front. The same seed always gives the same scramble.</span><span class="two-only">White up, green front. A 2×2 mix-up uses R, U and F only. The same seed always gives the same scramble.</span><span class="four-only">White up, green front. A 4×4 mix-up turns outside faces and two layers at once (Uu, Rr, Ff). The same seed always gives the same scramble.</span></span>
     <div id="drillNote" class="drillnote hidden"><span>Drill: <b id="drillName"></b>. The player shows this case, not the scramble. Your scramble is kept.</span><button class="small primary" id="drillBack">Back to scramble</button></div>
@@ -295,6 +296,8 @@
 <script src="js/enter.js"></script>
 <script src="js/scan-assemble.js"></script>
 <script src="js/scan.js"></script>
+<script src="js/gan.js"></script>
+<script src="js/smart-ui.js"></script>
 <script src="js/beginner-ui.js"></script>
 <script src="js/beghome.js"></script>
 <script src="js/learn.js"></script>
