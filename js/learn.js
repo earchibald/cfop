@@ -222,11 +222,11 @@ function lnRender(){
   if(lnView.n==null){t.innerHTML=lnHomeHTML();delete document.body.dataset.lesson;}
   else{t.innerHTML=lnLessonHTML(lnView.n);document.body.dataset.lesson='1';}
 }
-// Scroll so the top of the Learn section sits under the top bar.
-function lnScrollTop(){const t=$('#tab-learn');if(!t)return;
+// Scroll so the top of `el` (the Learn section by default) sits under the top bar.
+function lnScrollTop(el,smooth){const t=el||$('#tab-learn');if(!t)return;
   const bar=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--toph'))||58;
   const top=t.getBoundingClientRect().top+window.scrollY-bar-8;
-  try{window.scrollTo({top:Math.max(0,top)});}catch(e){}}
+  try{window.scrollTo({top:Math.max(0,top),behavior:smooth&&!reducedMotion()?'smooth':'auto'});}catch(e){}}
 function openLesson(n){n=Math.max(0,Math.min(begPack().count,Math.round(+n)||0));if(curTab!=='learn')goTab('learn');lnView.n=n;lnView.why.clear();lnRender();lnScrollTop();}
 function lnShowList(){lnView.n=null;lnRender();lnScrollTop();}
 // "Mark finished" goes through the status button's own path, so every view follows.
@@ -240,7 +240,7 @@ $('#tab-learn').addEventListener('click',e=>{
   else if(act==='next')setMethod(pk.next.method);
   else if(act==='practice'){if(typeof startPractice==='function')startPractice(n);}
   else if(act==='mark')lnMarkFinished(n);
-  else if(act==='demo'){if(lnDemo.on)lnDemoStop(true);else lnDemoPlay();}
+  else if(act==='demo'){if(lnDemo.on)lnDemoStop(true);else{lnDemoPlay();lnScrollTop($('#tab-learn .ln-pic'),true);}}
   else if(act==='moves'){const six=['U','D','F','B','R','L'];lnDrill(six,'the six moves, from the lesson',lnSetup(lnFrame(0),six),'Lesson: the six moves');}
   else if(act==='hl')lnHighlight(b.dataset.kind);
   else if(act==='face')lnShowTurn(b.dataset.m);

@@ -132,7 +132,10 @@ w.addEventListener('load',async()=>{try{
   assert.strictEqual($('#lnDemoMoves li.grp b').textContent,'Flip the edge','the last three moves are the flip');
   w.lnDemo.ms=100;const goalF=w.lnGoals()[1].toFacelets();
   assert.ok($('#tab-learn .ln-pic button[data-ln="demo"]'),'Watch sits on the picture');assert.strictEqual($('#tab-learn button[data-ln="demo"]').textContent,'Watch');
+  const scrolls=[];w.scrollTo=o=>scrolls.push(o);
   click($('#tab-learn button[data-ln="demo"]'));assert.ok(w.lnDemo.on);assert.ok(!$('#lnDemoMoves').classList.contains('hidden'),'Watch shows the moves');
+  assert.strictEqual(scrolls.length,1,'Watch scrolls the picture to the top');assert.strictEqual(scrolls[0].behavior,'smooth');
+  w.scrollTo=()=>{};
   assert.strictEqual($('#tab-learn button[data-ln="demo"]').textContent,'Skip');assert.ok(!pic().dataset.hl,'the highlight ends');
   assert.ok(/One petal/.test($('#lnGoalCap').textContent),'the demo starts with one petal');
   await sleep(120);assert.ok(/Middle layer/.test($('#lnGoalCap').textContent),'the first part says what it does');
