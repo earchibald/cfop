@@ -95,12 +95,6 @@ function cubePolys(facelets,opts={}){
   }
   return polys;
 }
-// The center of a 3x3 sticker in the 3D view, and whether its face looks at the camera. The
-// same camera as cubePolys: the What it moves marks sit on the stickers it draws.
-function faceletPt(idx,opts={}){const g=FACE_GEOM[Math.floor(idx/9)],p=idx%9,i=Math.floor(p/3),j=p%3;
-  const yaw=opts.yaw??-32,pitch=opts.pitch??28,S=opts.scale||52,cx=opts.cx??200,cy=opts.cy??185;
-  const q=rot3([0,1,2].map(t=>g.n[t]*1.5+g.r[t]*(j-1)+g.d[t]*(i-1)),yaw,pitch);return [cx+q[0]*S,cy-q[1]*S];}
-function faceFacing(f,opts={}){return rot3(FACE_GEOM[f].n,opts.yaw??-32,opts.pitch??28)[2];}
 function polysSVG(polys){return polys.map(p=>`<polygon${p.cls?` class="${p.cls}"`:''} points="${p.pts.map(q=>q.map(v=>v.toFixed(2)).join(',')).join(' ')}" fill="${p.fill}"${p.faded?' opacity="0.22"':''}${p.stroke?` stroke="${p.stroke}" stroke-width="0.6" stroke-linejoin="round"`:''}/>`).join('');}
 // The kind of piece a facelet belongs to: 'center', 'edge' or 'corner'.
 function pieceKind(idx,n){n=n||3;const p=idx%(n*n),i=Math.floor(p/n),j=p%n;const e=x=>x===0||x===n-1;return e(i)&&e(j)?'corner':e(i)||e(j)?'edge':'center';}

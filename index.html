@@ -240,17 +240,17 @@
     <section class="tab" id="tab-ref" data-sec="ref">
       <div id="refMobile"><div class="panel"><h2>CFOP reference</h2><p class="muted" style="margin:0">Tap a case to open its details: algorithm, how to recognize it, and how it works. Scrambles are white up, green front; cases are shown yellow up.</p></div><div id="refMobileCases"></div></div>
       <div id="refDesktop" style="display:contents">
-      <div class="panel"><h2>Reference</h2><p class="muted">Click any case to open it: large picture, recognition, breakdown, and buttons to set it on the cube or open it in the Lab. Algorithms follow jperm.net's two-look sets.</p><p class="muted">Each picture shows what the algorithm moves. An arrow goes from where a piece starts to where it ends. A two-headed arrow is a swap. A curved arrow on a corner is a twist in place. A gray dashed arrow moves a piece that this step does not care about. In the details, click a part of What it moves to show it on the picture.</p></div>
+      <div class="panel"><h2>Reference</h2><p class="muted">Click any case to open it: large picture, recognition, breakdown, and buttons to set it on the cube or open it in the Lab. Algorithms follow jperm.net's two-look sets.</p></div>
       <div class="grid2 refcols">
         <div class="panel"><h3>Two-look OLL</h3><p class="muted">Look 1: orient the edges. Only the edge stickers matter, so the corners are shown gray. Look 2: orient the corners.</p>
           <h3 class="sub">1. Edges</h3><div class="rcards" id="refOLLe"></div>
           <h3 class="sub">2. Corners</h3><div class="rcards" id="refOLLc"></div></div>
-        <div class="panel"><h3>Two-look PLL</h3><p class="muted">Look 1: permute the corners. The edges are fixed in look 2, so their arrows are gray and dashed. Look 2: permute the edges.</p>
+        <div class="panel"><h3>Two-look PLL</h3><p class="muted">Look 1: permute the corners; these pictures show corner arrows only, since the edges are fixed in look 2. Look 2: permute the edges. A two-headed arrow is a swap.</p>
           <h3 class="sub">1. Corners</h3><div class="rcards" id="refPLLc"></div>
           <h3 class="sub">2. Edges</h3><div class="rcards" id="refPLLe"></div></div>
       </div>
       <div class="panel"><h3>Full PLL (21)</h3><p class="muted">For later. The app checks that each one moves only the top layer.</p><div class="wide"><table id="refPLL"></table></div></div>
-      <div class="panel"><h3>F2L (41 cases, front-right slot)</h3><p class="muted">Solid arrows take the pair into the slot. Dashed arrows show the top-layer pieces that also move.</p><div class="wide"><table id="refF2L"></table></div></div>
+      <div class="panel"><h3>F2L (41 cases, front-right slot)</h3><div class="wide"><table id="refF2L"></table></div></div>
       <div class="panel"><h3>Notation</h3><p>Face turns: <span class="mono">U R F D L B</span> clockwise when you look at that face. <span class="mono">'</span> is counterclockwise. <span class="mono">2</span> is a half turn. Lower-case <span class="mono">r u f</span> turn two layers. <span class="mono">M E S</span> are the middle slices (M follows L, E follows D, S follows F). <span class="mono">x y z</span> rotate the whole cube like R, U, F.</p><p>Scrambles are applied with white up and green in front, the WCA rule. Solving plans start with one rotation (<span class="mono">z2</span> for a white cross) and then contain only face turns: hold the cube still, cross color down, and turn faces.</p></div>
     </div>
     </section>

@@ -204,14 +204,6 @@ th{color:var(--muted);font-weight:500;border-top:0;font-size:14px}
 .modal .close{position:absolute;top:10px;right:10px}
 .modal .sec{margin-top:12px}
 .modal .sec b{display:block;margin-bottom:2px;font-size:14px;color:var(--muted)}
-.modal .mvparts{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
-.modal .mvpart{font-family:var(--mono);font-size:13px;font-weight:400;padding:3px 9px;border-radius:var(--chip);text-align:left}
-.modal .mvpart.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.modal .mvhint{font-size:13px;margin-top:4px}
-/* What it moves: a part chosen in the details lights its pieces and its arrow. The rest fades. */
-svg.mv-focus .fc:not(.lit){opacity:.22}
-svg.mv-focus .mv:not(.on){opacity:.1}
-svg .mv{transition:opacity .15s}svg .fc{transition:opacity .15s}
 @media (max-width:700px){.modal{grid-template-columns:1fr}}
 
 .refcols{align-items:start}
