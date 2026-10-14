@@ -18,6 +18,7 @@ The app was called Cubeworks. Keep these old names as they are:
 |---|---|
 | `index.html` | Page shell and markup |
 | `css/app.css` | All styles |
+| `js/version.js` | `APP_VERSION`, shown in the Settings window. Loads first |
 | `js/engine.js` | `Cube` model, `parseAlg`, `applyAlg`, `invertAlg`, cross and F2L solvers, `fromFacelets` validation |
 | `js/two.js` | The 2x2 as the corners of the 3x3 model: `twoFacelets` (24 stickers), `twoSolved`, `twoScramble` (R U F), `twoAlign`, `twoSearch`, `buildTwoTable`, `twoOptimal`, `twoScrambleFor`, `twoFromFacelets` (pure, no DOM) |
 | `js/four.js` | The 4x4 as 96 stickers with moves from geometry: `FourCube`, `fourApply`, `parseFour` (R, r, Rr, R'r', Rw, 2R), `fourSolved`, `fourScramble`, `fourToCube` (the reduced cube as a 3x3 `Cube`), `fourFromFacelets` (pure, no DOM) |
@@ -42,7 +43,7 @@ The app was called Cubeworks. Keep these old names as they are:
 | `js/speed-ui.js` | The 2x2 speed tabs: Solve (Ortega and CLL plans, an optimal solution), Ortega and CLL case drills, Reference; `twoThumb` |
 | `js/speed4-ui.js` | The 4x4 advanced tabs: Solve (the plan), Parity (drills), Reference |
 | `js/glossary.js` | Glossary entries, links in description text, the floating card |
-| `test/` | `load.js` jsdom smoke test, `two.js` (the 2x2 engine), `mini.js` (the Mini guide's algorithms and 300 solves), `speed2.js` (every Ortega and CLL algorithm, the 42 cases cover every state), `two-ui.js` (the 2x2 in the page), `four.js` (the 4x4 engine), `master.js` (the Master guide's algorithms and 40 solves), `speed4.js` (parity algorithms, outside-turn last layer, plans), `four-ui.js` (the 4x4 in the page), `draw.js` (a part turn lands on the moved cube), `tabs.js` (scramble, drills, case cards, clear dialog), `refspoil.js` (Reference spoilers: first move only, one move per click, Show all moves), `refmoves.js` (What it moves in the details: plain parts, a clean picture, one part at a time), `plan.js` (guided solve with rotations), `mobile.js` (phone menu), `glossary.js`, `beginner.js` (the guide's algorithms and 300 beginner solves), `method.js` (the method chip, rails, progress panel), `learn.js`, `guide.js`, `paint.js`, `practice.js`, `home.js` (one per beginner module), and the scanner tests: `scan-assemble.js` (stage 5 for all three sizes), `scan-synth.js` (synthetic faces of each size through stages 1-3), `scan-vote.js` (the voter and six faces end to end), `scan-ui.js` (the dialog for each puzzle) |
+| `test/` | `load.js` jsdom smoke test, `two.js` (the 2x2 engine), `mini.js` (the Mini guide's algorithms and 300 solves), `speed2.js` (every Ortega and CLL algorithm, the 42 cases cover every state), `two-ui.js` (the 2x2 in the page), `four.js` (the 4x4 engine), `master.js` (the Master guide's algorithms and 40 solves), `speed4.js` (parity algorithms, outside-turn last layer, plans), `four-ui.js` (the 4x4 in the page), `draw.js` (a part turn lands on the moved cube), `tabs.js` (scramble, drills, case cards, clear dialog), `refspoil.js` (Reference spoilers: first move only, one move per click, Show all moves), `refmoves.js` (What it moves in the details: plain parts, a clean picture, one part at a time), `settings.js` (the Settings window and the version), `plan.js` (guided solve with rotations), `mobile.js` (phone menu), `glossary.js`, `beginner.js` (the guide's algorithms and 300 beginner solves), `method.js` (the method chip, rails, progress panel), `learn.js`, `guide.js`, `paint.js`, `practice.js`, `home.js` (one per beginner module), and the scanner tests: `scan-assemble.js` (stage 5 for all three sizes), `scan-synth.js` (synthetic faces of each size through stages 1-3), `scan-vote.js` (the voter and six faces end to end), `scan-ui.js` (the dialog for each puzzle) |
 | `docs/` | Design notes and handoff documents. `beginner-mode.md` holds the 3x3 beginner method plan and its open decisions; `two-by-two.md` the 2x2 model, both 2x2 methods and the packs; `four-by-four.md` the 4x4 model and both 4x4 methods; `scanner-handoff.md` the scanner |
 
 The scripts share one global scope. `index.html` loads them in the order
@@ -138,6 +139,13 @@ npm run serve      # http://localhost:8000 — needed for camera work
 
 Run `npm test` before every commit. Add a focused test under `test/` for
 any new module with logic that runs without a browser.
+
+## Version
+
+`APP_VERSION` in `js/version.js` is the version a report names; the Settings
+window shows it. Raise it in the same commit as any change a user can see:
+the last number for a fix, the middle number for a new feature. Change the
+`version` in `package.json` to match; `test/settings.js` fails if they differ.
 
 ## Commit style
 

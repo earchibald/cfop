@@ -304,8 +304,10 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
 .modal.ask{display:block;max-width:420px;padding:22px 24px}
 .modal.ask h2{margin-top:0;font-size:21px}
 .modal.ask p{margin:6px 0 0}
-.modal.ask .kbd{margin-left:6px;opacity:.75}
-.modal.ask .primary .kbd{background:rgba(128,128,128,.28);border-color:transparent;color:inherit}
+/* Settings: the settings area, then the buttons, then the version at the bottom right. */
+.modal.settings .setarea{margin-top:10px;padding:14px 16px;min-height:96px;border:1px dashed var(--line);border-radius:var(--rb)}
+.modal.settings .setarea p{margin:0}
+.modal.settings .appver{margin-top:12px;text-align:right;font-family:var(--mono);font-size:12px;color:var(--muted);user-select:text}
 @media (max-width:760px){.modal-bg.ask-bg{padding:16px;align-items:center}.modal.ask{max-width:420px;border:1px solid var(--line);border-radius:calc(var(--r) + 4px);box-shadow:var(--shadow);padding:22px 24px}}
 
 /* ---------- enter-scramble dialog ---------- */

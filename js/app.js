@@ -322,7 +322,7 @@ function askConfirm(title,text,yesLabel,onYes){
   bg.innerHTML=`<div class="modal ask" role="alertdialog" aria-modal="true" aria-labelledby="askTitle" aria-describedby="askText">
    <h2 id="askTitle">${esc(title)}</h2>
    <p id="askText" class="muted">${esc(text)}</p>
-   <div class="row" style="justify-content:flex-end;margin-top:14px"><button id="askNo">Cancel <span class="kbd">Esc</span></button><button class="primary" id="askYes">${esc(yesLabel)} <span class="kbd">Enter</span></button></div>
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button id="askNo">Cancel<span class="hk">Esc</span></button><button class="primary" id="askYes">${esc(yesLabel)}<span class="hk">Enter</span></button></div>
   </div>`;
   const close=()=>{document.removeEventListener('keydown',keys,true);document.removeEventListener('keyup',keys,true);bg.remove();};
   const yes=()=>{close();onYes();};
@@ -718,6 +718,27 @@ function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHi
     [k('space'),beg?'play, pause':'timer: hold, release to start · press to stop'],[k('P'),'play, pause'],[k('A'),'animation on or off'],...(beg?[]:[[k('D'),'delete the last time'],[k('C'),'clear all times']]),
     [k('1')+'–'+k(String(railButtons().length)),'switch tab'],...(beg?[]:[[k('N'),'next scramble / case'],[k('H'),'reveal the answer']]),[k('?'),'this card'],['drag cube','orbit the view']];
   return `<h3>Keys</h3><table>${rows.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table><p class="muted" style="margin-top:8px;font-size:13px">${beg?'Your progress and seed history are':'Times, case statuses and seed history are'} saved in this browser.</p>`;}
+// ---------- settings ----------
+// The Settings window. There are no settings yet. It shows the version, under the buttons, so a
+// report can name it. While it is open, keys go to the window only: Esc cancels and Enter saves.
+function openSettings(){if($('#setBg'))return;
+  const bg=document.createElement('div');bg.className='modal-bg ask-bg';bg.id='setBg';
+  bg.innerHTML=`<div class="modal ask settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+   <h2 id="setTitle">Settings</h2>
+   <div class="setarea" id="setArea"><p class="muted">There are no settings yet. They will show here.</p></div>
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button id="setCancel">Cancel<span class="hk">Esc</span></button><button class="primary" id="setSave">Save<span class="hk">Enter</span></button></div>
+   <div class="appver" id="appVer">Twistwright ${esc(APP_VERSION)}</div>
+  </div>`;
+  const close=()=>{document.removeEventListener('keydown',keys,true);document.removeEventListener('keyup',keys,true);bg.remove();$('#settingsBtn').focus();};
+  const save=()=>{close();}; // nothing to save yet
+  const keys=e=>{if(e.key==='Tab')return;e.stopPropagation();if(e.type!=='keydown')return;
+    if(e.key==='Escape'){e.preventDefault();close();}else if(e.key==='Enter'){e.preventDefault();save();}};
+  document.body.appendChild(bg);
+  bg.addEventListener('click',e=>{if(e.target===bg)close();});
+  $('#setCancel').onclick=close;$('#setSave').onclick=save;
+  document.addEventListener('keydown',keys,true);document.addEventListener('keyup',keys,true);
+  setTimeout(()=>$('#setSave').focus(),20);}
+$('#settingsBtn').onclick=openSettings;
 $('#helpBtn').onclick=()=>{const b=$('#helpBox');b.classList.toggle('hidden');b.innerHTML=helpHTML();};
 document.addEventListener('cw:method',()=>{renderAnimBtn();const b=$('#helpBox');if(b&&!b.classList.contains('hidden'))b.innerHTML=helpHTML();});
 $('#scrLen').onchange=()=>newScramble($('#seed').value||undefined);
