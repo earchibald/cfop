@@ -335,6 +335,10 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
 .smart-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start;margin-bottom:10px}
 @media (max-width:700px){.smart-grid{grid-template-columns:1fr}}
 .modal.smart button:disabled{opacity:.45;cursor:not-allowed}
+.modal.smart.dl{max-width:560px}
+.modal.smart ol{margin:10px 0;line-height:1.5}
+#smartBtn.dl{color:var(--link);border-color:color-mix(in srgb,var(--link) 55%,var(--line))}
+#smartBtn.dl:hover{border-color:var(--link)}
 /* A dark backdrop: a bright page lights a glossy cube and puts reflections on it. */
 .modal-bg.scan-bg{background:rgba(0,0,0,.92)}
 

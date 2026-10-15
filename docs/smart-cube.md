@@ -6,7 +6,7 @@
 | Smart cube dialog | `js/smart-ui.js`, opened by `#smartBtn` in the seed bar (3x3 only) |
 | Tests | `test/gan.js` (protocol), `test/smart-ui.js` (dialog), `test/fake-gan.js` (a fake GAN cube) |
 | Saved MAC addresses | `cw:ganMac`, a map from the Bluetooth name to the address |
-| MAC address helper for macOS | `tools/ganmac/` (Swift command-line tool) |
+| The macOS app (Bluetooth bridge for Safari) | `mac/` (Swift, AppKit, Network, CoreBluetooth); `js/bridge.js` is the page side; `test/bridge.js` and `test/fake-bridge.js` |
 
 ## What it does now
 
@@ -58,24 +58,75 @@ carry no manufacturer data, so `ganWatchMac` skips them and waits for one that d
 Where the browser cannot read it, the dialog asks the user to type it. A typed
 address that works is saved by the cube's name.
 
-### ganmac, the helper for macOS
-
-`tools/ganmac/` holds a Swift command-line tool that prints the address. macOS
-hides MAC addresses, but CoreBluetooth gives the manufacturer data, and the
-tool reads the address from it the same way as `ganMacFromData`.
-
-```sh
-tools/ganmac/build.sh          # once; the binary is in .gitignore
-tools/ganmac/ganmac --copy     # wake the cube; prints "GAN12uiM_A1B2  AB:12:34:56:78:9A"
-```
-
-Options: `--all` keeps scanning, `--raw` prints the manufacturer data in hex,
-`--timeout N` sets the wait. The first run makes macOS ask for Bluetooth
-permission for the terminal app. The binary carries an Info.plist with a
-Bluetooth usage description, because macOS stops a Bluetooth tool without one.
+Over the bridge (below) the app reads the address from the advertisement and
+the page gets it with the cube in the chooser list, so nobody types it on a Mac.
 
 ## Browsers
 
 Web Bluetooth works in Chrome and Edge on a computer and on Android. Safari and
 Firefox do not have it. On iOS, the Bluefy browser has it. It needs a secure
 page: GitHub Pages or `localhost`.
+
+Safari blocks a WebSocket to `localhost` from an `https://` page, with no
+exemption for loopback (tested in Safari 27.2). Chrome and Edge allow it. So a
+bridge for Safari cannot sit beside `twistwright.com`: the app has to serve the
+page itself, from an `http://127.0.0.1` origin, which is a secure context and
+has no mixed content.
+
+## The macOS app
+
+`mac/` holds Twistwright for macOS, a menu bar app with no window of its own.
+It does three things:
+
+| Part | Where | What |
+|---|---|---|
+| Site | `mac/Sources/Site.swift` | Serves the page at `http://127.0.0.1:27272/`. The pages come from `https://www.twistwright.com` through a proxy, so the app needs no new build when the site changes. `--root DIR` serves a checkout instead, for work on the site. `/bridge/info` answers `{app, version, ws}`, which is how the page knows the app is there. |
+| Bridge | `mac/Sources/Bridge.swift` | A WebSocket on `ws://127.0.0.1:27273/` that carries JSON between the page and CoreBluetooth. The page keeps the GAN protocol and the cipher; the app moves bytes. The handshake accepts only the `Origin` of the page the app serves. The messages are listed at the top of the file. |
+| App | `mac/Sources/App.swift` | The menu bar item (Open Twistwright, the Bluetooth state, the connected cube, Copy the address, Quit) and the `twistwright://` scheme. `twistwright://smart` opens the page with `?smart=1`, and the page opens the Smart cube dialog itself. |
+
+CoreBluetooth starts on the first scan, so macOS asks for Bluetooth permission
+when the user presses Connect, not when the app opens.
+
+### The page side
+
+`js/bridge.js` probes `/bridge/info` when the page is at a loopback address,
+opens the WebSocket and sets `BRIDGE`. `bridgeDevice(link, {id, name, mac})`
+wraps a cube in the shape of a Web Bluetooth device (the parts `ganOpen`
+uses), so the GAN code is the same on both paths. `ganAvailable()` is true with
+Web Bluetooth or a bridge. `smartMode()` in `smart-ui.js` names the path:
+
+| Mode | When | The button in the seed bar |
+|---|---|---|
+| `bt` | `navigator.bluetooth` exists (Chrome, Edge, Bluefy) | Smart cube; the browser's chooser |
+| `bridge` | the app serves the page and answered | Smart cube; the chooser is a list in the dialog, with the address from the app |
+| `download` | a Mac with neither (Safari at twistwright.com) | "Download macOS app to use a Smart Cube", marked `.dl`; the download dialog with the release and a `twistwright://smart` link |
+| `none` | anything else | Smart cube; the dialog says which browsers work |
+
+### Build and release
+
+```sh
+mac/build.sh                   # Developer ID signed app in mac/build/, plus Twistwright-mac.zip
+mac/build.sh --adhoc           # a build that stays on this Mac
+mac/build.sh --notarize NAME   # also notarize with the notarytool keychain profile NAME, and staple
+mac/build/Twistwright.app/Contents/MacOS/Twistwright --root . --no-open   # serve this checkout
+```
+
+Releases live on GitHub Releases of this repo, tagged `mac-vX.Y.Z` after
+`CFBundleShortVersionString` in `mac/Info.plist`. The page links
+`releases/latest/download/Twistwright-mac.zip`, so a new release is live as soon
+as it is published, and GitHub releases are for the Mac app only. The site
+itself deploys from `main`.
+
+Until a release is notarized, macOS blocks the first open ("Apple could not
+verify") and the user has to press Open Anyway in System Settings › Privacy &
+Security. The download dialog says so. To notarize, store credentials once:
+`xcrun notarytool store-credentials twistwright` (Apple ID, team LMMVWL22J9, an
+app-specific password), then build with `--notarize twistwright`.
+
+### What is not there yet
+
+- An app icon. The bundle uses the system icon.
+- Reconnect when the app restarts while the page is open: the page drops the
+  link and shows the download button; a reload finds the app again.
+- A `localhost` history is not the `twistwright.com` history. `cw:` data is per
+  origin.

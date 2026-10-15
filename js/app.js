@@ -296,7 +296,10 @@ function timerRelease(){
 }
 // The player's keys read like a media player: arrows step, Shift jumps five, Home and End go to
 // the ends, P plays. Space is the timer; without a timer (beginner mode) Space plays and pauses.
-document.addEventListener('keydown',e=>{const tag=document.activeElement.tagName;if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
+// Letters go to a text field, a select or a text area that has focus. A slider, a checkbox or a
+// button keeps the keys: Safari leaves focus on a control after a click more often than Chrome does.
+document.addEventListener('keydown',e=>{const el=document.activeElement,tag=el?el.tagName:'';
+  if(tag==='TEXTAREA'||tag==='SELECT'||(tag==='INPUT'&&!/^(range|checkbox|radio|button)$/.test(el.type)))return;
   if(e.metaKey||e.ctrlKey||e.altKey)return;
   if(e.code==='Space'){e.preventDefault();if(e.repeat)return;if(timerHidden())toggleAuto();else timerPress();return;}
   if(timer.state==='running')return;
