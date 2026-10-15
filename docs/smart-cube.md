@@ -4,6 +4,7 @@
 |---|---|
 | Protocol, cipher, Bluetooth link | `js/gan.js` (no DOM) |
 | Smart cube dialog | `js/smart-ui.js`, opened by `#smartBtn` in the seed bar (3x3 only) |
+| The cube tab | `js/cubetab.js`: the tab in the top bar while a cube is connected, its floating window with the live cube, the first-time callout; `test/cubetab.js` |
 | Tests | `test/gan.js` (protocol), `test/smart-ui.js` (dialog), `test/fake-gan.js` (a fake GAN cube) |
 | Saved MAC addresses | `cw:ganMac`, a map from the Bluetooth name to the address |
 | The macOS app (Bluetooth bridge for Safari) | `mac/` (Swift, AppKit, Network, CoreBluetooth); `js/bridge.js` is the page side; `test/bridge.js` and `test/fake-bridge.js` |
@@ -16,8 +17,25 @@ the dialog is open, the net follows each turn: a move message triggers a new
 state request 150 ms later. "My cube is solved" sends the reset command. The
 reset tells the cube that its current state is solved.
 
-The app does not use the moves themselves yet. Next steps: a timer that starts
-on the first turn and stops on the solve, and a player that follows the cube.
+Version 1.4.0 adds the cube tab. While a cube is connected, the top bar carries
+a tab with the cube's name (`GAN12uiM_A1B2` reads "GAN 12 ui Maglev"). The tab
+opens a floating window with a live cube. Each move message asks the cube for
+its state, one request at a time. When the new state is one move away from the
+last picture, the window turns that layer; otherwise it shows the new state at
+once. Close (Esc) collapses the window into the tab. Disconnect removes the tab.
+A link that drops by itself dims the tab, and the window offers Connect again.
+The first time a cube connects, the page dims around the tab for eight seconds
+and a callout points to it. The dialog is a modal, so the callout waits until
+the dialog closes. `cw:cubeTip` records that it was shown.
+
+The dialog reports the link as `cw:smart` events on `document`: `connect`
+(with `conn` and the first `cube`), `disconnect`, `gone`, `close` (the dialog),
+and each `move` and `state` message. The tab listens; nothing else does yet.
+
+The app does not decode the moves themselves yet: the tab infers a move from
+two states. Next steps: decode the face and the direction from the move
+message, a timer that starts on the first turn and stops on the solve, and a
+player that follows the cube.
 
 ## The GAN protocol
 

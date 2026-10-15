@@ -6,7 +6,10 @@
 // Without Web Bluetooth, the page can reach a cube through the Twistwright app for macOS
 // (bridge.js): the app serves the page and the chooser is a list in this dialog. A Mac with
 // neither gets the download dialog instead.
+// Every change of the link goes out as a cw:smart event on document, for the cube tab in the top
+// bar (cubetab.js): {type:'connect',conn}, 'disconnect', 'gone', and each 'move' and 'state' message.
 let smartConn=null,smartCube=null,smartBusy=false,smartTimer=0,smartMacWait=null,smartListEnd=null;
+function smartNotify(detail){if(typeof document!=='undefined')document.dispatchEvent(new CustomEvent('cw:smart',{detail}));}
 const MAC_APP_URL='https://github.com/earchibald/cfop/releases/latest/download/Twistwright-mac.zip';
 // How this page can reach a cube: 'bt' (Web Bluetooth), 'bridge' (the app serves the page),
 // 'download' (a Mac with neither: offer the app) or 'none'.
@@ -17,6 +20,19 @@ function smartMode(){
 }
 // An iPad says Mac too, but has touch.
 function smartIsMac(){const n=typeof navigator==='undefined'?{}:navigator;return /Mac/.test(n.platform||'')&&!(n.maxTouchPoints>1);}
+// The Bluetooth name of a cube as a person says it: GAN12uiM_A1B2 is a GAN 12 ui Maglev,
+// GAN356iC_... a GAN 356 i Carry. A name of another shape comes back without its id suffix.
+function smartNiceName(raw){
+  const name=String(raw||'GAN cube').replace(/[_-][0-9A-Za-z]{2,6}$/,'');
+  const m=/^GAN(\d+)([A-Za-z0-9]*)$/.exec(name);
+  if(!m)return name==='GAN'||!name?'GAN cube':name;
+  const t=/^(ui|i\d?|iC(?:arry)?\d?|ic)?(M)?$/i.exec(m[2]);
+  if(!t)return `GAN ${m[1]} ${m[2]}`.trim();
+  const parts=['GAN',m[1]];
+  if(t[1])parts.push(/^ic/i.test(t[1])?'i Carry'+t[1].replace(/^iC(?:arry)?/i,'').replace(/^(\d)$/,' $1'):t[1]);
+  if(t[2])parts.push('Maglev');
+  return parts.join(' ');
+}
 // The button in the seed bar: Smart cube, or the download of the app on a Mac that cannot connect.
 function smartLabel(){
   const b=$('#smartBtn');if(!b)return;
@@ -97,6 +113,7 @@ function closeSmart(){
   if(smartMacWait){const w=smartMacWait;smartMacWait=null;w(null);}
   if(smartListEnd)smartListEnd(null);
   const b=$('#smartBg');if(b)b.remove();
+  smartNotify({type:'close'});
 }
 function smartKeys(e){
   if(!$('#smartBg'))return;
@@ -193,7 +210,7 @@ async function smartConnect(){
     catch(e){smartBusy=false;smartButtons();smartStatus(e.code==='model'?e.message:'The connection did not start. Turn the cube to wake it up, then press Connect again.');return;}
     try{
       const cube=await conn.readState(3000);
-      smartSaveMac(name,conn.mac);smartConn=conn;smartBusy=false;smartGot(cube);return;
+      smartSaveMac(name,conn.mac);smartConn=conn;smartBusy=false;smartGot(cube);smartNotify({type:'connect',conn,cube});return;
     }catch(e){
       conn.close();
       if(e.code!=='badmac'&&e.code!=='timeout'){smartBusy=false;smartButtons();smartStatus('The cube did not answer: '+e.message);return;}
@@ -206,7 +223,8 @@ async function smartConnect(){
 // Events from a link that is not the current one (a failed try, or one that was closed) are dropped.
 function smartEvent(ev,conn){
   if(!conn||conn!==smartConn)return;
-  if(ev.type==='gone'){smartConn=null;smartBusy=false;smartButtons();smartStatus('The cube is no longer connected. Press Connect to connect again.');return;}
+  if(ev.type==='gone'){smartConn=null;smartBusy=false;smartButtons();smartStatus('The cube is no longer connected. Press Connect to connect again.');smartNotify({type:'gone',conn});return;}
+  if(ev.type==='move'||ev.type==='state')smartNotify(Object.assign({conn},ev));
   if(ev.type==='off'){conn.close();return;}
   // A turn: read the state again once the turns stop for a moment.
   if(ev.type==='move'&&$('#smartBg')){clearTimeout(smartTimer);smartTimer=setTimeout(()=>smartRead(true),150);}
@@ -234,7 +252,7 @@ function smartUse(){
   const r=scrambleFromCube(smartCube,customName('smart'));
   if(r.ok)closeSmart();else smartStatus(r.errors.join(' '));
 }
-function smartDisconnect(){if(smartConn){const c=smartConn;smartConn=null;c.close();}smartCube=null;smartBusy=false;smartDraw();smartButtons();smartStatus('Disconnected. Press Connect to connect again.');}
+function smartDisconnect(){if(smartConn){const c=smartConn;smartConn=null;c.close();smartNotify({type:'disconnect',conn:c});}smartCube=null;smartBusy=false;smartDraw();smartButtons();smartStatus('Disconnected. Press Connect to connect again.');}
 if(typeof document!=='undefined'&&$('#smartBtn')){
   $('#smartBtn').onclick=openSmart;smartLabel();
   document.addEventListener('cw:bridge',smartLabel);
