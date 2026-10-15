@@ -139,6 +139,23 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),held(w.applyAlg(c7,['y']))),1500),'on again: the held view');
   // Back to white up, green front for the rest: the reading Reset view took as the frame.
   dev.notify(gyroMsg(4,{w:0,x:0,y:0,z:1}));assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),held(c7)),1500));
+  // ----- the up face comes from the cube, only the heading from the frame -----
+  // The frame of a reading takes out its turn about the vertical and nothing else.
+  const near=(a,b)=>w.quatAngle(a,b)<0.01,yawQ=d=>[0,Math.sin(d*Math.PI/360),0,Math.cos(d*Math.PI/360)],tiltQ=[s,0,0,s];
+  assert.ok(near(w.quatMul(w.cubeTabYawBasis(yawQ(90)),yawQ(90)),[0,0,0,1]),'a heading alone is taken out');
+  assert.ok(near(w.quatMul(w.cubeTabYawBasis(tiltQ),tiltQ),tiltQ),'a tilt alone stays');
+  const both=w.quatMul(yawQ(-130),tiltQ);
+  assert.ok(near(w.quatMul(w.cubeTabYawBasis(both),both),tiltQ),'a heading on a tilt: the tilt stays');
+  const up=w.quatMul(yawQ(70),[0,0,s,s]); // green up: red decides the heading
+  assert.ok(near(w.quatMul(w.cubeTabYawBasis(up),up),[0,0,s,s]),'green up: the heading comes from red');
+  // The cube tilts a quarter turn toward the viewer, on top of its half turn: white comes to the front.
+  const tilted=w.quatMul([0,1,0,0],tiltQ),rawOf=q=>({x:-q[0],y:q[2],z:-q[1],w:q[3]});
+  dev.notify(gyroMsg(4,rawOf(tilted)));
+  assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),held(w.applyAlg(c7,["x'"]))),1500),'the tilt shows');
+  // Reset view while tilted: the heading is taken again, the tilt stays in the picture.
+  click($('#cubeWinHome'));
+  assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),held(w.applyAlg(c7,["x'"]))),1500),'Reset view keeps the tilt');
+  dev.notify(gyroMsg(4,{w:0,x:0,y:0,z:1}));assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),held(c7)),1500),'upright again');
   // ----- the head drags the window -----
   const win=$('#cubeWin'),head=win.querySelector('.cw-head');
   assert.ok(/Drag/.test(head.title),'the head says it drags');

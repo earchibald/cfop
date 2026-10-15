@@ -8,8 +8,12 @@
 // to it. The Smart cube dialog is a modal, so the callout waits until the dialog closes.
 // The window moves: drag it by its head. The place is kept in cw:cubeWin and clamped to the screen.
 // The picture follows how the cube is held: a gen 2 or gen 4 cube reports its tilt (a gyro
-// message, `q` in gan.js) many times a second. The first reading sets the frame (`basis`): the
-// cube is taken to be white up, green front at that moment. Reset view takes the frame again.
+// message, `q` in gan.js) many times a second. The cube knows which way is up (gravity), so the
+// picture takes the up face from each reading as it is. It does not know which way the user
+// faces, so the first reading sets the heading (`basis`, a turn about the vertical): the green
+// face is taken to point at the user at that moment. Reset view takes the heading again. A frame
+// that took the whole first reading as white up, green front went wrong whenever the cube lay
+// some other way when it first moved, and the picture then stayed tilted for good.
 // Follow my cube switches between the held view and the fixed view, kept in cw:cubeFollow.
 // The dialog reports every change of the link as a cw:smart event (smart-ui.js); nothing here
 // reaches into the dialog. All markup here is fixed text; the cube's name goes in as text.
@@ -52,7 +56,7 @@ function cubeTabOpen(){
   w.innerHTML=`<div class="cw-head" title="Drag to move the window"><span class="dot" aria-hidden="true"></span><b class="nm"></b><button class="small ghost" id="cubeWinClose" title="Collapse the window back into the tab (Esc)">Close<span class="hk" aria-hidden="true">Esc</span></button></div>
    <svg id="cubeWinSvg" viewBox="0 0 400 360" role="img" aria-label="Your smart cube, live"></svg>
    <div class="cw-moves" id="cubeWinMoves" aria-label="Your last moves"></div>
-   <div class="cw-row hidden" id="cubeWinView"><button class="small cw-tog" id="cubeWinFollow" aria-pressed="true" title="Turn the picture as you turn the cube in your hands">Follow my cube</button><button class="small ghost" id="cubeWinHome" title="Hold the cube white up, green front, then press. The picture lines up with your cube.">Reset view</button></div>
+   <div class="cw-row hidden" id="cubeWinView"><button class="small cw-tog" id="cubeWinFollow" aria-pressed="true" title="Turn the picture as you turn the cube in your hands">Follow my cube</button><button class="small ghost" id="cubeWinHome" title="Hold the cube with green toward you, then press. The picture turns to match.">Reset view</button></div>
    <p class="muted cw-note" id="cubeWinNote"></p>
    <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect">Connect again</button></div>`;
   document.body.appendChild(w);
@@ -240,11 +244,21 @@ function quatSlerp(a,b,t){
 }
 // The angle between two turns, in degrees.
 function quatAngle(a,b){const d=Math.abs(a[0]*b[0]+a[1]*b[1]+a[2]*b[2]+a[3]*b[3]);return 2*Math.acos(Math.min(1,d))*180/Math.PI;}
-// A tilt reading from the cube. The first one sets the frame: the cube is taken to be white up,
-// green front at that moment.
+// The heading frame for a reading: the turn about the vertical that points the green face at
+// the viewer (+z). With green straight up or down, the red face goes to the right (+x) instead.
+// Only the heading is taken out, so a tilt in the reading stays in the picture.
+function cubeTabYawBasis(q){
+  const M=quatMat(q);let a;
+  const g=[M[0][2],M[2][2]]; // the green axis, seen from above: x and z
+  if(Math.hypot(g[0],g[1])>0.3)a=-Math.atan2(g[0],g[1]);
+  else{const r=[M[0][0],M[2][0]];a=Math.PI/2-Math.atan2(r[0],r[1]);}
+  return [0,Math.sin(a/2),0,Math.cos(a/2)];
+}
+// A tilt reading from the cube. The first one sets the heading: green is taken to face the
+// viewer at that moment. The up face comes from the reading itself.
 function cubeTabGyro(q){
   q=quatNorm(q);cubeTab.raw=q;
-  if(!cubeTab.basis)cubeTab.basis=quatConj(q);
+  if(!cubeTab.basis)cubeTab.basis=cubeTabYawBasis(q);
   cubeTab.qTo=quatNorm(quatMul(cubeTab.basis,q));
   if(!cubeTab.gyro){cubeTab.gyro=true;cubeTab.q=cubeTab.qTo;cubeTabWindow();return;}
   cubeTabTurnView();
@@ -271,8 +285,8 @@ function cubeTabStopView(){if(cubeTab.qraf){cancelAnimationFrame(cubeTab.qraf);c
 function cubeTabResetView(){cubeTabStopView();cubeTab.gyro=false;cubeTab.raw=cubeTab.basis=cubeTab.q=cubeTab.qTo=null;}
 // Follow my cube: on, the picture turns with the cube; off, the fixed view.
 function cubeTabFollow(on){cubeTab.follow=!!on;store.set('cubeFollow',cubeTab.follow);if(on)cubeTabTurnView();cubeTabWindow();}
-// Reset view: the cube is white up, green front right now. The picture turns to line up.
-function cubeTabHome(){if(!cubeTab.raw)return;cubeTab.basis=quatConj(cubeTab.raw);cubeTab.qTo=[0,0,0,1];cubeTabTurnView();}
+// Reset view: green faces the viewer right now. The picture turns to line up; a tilt stays.
+function cubeTabHome(){if(!cubeTab.raw)return;cubeTab.basis=cubeTabYawBasis(cubeTab.raw);cubeTab.qTo=quatNorm(quatMul(cubeTab.basis,cubeTab.raw));cubeTabTurnView();}
 // ----- the first time: dim the page around the tab and point to it -----
 function cubeTabSpot(){
   if(store.get('cubeTip',0)||!cubeTabBtn()||$('#cubeSpot'))return;

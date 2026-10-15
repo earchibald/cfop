@@ -46,14 +46,18 @@ so the list stays complete. Five or more moves between two states cannot be
 named, and the list keeps what it has. A new connection starts the list again.
 
 Version 1.6.0 turns the picture with the cube. A gen 2 or gen 4 cube reports its
-tilt many times a second (a `gyro` message, a unit quaternion). The first
-reading sets the frame: the cube is taken to be white up, green front at that
-moment, because the cube's own frame is not known. The picture then turns with
+tilt many times a second (a `gyro` message, a unit quaternion). The cube knows
+which way is up (gravity), so the picture takes the up face from each reading
+as it is. It does not know which way the user faces, so the first reading sets
+the heading (`cubeTabYawBasis`, a turn about the vertical): the green face is
+taken to point at the user at that moment (version 1.7.1; before it, the whole
+first reading was taken as white up, green front, and a cube that lay some
+other way when it first moved left the picture tilted for good). The picture then turns with
 the cube, a little closer to the reported tilt each frame (`quatSlerp`, most of
 the way within a tenth of a second), so a quick turn reads as a turn. The window
 carries two controls once the tilt arrives: Follow my cube (on by default, kept
-in `cw:cubeFollow`; off is the fixed view) and Reset view (hold the cube white
-up, green front, press, and the picture lines up). The gen 3 cube (i Carry 2)
+in `cw:cubeFollow`; off is the fixed view) and Reset view (hold the cube with
+green toward you, press, and the picture lines up; a tilt stays). The gen 3 cube (i Carry 2)
 has no gyro, so its window shows no controls. `cubePolys` takes `rot`, a 3×3
 matrix, for the turn of the body before the camera; the body turned +90° about
 y is the picture of the move y'. The held view uses a camera a little from the
