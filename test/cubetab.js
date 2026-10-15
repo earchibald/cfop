@@ -124,8 +124,9 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   // Reset view: the cube is white up, green front as it is held now.
   click($('#cubeWinHome'));
   assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),held(c7)),1500),'Reset view lines the picture up');
-  // From there, a quarter turn about the cube's z: the picture is the cube after y.
-  const s=Math.SQRT1_2;dev.notify(gyroMsg(4,{w:s,x:0,y:0,z:s}));
+  // From there, the cube turns a quarter turn like the move y. It reports the turn the other
+  // way round (a quarter turn back about its z, on top of the half turn): the picture is the cube after y.
+  const s=Math.SQRT1_2;dev.notify(gyroMsg(4,{w:s,x:0,y:0,z:-s}));
   assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),held(w.applyAlg(c7,['y']))),1500),'a quarter turn of the cube is a quarter turn of the picture');
   // Follow my cube off: the fixed view. On again: the held view. The choice is kept.
   click($('#cubeWinFollow'));

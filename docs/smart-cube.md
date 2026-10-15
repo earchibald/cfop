@@ -85,9 +85,11 @@ need to know which GAN 12 ui they have.
   x, y, z, each a sign bit and a 15-bit size over 0x7FFF. A gen 4 cube sends
   event 0xEC with the same words from bit 16. Gen 3 has none. The cube's axes go
   to the page's (x right, y up, z toward the viewer) as gan-cube-sample maps
-  them: x, z, -y. This mapping and the frame of the first reading are from the
-  sample, not from a cube in hand; if a real cube turns the wrong way, this is
-  the line to change (`ganGyro`).
+  them: x, z, -y. The cube reports the turn the other way round from the turn
+  of its body (with the sample's mapping as it is, a GAN 12 ui turned the
+  picture the wrong way on every axis), so `ganGyro` negates the vector part:
+  the turn of the body is -x, -z, y. Checked on a GAN 12 ui for the turn to
+  the side and the tilt forward (version 1.6.1).
 - **A wrong key.** A wrong MAC address decrypts to noise. Noise almost never
   gives two valid permutations, so `ganDecode` returns `bad`. The cube also
   cannot read a request under a wrong key, so it often stays silent. `readState`

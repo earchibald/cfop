@@ -47,7 +47,7 @@ for(const gen of [2,3,4])assert.deepStrictEqual({...ganDecode(gen,batteryMsg(gen
 for(const gen of [2,4]){
   const ev=ganDecode(gen,ci.decrypt(encrypt(MAC,gyroMsg(gen,{w:0.5,x:-0.25,y:0.75,z:-1}))));
   assert.strictEqual(ev.type,'gyro','gen '+gen+' reads the tilt');
-  [-0.25,-1,-0.75,0.5].forEach((v,i)=>assert.ok(Math.abs(ev.q[i]-v)<1e-4,'gen '+gen+' q['+i+']='+ev.q[i]));
+  [0.25,1,0.75,0.5].forEach((v,i)=>assert.ok(Math.abs(ev.q[i]-v)<1e-4,'gen '+gen+' q['+i+']='+ev.q[i]));
 }
 assert.strictEqual(ganDecode(3,gyroMsg(3,{w:1,x:0,y:0,z:0})),null,'gen 3: no such message');
 // ----- the MAC address from manufacturer data -----
