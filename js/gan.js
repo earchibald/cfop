@@ -110,14 +110,15 @@ function ganState(bits,at){
 }
 // The tilt of the cube: four 16-bit words w, x, y, z from bit `at`, each a sign bit and a 15-bit
 // size. The cube's own axes go to the axes of draw.js (x right, y up, z toward the viewer) as
-// gan-cube-sample maps them: x, z, -y. The cube reports the turn the other way round from the
-// turn of its body (the world as seen from the cube; checked on a GAN 12 ui, which turned the
-// picture the wrong way without this), so the vector part is negated: the turn of the body is
-// -x, -z, y. q is [x,y,z,w], a unit quaternion.
+// gan-cube-sample maps them: x, z, -y. The reading is the turn of the body (the cube's axes
+// taken to the world's), as the sample uses it. Version 1.6.1 negated the vector part, which
+// turned the picture the wrong way on every axis once the up face came from the reading
+// itself (1.7.1); the wrong way it was meant to fix came from the first-reading frame of the
+// time, not from the sign. q is [x,y,z,w], a unit quaternion.
 function ganGyro(bits,at){
   const f=i=>{const v=bits(at+16*i,16);return (v&0x8000?-1:1)*(v&0x7fff)/0x7fff;};
   const w=f(0),x=f(1),y=f(2),z=f(3);
-  return {type:'gyro',q:[-x,-z,y,w]};
+  return {type:'gyro',q:[x,z,-y,w]};
 }
 // Decode a decrypted message. Returns {type:'state',cube}, {type:'move'}, {type:'gyro',q},
 // {type:'battery',level}, {type:'off'}, {type:'bad'} for a state that is not a cube, or null for

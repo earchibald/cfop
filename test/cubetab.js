@@ -124,9 +124,9 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   // Reset view: the cube is white up, green front as it is held now.
   click($('#cubeWinHome'));
   assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),held(c7)),1500),'Reset view lines the picture up');
-  // From there, the cube turns a quarter turn like the move y. It reports the turn the other
-  // way round (a quarter turn back about its z, on top of the half turn): the picture is the cube after y.
-  const s=Math.SQRT1_2;dev.notify(gyroMsg(4,{w:s,x:0,y:0,z:-s}));
+  // From there, the cube turns a quarter turn about its z (up), on top of the half turn, like
+  // the move y: the picture is the cube after y.
+  const s=Math.SQRT1_2;dev.notify(gyroMsg(4,{w:s,x:0,y:0,z:s}));
   assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),held(w.applyAlg(c7,['y']))),1500),'a quarter turn of the cube is a quarter turn of the picture');
   // Follow my cube off: the fixed view. On again: the held view. The choice is kept.
   click($('#cubeWinFollow'));
@@ -149,7 +149,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   const up=w.quatMul(yawQ(70),[0,0,s,s]); // green up: red decides the heading
   assert.ok(near(w.quatMul(w.cubeTabYawBasis(up),up),[0,0,s,s]),'green up: the heading comes from red');
   // The cube tilts a quarter turn toward the viewer, on top of its half turn: white comes to the front.
-  const tilted=w.quatMul([0,1,0,0],tiltQ),rawOf=q=>({x:-q[0],y:q[2],z:-q[1],w:q[3]});
+  const tilted=w.quatMul([0,1,0,0],tiltQ),rawOf=q=>({x:q[0],y:-q[2],z:q[1],w:q[3]});
   dev.notify(gyroMsg(4,rawOf(tilted)));
   assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),held(w.applyAlg(c7,["x'"]))),1500),'the tilt shows');
   // Reset view while tilted: the heading is taken again, the tilt stays in the picture.
