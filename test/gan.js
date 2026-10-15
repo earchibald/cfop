@@ -3,7 +3,7 @@
 const assert=require('assert');const crypto=require('crypto');
 const run=require('./vm-load')('js/engine.js','js/gan.js');
 Object.assign(run('this'),{setTimeout,clearTimeout,AbortController}); // the Bluetooth part waits on timers
-const {encrypt,stateMsg,batteryMsg,fakeDevice,mfDataFor}=require('./fake-gan');
+const {encrypt,stateMsg,batteryMsg,gyroMsg,fakeDevice,mfDataFor}=require('./fake-gan');
 const Cube=run('Cube'),applyAlg=run('applyAlg'),randomMoveScramble=run('randomMoveScramble');
 const aesExpand=run('aesExpand'),aesEncrypt=run('aesEncrypt'),aesDecrypt=run('aesDecrypt');
 const ganCipher=run('ganCipher'),ganDecode=run('ganDecode'),ganCommand=run('ganCommand'),ganMacFromData=run('ganMacFromData'),ganParseMac=run('ganParseMac');
@@ -43,6 +43,13 @@ const wrong=ganCipher('AB:12:34:5C:9D:E2');let states=0;
 for(const gen of [2,3,4])for(let i=0;i<100;i++){const ev=ganDecode(gen,wrong.decrypt(encrypt(MAC,stateMsg(gen,applyAlg(new Cube(),randomMoveScramble(25)),i))));if(ev&&ev.type==='state')states++;}
 assert.strictEqual(states,0,'a wrong MAC address gives no cube');
 for(const gen of [2,3,4])assert.deepStrictEqual({...ganDecode(gen,batteryMsg(gen,64))},{type:'battery',level:64},'gen '+gen+' battery');
+// ----- the tilt: gen 2 and gen 4 report it, gen 3 has none. The cube's x,y,z go to x,z,-y -----
+for(const gen of [2,4]){
+  const ev=ganDecode(gen,ci.decrypt(encrypt(MAC,gyroMsg(gen,{w:0.5,x:-0.25,y:0.75,z:-1}))));
+  assert.strictEqual(ev.type,'gyro','gen '+gen+' reads the tilt');
+  [-0.25,-1,-0.75,0.5].forEach((v,i)=>assert.ok(Math.abs(ev.q[i]-v)<1e-4,'gen '+gen+' q['+i+']='+ev.q[i]));
+}
+assert.strictEqual(ganDecode(3,gyroMsg(3,{w:1,x:0,y:0,z:0})),null,'gen 3: no such message');
 // ----- the MAC address from manufacturer data -----
 assert.strictEqual(ganMacFromData(mfDataFor(MAC)),MAC);assert.strictEqual(ganMacFromData(mfDataFor(MAC,0xFF01)),MAC);
 assert.strictEqual(ganMacFromData(new Map()),null);assert.strictEqual(ganMacFromData(new Map([[0x004C,new DataView(new ArrayBuffer(9))]])),null,'another company is not a GAN cube');

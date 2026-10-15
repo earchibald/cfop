@@ -46,8 +46,10 @@ function moveGeom(move,size){
 // The polygons of the cube picture, far to near. Each is {pts,fill} and a sticker also
 // has {stroke,faded}. Options: yaw, pitch, scale, cx, cy (the center on the page),
 // fade (a Set of facelet indices that keep full color), color(ci,idx) for the sticker
-// fill, body for the plastic between stickers, cls(idx) for a class on each sticker, and
-// move with t (0..1) for a part turn.
+// fill, body for the plastic between stickers, cls(idx) for a class on each sticker,
+// move with t (0..1) for a part turn, and rot, a 3×3 matrix (three rows) that turns the
+// whole cube before the camera: how a smart cube is held. Turning the body +90° about y
+// shows the same picture as the move y' from the fixed camera.
 //
 // The cube is drawn as slabs: runs of layers along the move axis that move together.
 // Each slab is a convex box, so its front faces never overlap and need no sort. The
@@ -61,7 +63,8 @@ function cubePolys(facelets,opts={}){
   const to54=n===2?i=>TWO_FACELET[i]:i=>i; // the index the options see: the 3×3 one for a 2×2, the native one otherwise
   const yaw=opts.yaw??-32,pitch=opts.pitch??28;const S=opts.scale||52;const cx=opts.cx??200,cy=opts.cy??185;
   const color=opts.color||((ci)=>stickerColor(ci));const body=opts.body||'var(--sticker-line)';
-  const proj=p=>{const q=rot3(p,yaw,pitch);return [cx+q[0]*S,cy-q[1]*S];};
+  const M=opts.rot,cam=M?p=>rot3([0,1,2].map(i=>M[i][0]*p[0]+M[i][1]*p[1]+M[i][2]*p[2]),yaw,pitch):p=>rot3(p,yaw,pitch);
+  const proj=p=>{const q=cam(p);return [cx+q[0]*S,cy-q[1]*S];};
   const hs=1.5/n,layerAt=k=>-1.5+hs+2*hs*k; // half a cubie; the center of layer k, counted from the negative side
   let nv=[0,1,0],slabs=[{lo:0,hi:n-1,deg:0}];
   if(opts.move&&opts.t){const g=moveGeom(opts.move,n);nv=g.n;const deg=g.deg*opts.t;slabs=[];const pos=nv[0]+nv[1]+nv[2]>0;
@@ -71,13 +74,13 @@ function cubePolys(facelets,opts={}){
     // end of the axis points away from the camera, the first slab is the nearest, so reverse.
     // The axis, not the face normal: D, L and B turn about a negative normal, but their slabs
     // are still counted from the negative end.
-    if(rot3(nv.map(Math.abs),yaw,pitch)[2]<0)slabs.reverse();}
+    if(cam(nv.map(Math.abs))[2]<0)slabs.reverse();}
   const k=nv.findIndex(v=>v!==0);const polys=[];
   for(const sl of slabs){
     // the slab's box, and the turn it has made
     const lo=[-1.5,-1.5,-1.5],hi=[1.5,1.5,1.5];lo[k]=layerAt(sl.lo)-hs;hi[k]=layerAt(sl.hi)+hs; // layers are counted along the axis, so the sign of nv does not matter here
     const R=sl.deg?p=>rotAxis(p,nv,sl.deg):p=>p;
-    const faces=[];for(let f=0;f<6;f++){const nz=rot3(R(FACE_GEOM[f].n),yaw,pitch)[2];if(nz>=0.02)faces.push({f,nz});}
+    const faces=[];for(let f=0;f<6;f++){const nz=cam(R(FACE_GEOM[f].n))[2];if(nz>=0.02)faces.push({f,nz});}
     faces.sort((x,y)=>x.nz-y.nz);
     for(const {f} of faces){const g=FACE_GEOM[f];
       // the box face: plastic. A cut face inside the cube has no stickers.

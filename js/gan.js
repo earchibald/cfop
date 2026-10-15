@@ -108,14 +108,24 @@ function ganState(bits,at){
   if(!perm(cp,8)||!perm(ep,12)||co.some(x=>x>2))return null;
   return new Cube(cp,co,ep,eo);
 }
-// Decode a decrypted message. Returns {type:'state',cube}, {type:'move'}, {type:'battery',level},
-// {type:'off'}, {type:'bad'} for a state that is not a cube, or null for anything else.
+// The tilt of the cube: four 16-bit words w, x, y, z from bit `at`, each a sign bit and a 15-bit
+// size. The cube's own axes go to the axes of draw.js (x right, y up, z toward the viewer) as
+// gan-cube-sample maps them: x, z, -y. q is [x,y,z,w], a unit quaternion.
+function ganGyro(bits,at){
+  const f=i=>{const v=bits(at+16*i,16);return (v&0x8000?-1:1)*(v&0x7fff)/0x7fff;};
+  const w=f(0),x=f(1),y=f(2),z=f(3);
+  return {type:'gyro',q:[x,z,-y,w]};
+}
+// Decode a decrypted message. Returns {type:'state',cube}, {type:'move'}, {type:'gyro',q},
+// {type:'battery',level}, {type:'off'}, {type:'bad'} for a state that is not a cube, or null for
+// anything else. The gen 3 cube (i Carry 2) has no gyro.
 function ganDecode(gen,msg){
   const bits=ganBits(msg);let type;
   if(gen===2){
     type=bits(0,4);
     if(type===0x04){const cube=ganState(bits,GAN_STATE_AT[2]);return cube?{type:'state',cube}:{type:'bad'};}
     if(type===0x02)return {type:'move'};
+    if(type===0x01)return ganGyro(bits,4);
     if(type===0x09)return {type:'battery',level:Math.min(bits(8,8),100)};
     if(type===0x0D)return {type:'off'};
     return null;
@@ -132,6 +142,7 @@ function ganDecode(gen,msg){
   type=bits(0,8);
   if(type===0xED){const cube=ganState(bits,GAN_STATE_AT[4]);return cube?{type:'state',cube}:{type:'bad'};}
   if(type===0x01)return {type:'move'};
+  if(type===0xEC)return ganGyro(bits,16);
   if(type===0xEF){const n=bits(8,8);return 8+n*8+8<=msg.length*8?{type:'battery',level:Math.min(bits(8+n*8,8),100)}:null;}
   if(type===0xEA)return {type:'off'};
   return null;

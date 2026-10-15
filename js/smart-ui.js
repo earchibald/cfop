@@ -7,7 +7,8 @@
 // (bridge.js): the app serves the page and the chooser is a list in this dialog. A Mac with
 // neither gets the download dialog instead.
 // Every change of the link goes out as a cw:smart event on document, for the cube tab in the top
-// bar (cubetab.js): {type:'connect',conn}, 'disconnect', 'gone', and each 'move' and 'state' message.
+// bar (cubetab.js): {type:'connect',conn}, 'disconnect', 'gone', and each 'move', 'state' and 'gyro'
+// message.
 let smartConn=null,smartCube=null,smartBusy=false,smartTimer=0,smartMacWait=null,smartListEnd=null;
 function smartNotify(detail){if(typeof document!=='undefined')document.dispatchEvent(new CustomEvent('cw:smart',{detail}));}
 const MAC_APP_URL='https://github.com/earchibald/cfop/releases/latest/download/Twistwright-mac.zip';
@@ -224,7 +225,7 @@ async function smartConnect(){
 function smartEvent(ev,conn){
   if(!conn||conn!==smartConn)return;
   if(ev.type==='gone'){smartConn=null;smartBusy=false;smartButtons();smartStatus('The cube is no longer connected. Press Connect to connect again.');smartNotify({type:'gone',conn});return;}
-  if(ev.type==='move'||ev.type==='state')smartNotify(Object.assign({conn},ev));
+  if(ev.type==='move'||ev.type==='state'||ev.type==='gyro')smartNotify(Object.assign({conn},ev));
   if(ev.type==='off'){conn.close();return;}
   // A turn: read the state again once the turns stop for a moment.
   if(ev.type==='move'&&$('#smartBg')){clearTimeout(smartTimer);smartTimer=setTimeout(()=>smartRead(true),150);}

@@ -23,6 +23,9 @@ function stateMsg(gen,c,serial){
   for(let i=0;i<11;i++){w.put(a.ep+4*i,4,c.ep[i]);w.put(a.eo+i,1,c.eo[i]);}
   return w.bytes();
 }
+// A tilt message: w, x, y, z in the cube's own frame, each -1..1, as a sign bit and 15 bits. Gen 3 has none.
+function gyroMsg(gen,q){const w=writer(20),at=gen===2?4:16;if(gen===2)w.put(0,4,1);else w.put(0,8,0xEC);
+  [q.w,q.x,q.y,q.z].forEach((v,i)=>w.put(at+16*i,16,(v<0?0x8000:0)|Math.round(Math.abs(v)*0x7fff)));return w.bytes();}
 function batteryMsg(gen,level){const w=writer(gen===3?16:20);
   if(gen===2){w.put(0,4,9);w.put(8,8,level);}if(gen===3){w.put(0,8,0x55);w.put(8,8,0x10);w.put(16,8,1);w.put(24,8,level);}
   if(gen===4){w.put(0,8,0xEF);w.put(8,8,1);w.put(16,8,level);}return w.bytes();}
@@ -52,4 +55,4 @@ function fakeDevice(gen,mac,cube,opts={}){
 }
 // Manufacturer data as a GAN cube sends it: nine bytes, the MAC address reversed at the end.
 function mfDataFor(mac,cic){const b=new Uint8Array(9);b.set([0x12,0x34,0x56]);mac.split(':').map(x=>parseInt(x,16)).reverse().forEach((x,i)=>b[3+i]=x);return new Map([[cic||0x0501,new DataView(b.buffer)]]);}
-module.exports={encrypt,decrypt,stateMsg,batteryMsg,fakeDevice,mfDataFor,UUID};
+module.exports={encrypt,decrypt,stateMsg,batteryMsg,gyroMsg,fakeDevice,mfDataFor,UUID};

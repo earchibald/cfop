@@ -7,11 +7,20 @@
 // The first time a cube connects, the page dims around the tab for a moment and a callout points
 // to it. The Smart cube dialog is a modal, so the callout waits until the dialog closes.
 // The window moves: drag it by its head. The place is kept in cw:cubeWin and clamped to the screen.
+// The picture follows how the cube is held: a gen 2 or gen 4 cube reports its tilt (a gyro
+// message, `q` in gan.js) many times a second. The first reading sets the frame (`basis`): the
+// cube is taken to be white up, green front at that moment. Reset view takes the frame again.
+// Follow my cube switches between the held view and the fixed view, kept in cw:cubeFollow.
 // The dialog reports every change of the link as a cw:smart event (smart-ui.js); nothing here
 // reaches into the dialog. All markup here is fixed text; the cube's name goes in as text.
 // `shown` is the cube the picture is on (or turns toward), `queue` the moves still to turn, and
-// `target` the cube at the end of the queue: the real cube, as far as the page knows.
-const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,yaw:-32,pitch:28,asked:false,want:false,tipWait:false,spotTimer:0,pos:null};
+// `target` the cube at the end of the queue: the real cube, as far as the page knows. `q` is the
+// turn of the body the picture shows, `qTo` the one the cube reports, in the frame of draw.js.
+const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,yaw:-32,pitch:28,asked:false,want:false,tipWait:false,spotTimer:0,pos:null,
+  gyro:false,raw:null,basis:null,q:null,qTo:null,qraf:0,qAt:0,follow:true};
+// The camera while the picture follows the cube: a little from the right and above, so three faces
+// show when the cube is held straight.
+const CUBE_TAB_HELD={yaw:-24,pitch:18};
 const CUBE_TAB_TIP='Click your smart cube to open the Smart Cube interface!';
 function cubeTabBtn(){return $('#cubeTab');}
 // The tab: made when a cube connects, removed on Disconnect. `off` marks a link that dropped.
@@ -38,11 +47,15 @@ function cubeTabOpen(){
   const w=document.createElement('div');w.className='cubewin panel';w.id='cubeWin';w.setAttribute('role','dialog');w.setAttribute('aria-label',`Smart cube window: ${cubeTab.name}`);
   w.innerHTML=`<div class="cw-head" title="Drag to move the window"><span class="dot" aria-hidden="true"></span><b class="nm"></b><button class="small ghost" id="cubeWinClose" title="Collapse the window back into the tab (Esc)">Close<span class="hk" aria-hidden="true">Esc</span></button></div>
    <svg id="cubeWinSvg" viewBox="0 0 400 360" role="img" aria-label="Your smart cube, live"></svg>
+   <div class="cw-row hidden" id="cubeWinView"><button class="small cw-tog" id="cubeWinFollow" aria-pressed="true" title="Turn the picture as you turn the cube in your hands">Follow my cube</button><button class="small ghost" id="cubeWinHome" title="Hold the cube white up, green front, then press. The picture lines up with your cube.">Reset view</button></div>
    <p class="muted cw-note" id="cubeWinNote"></p>
    <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect">Connect again</button></div>`;
   document.body.appendChild(w);
   $('#cubeWinClose').onclick=cubeTabClose;
   $('#cubeWinConnect').onclick=()=>{cubeTabClose();openSmart();};
+  $('#cubeWinFollow').onclick=()=>cubeTabFollow(!cubeTab.follow);
+  $('#cubeWinHome').onclick=cubeTabHome;
+  cubeTab.follow=!!store.get('cubeFollow',true);
   document.addEventListener('keydown',cubeTabKeys,true);
   cubeTabDrag(w);
   if(!cubeTab.pos)cubeTab.pos=store.get('cubeWin',null);
@@ -55,7 +68,7 @@ function cubeTabOpen(){
 function cubeTabClose(){
   const w=$('#cubeWin');if(!w)return;
   document.removeEventListener('keydown',cubeTabKeys,true);window.removeEventListener('resize',cubeTabResize);
-  cubeTabStopAnim();w.remove();cubeTabRender();
+  cubeTabStopAnim();cubeTabStopView();w.remove();cubeTabRender();
   const b=cubeTabBtn();if(b)b.focus();
 }
 // ----- move the window: drag it by its head -----
@@ -96,13 +109,18 @@ function cubeTabWindow(){
   const off=!cubeTab.conn;
   w.classList.toggle('off',off);
   w.querySelector('.nm').textContent=cubeTab.name;
-  $('#cubeWinNote').textContent=off?'The cube is no longer connected. Turn a face to wake it up, then connect again.':cubeTab.shown?'Live. Each turn of your cube turns the layer here.':'Reading the cube.';
+  const held=cubeTab.gyro&&cubeTab.follow;
+  $('#cubeWinNote').textContent=off?'The cube is no longer connected. Turn a face to wake it up, then connect again.':!cubeTab.shown?'Reading the cube.':held?'Live. The picture turns with your cube.':'Live. Each turn of your cube turns the layer here.';
   $('#cubeWinAgain').classList.toggle('hidden',!off);
+  $('#cubeWinView').classList.toggle('hidden',!cubeTab.gyro);
+  $('#cubeWinFollow').setAttribute('aria-pressed',String(cubeTab.follow));
+  $('#cubeWinHome').disabled=!held||off;
   cubeTabDraw();
 }
 function cubeTabDraw(){
   const svg=$('#cubeWinSvg');if(!svg)return;
-  const a=cubeTab.anim,o={yaw:cubeTab.yaw,pitch:cubeTab.pitch,n:3};
+  const held=cubeTab.gyro&&cubeTab.follow&&cubeTab.q;
+  const a=cubeTab.anim,o=held?{yaw:CUBE_TAB_HELD.yaw,pitch:CUBE_TAB_HELD.pitch,rot:quatMat(cubeTab.q),n:3}:{yaw:cubeTab.yaw,pitch:cubeTab.pitch,n:3};
   if(a&&a.t<1)svg.innerHTML=renderCube3D(a.from.toFacelets(),Object.assign(o,{move:a.move,t:Math.max(a.t,0.01)}));
   else{const f=cubeTab.shown?cubeTab.shown.toFacelets():Array.from({length:54},(_,i)=>i%9===4?(i-4)/9:-1);svg.innerHTML=renderCube3D(f,o);}
 }
@@ -163,6 +181,57 @@ function cubeTabNext(){
 }
 // Stop the turns. The picture lands on the real cube.
 function cubeTabStopAnim(){if(cubeTab.raf){cancelAnimationFrame(cubeTab.raf);cubeTab.raf=0;}cubeTab.anim=null;cubeTab.queue=[];if(cubeTab.target)cubeTab.shown=cubeTab.target;}
+// ----- how the cube is held: the picture turns with it -----
+// Quaternions as [x,y,z,w]. quatMul(a,b) is a after b: its matrix is the matrix of a times the
+// matrix of b. quatMat gives the 3×3 matrix (three rows) that draw.js takes as `rot`.
+function quatMul(a,b){const [ax,ay,az,aw]=a,[bx,by,bz,bw]=b;
+  return [aw*bx+ax*bw+ay*bz-az*by,aw*by-ax*bz+ay*bw+az*bx,aw*bz+ax*by-ay*bx+az*bw,aw*bw-ax*bx-ay*by-az*bz];}
+function quatConj(q){return [-q[0],-q[1],-q[2],q[3]];}
+function quatNorm(q){const l=Math.hypot(...q)||1;return q.map(v=>v/l);}
+function quatMat(q){const [x,y,z,w]=quatNorm(q);
+  return [[1-2*(y*y+z*z),2*(x*y-z*w),2*(x*z+y*w)],[2*(x*y+z*w),1-2*(x*x+z*z),2*(y*z-x*w)],[2*(x*z-y*w),2*(y*z+x*w),1-2*(x*x+y*y)]];}
+// Part of the way from a to b, the short way round. t=1 is b.
+function quatSlerp(a,b,t){
+  let d=a[0]*b[0]+a[1]*b[1]+a[2]*b[2]+a[3]*b[3];if(d<0){b=b.map(v=>-v);d=-d;}
+  if(d>0.9995)return quatNorm(a.map((v,i)=>v+(b[i]-v)*t));
+  const th=Math.acos(Math.min(1,d)),s=Math.sin(th),wa=Math.sin((1-t)*th)/s,wb=Math.sin(t*th)/s;
+  return a.map((v,i)=>v*wa+b[i]*wb);
+}
+// The angle between two turns, in degrees.
+function quatAngle(a,b){const d=Math.abs(a[0]*b[0]+a[1]*b[1]+a[2]*b[2]+a[3]*b[3]);return 2*Math.acos(Math.min(1,d))*180/Math.PI;}
+// A tilt reading from the cube. The first one sets the frame: the cube is taken to be white up,
+// green front at that moment.
+function cubeTabGyro(q){
+  q=quatNorm(q);cubeTab.raw=q;
+  if(!cubeTab.basis)cubeTab.basis=quatConj(q);
+  cubeTab.qTo=quatNorm(quatMul(cubeTab.basis,q));
+  if(!cubeTab.gyro){cubeTab.gyro=true;cubeTab.q=cubeTab.qTo;cubeTabWindow();return;}
+  cubeTabTurnView();
+}
+// Turn the picture toward qTo, a little closer each frame, so a quick turn of the cube reads as a
+// turn and not a jump. With reduced motion, or with no window, the picture goes straight there.
+function cubeTabTurnView(){
+  if(!cubeTab.qTo)return;
+  const still=!cubeTab.follow||!$('#cubeWin')||(typeof reducedMotion==='function'&&reducedMotion())||typeof requestAnimationFrame!=='function';
+  if(still){cubeTabStopView();cubeTab.q=cubeTab.qTo;if(cubeTab.follow&&!cubeTab.raf)cubeTabDraw();return;}
+  if(cubeTab.qraf)return;
+  cubeTab.qAt=performance.now();
+  const step=()=>{
+    const now=performance.now(),k=1-Math.exp(-(now-cubeTab.qAt)/70);cubeTab.qAt=now; // most of the way within a tenth of a second
+    cubeTab.q=cubeTab.q?quatSlerp(cubeTab.q,cubeTab.qTo,k):cubeTab.qTo;
+    const done=quatAngle(cubeTab.q,cubeTab.qTo)<0.05;if(done)cubeTab.q=cubeTab.qTo;
+    if(!cubeTab.raf)cubeTabDraw(); // a running turn draws every frame already
+    cubeTab.qraf=done?0:requestAnimationFrame(step);
+  };
+  cubeTab.qraf=requestAnimationFrame(step);
+}
+function cubeTabStopView(){if(cubeTab.qraf){cancelAnimationFrame(cubeTab.qraf);cubeTab.qraf=0;}}
+// Forget the tilt: on connect and on disconnect.
+function cubeTabResetView(){cubeTabStopView();cubeTab.gyro=false;cubeTab.raw=cubeTab.basis=cubeTab.q=cubeTab.qTo=null;}
+// Follow my cube: on, the picture turns with the cube; off, the fixed view.
+function cubeTabFollow(on){cubeTab.follow=!!on;store.set('cubeFollow',cubeTab.follow);if(on)cubeTabTurnView();cubeTabWindow();}
+// Reset view: the cube is white up, green front right now. The picture turns to line up.
+function cubeTabHome(){if(!cubeTab.raw)return;cubeTab.basis=quatConj(cubeTab.raw);cubeTab.qTo=[0,0,0,1];cubeTabTurnView();}
 // ----- the first time: dim the page around the tab and point to it -----
 function cubeTabSpot(){
   if(store.get('cubeTip',0)||!cubeTabBtn()||$('#cubeSpot'))return;
@@ -202,17 +271,18 @@ function cubeTabSpotEnd(){
 // ----- what the Smart cube dialog reports -----
 function cubeTabEvent(ev){
   if(ev.type==='connect'){
-    cubeTab.conn=ev.conn;cubeTab.name=smartNiceName(ev.conn.name);cubeTab.asked=false;cubeTab.want=false;cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;
+    cubeTab.conn=ev.conn;cubeTab.name=smartNiceName(ev.conn.name);cubeTab.asked=false;cubeTab.want=false;cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;cubeTabResetView();
     cubeTabRender();
     if(ev.cube)cubeTabShow(ev.cube);else cubeTabWindow();
     if($('#cubeWin'))cubeTabAsk();
     cubeTabSpot();return;
   }
-  if(ev.type==='disconnect'){cubeTab.conn=null;cubeTab.name='';cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;cubeTabClose();cubeTabSpotEnd();cubeTabRender();return;}
+  if(ev.type==='disconnect'){cubeTab.conn=null;cubeTab.name='';cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;cubeTabClose();cubeTabResetView();cubeTabSpotEnd();cubeTabRender();return;}
   if(ev.type==='gone'){if(ev.conn!==cubeTab.conn)return;cubeTab.conn=null;cubeTab.asked=false;cubeTab.want=false;cubeTabRender();cubeTabWindow();return;}
   if(ev.type==='close'){if(cubeTab.tipWait)cubeTabSpot();return;}
   if(ev.conn!==cubeTab.conn)return;
   if(ev.type==='move')cubeTabAsk();
+  if(ev.type==='gyro')cubeTabGyro(ev.q);
   if(ev.type==='state'){cubeTab.asked=false;if(cubeTab.want){cubeTab.want=false;cubeTabAsk();}cubeTabShow(ev.cube);}
 }
 if(typeof document!=='undefined')document.addEventListener('cw:smart',e=>cubeTabEvent(e.detail));

@@ -4,7 +4,7 @@
 |---|---|
 | Protocol, cipher, Bluetooth link | `js/gan.js` (no DOM) |
 | Smart cube dialog | `js/smart-ui.js`, opened by `#smartBtn` in the seed bar (3x3 only) |
-| The cube tab | `js/cubetab.js`: the tab in the top bar while a cube is connected, its floating window with the live cube, the first-time callout; `test/cubetab.js` |
+| The cube tab | `js/cubetab.js`: the tab in the top bar while a cube is connected, its floating window with the live cube (turns, and the tilt of the cube), the first-time callout; `test/cubetab.js` |
 | Tests | `test/gan.js` (protocol), `test/smart-ui.js` (dialog), `test/fake-gan.js` (a fake GAN cube) |
 | Saved MAC addresses | `cw:ganMac`, a map from the Bluetooth name to the address |
 | The macOS app (Bluetooth bridge for Safari) | `mac/` (Swift, AppKit, Network, CoreBluetooth); `js/bridge.js` is the page side; `test/bridge.js` and `test/fake-bridge.js` |
@@ -34,9 +34,24 @@ The first time a cube connects, the page dims around the tab for eight seconds
 and a callout points to it. The dialog is a modal, so the callout waits until
 the dialog closes. `cw:cubeTip` records that it was shown.
 
+Version 1.6.0 turns the picture with the cube. A gen 2 or gen 4 cube reports its
+tilt many times a second (a `gyro` message, a unit quaternion). The first
+reading sets the frame: the cube is taken to be white up, green front at that
+moment, because the cube's own frame is not known. The picture then turns with
+the cube, a little closer to the reported tilt each frame (`quatSlerp`, most of
+the way within a tenth of a second), so a quick turn reads as a turn. The window
+carries two controls once the tilt arrives: Follow my cube (on by default, kept
+in `cw:cubeFollow`; off is the fixed view) and Reset view (hold the cube white
+up, green front, press, and the picture lines up). The gen 3 cube (i Carry 2)
+has no gyro, so its window shows no controls. `cubePolys` takes `rot`, a 3×3
+matrix, for the turn of the body before the camera; the body turned +90° about
+y is the picture of the move y'. The held view uses a camera a little from the
+right and above (yaw -24, pitch 18), so three faces show when the cube is held
+straight.
+
 The dialog reports the link as `cw:smart` events on `document`: `connect`
 (with `conn` and the first `cube`), `disconnect`, `gone`, `close` (the dialog),
-and each `move` and `state` message. The tab listens; nothing else does yet.
+and each `move`, `state` and `gyro` message. The tab listens; nothing else does yet.
 
 The app does not decode the moves themselves yet: the tab infers a move from
 two states. Next steps: decode the face and the direction from the move
@@ -66,6 +81,13 @@ need to know which GAN 12 ui they have.
   from the others. The order is Kociemba's, the same as `js/engine.js`, so the
   fields make a `Cube` as they are. The frame is the cube's own: white up, green
   front.
+- **Tilt.** A gen 2 cube sends event 0x01 with four 16-bit words from bit 4: w,
+  x, y, z, each a sign bit and a 15-bit size over 0x7FFF. A gen 4 cube sends
+  event 0xEC with the same words from bit 16. Gen 3 has none. The cube's axes go
+  to the page's (x right, y up, z toward the viewer) as gan-cube-sample maps
+  them: x, z, -y. This mapping and the frame of the first reading are from the
+  sample, not from a cube in hand; if a real cube turns the wrong way, this is
+  the line to change (`ganGyro`).
 - **A wrong key.** A wrong MAC address decrypts to noise. Noise almost never
   gives two valid permutations, so `ganDecode` returns `bad`. The cube also
   cannot read a request under a wrong key, so it often stays silent. `readState`

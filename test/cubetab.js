@@ -1,10 +1,11 @@
 // The cube tab in the top bar (js/cubetab.js), with a fake GAN cube (test/fake-gan.js): the tab
 // appears on connect with the cube's name, the first-time callout waits for the dialog to close,
 // the window shows a live cube that turns the layer for each turn (turns queue, up to four moves
-// between two states, further away snaps), the head drags the window, Close (Esc) collapses it, a
-// dropped link dims the tab, Disconnect removes it.
+// between two states, further away snaps), the picture turns with the cube's tilt (Follow my cube,
+// Reset view), the head drags the window, Close (Esc) collapses it, a dropped link dims the tab,
+// Disconnect removes it.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
-const {fakeDevice,mfDataFor}=require('./fake-gan');
+const {fakeDevice,mfDataFor,gyroMsg}=require('./fake-gan');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
 function fakeStorage(seed){const m=new Map(Object.entries(seed||{}));return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear(),map:m};}
 const MAC='AB:12:34:5C:9D:E1';
@@ -94,6 +95,49 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   // Turns speed up as the queue grows.
   assert.strictEqual(w.cubeTabDur('R',0),260);assert.strictEqual(w.cubeTabDur('R2',0),360);
   assert.ok(w.cubeTabDur('R',1)<w.cubeTabDur('R',0)&&w.cubeTabDur('R',3)<w.cubeTabDur('R',1)&&w.cubeTabDur('R',9)>=90);
+  // ----- the picture turns with the cube -----
+  // Stickers as their center and color, matched within a pixel: a turned body lists the corners of
+  // a sticker from another start, and a center can round either way.
+  const polysOf=svg=>[...svg.querySelectorAll('polygon')].map(p=>{const q=p.getAttribute('points').split(' ').map(v=>v.split(',').map(Number));return {x:q.reduce((a,v)=>a+v[0],0)/q.length,y:q.reduce((a,v)=>a+v[1],0)/q.length,fill:p.getAttribute('fill')};});
+  const same=(A,B)=>{if(A.length!==B.length)return false;const used=new Set();for(const a of A){const i=B.findIndex((b,j)=>!used.has(j)&&b.fill===a.fill&&Math.hypot(a.x-b.x,a.y-b.y)<0.3);if(i<0)return false;used.add(i);}return true;};
+  const winPolys=()=>polysOf($('#cubeWinSvg'));
+  const held=(c,o)=>polysOf(new w.DOMParser().parseFromString('<svg>'+w.renderCube3D(c.toFacelets(),Object.assign({yaw:-24,pitch:18,n:3},o))+'</svg>','text/html'));
+  const fixed=c=>polysOf(new w.DOMParser().parseFromString('<svg>'+w.renderCube3D(c.toFacelets(),{yaw:-32,pitch:28,n:3})+'</svg>','text/html'));
+  assert.ok($('#cubeWinView').classList.contains('hidden'),'no tilt controls before the cube reports its tilt');
+  assert.ok(same(winPolys(),fixed(c6)),'the fixed view until then');
+  dev.notify(gyroMsg(4,{w:1,x:0,y:0,z:0}));await sleep(20);
+  assert.ok(!$('#cubeWinView').classList.contains('hidden'),'the controls show once the tilt arrives');
+  assert.strictEqual($('#cubeWinFollow').getAttribute('aria-pressed'),'true','Follow my cube is on');
+  assert.ok(/turns with your cube/.test($('#cubeWinNote').textContent));
+  assert.ok(same(winPolys(),held(c6)),'the first reading is white up, green front, from the held camera');
+  // The cube turns half way round about its own z (up): the picture turns, then rests on y2.
+  dev.notify(gyroMsg(4,{w:0,x:0,y:0,z:1}));
+  assert.ok(await until(()=>w.quatAngle(ev('cubeTab.q'),[0,0,0,1])>1,500),'the picture starts to turn');
+  const mid=w.quatAngle(ev('cubeTab.q'),[0,0,0,1]);assert.ok(mid>1&&mid<179,'part way round: '+mid);
+  assert.ok(await until(()=>!ev('cubeTab.qraf'),1500),'then it rests');
+  assert.ok(same(winPolys(),held(c6,{rot:w.quatMat([0,1,0,0])})),'the picture is the cube turned half round');
+  assert.ok(same(winPolys(),held(w.applyAlg(c6,['y2']))),'the back is in front');
+  // A turn of a layer while the cube is held turned: the picture turns the layer from that view.
+  const c7=w.applyAlg(c6,['R']);set(c7);dev.notify(mv);
+  assert.ok(await until(()=>ev('cubeTab.anim&&cubeTab.anim.move')==='R',500),'the R layer turns');
+  assert.ok(await until(()=>!ev('cubeTab.anim')&&same(winPolys(),held(w.applyAlg(c7,['y2']))),1500),'and lands on the new cube, still turned round');
+  // Reset view: the cube is white up, green front as it is held now.
+  click($('#cubeWinHome'));
+  assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),held(c7)),1500),'Reset view lines the picture up');
+  // From there, a quarter turn about the cube's z: the picture is the cube after y.
+  const s=Math.SQRT1_2;dev.notify(gyroMsg(4,{w:s,x:0,y:0,z:s}));
+  assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),held(w.applyAlg(c7,['y']))),1500),'a quarter turn of the cube is a quarter turn of the picture');
+  // Follow my cube off: the fixed view. On again: the held view. The choice is kept.
+  click($('#cubeWinFollow'));
+  assert.strictEqual($('#cubeWinFollow').getAttribute('aria-pressed'),'false');
+  assert.ok(same(winPolys(),fixed(c7)),'off: the fixed view');
+  assert.strictEqual(w.localStorage.getItem('cw:cubeFollow'),'false','the choice is kept');
+  assert.ok($('#cubeWinHome').disabled,'Reset view waits for Follow');
+  esc();click($('#cubeTab'));assert.strictEqual($('#cubeWinFollow').getAttribute('aria-pressed'),'false','still off after a reopen');
+  click($('#cubeWinFollow'));
+  assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),held(w.applyAlg(c7,['y']))),1500),'on again: the held view');
+  // Back to white up, green front for the rest: the reading Reset view took as the frame.
+  dev.notify(gyroMsg(4,{w:0,x:0,y:0,z:1}));assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),held(c7)),1500));
   // ----- the head drags the window -----
   const win=$('#cubeWin'),head=win.querySelector('.cw-head');
   assert.ok(/Drag/.test(head.title),'the head says it drags');
@@ -125,6 +169,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   // ----- the link drops: the tab dims, the window offers the way back -----
   dev.gatt.disconnect();await sleep(10);
   assert.ok($('#cubeTab').classList.contains('off'),'a dropped link dims the tab');
+  assert.ok(ev('cubeTab.gyro'),'the tilt frame stays while the link is down');
   click($('#cubeTab'));assert.ok(/no longer connected/.test($('#cubeWinNote').textContent));
   assert.ok(!$('#cubeWinAgain').classList.contains('hidden'),'Connect again shows');
   click($('#cubeWinConnect'));assert.ok($('#smartBg')&&!$('#cubeWin'),'Connect again opens the dialog');
@@ -136,6 +181,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   click($('#cubeTab'));assert.ok($('#cubeWin'));
   click($('#smartBtn'));await sleep(20);click($('#smartDisconnect'));
   assert.ok(!$('#cubeTab'),'Disconnect removes the tab');assert.ok(!$('#cubeWin'),'and the window');
+  assert.ok(!ev('cubeTab.gyro')&&!ev('cubeTab.basis'),'Disconnect forgets the tilt frame');
   esc();
   assert.deepStrictEqual(errs,[],'no script errors');
   // ----- a browser that has seen the callout -----

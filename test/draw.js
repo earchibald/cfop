@@ -65,4 +65,15 @@ const half=T.cubePolys(new T.Cube().toFacelets(),{move:'R',t:0.5});
 assert.ok(half.filter(p=>!p.stroke).length>3,'cut face and strips drawn');
 // The mark's view box is stable
 assert.strictEqual(T.polysViewBox(T.cubePolys(new T.Cube().toFacelets(),{move:'R',t:0.5,scale:10,cx:0,cy:0}),0.5),'-21.17 -23.45 45.63 46.41');
+// rot turns the whole cube before the camera. The body turned +90° about y is the move y' seen
+// from the fixed camera; 180° is y2; 90° about x is x'. The same stickers in the same places.
+const ry=a=>{const c=Math.cos(a*Math.PI/180),s=Math.sin(a*Math.PI/180);return [[c,0,s],[0,1,0],[-s,0,c]];};
+const rx=a=>{const c=Math.cos(a*Math.PI/180),s=Math.sin(a*Math.PI/180);return [[1,0,0],[0,c,-s],[0,s,c]];};
+for(const [yaw,pitch] of views)for(const [rot,mv] of [[ry(90),"y'"],[ry(180),'y2'],[ry(-90),'y'],[rx(90),"x'"],[rx(-90),'x']]){
+  const A=stickers(T.cubePolys(base.toFacelets(),{yaw,pitch,rot})),B=stickers(T.cubePolys(T.applyAlg(base,[mv]).toFacelets(),{yaw,pitch}));
+  assert.ok(same(A,B),`rot ${mv} from ${yaw},${pitch}`);
+}
+assert.strictEqual(T.renderCube3D(base.toFacelets(),{rot:[[1,0,0],[0,1,0],[0,0,1]]}),T.renderCube3D(base.toFacelets()),'the identity changes nothing');
+// A part turn with the body turned lands on the moved cube.
+{const after=T.applyAlg(base,['R']);const A=stickers(T.cubePolys(base.toFacelets(),{rot:ry(60),move:'R',t:1})),B=stickers(T.cubePolys(after.toFacelets(),{rot:ry(60)}));assert.ok(same(A,B),'a part turn with rot');}
 console.log('draw ok:',checks,'move/view checks,',hiddenChecks,'hidden-face turns');
