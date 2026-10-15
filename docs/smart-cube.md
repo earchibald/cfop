@@ -4,7 +4,7 @@
 |---|---|
 | Protocol, cipher, Bluetooth link | `js/gan.js` (no DOM) |
 | Smart cube dialog | `js/smart-ui.js`, opened by `#smartBtn` in the seed bar (3x3 only) |
-| The cube tab | `js/cubetab.js`: the tab in the top bar while a cube is connected, its floating window with the live cube (turns, and the tilt of the cube), the first-time callout; `test/cubetab.js` |
+| The cube tab | `js/cubetab.js`: the tab in the top bar while a cube is connected, its floating window with the live cube (turns, the tilt of the cube, the moves), the first-time callout; `test/cubetab.js` |
 | Tests | `test/gan.js` (protocol), `test/smart-ui.js` (dialog), `test/fake-gan.js` (a fake GAN cube) |
 | Saved MAC addresses | `cw:ganMac`, a map from the Bluetooth name to the address |
 | The macOS app (Bluetooth bridge for Safari) | `mac/` (Swift, AppKit, Network, CoreBluetooth); `js/bridge.js` is the page side; `test/bridge.js` and `test/fake-bridge.js` |
@@ -33,6 +33,17 @@ A link that drops by itself dims the tab, and the window offers Connect again.
 The first time a cube connects, the page dims around the tab for eight seconds
 and a callout points to it. The dialog is a modal, so the callout waits until
 the dialog closes. `cw:cubeTip` records that it was shown.
+
+Version 1.7.0 adds the moves under the picture. A move message carries no move,
+so the moves come from `cubeTabPath`: the list between the last state and the
+new one. Every move since the cube connected goes on `cubeTab.moves`, merged
+as it comes (`cubeTabMerge`): the same face as the last move adds its turns,
+so R then R is R2, and no turns left takes the move off, so R then R' is
+nothing. A sequence turned back move by move empties the list. The readout
+shows the last ten; past ten, a plain triangle after them says there are more
+(no action yet). The tab asks for the state on every move, window or no window,
+so the list stays complete. Five or more moves between two states cannot be
+named, and the list keeps what it has. A new connection starts the list again.
 
 Version 1.6.0 turns the picture with the cube. A gen 2 or gen 4 cube reports its
 tilt many times a second (a `gyro` message, a unit quaternion). The first

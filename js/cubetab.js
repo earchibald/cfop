@@ -16,8 +16,12 @@
 // `shown` is the cube the picture is on (or turns toward), `queue` the moves still to turn, and
 // `target` the cube at the end of the queue: the real cube, as far as the page knows. `q` is the
 // turn of the body the picture shows, `qTo` the one the cube reports, in the frame of draw.js.
+// `moves` is every move since the cube connected, merged as they come (cubeTabMerge): R then R is
+// R2, R then R' is nothing, so a turn back takes its move off the list. The readout under the
+// picture shows the last CUBE_TAB_SHOWN of them; a triangle after them says there are more.
 const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,yaw:-32,pitch:28,asked:false,want:false,tipWait:false,spotTimer:0,pos:null,
-  gyro:false,raw:null,basis:null,q:null,qTo:null,qraf:0,qAt:0,follow:true};
+  gyro:false,raw:null,basis:null,q:null,qTo:null,qraf:0,qAt:0,follow:true,moves:[]};
+const CUBE_TAB_SHOWN=10;
 // The camera while the picture follows the cube: a little from the right and above, so three faces
 // show when the cube is held straight.
 const CUBE_TAB_HELD={yaw:-24,pitch:18};
@@ -47,6 +51,7 @@ function cubeTabOpen(){
   const w=document.createElement('div');w.className='cubewin panel';w.id='cubeWin';w.setAttribute('role','dialog');w.setAttribute('aria-label',`Smart cube window: ${cubeTab.name}`);
   w.innerHTML=`<div class="cw-head" title="Drag to move the window"><span class="dot" aria-hidden="true"></span><b class="nm"></b><button class="small ghost" id="cubeWinClose" title="Collapse the window back into the tab (Esc)">Close<span class="hk" aria-hidden="true">Esc</span></button></div>
    <svg id="cubeWinSvg" viewBox="0 0 400 360" role="img" aria-label="Your smart cube, live"></svg>
+   <div class="cw-moves" id="cubeWinMoves" aria-label="Your last moves"></div>
    <div class="cw-row hidden" id="cubeWinView"><button class="small cw-tog" id="cubeWinFollow" aria-pressed="true" title="Turn the picture as you turn the cube in your hands">Follow my cube</button><button class="small ghost" id="cubeWinHome" title="Hold the cube white up, green front, then press. The picture lines up with your cube.">Reset view</button></div>
    <p class="muted cw-note" id="cubeWinNote"></p>
    <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect">Connect again</button></div>`;
@@ -115,7 +120,38 @@ function cubeTabWindow(){
   $('#cubeWinView').classList.toggle('hidden',!cubeTab.gyro);
   $('#cubeWinFollow').setAttribute('aria-pressed',String(cubeTab.follow));
   $('#cubeWinHome').disabled=!held||off;
+  cubeTabMovesDraw();
   cubeTabDraw();
+}
+// ----- the moves: every turn since the cube connected, merged -----
+// The turn count of a move: R is 1, R2 is 2, R' is 3.
+const cubeTabTurns=m=>m.endsWith('2')?2:m.endsWith("'")?3:1;
+// `moves` with `m` added. The same face as the last move merges with it: the turns add up round
+// the four, and no turns left takes the last move off. So R U R' U' done, then U R U' R' undoes it
+// move by move, and the list is empty again. Returns a new list.
+function cubeTabMerge(moves,m){
+  const last=moves[moves.length-1];
+  if(!last||last[0]!==m[0])return moves.concat(m);
+  const t=(cubeTabTurns(last)+cubeTabTurns(m))%4;
+  return moves.slice(0,-1).concat(t?[m[0]+['','','2',"'"][t]]:[]);
+}
+// Record the moves the cube made between two states.
+function cubeTabRecord(path){
+  for(const m of path)cubeTab.moves=cubeTabMerge(cubeTab.moves,m);
+  cubeTabMovesDraw();
+}
+// The readout: the last CUBE_TAB_SHOWN moves, and a triangle after them when there are more.
+function cubeTabMovesDraw(){
+  const el=$('#cubeWinMoves');if(!el)return;
+  const ms=cubeTab.moves,span=(cls,text)=>{const s=document.createElement('span');s.className=cls;if(text)s.textContent=text;return el.appendChild(s);};
+  el.textContent='';
+  if(!ms.length){span('none','No moves yet');return;}
+  for(const m of ms.slice(-CUBE_TAB_SHOWN))span('mv',m);
+  if(ms.length>CUBE_TAB_SHOWN){
+    const more=span('more');more.setAttribute('aria-label',`${ms.length-CUBE_TAB_SHOWN} more`);more.title=`${ms.length} moves in all`;
+    const NS='http://www.w3.org/2000/svg',svg=document.createElementNS(NS,'svg'),p=document.createElementNS(NS,'polygon');
+    svg.setAttribute('viewBox','0 0 8 10');svg.setAttribute('aria-hidden','true');p.setAttribute('points','0,0 8,5 0,10');svg.appendChild(p);more.appendChild(svg);
+  }
 }
 function cubeTabDraw(){
   const svg=$('#cubeWinSvg');if(!svg)return;
@@ -126,9 +162,10 @@ function cubeTabDraw(){
 }
 // ----- live: a turn asks the cube for its state, the state turns the layer -----
 // One request at a time. A turn during a request marks `want`, and the answer asks again, so the
-// picture ends on the real cube however fast the turns come.
+// picture ends on the real cube however fast the turns come. The window closed, the request still
+// goes: the move list needs every state.
 function cubeTabAsk(){
-  if(!cubeTab.conn||!$('#cubeWin'))return;
+  if(!cubeTab.conn)return;
   if(cubeTab.asked){cubeTab.want=true;return;}
   cubeTab.asked=true;
   cubeTab.conn.send('state').catch(()=>{cubeTab.asked=false;});
@@ -156,9 +193,13 @@ function cubeTabPath(from,to){
 }
 // Show `cube`, the real cube's state. Up to four moves past the last picture: queue the turns, so
 // each one turns its layer, even when the turns come fast. Further away: show it at once.
+// The moves on the way go on the list, window or no window. Five or more apart, the moves are not
+// known, and the list keeps what it has.
 function cubeTabShow(cube){
+  const moved=cubeTabPath(cubeTab.target||cubeTab.shown,cube);
+  if(moved&&moved.length)cubeTabRecord(moved);
   const still=(typeof reducedMotion==='function'&&reducedMotion())||typeof requestAnimationFrame!=='function';
-  const path=still||!$('#cubeWin')?null:cubeTabPath(cubeTab.target||cubeTab.shown,cube);
+  const path=still||!$('#cubeWin')?null:moved;
   if(!path){cubeTabStopAnim();cubeTab.shown=cubeTab.target=cube;cubeTabWindow();return;}
   cubeTab.target=cube;cubeTab.queue.push(...path);
   if(cubeTab.anim)return; // the running turn goes on; the new ones follow it
@@ -271,13 +312,13 @@ function cubeTabSpotEnd(){
 // ----- what the Smart cube dialog reports -----
 function cubeTabEvent(ev){
   if(ev.type==='connect'){
-    cubeTab.conn=ev.conn;cubeTab.name=smartNiceName(ev.conn.name);cubeTab.asked=false;cubeTab.want=false;cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;cubeTabResetView();
+    cubeTab.conn=ev.conn;cubeTab.name=smartNiceName(ev.conn.name);cubeTab.asked=false;cubeTab.want=false;cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;cubeTab.moves=[];cubeTabResetView();
     cubeTabRender();
     if(ev.cube)cubeTabShow(ev.cube);else cubeTabWindow();
     if($('#cubeWin'))cubeTabAsk();
     cubeTabSpot();return;
   }
-  if(ev.type==='disconnect'){cubeTab.conn=null;cubeTab.name='';cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;cubeTabClose();cubeTabResetView();cubeTabSpotEnd();cubeTabRender();return;}
+  if(ev.type==='disconnect'){cubeTab.conn=null;cubeTab.name='';cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;cubeTab.moves=[];cubeTabClose();cubeTabResetView();cubeTabSpotEnd();cubeTabRender();return;}
   if(ev.type==='gone'){if(ev.conn!==cubeTab.conn)return;cubeTab.conn=null;cubeTab.asked=false;cubeTab.want=false;cubeTabRender();cubeTabWindow();return;}
   if(ev.type==='close'){if(cubeTab.tipWait)cubeTabSpot();return;}
   if(ev.conn!==cubeTab.conn)return;

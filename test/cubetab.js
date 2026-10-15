@@ -2,8 +2,8 @@
 // appears on connect with the cube's name, the first-time callout waits for the dialog to close,
 // the window shows a live cube that turns the layer for each turn (turns queue, up to four moves
 // between two states, further away snaps), the picture turns with the cube's tilt (Follow my cube,
-// Reset view), the head drags the window, Close (Esc) collapses it, a dropped link dims the tab,
-// Disconnect removes it.
+// Reset view), the moves under the picture (merged, the last ten, a triangle for more), the head
+// drags the window, Close (Esc) collapses it, a dropped link dims the tab, Disconnect removes it.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const {fakeDevice,mfDataFor,gyroMsg}=require('./fake-gan');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
@@ -159,6 +159,56 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   pe('pointerdown',1100,80,$('#cubeWinClose'));assert.ok(!win.classList.contains('drag'));
   // Reopened, the window is where it was left.
   esc();click($('#cubeTab'));assert.strictEqual($('#cubeWin').style.left,'560px','the place survives a close');assert.strictEqual($('#cubeWin').style.top,'290px');
+  // ----- the moves under the picture -----
+  // Pure: the same face merges, and no turns left takes the move off.
+  assert.deepStrictEqual(w.cubeTabMerge([],'R'),['R']);
+  assert.deepStrictEqual(w.cubeTabMerge(['R'],'R'),['R2']);
+  assert.deepStrictEqual(w.cubeTabMerge(['R2'],'R'),["R'"]);
+  assert.deepStrictEqual(w.cubeTabMerge(['R2'],'R2'),[]);
+  assert.deepStrictEqual(w.cubeTabMerge(['U','R'],"R'"),['U']);
+  assert.deepStrictEqual(w.cubeTabMerge(['U',"R'"],"R'"),['U','R2']);
+  assert.deepStrictEqual(w.cubeTabMerge(['U'],"R'"),['U',"R'"]);
+  let h=[];for(const m of ['R','U2','L',"D'",'D',"L'",'U2',"R'"])h=w.cubeTabMerge(h,m);
+  assert.deepStrictEqual(h,[],"R U2 L D' then D L' U2 R': every move taken back");
+  // In the window: every move seen so far, in order. The five-move jump was not known.
+  const readout=()=>$$('#cubeWinMoves .mv').map(s=>s.textContent).join(' ');
+  assert.strictEqual(readout(),"U R F U' R U R' U' R",'the moves so far: '+readout());
+  assert.ok(!$('#cubeWinMoves .more'),'no triangle at nine moves');
+  // Turned back move by move, the list shrinks.
+  let cc=w.applyAlg(c7,["R'",'U','R',"U'"]);set(cc);dev.notify(mv);
+  assert.ok(await until(()=>readout()==="U R F U' R",1500),'four turns back: '+readout());
+  cc=w.applyAlg(cc,["R'"]);set(cc);dev.notify(mv);
+  assert.ok(await until(()=>readout()==="U R F U'",1500),'one more back: '+readout());
+  // R then R reads R2; R' then makes it R; R' again takes it off.
+  cc=w.applyAlg(cc,['R']);set(cc);dev.notify(mv);assert.ok(await until(()=>readout()==="U R F U' R",1500));
+  cc=w.applyAlg(cc,['R']);set(cc);dev.notify(mv);
+  assert.ok(await until(()=>readout()==="U R F U' R2",1500),'R then R is R2: '+readout());
+  cc=w.applyAlg(cc,["R'"]);set(cc);dev.notify(mv);
+  assert.ok(await until(()=>readout()==="U R F U' R",1500),"R2 then R' is R: "+readout());
+  cc=w.applyAlg(cc,["R'"]);set(cc);dev.notify(mv);
+  assert.ok(await until(()=>readout()==="U R F U'",1500),"R then R' is nothing: "+readout());
+  // Taken back to the start, the list is empty.
+  cc=w.applyAlg(cc,['U',"F'","R'","U'"]);set(cc);dev.notify(mv);
+  assert.ok(await until(()=>!readout()&&$('#cubeWinMoves .none'),1500),'all moves taken back: '+readout());
+  assert.strictEqual($('#cubeWinMoves .none').textContent,'No moves yet');
+  // Past ten moves, the last ten show and a triangle says there are more. All of them are kept.
+  let want=[];
+  for(const batch of [['R','U','F','D'],['L','B','R','U'],['F','D','L']]){
+    for(const m of batch)want=w.cubeTabMerge(want,m);
+    cc=w.applyAlg(cc,batch);set(cc);dev.notify(mv);
+    assert.ok(await until(()=>ev('cubeTab.moves').join()===want.join(),1500),'moves: '+ev('cubeTab.moves').join(' '));
+    if(want.length<=10)assert.ok(!$('#cubeWinMoves .more'),'no triangle up to ten moves');
+  }
+  assert.strictEqual(ev('cubeTab.moves').length,11,'all eleven are kept');
+  assert.strictEqual(readout(),want.slice(-10).join(' '),'the last ten show: '+readout());
+  const more=$('#cubeWinMoves .more');assert.ok(more,'the triangle says there are more');
+  assert.strictEqual(more.getAttribute('aria-label'),'1 more');assert.strictEqual(more.title,'11 moves in all');
+  assert.ok(more.querySelector('svg polygon'),'a plain triangle');assert.ok(!more.onclick,'nothing happens on a click yet');
+  // The window closed, the moves still count: a turn asks the cube for its state all the same.
+  esc();assert.ok(!$('#cubeWin'));
+  cc=w.applyAlg(cc,['B']);set(cc);dev.notify(mv);
+  assert.ok(await until(()=>ev('cubeTab.moves').length===12,1500),'a move with the window closed is kept');
+  click($('#cubeTab'));assert.ok(readout().endsWith('L B'),'and shows on reopen: '+readout());
   // ----- Esc collapses the window back into the tab -----
   esc();assert.ok(!$('#cubeWin'),'Esc closes the window');assert.ok($('#cubeTab'),'the tab stays');
   assert.strictEqual($('#cubeTab').getAttribute('aria-expanded'),'false');assert.strictEqual(d.activeElement,$('#cubeTab'),'the tab has the focus');
@@ -177,6 +227,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   dev=fakeDevice(4,MAC,cube,{mfData:mfDataFor(MAC),name:'GAN12uiM_A1B2'});
   click($('#smartConnect'));assert.ok(await until(()=>!$('#smartUse').disabled),'connected again');
   assert.ok(!$('#cubeTab').classList.contains('off'),'the tab is live again');
+  assert.strictEqual(ev('cubeTab.moves').length,0,'a new connection starts the move list again');
   esc();assert.ok(!$('#cubeSpot'),'the callout shows only once');
   // ----- Disconnect removes the tab -----
   click($('#cubeTab'));assert.ok($('#cubeWin'));

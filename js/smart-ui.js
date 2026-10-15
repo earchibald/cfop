@@ -245,6 +245,7 @@ function smartGot(cube){
 async function smartSolved(){
   if(!smartConn||smartBusy)return;
   try{await smartConn.send('reset');}catch(e){smartStatus('The cube did not take the change: '+e.message);return;}
+  clearTimeout(smartTimer); // a quiet read after a turn would take the place of this read, and its status
   await new Promise(r=>setTimeout(r,100));await smartRead();
 }
 function smartUse(){
