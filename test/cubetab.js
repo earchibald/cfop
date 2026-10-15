@@ -1,6 +1,7 @@
 // The cube tab in the top bar (js/cubetab.js), with a fake GAN cube (test/fake-gan.js): the tab
 // appears on connect with the cube's name, the first-time callout waits for the dialog to close,
-// the window shows a live cube that turns the layer for each turn, Close (Esc) collapses it, a
+// the window shows a live cube that turns the layer for each turn (turns queue, up to four moves
+// between two states, further away snaps), the head drags the window, Close (Esc) collapses it, a
 // dropped link dims the tab, Disconnect removes it.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const {fakeDevice,mfDataFor}=require('./fake-gan');
@@ -70,10 +71,49 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   const mv=new Uint8Array(20);mv[0]=0x01;dev.notify(mv);
   assert.ok(await until(()=>ev('cubeTab.anim&&cubeTab.anim.move')==='U',500),'the U layer turns');
   assert.ok(await until(()=>!ev('cubeTab.anim')&&winColors().join()===picOf(c2).join(),1500),'the picture ends on the new cube');
-  // Two turns at once: no single move fits, the picture changes at once.
+  // Two turns between two states: both layers turn, one after the other.
   const c3=w.applyAlg(c2,['R','F']);set(c3);dev.notify(mv);
-  assert.ok(await until(()=>winColors().join()===picOf(c3).join(),500),'two turns show at once');
-  assert.ok(!ev('cubeTab.anim'));
+  assert.ok(await until(()=>ev('cubeTab.anim&&cubeTab.anim.move')==='R',500),'the R layer turns first');
+  assert.strictEqual(ev('cubeTab.queue').join(),'F','F waits in the queue');
+  assert.ok(ev('cubeTab.target').equals(c3),'the target is the real cube');
+  // A state that lands during a turn joins the queue; the running turn is not cut.
+  const c4=w.applyAlg(c3,["U'"]);set(c4);dev.notify(mv);
+  assert.ok(await until(()=>ev('cubeTab.queue').length===2,300),'the new turn joins the queue: '+JSON.stringify(ev('cubeTab.queue')));
+  assert.strictEqual(ev('cubeTab.anim.move'),'R','the R turn goes on');
+  assert.ok(await until(()=>ev('cubeTab.anim&&cubeTab.anim.move')==='F',800),'then F');
+  assert.ok(await until(()=>ev('cubeTab.anim&&cubeTab.anim.move')==="U'",800),"then U'");
+  assert.ok(await until(()=>!ev('cubeTab.anim')&&winColors().join()===picOf(c4).join(),1500),'the picture ends on the real cube');
+  // Four moves still turn; five snap.
+  const Cube_=w.Cube;const c5=w.applyAlg(c4,['R','U',"R'","U'"]);set(c5);dev.notify(mv);
+  assert.ok(await until(()=>ev('cubeTab.anim'),500),'four moves turn');
+  assert.strictEqual(ev('cubeTab.queue').length+1,4,'four turns');
+  assert.ok(await until(()=>!ev('cubeTab.anim')&&winColors().join()===picOf(c5).join(),2500),'ends on the cube after four');
+  const c6=w.applyAlg(c5,['R','U','F','D','L']);set(c6);dev.notify(mv);
+  assert.ok(await until(()=>winColors().join()===picOf(c6).join(),500),'five turns show at once');
+  assert.ok(!ev('cubeTab.anim')&&!ev('cubeTab.queue').length);
+  // Turns speed up as the queue grows.
+  assert.strictEqual(w.cubeTabDur('R',0),260);assert.strictEqual(w.cubeTabDur('R2',0),360);
+  assert.ok(w.cubeTabDur('R',1)<w.cubeTabDur('R',0)&&w.cubeTabDur('R',3)<w.cubeTabDur('R',1)&&w.cubeTabDur('R',9)>=90);
+  // ----- the head drags the window -----
+  const win=$('#cubeWin'),head=win.querySelector('.cw-head');
+  assert.ok(/Drag/.test(head.title),'the head says it drags');
+  const PE=w.PointerEvent||w.MouseEvent;
+  const pe=(type,x,y,target)=>target.dispatchEvent(new PE(type,{bubbles:true,cancelable:true,clientX:x,clientY:y,button:0,pointerId:1}));
+  Object.defineProperty(w,'innerWidth',{value:1200,configurable:true});Object.defineProperty(w,'innerHeight',{value:800,configurable:true});
+  win.getBoundingClientRect=()=>({left:860,top:70,width:320,height:400,right:1180,bottom:470});
+  pe('pointerdown',900,80,head);assert.ok(win.classList.contains('drag'),'a press on the head starts the drag');
+  pe('pointermove',600,300,head);
+  assert.strictEqual(win.style.left,'560px','the window follows the pointer');assert.strictEqual(win.style.top,'290px');assert.strictEqual(win.style.right,'auto');
+  pe('pointermove',-500,2000,head);
+  assert.strictEqual(win.style.left,'8px','kept on the screen on the left');assert.strictEqual(win.style.top,'752px','the head stays in view at the bottom');
+  pe('pointermove',600,300,head);pe('pointerup',600,300,head);
+  assert.ok(!win.classList.contains('drag'));
+  assert.deepStrictEqual(JSON.parse(w.localStorage.getItem('cw:cubeWin')),{x:560,y:290},'the place is kept');
+  pe('pointermove',100,100,head);assert.strictEqual(win.style.left,'560px','no drag after the release');
+  // A press on Close is not a drag.
+  pe('pointerdown',1100,80,$('#cubeWinClose'));assert.ok(!win.classList.contains('drag'));
+  // Reopened, the window is where it was left.
+  esc();click($('#cubeTab'));assert.strictEqual($('#cubeWin').style.left,'560px','the place survives a close');assert.strictEqual($('#cubeWin').style.top,'290px');
   // ----- Esc collapses the window back into the tab -----
   esc();assert.ok(!$('#cubeWin'),'Esc closes the window');assert.ok($('#cubeTab'),'the tab stays');
   assert.strictEqual($('#cubeTab').getAttribute('aria-expanded'),'false');assert.strictEqual(d.activeElement,$('#cubeTab'),'the tab has the focus');

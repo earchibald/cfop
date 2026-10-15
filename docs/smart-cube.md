@@ -20,9 +20,15 @@ reset tells the cube that its current state is solved.
 Version 1.4.0 adds the cube tab. While a cube is connected, the top bar carries
 a tab with the cube's name (`GAN12uiM_A1B2` reads "GAN 12 ui Maglev"). The tab
 opens a floating window with a live cube. Each move message asks the cube for
-its state, one request at a time. When the new state is one move away from the
-last picture, the window turns that layer; otherwise it shows the new state at
-once. Close (Esc) collapses the window into the tab. Disconnect removes the tab.
+its state, one request at a time. `cubeTabPath` finds the shortest list of up
+to four moves from the last picture to the new state (two moves out meet two
+moves back, under a millisecond). The window queues those turns and turns each
+layer in order; a state that lands during a turn joins the queue, and turns
+speed up as the queue grows (`cubeTabDur`), so the picture catches up within a
+turn or two. Five or more moves apart, it shows the new state at once. The
+head of the window drags it; the place is kept in `cw:cubeWin` and clamped to
+the screen. Close (Esc) collapses the window into the tab. Disconnect removes
+the tab.
 A link that drops by itself dims the tab, and the window offers Connect again.
 The first time a cube connects, the page dims around the tab for eight seconds
 and a callout points to it. The dialog is a modal, so the callout waits until

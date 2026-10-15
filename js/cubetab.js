@@ -6,9 +6,12 @@
 // and the window offers the way back to the dialog.
 // The first time a cube connects, the page dims around the tab for a moment and a callout points
 // to it. The Smart cube dialog is a modal, so the callout waits until the dialog closes.
+// The window moves: drag it by its head. The place is kept in cw:cubeWin and clamped to the screen.
 // The dialog reports every change of the link as a cw:smart event (smart-ui.js); nothing here
 // reaches into the dialog. All markup here is fixed text; the cube's name goes in as text.
-const cubeTab={conn:null,name:'',shown:null,anim:null,raf:0,yaw:-32,pitch:28,asked:false,want:false,tipWait:false,spotTimer:0};
+// `shown` is the cube the picture is on (or turns toward), `queue` the moves still to turn, and
+// `target` the cube at the end of the queue: the real cube, as far as the page knows.
+const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,yaw:-32,pitch:28,asked:false,want:false,tipWait:false,spotTimer:0,pos:null};
 const CUBE_TAB_TIP='Click your smart cube to open the Smart Cube interface!';
 function cubeTabBtn(){return $('#cubeTab');}
 // The tab: made when a cube connects, removed on Disconnect. `off` marks a link that dropped.
@@ -33,7 +36,7 @@ function cubeTabRender(){
 function cubeTabOpen(){
   if($('#cubeWin')||!cubeTab.name)return;
   const w=document.createElement('div');w.className='cubewin panel';w.id='cubeWin';w.setAttribute('role','dialog');w.setAttribute('aria-label',`Smart cube window: ${cubeTab.name}`);
-  w.innerHTML=`<div class="cw-head"><span class="dot" aria-hidden="true"></span><b class="nm"></b><button class="small ghost" id="cubeWinClose" title="Collapse the window back into the tab (Esc)">Close<span class="hk" aria-hidden="true">Esc</span></button></div>
+  w.innerHTML=`<div class="cw-head" title="Drag to move the window"><span class="dot" aria-hidden="true"></span><b class="nm"></b><button class="small ghost" id="cubeWinClose" title="Collapse the window back into the tab (Esc)">Close<span class="hk" aria-hidden="true">Esc</span></button></div>
    <svg id="cubeWinSvg" viewBox="0 0 400 360" role="img" aria-label="Your smart cube, live"></svg>
    <p class="muted cw-note" id="cubeWinNote"></p>
    <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect">Connect again</button></div>`;
@@ -41,15 +44,46 @@ function cubeTabOpen(){
   $('#cubeWinClose').onclick=cubeTabClose;
   $('#cubeWinConnect').onclick=()=>{cubeTabClose();openSmart();};
   document.addEventListener('keydown',cubeTabKeys,true);
+  cubeTabDrag(w);
+  if(!cubeTab.pos)cubeTab.pos=store.get('cubeWin',null);
+  if(cubeTab.pos)cubeTabPlace(cubeTab.pos.x,cubeTab.pos.y);
+  window.addEventListener('resize',cubeTabResize);
   cubeTabRender();cubeTabWindow();
   if(cubeTab.conn)cubeTabAsk(); // the first picture
   setTimeout(()=>{const c=$('#cubeWinClose');if(c)c.focus();},20);
 }
 function cubeTabClose(){
   const w=$('#cubeWin');if(!w)return;
-  document.removeEventListener('keydown',cubeTabKeys,true);
+  document.removeEventListener('keydown',cubeTabKeys,true);window.removeEventListener('resize',cubeTabResize);
   cubeTabStopAnim();w.remove();cubeTabRender();
   const b=cubeTabBtn();if(b)b.focus();
+}
+// ----- move the window: drag it by its head -----
+// On a phone the window spans the screen and stays put.
+function cubeTabPhone(){try{return matchMedia('(max-width:760px)').matches;}catch(e){return false;}}
+// Put the window at (x,y), kept on the screen: the whole width, and at least the head in view.
+function cubeTabPlace(x,y){
+  const w=$('#cubeWin');if(!w||cubeTabPhone())return;
+  const W=window.innerWidth||0,H=window.innerHeight||0,ww=w.offsetWidth||320;
+  x=Math.round(Math.max(8,Math.min(x,Math.max(8,W-ww-8))));y=Math.round(Math.max(0,Math.min(y,Math.max(0,H-48))));
+  w.style.left=x+'px';w.style.top=y+'px';w.style.right='auto';
+  cubeTab.pos={x,y};
+}
+function cubeTabResize(){if(cubeTab.pos)cubeTabPlace(cubeTab.pos.x,cubeTab.pos.y);}
+function cubeTabDrag(w){
+  const h=w.querySelector('.cw-head');
+  h.addEventListener('pointerdown',e=>{
+    if(e.button>0||e.target.closest('button')||cubeTabPhone())return;
+    e.preventDefault();
+    const r=w.getBoundingClientRect(),d={x:e.clientX-r.left,y:e.clientY-r.top,id:e.pointerId};
+    const move=ev=>{if(ev.pointerId!==d.id)return;cubeTabPlace(ev.clientX-d.x,ev.clientY-d.y);};
+    const up=ev=>{if(ev.pointerId!==d.id)return;
+      h.removeEventListener('pointermove',move);h.removeEventListener('pointerup',up);h.removeEventListener('pointercancel',up);
+      w.classList.remove('drag');if(cubeTab.pos)store.set('cubeWin',cubeTab.pos);};
+    h.addEventListener('pointermove',move);h.addEventListener('pointerup',up);h.addEventListener('pointercancel',up);
+    if(h.setPointerCapture)try{h.setPointerCapture(e.pointerId);}catch(_){}
+    w.classList.add('drag');
+  });
 }
 // Esc closes the window, unless a modal is open: that one takes the key.
 function cubeTabKeys(e){
@@ -82,25 +116,53 @@ function cubeTabAsk(){
   cubeTab.conn.send('state').catch(()=>{cubeTab.asked=false;});
 }
 const CUBE_TAB_MOVES=['U',"U'",'U2','R',"R'",'R2','F',"F'",'F2','D',"D'",'D2','L',"L'",'L2','B',"B'",'B2'];
-// The one move that takes `from` to `to`, or null.
-function cubeTabMove(from,to){
-  if(!from||!to||from.equals(to))return null;
-  return CUBE_TAB_MOVES.find(m=>applyAlg(from,[m]).equals(to))||null;
+const cubeTabKey=c=>c.cp.join()+'/'+c.co.join()+'/'+c.ep.join()+'/'+c.eo.join();
+// The shortest list of up to four moves that takes `from` to `to`: [] when they are equal, null
+// when no such list exists. Two moves out from `from` meet two moves back from `to`. Under a
+// millisecond, so it runs on every state message.
+function cubeTabPath(from,to){
+  if(!from||!to)return null;
+  const inv=m=>m.endsWith("'")?m[0]:m.endsWith('2')?m:m+"'";
+  const grow=layer=>{const next=[];for(const {c,ms} of layer)for(const m of CUBE_TAB_MOVES){if(ms.length&&ms[ms.length-1][0]===m[0])continue;next.push({c:applyAlg(c,[m]),ms:ms.concat(m)});}return next;};
+  // back: the cubes one and two moves before `to`, each with the moves that lead from it to `to`
+  const back=new Map();let bl=[{c:to,ms:[]}];
+  for(let d=0;d<=2;d++){for(const {c,ms} of bl){const k=cubeTabKey(c);if(!back.has(k))back.set(k,ms.map(inv).reverse());}if(d<2)bl=grow(bl);}
+  let layer=[{c:from,ms:[]}],best=null;
+  for(let d=0;d<=2;d++){
+    if(best&&best.length<=d)return best; // nothing from here on is shorter
+    for(const {c,ms} of layer){const b=back.get(cubeTabKey(c));if(b&&(!best||ms.length+b.length<best.length))best=ms.concat(b);}
+    if(best&&best.length<=d+1)return best;
+    if(d<2)layer=grow(layer);
+  }
+  return best;
 }
-// Show `cube`. One move away from the last picture: turn that layer. Otherwise show it at once.
+// Show `cube`, the real cube's state. Up to four moves past the last picture: queue the turns, so
+// each one turns its layer, even when the turns come fast. Further away: show it at once.
 function cubeTabShow(cube){
-  const from=cubeTab.shown;cubeTabStopAnim();cubeTab.shown=cube;
-  const m=cubeTabMove(from,cube);
   const still=(typeof reducedMotion==='function'&&reducedMotion())||typeof requestAnimationFrame!=='function';
-  if(!m||still||!$('#cubeWin')){cubeTabWindow();return;}
-  const dur=m.endsWith('2')?360:260,t0=performance.now();
+  const path=still||!$('#cubeWin')?null:cubeTabPath(cubeTab.target||cubeTab.shown,cube);
+  if(!path){cubeTabStopAnim();cubeTab.shown=cubeTab.target=cube;cubeTabWindow();return;}
+  cubeTab.target=cube;cubeTab.queue.push(...path);
+  if(cubeTab.anim)return; // the running turn goes on; the new ones follow it
+  cubeTabNext();cubeTabWindow();
+}
+// How long one turn takes, with `n` more turns waiting: faster as the queue grows, so the picture
+// catches up with the cube within a turn or two.
+function cubeTabDur(move,n){return Math.max(90,Math.round((move.endsWith('2')?360:260)*[1,0.65,0.5][Math.min(n,2)]*(n>2?0.8:1)));}
+// Turn the first move of the queue. When it ends, the next one starts in the same frame.
+function cubeTabNext(){
+  const m=cubeTab.queue.shift();
+  if(!m){cubeTab.raf=0;cubeTab.anim=null;cubeTabWindow();return;}
+  const from=cubeTab.shown;cubeTab.shown=applyAlg(from,[m]);
+  const dur=cubeTabDur(m,cubeTab.queue.length),t0=performance.now();
   cubeTab.anim={from,move:m,t:0};
   const step=()=>{const x=Math.min(1,(performance.now()-t0)/dur);cubeTab.anim.t=x<1?0.5-0.5*Math.cos(Math.PI*x):1;
-    if(x>=1){cubeTab.raf=0;cubeTab.anim=null;cubeTabWindow();return;}
+    if(x>=1){cubeTabNext();return;}
     cubeTabDraw();cubeTab.raf=requestAnimationFrame(step);};
-  cubeTabWindow();cubeTab.raf=requestAnimationFrame(step);
+  cubeTab.raf=requestAnimationFrame(step);
 }
-function cubeTabStopAnim(){if(cubeTab.raf){cancelAnimationFrame(cubeTab.raf);cubeTab.raf=0;}cubeTab.anim=null;}
+// Stop the turns. The picture lands on the real cube.
+function cubeTabStopAnim(){if(cubeTab.raf){cancelAnimationFrame(cubeTab.raf);cubeTab.raf=0;}cubeTab.anim=null;cubeTab.queue=[];if(cubeTab.target)cubeTab.shown=cubeTab.target;}
 // ----- the first time: dim the page around the tab and point to it -----
 function cubeTabSpot(){
   if(store.get('cubeTip',0)||!cubeTabBtn()||$('#cubeSpot'))return;
@@ -140,13 +202,13 @@ function cubeTabSpotEnd(){
 // ----- what the Smart cube dialog reports -----
 function cubeTabEvent(ev){
   if(ev.type==='connect'){
-    cubeTab.conn=ev.conn;cubeTab.name=smartNiceName(ev.conn.name);cubeTab.shown=null;cubeTab.asked=false;cubeTab.want=false;cubeTabStopAnim();
+    cubeTab.conn=ev.conn;cubeTab.name=smartNiceName(ev.conn.name);cubeTab.asked=false;cubeTab.want=false;cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;
     cubeTabRender();
     if(ev.cube)cubeTabShow(ev.cube);else cubeTabWindow();
     if($('#cubeWin'))cubeTabAsk();
     cubeTabSpot();return;
   }
-  if(ev.type==='disconnect'){cubeTab.conn=null;cubeTab.name='';cubeTab.shown=null;cubeTabStopAnim();cubeTabClose();cubeTabSpotEnd();cubeTabRender();return;}
+  if(ev.type==='disconnect'){cubeTab.conn=null;cubeTab.name='';cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;cubeTabClose();cubeTabSpotEnd();cubeTabRender();return;}
   if(ev.type==='gone'){if(ev.conn!==cubeTab.conn)return;cubeTab.conn=null;cubeTab.asked=false;cubeTab.want=false;cubeTabRender();cubeTabWindow();return;}
   if(ev.type==='close'){if(cubeTab.tipWait)cubeTabSpot();return;}
   if(ev.conn!==cubeTab.conn)return;
