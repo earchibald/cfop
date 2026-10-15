@@ -15,6 +15,10 @@
 // that took the whole first reading as white up, green front went wrong whenever the cube lay
 // some other way when it first moved, and the picture then stayed tilted for good.
 // Follow my cube switches between the held view and the fixed view, kept in cw:cubeFollow.
+// The held view is the cube as it sits in space: the camera looks straight at it, so a level cube
+// with green toward the user shows only its green face until it tilts. The Isometric box
+// (cw:cubeIso, off by default) looks from a little to the right and above instead, so three
+// faces show when the cube is held straight.
 // The dialog reports every change of the link as a cw:smart event (smart-ui.js); nothing here
 // reaches into the dialog. All markup here is fixed text; the cube's name goes in as text.
 // `shown` is the cube the picture is on (or turns toward), `queue` the moves still to turn, and
@@ -24,11 +28,11 @@
 // R2, R then R' is nothing, so a turn back takes its move off the list. The readout under the
 // picture shows the last CUBE_TAB_SHOWN of them; a triangle after them says there are more.
 const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,yaw:-32,pitch:28,asked:false,want:false,tipWait:false,spotTimer:0,pos:null,
-  gyro:false,raw:null,basis:null,q:null,qTo:null,qraf:0,qAt:0,follow:true,moves:[]};
+  gyro:false,raw:null,basis:null,q:null,qTo:null,qraf:0,qAt:0,follow:true,iso:false,moves:[]};
 const CUBE_TAB_SHOWN=10;
-// The camera while the picture follows the cube: a little from the right and above, so three faces
-// show when the cube is held straight.
-const CUBE_TAB_HELD={yaw:-24,pitch:18};
+// The cameras while the picture follows the cube: straight on, the cube as it sits in space; and
+// isometric, a little from the right and above, so three faces show when the cube is held straight.
+const CUBE_TAB_FLAT={yaw:0,pitch:0},CUBE_TAB_ISO={yaw:-24,pitch:18};
 const CUBE_TAB_TIP='Click your smart cube to open the Smart Cube interface!';
 function cubeTabBtn(){return $('#cubeTab');}
 // The tab: made when a cube connects, removed on Disconnect. `off` marks a link that dropped.
@@ -56,7 +60,7 @@ function cubeTabOpen(){
   w.innerHTML=`<div class="cw-head" title="Drag to move the window"><span class="dot" aria-hidden="true"></span><b class="nm"></b><button class="small ghost" id="cubeWinClose" title="Collapse the window back into the tab (Esc)">Close<span class="hk" aria-hidden="true">Esc</span></button></div>
    <svg id="cubeWinSvg" viewBox="0 0 400 360" role="img" aria-label="Your smart cube, live"></svg>
    <div class="cw-moves" id="cubeWinMoves" aria-label="Your last moves"></div>
-   <div class="cw-row hidden" id="cubeWinView"><button class="small cw-tog" id="cubeWinFollow" aria-pressed="true" title="Turn the picture as you turn the cube in your hands">Follow my cube</button><button class="small ghost" id="cubeWinHome" title="Hold the cube with green toward you, then press. The picture turns to match.">Reset view</button></div>
+   <div class="cw-row hidden" id="cubeWinView"><button class="small cw-tog" id="cubeWinFollow" aria-pressed="true" title="Turn the picture as you turn the cube in your hands">Follow my cube</button><button class="small ghost" id="cubeWinHome" title="Hold the cube with green toward you, then press. The picture turns to match.">Reset view</button><label class="cw-chk" title="Look at the cube from a little to the right and above, so three faces show. Off: straight on, as the cube sits in space."><input type="checkbox" id="cubeWinIso"> Isometric</label></div>
    <p class="muted cw-note" id="cubeWinNote"></p>
    <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect">Connect again</button></div>`;
   document.body.appendChild(w);
@@ -64,7 +68,9 @@ function cubeTabOpen(){
   $('#cubeWinConnect').onclick=()=>{cubeTabClose();openSmart();};
   $('#cubeWinFollow').onclick=()=>cubeTabFollow(!cubeTab.follow);
   $('#cubeWinHome').onclick=cubeTabHome;
+  $('#cubeWinIso').onchange=e=>cubeTabIso(e.target.checked);
   cubeTab.follow=!!store.get('cubeFollow',true);
+  cubeTab.iso=!!store.get('cubeIso',false);
   document.addEventListener('keydown',cubeTabKeys,true);
   cubeTabDrag(w);
   if(!cubeTab.pos)cubeTab.pos=store.get('cubeWin',null);
@@ -124,6 +130,7 @@ function cubeTabWindow(){
   $('#cubeWinView').classList.toggle('hidden',!cubeTab.gyro);
   $('#cubeWinFollow').setAttribute('aria-pressed',String(cubeTab.follow));
   $('#cubeWinHome').disabled=!held||off;
+  const iso=$('#cubeWinIso');iso.checked=cubeTab.iso;iso.disabled=!held||off;
   cubeTabMovesDraw();
   cubeTabDraw();
 }
@@ -160,7 +167,8 @@ function cubeTabMovesDraw(){
 function cubeTabDraw(){
   const svg=$('#cubeWinSvg');if(!svg)return;
   const held=cubeTab.gyro&&cubeTab.follow&&cubeTab.q;
-  const a=cubeTab.anim,o=held?{yaw:CUBE_TAB_HELD.yaw,pitch:CUBE_TAB_HELD.pitch,rot:quatMat(cubeTab.q),n:3}:{yaw:cubeTab.yaw,pitch:cubeTab.pitch,n:3};
+  const cam=cubeTab.iso?CUBE_TAB_ISO:CUBE_TAB_FLAT;
+  const a=cubeTab.anim,o=held?{yaw:cam.yaw,pitch:cam.pitch,rot:quatMat(cubeTab.q),n:3}:{yaw:cubeTab.yaw,pitch:cubeTab.pitch,n:3};
   if(a&&a.t<1)svg.innerHTML=renderCube3D(a.from.toFacelets(),Object.assign(o,{move:a.move,t:Math.max(a.t,0.01)}));
   else{const f=cubeTab.shown?cubeTab.shown.toFacelets():Array.from({length:54},(_,i)=>i%9===4?(i-4)/9:-1);svg.innerHTML=renderCube3D(f,o);}
 }
@@ -285,6 +293,8 @@ function cubeTabStopView(){if(cubeTab.qraf){cancelAnimationFrame(cubeTab.qraf);c
 function cubeTabResetView(){cubeTabStopView();cubeTab.gyro=false;cubeTab.raw=cubeTab.basis=cubeTab.q=cubeTab.qTo=null;}
 // Follow my cube: on, the picture turns with the cube; off, the fixed view.
 function cubeTabFollow(on){cubeTab.follow=!!on;store.set('cubeFollow',cubeTab.follow);if(on)cubeTabTurnView();cubeTabWindow();}
+// Isometric: on, the held view looks from a little to the right and above; off, straight on.
+function cubeTabIso(on){cubeTab.iso=!!on;store.set('cubeIso',cubeTab.iso);cubeTabWindow();}
 // Reset view: green faces the viewer right now. The picture turns to line up; a tilt stays.
 function cubeTabHome(){if(!cubeTab.raw)return;cubeTab.basis=cubeTabYawBasis(cubeTab.raw);cubeTab.qTo=quatNorm(quatMul(cubeTab.basis,cubeTab.raw));cubeTabTurnView();}
 // ----- the first time: dim the page around the tab and point to it -----

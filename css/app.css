@@ -724,6 +724,9 @@ body[data-kind="beg"][data-key] #progressPanel,body[data-kind="beg"][data-key] .
 .cubewin .cw-moves .more{flex:none;display:inline-flex;width:8px;height:10px;margin-left:2px;color:var(--muted)}
 .cubewin .cw-moves .more svg{width:8px;height:10px;display:block;fill:currentColor}
 .cubewin .cw-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+.cubewin .cw-chk{display:flex;align-items:center;gap:5px;margin-left:auto;font-size:13px;color:var(--muted);cursor:pointer}
+.cubewin .cw-chk input{accent-color:var(--accent);margin:0}
+.cubewin .cw-chk:has(input:disabled){opacity:.5;cursor:default}
 .cubewin .cw-tog{color:var(--muted);border-color:var(--line);background:var(--panel)}
 .cubewin .cw-tog[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--panel))}
 .cubewin .scan-row{margin-top:8px}

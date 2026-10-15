@@ -57,12 +57,15 @@ the cube, a little closer to the reported tilt each frame (`quatSlerp`, most of
 the way within a tenth of a second), so a quick turn reads as a turn. The window
 carries two controls once the tilt arrives: Follow my cube (on by default, kept
 in `cw:cubeFollow`; off is the fixed view) and Reset view (hold the cube with
-green toward you, press, and the picture lines up; a tilt stays). The gen 3 cube (i Carry 2)
+green toward you, press, and the picture lines up; a tilt stays), and from version
+1.8.0 an Isometric box (off by default, kept in `cw:cubeIso`). The gen 3 cube (i Carry 2)
 has no gyro, so its window shows no controls. `cubePolys` takes `rot`, a 3×3
 matrix, for the turn of the body before the camera; the body turned +90° about
-y is the picture of the move y'. The held view uses a camera a little from the
-right and above (yaw -24, pitch 18), so three faces show when the cube is held
-straight.
+y is the picture of the move y'. The held view looks straight at the cube (yaw 0,
+pitch 0): the cube as it sits in space, so a level cube with green toward the user
+shows only its green face until it tilts. With Isometric on, the camera is a little
+from the right and above (yaw -24, pitch 18), so three faces show when the cube is
+held straight. Follow my cube off is the fixed view either way.
 
 The dialog reports the link as `cw:smart` events on `document`: `connect`
 (with `conn` and the first `cube`), `disconnect`, `gone`, `close` (the dialog),

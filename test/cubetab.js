@@ -101,7 +101,8 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   const polysOf=svg=>[...svg.querySelectorAll('polygon')].map(p=>{const q=p.getAttribute('points').split(' ').map(v=>v.split(',').map(Number));return {x:q.reduce((a,v)=>a+v[0],0)/q.length,y:q.reduce((a,v)=>a+v[1],0)/q.length,fill:p.getAttribute('fill')};});
   const same=(A,B)=>{if(A.length!==B.length)return false;const used=new Set();for(const a of A){const i=B.findIndex((b,j)=>!used.has(j)&&b.fill===a.fill&&Math.hypot(a.x-b.x,a.y-b.y)<0.3);if(i<0)return false;used.add(i);}return true;};
   const winPolys=()=>polysOf($('#cubeWinSvg'));
-  const held=(c,o)=>polysOf(new w.DOMParser().parseFromString('<svg>'+w.renderCube3D(c.toFacelets(),Object.assign({yaw:-24,pitch:18,n:3},o))+'</svg>','text/html'));
+  const held=(c,o,cam={yaw:0,pitch:0})=>polysOf(new w.DOMParser().parseFromString('<svg>'+w.renderCube3D(c.toFacelets(),Object.assign({n:3},cam,o))+'</svg>','text/html'));
+  const iso=(c,o)=>held(c,o,{yaw:-24,pitch:18});
   const fixed=c=>polysOf(new w.DOMParser().parseFromString('<svg>'+w.renderCube3D(c.toFacelets(),{yaw:-32,pitch:28,n:3})+'</svg>','text/html'));
   assert.ok($('#cubeWinView').classList.contains('hidden'),'no tilt controls before the cube reports its tilt');
   assert.ok(same(winPolys(),fixed(c6)),'the fixed view until then');
@@ -109,7 +110,17 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.ok(!$('#cubeWinView').classList.contains('hidden'),'the controls show once the tilt arrives');
   assert.strictEqual($('#cubeWinFollow').getAttribute('aria-pressed'),'true','Follow my cube is on');
   assert.ok(/turns with your cube/.test($('#cubeWinNote').textContent));
-  assert.ok(same(winPolys(),held(c6)),'the first reading is white up, green front, from the held camera');
+  assert.ok(same(winPolys(),held(c6)),'the first reading is white up, green front, seen straight on');
+  assert.strictEqual(winPolys().length,10,'a level cube facing the viewer shows one face: nine stickers on the plastic');
+  // Isometric: off by default; on, three faces show. The choice is kept.
+  const isoBox=$('#cubeWinIso');assert.ok(!isoBox.checked,'Isometric is off by default');assert.ok(!isoBox.disabled);
+  isoBox.checked=true;isoBox.dispatchEvent(new w.Event('change',{bubbles:true}));
+  assert.ok(same(winPolys(),iso(c6)),'Isometric: the camera a little to the right and above');
+  assert.strictEqual(w.localStorage.getItem('cw:cubeIso'),'true','the choice is kept');
+  esc();click($('#cubeTab'));assert.ok($('#cubeWinIso').checked,'still on after a reopen');
+  assert.ok(same(winPolys(),iso(c6)),'and the picture is isometric');
+  $('#cubeWinIso').checked=false;$('#cubeWinIso').dispatchEvent(new w.Event('change',{bubbles:true}));
+  assert.ok(same(winPolys(),held(c6)),'off again: straight on');
   // The cube turns half way round about its own z (up): the picture turns, then rests on y2.
   dev.notify(gyroMsg(4,{w:0,x:0,y:0,z:1}));
   assert.ok(await until(()=>w.quatAngle(ev('cubeTab.q'),[0,0,0,1])>1,500),'the picture starts to turn');
@@ -133,7 +144,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.strictEqual($('#cubeWinFollow').getAttribute('aria-pressed'),'false');
   assert.ok(same(winPolys(),fixed(c7)),'off: the fixed view');
   assert.strictEqual(w.localStorage.getItem('cw:cubeFollow'),'false','the choice is kept');
-  assert.ok($('#cubeWinHome').disabled,'Reset view waits for Follow');
+  assert.ok($('#cubeWinHome').disabled,'Reset view waits for Follow');assert.ok($('#cubeWinIso').disabled,'so does Isometric');
   esc();click($('#cubeTab'));assert.strictEqual($('#cubeWinFollow').getAttribute('aria-pressed'),'false','still off after a reopen');
   click($('#cubeWinFollow'));
   assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),held(w.applyAlg(c7,['y']))),1500),'on again: the held view');
