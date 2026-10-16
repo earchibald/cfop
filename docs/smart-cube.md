@@ -45,48 +45,33 @@ shows the last ten; past ten, a plain triangle after them says there are more
 so the list stays complete. Five or more moves between two states cannot be
 named, and the list keeps what it has. A new connection starts the list again.
 
-Version 1.6.0 turns the picture with the cube. A gen 2 or gen 4 cube reports its
-tilt many times a second (a `gyro` message, a unit quaternion). The cube knows
-which way is up (gravity), so the picture takes the up face from each reading
-as it is. It does not know which way the user faces, so the first reading sets
-the heading (`cubeTabYawBasis`, a turn about the vertical): the green face is
-taken to point at the user at that moment (version 1.7.1; before it, the whole
-first reading was taken as white up, green front, and a cube that lay some
-other way when it first moved left the picture tilted for good). The picture then turns with
-the cube, a little closer to the reported tilt each frame (`quatSlerp`, most of
-the way within a tenth of a second), so a quick turn reads as a turn. The window
-carries two controls once the tilt arrives: Follow my cube (on by default, kept
-in `cw:cubeFollow`; off is the fixed view) and Reset view (hold the cube with
-green toward you, press, and the picture lines up; a tilt stays), and from version
-1.8.0 an Isometric box (off by default, kept in `cw:cubeIso`). The gen 3 cube (i Carry 2)
-has no gyro, so its window shows no controls. `cubePolys` takes `rot`, a 3×3
-matrix, for the turn of the body before the camera; the body turned +90° about
-y is the picture of the move y'. The held view looks straight at the cube (yaw 0,
-pitch 0): the cube as it sits in space, so a level cube with green toward the user
-shows only its green face until it tilts. With Isometric on, the camera is a little
-from the right and above (yaw -24, pitch 18), so three faces show when the cube is
-held straight. Follow my cube off is the fixed view either way.
-
-Version 1.9.0 reads the moves as the cube is held, and names the stage of a
-CFOP solve above the picture.
+Version 1.6.0 turned the picture with the cube's tilt, and version 1.9.0
+took the hold (how the cube sits in the hands) from the same reading. Version
+1.10.0 takes both out: the tilt twitched the picture with every small move of
+the hands, and a hold that snapped to the nearest of the 24 ways to hold a cube
+put turns on the list that the user had not made, and renamed the moves after
+them. A gen 2 or gen 4 cube still reports its tilt many times a second (a
+`gyro` message, a unit quaternion, `ganGyro` in gan.js); the tab ignores it.
 
 The hold. The cube names its faces its own way: its white face is U whatever
-way it sits. The tilt reading, snapped to the nearest of the 24 ways to hold a
-cube (`CUBE_TAB_HOLDS`: each as the shortest turns from white up, green
-front, the cube after them, and the turn of the body as a quaternion), is the
-hold. A new hold takes after 750 ms in one place (`cubeTab.holdMs`), so a cube
-on its way past a face does not count. A move the cube reports is renamed by
-where its face sits in the hold (`cubeTabRelabel`): held white down (z2), the
-cube's R is the user's L. A change of hold puts the turn of the whole cube on
-the list (`cubeTabHoldDelta`, x, y, z, their primes and doubles, at most two).
-A slice turn moves the core, and the gyro sits in the core, so the cube
-reports two face turns and a turn of its body: R2 L2 and x2 read as M2 once
-the turn lands (`cubeTabSlice`; also E from U D' y' and S from F' B z). The
-first reading and Reset view set the hold with no turn on the list: the cube
-did not move, the page learned how it is held. The heading is still the one
-Reset view set (green toward the user), so a user whose moves read wrong
-holds green toward them and presses Reset view. Clear moves empties the list.
-The gen 3 cube has no gyro: its moves read as the cube names them.
+way it sits. Six buttons under the picture turn the whole cube: x, y, z and
+their primes (`CUBE_TAB_TURNS`, `cubeTabTurn`). A press moves the hold on
+(`cubeTab.hold`, one of `CUBE_TAB_HOLDS`: each as the shortest turns from
+white up, green front, the cube after them, and the turn of the body as a
+quaternion in the frame of draw.js; null is white up, green front), puts the
+turn on the list (where y then y' takes both off, through `cubeTabMerge`), and
+turns the picture, a little closer to the hold each frame (`quatSlerp`, most of
+the way within a quarter of a second), so a press reads as a turn and not a
+jump. `cubePolys` takes `rot`, a 3×3 matrix, for the turn of the body before
+the camera; the camera stays the fixed one (yaw -32, pitch 28). A move the cube
+reports is renamed by where its face sits in the hold (`cubeTabRelabel`): held
+white down (z2), the cube's R is the user's L. The window's note says to press
+the same turn when the cube turns in the hands; a user who does not press
+reads the moves as the cube names them, and the stage then names the turn
+that brings the cross down (z2, say) as its first move. A new connection and
+Disconnect both put the hold back to white up, green front; a link that drops
+keeps it, with the buttons disabled until the cube is back. Clear moves
+empties the list.
 
 The stage. `cfopStage(held, prefer)` in `stage.js` takes the cube as held (the
 reported state turned by the hold, `cubeTabHeld`) and finds where a CFOP
@@ -107,13 +92,14 @@ with the moves done so far marked (`cfopStageDone` compares the cube as held,
 centers and all, with the case's cube after each prefix of its moves, so a
 turn of the whole cube counts only once the cube was turned). The same case
 read again (after a U turn, say) keeps the moves already revealed; another
-stage in between hides them again. A change of hold with the cube still reads
+stage in between hides them again. A turn of the whole cube with the cube still reads
 the stage again at once. The panel keeps its height, so the picture does not
 jump between stages.
 
 The dialog reports the link as `cw:smart` events on `document`: `connect`
 (with `conn` and the first `cube`), `disconnect`, `gone`, `close` (the dialog),
-and each `move`, `state` and `gyro` message. The tab listens; nothing else does yet.
+and each `move`, `state` and `gyro` message. The tab listens (and ignores `gyro`);
+nothing else does yet.
 
 The app does not decode the moves themselves yet: the tab infers a move from
 two states. Next steps: decode the face and the direction from the move
