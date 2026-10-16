@@ -251,6 +251,17 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
   body[data-tab="ref"] .player,body[data-tab="ref"] .seedbar{display:none!important}
   .page{padding:10px}
   #refMobile{display:block}
+  /* Listen: the card with the heard case stays under the top bar while the cases scroll */
+  .listen{display:flex;flex-direction:column;gap:6px}
+  .listen.pinned{position:sticky;top:calc(var(--toph,58px) + 6px);z-index:10;box-shadow:var(--shadow)}
+  .listen-row{display:flex;align-items:center;gap:10px;font-size:13.5px;line-height:1.35}
+  #listenBtn{flex:none;padding:7px 14px;font-weight:600}
+  #listenBtn.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+  .listen-heard{font-size:12.5px;min-height:0}.listen-heard:empty{display:none}
+  #listenCard{padding-top:4px}
+  .listen-nm{display:block;width:100%;text-align:left;background:transparent;border:0;padding:0 0 6px;font-weight:600;font-size:17px;color:var(--text)}
+  .listen-alg{font-family:var(--mono);font-size:20px;line-height:1.7;cursor:pointer;word-spacing:2px}
+  .refall #listenCard .sp-m:not(.on){background:var(--muted);box-shadow:0 0 0 2px var(--muted);color:transparent;user-select:none} /* Show all moves does not skip the reveal */
   .top{gap:8px;padding:8px 10px;position:fixed;top:0;left:0;right:0;padding-top:calc(env(safe-area-inset-top,0px) + 8px);z-index:15}
   .page{padding-top:calc(var(--toph,58px) - env(safe-area-inset-top,0px) + 10px)}
   .top h1,.top .spacer{display:none}
