@@ -9,7 +9,14 @@ final class SiteServer {
     let port: UInt16
     let root: URL?
     var listener: NWListener?
-    let session = URLSession(configuration: .default)
+    // No cache: the site sends max-age=600, and a cached page would show an old version of the
+    // site for ten minutes after a deploy. twistwright.com's own edge cache is cleared on deploy.
+    let session: URLSession = {
+        let c = URLSessionConfiguration.ephemeral
+        c.urlCache = nil
+        c.requestCachePolicy = .reloadIgnoringLocalCacheData
+        return URLSession(configuration: c)
+    }()
 
     init(port: UInt16, root: URL?) { self.port = port; self.root = root }
 
