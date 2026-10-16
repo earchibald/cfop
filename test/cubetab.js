@@ -45,6 +45,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   dev=fakeDevice(4,MAC,cube,{mfData:mfDataFor(MAC),name:'GAN12uiM_A1B2'});
   click($('#smartBtn'));await sleep(20);click($('#smartConnect'));
   assert.ok(await until(()=>!$('#smartUse').disabled),'connected: '+$('#smartStatus').textContent);
+  ev('cubeTab.holdMs=30;cubeTab.stillMs=150;cubeTab.revealMs=120'); // short waits for the hold and the stage
   const tab=$('#cubeTab');assert.ok(tab,'the tab is there');
   assert.ok(tab.closest('header.top'),'in the top bar');
   assert.strictEqual(tab.querySelector('.nm').textContent,'GAN 12 ui Maglev','named after the cube');
@@ -104,10 +105,10 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   const held=(c,o,cam={yaw:0,pitch:0})=>polysOf(new w.DOMParser().parseFromString('<svg>'+w.renderCube3D(c.toFacelets(),Object.assign({n:3},cam,o))+'</svg>','text/html'));
   const iso=(c,o)=>held(c,o,{yaw:-24,pitch:18});
   const fixed=c=>polysOf(new w.DOMParser().parseFromString('<svg>'+w.renderCube3D(c.toFacelets(),{yaw:-32,pitch:28,n:3})+'</svg>','text/html'));
-  assert.ok($('#cubeWinView').classList.contains('hidden'),'no tilt controls before the cube reports its tilt');
+  assert.ok($('#cubeWinGyro').classList.contains('hidden')&&$('#cubeWinIsoBox').classList.contains('hidden'),'no tilt controls before the cube reports its tilt');assert.ok($('#cubeWinClear')&&!$('#cubeWinView').classList.contains('hidden'),'Clear moves is there all the same');
   assert.ok(same(winPolys(),fixed(c6)),'the fixed view until then');
   dev.notify(gyroMsg(4,{w:1,x:0,y:0,z:0}));await sleep(20);
-  assert.ok(!$('#cubeWinView').classList.contains('hidden'),'the controls show once the tilt arrives');
+  assert.ok(!$('#cubeWinGyro').classList.contains('hidden')&&!$('#cubeWinIsoBox').classList.contains('hidden'),'the controls show once the tilt arrives');
   assert.strictEqual($('#cubeWinFollow').getAttribute('aria-pressed'),'true','Follow my cube is on');
   assert.ok(/turns with your cube/.test($('#cubeWinNote').textContent));
   assert.ok(same(winPolys(),held(c6)),'the first reading is white up, green front, seen straight on');
@@ -198,27 +199,34 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.deepStrictEqual(w.cubeTabMerge(['U'],"R'"),['U',"R'"]);
   let h=[];for(const m of ['R','U2','L',"D'",'D',"L'",'U2',"R'"])h=w.cubeTabMerge(h,m);
   assert.deepStrictEqual(h,[],"R U2 L D' then D L' U2 R': every move taken back");
-  // In the window: every move seen so far, in order. The five-move jump was not known.
+  // In the window: every move seen so far, in order, as held. The five-move jump was not known.
+  // The half turn of the cube above went on the list as y2, and the R turned while it was held
+  // that way reads L: the cube's right face sat on the left. Reset view took the hold back
+  // without a turn on the list, and the quarter turns and tilts after it came and went.
   const readout=()=>$$('#cubeWinMoves .mv').map(s=>s.textContent).join(' ');
-  assert.strictEqual(readout(),"U R F U' R U R' U' R",'the moves so far: '+readout());
-  assert.ok(!$('#cubeWinMoves .more'),'no triangle at nine moves');
-  // Turned back move by move, the list shrinks.
-  let cc=w.applyAlg(c7,["R'",'U','R',"U'"]);set(cc);dev.notify(mv);
-  assert.ok(await until(()=>readout()==="U R F U' R",1500),'four turns back: '+readout());
-  cc=w.applyAlg(cc,["R'"]);set(cc);dev.notify(mv);
-  assert.ok(await until(()=>readout()==="U R F U'",1500),'one more back: '+readout());
+  assert.strictEqual(readout(),"U R F U' R U R' U' y2 L",'the moves so far: '+readout());
+  assert.ok($('#cubeWinMoves .mv.rot').textContent==='y2','the turn of the cube is marked');
+  assert.ok(!$('#cubeWinMoves .more'),'no triangle at ten moves');
+  // Clear moves empties the list.
+  assert.ok(!$('#cubeWinClear').disabled);click($('#cubeWinClear'));
+  assert.ok(!readout()&&$('#cubeWinMoves .none'),'Clear moves empties the list');assert.strictEqual($('#cubeWinMoves .none').textContent,'No moves yet');
+  assert.ok($('#cubeWinClear').disabled,'and has nothing more to clear');
+  assert.ok($('#cubeWinClear').closest('.cw-side')===$('#cubeWinIsoBox').closest('.cw-side')&&$('#cubeWinIsoBox').nextElementSibling===$('#cubeWinClear'),'Clear moves sits under Isometric');
+  // Four moves, then turned back move by move: the list shrinks.
+  let cc=w.applyAlg(c7,['R','U',"R'","U'"]);set(cc);dev.notify(mv);
+  assert.ok(await until(()=>readout()==="R U R' U'",1500),'four moves: '+readout());
+  assert.ok(!$('#cubeWinClear').disabled,'Clear moves is live again');
+  cc=w.applyAlg(cc,['U','R']);set(cc);dev.notify(mv);
+  assert.ok(await until(()=>readout()==="R U",1500),'two turns back: '+readout());
+  cc=w.applyAlg(cc,["U'"]);set(cc);dev.notify(mv);
+  assert.ok(await until(()=>readout()==="R",1500),'one more back: '+readout());
   // R then R reads R2; R' then makes it R; R' again takes it off.
-  cc=w.applyAlg(cc,['R']);set(cc);dev.notify(mv);assert.ok(await until(()=>readout()==="U R F U' R",1500));
   cc=w.applyAlg(cc,['R']);set(cc);dev.notify(mv);
-  assert.ok(await until(()=>readout()==="U R F U' R2",1500),'R then R is R2: '+readout());
+  assert.ok(await until(()=>readout()==="R2",1500),'R then R is R2: '+readout());
   cc=w.applyAlg(cc,["R'"]);set(cc);dev.notify(mv);
-  assert.ok(await until(()=>readout()==="U R F U' R",1500),"R2 then R' is R: "+readout());
+  assert.ok(await until(()=>readout()==="R",1500),"R2 then R' is R: "+readout());
   cc=w.applyAlg(cc,["R'"]);set(cc);dev.notify(mv);
-  assert.ok(await until(()=>readout()==="U R F U'",1500),"R then R' is nothing: "+readout());
-  // Taken back to the start, the list is empty.
-  cc=w.applyAlg(cc,['U',"F'","R'","U'"]);set(cc);dev.notify(mv);
-  assert.ok(await until(()=>!readout()&&$('#cubeWinMoves .none'),1500),'all moves taken back: '+readout());
-  assert.strictEqual($('#cubeWinMoves .none').textContent,'No moves yet');
+  assert.ok(await until(()=>!readout()&&$('#cubeWinMoves .none'),1500),"R then R' is nothing: "+readout());
   // Past ten moves, the last ten show and a triangle says there are more. All of them are kept.
   let want=[];
   for(const batch of [['R','U','F','D'],['L','B','R','U'],['F','D','L']]){
@@ -237,6 +245,90 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   cc=w.applyAlg(cc,['B']);set(cc);dev.notify(mv);
   assert.ok(await until(()=>ev('cubeTab.moves').length===12,1500),'a move with the window closed is kept');
   click($('#cubeTab'));assert.ok(readout().endsWith('L B'),'and shows on reopen: '+readout());
+  // ----- the hold: the cube as it sits in the hands -----
+  // Pure: the 24 holds, each found from its turn of the body; the turns from one hold to another;
+  // a move named by where its face sits; two faces and a turn of the body read as a slice.
+  const HOLDS=ev('CUBE_TAB_HOLDS'),holdOf=ms=>HOLDS.find(h=>h.moves.join(' ')===ms);
+  assert.strictEqual(HOLDS.length,24);assert.strictEqual(HOLDS[0].moves.length,0);
+  for(const h of HOLDS){assert.ok(h.moves.length<=2,h.moves.join(' '));assert.strictEqual(w.cubeTabSnap(h.q),h,'snapped to itself: '+h.moves.join(' '));
+    const near=w.quatMul([Math.sin(0.1),0,0,Math.cos(0.1)],h.q);assert.strictEqual(w.cubeTabSnap(near),h,'a little off still snaps: '+h.moves.join(' '));}
+  assert.strictEqual(w.cubeTabHoldDelta(null,holdOf('z2')).join(' '),'z2');assert.strictEqual(w.cubeTabHoldDelta(holdOf('z2'),null).join(' '),'z2');
+  assert.strictEqual(w.cubeTabHoldDelta(holdOf('y'),holdOf('y2')).join(' '),'y');assert.strictEqual(w.cubeTabHoldDelta(holdOf('z2'),holdOf('y2')).join(' '),'x2');
+  for(const h of HOLDS)for(const g of HOLDS)assert.ok(w.applyAlg(h.cube,w.cubeTabHoldDelta(h,g)).equals(g.cube),'the turns between two holds');
+  assert.strictEqual(w.cubeTabRelabel('R',holdOf('z2')),'L');assert.strictEqual(w.cubeTabRelabel("U'",holdOf('z2')),"D'");assert.strictEqual(w.cubeTabRelabel('F2',holdOf('z2')),'F2');
+  assert.strictEqual(w.cubeTabRelabel('R',holdOf('y')),'F','after y the cube\'s right face is in front');assert.strictEqual(w.cubeTabRelabel('R',null),'R');assert.strictEqual(w.cubeTabRelabel('x',holdOf('y')),'x');
+  const S0=w.applyAlg(new Cube(),"R U F' D");
+  for(const [faces,slice] of [["R L' x'",'M'],["R' L x","M'"],["R2 L2 x2",'M2'],["U D' y'",'E'],["U' D y","E'"],["F' B z",'S'],["F B' z'","S'"],["F2 B2 z2",'S2']]){
+    assert.ok(w.applyAlg(S0,faces).equals(w.applyAlg(S0,slice)),faces+' is '+slice);
+    assert.deepStrictEqual([...w.cubeTabSlice(['U',...w.parseAlg(faces)])],['U',slice],faces+' reads '+slice);
+    const fm=w.parseAlg(faces);assert.deepStrictEqual([...w.cubeTabSlice(['U',fm[1],fm[0],fm[2]])],['U',slice],'in either order');}
+  assert.deepStrictEqual([...w.cubeTabSlice(['R','L','x'])],['R','L','x'],'the wrong way round is not a slice');
+  assert.deepStrictEqual([...w.cubeTabSlice(['R',"L'",'U',"x'"])],['R',"L'",'U',"x'"],'a move between is not a slice');
+  // ----- the stage above the picture -----
+  const stage=()=>$('#cubeWinStage'),stName=()=>stage().querySelector('.st-name').textContent,stSub=()=>stage().querySelector('.st-sub').textContent;
+  const stMoves=()=>$$('#cubeWinStage .st-alg .mv').map(s=>s.classList.contains('hid')?'•':s.textContent),stDone=()=>$$('#cubeWinStage .st-alg .mv.done').length;
+  assert.ok(stage()&&stage().nextElementSibling===$('#cubeWinSvg'),'the stage panel is above the picture');
+  assert.ok(await until(()=>stName()==='Cross',2500),'a scrambled cube reads as the cross: '+stName());
+  assert.ok(/^\d of 4 white edges$/.test(stSub()),stSub());assert.strictEqual(stMoves().length,0,'no moves for the cross');
+  // The tilt as a turn of the body, through the frame Reset view set.
+  const tilt=q=>dev.notify(gyroMsg(4,rawOf(w.quatMul(w.quatConj(ev('cubeTab.basis')||[0,0,0,1]),q))));
+  tilt([0,0,0,1]);assert.ok(await until(()=>ev('cubeTab.hold')===HOLDS[0],500),'held as the cube names its faces');
+  // A Sune on the cube's yellow face, white cross whole: the cube's white face is U, so held as the
+  // cube names its faces, the cross is on top.
+  const sune=ev('ALG_DB').co[0],X=w.applyAlg(new Cube(),w.invertAlg(sune.alg)),cs=w.afterRotation(X,'z2');
+  let cur=cs;set(cur);dev.notify(mv);
+  assert.ok(await until(()=>stage().classList.contains('stale'),300),'a turn fades the stage');assert.strictEqual(stName(),'Cross','but leaves it there');
+  assert.ok(await until(()=>stName()==='Sune'&&!stage().classList.contains('stale'),2000),'still again: the stage is read: '+stName());
+  const st=ev('cubeTab.stage');assert.strictEqual(st.moves[0],'z2','the cross is on top: turn the cube over first');
+  assert.strictEqual(stSub(),'Turn z2: Yellow up, green in front');
+  assert.strictEqual(stMoves().join(''),'•'.repeat(st.moves.length),'every move hidden at first: '+stMoves().join(' '));
+  assert.ok(st.moves.length>=8,'z2 and the seven moves of Sune');
+  // One move shows every revealMs.
+  assert.ok(await until(()=>stMoves()[0]==='z2',600),'the first move shows: '+stMoves().join(' '));assert.strictEqual(stMoves()[1],'•');
+  assert.ok($('#cubeWinStage .mv.rot'),'a turn of the cube is marked');
+  assert.ok(await until(()=>stMoves()[1]!=='•',600),'then the second');
+  // The cube turned over in the hands: after holdMs the hold is z2, the turn goes on the list, and
+  // the z2 of the case is done.
+  click($('#cubeWinClear'));
+  tilt(holdOf('z2').q);
+  assert.ok(await until(()=>ev('cubeTab.hold')===holdOf('z2'),500),'the hold takes');
+  assert.strictEqual(readout(),'z2','the turn is on the list');
+  assert.ok(await until(()=>stDone()===1,500),'the z2 of the case is done: '+stDone());assert.strictEqual(stName(),'Sune');
+  // The user's moves, in the hands: the cube reports each by its own face, and the body turns
+  // with a slice. `user` plays them on the fake cube that way.
+  const user=(ms)=>{const held=w.applyAlg(w.applyAlg(cur,ev('cubeTab.hold').moves),ms);const B=HOLDS.find(h=>h.cube.center.join()===held.center.join());
+    cur=held.mul(B.cube.inverse());set(cur);dev.notify(mv);if(B!==ev('cubeTab.hold'))tilt(B.q);};
+  user([st.moves[1]]);
+  assert.ok(await until(()=>stDone()===2,1500),'a move done in the hands counts: '+stDone());assert.strictEqual(stName(),'Sune');
+  assert.strictEqual(readout(),'z2 '+st.moves[1],'the list names the face as held: '+readout());
+  assert.ok(stMoves()[1]===st.moves[1]&&stMoves()[2]==='•','done moves show; the rest stay hidden');
+  // The rest of the case, a few at a time: the cube ends solved.
+  user(st.moves.slice(2,5));await until(()=>!ev('cubeTab.anim')&&ev('cubeTab.target').equals(cur),1500);
+  assert.ok(await until(()=>stDone()===5,1500),'five done: '+stDone());
+  user(st.moves.slice(5));
+  assert.ok(await until(()=>stName()==='Solved',2500),'the case done: '+stName());
+  assert.strictEqual(readout(),st.moves.join(' '),'the list is the case as held: '+readout());
+  // A T perm, set up in the hands. Its moves hide; a wrong move part way reads as another stage;
+  // back on the case, the moves hide again. A U turn on the same case keeps what was revealed.
+  const tp=ev('ALG_DB').cp[0],setup=w.parseAlg(w.invertAlg(tp.alg));
+  for(let i=0;i<setup.length;i+=4){user(setup.slice(i,i+4));await until(()=>!ev('cubeTab.anim')&&ev('cubeTab.target').equals(cur),1500);}
+  assert.ok(await until(()=>stName()==='T perm',2500),'T perm: '+stName());assert.strictEqual(stSub(),'Yellow up, green in front');
+  assert.ok(await until(()=>stMoves().filter(m=>m!=='•').length===2,800),'two moves shown');
+  user(['U']);assert.ok(await until(()=>stage().classList.contains('stale'),300));
+  assert.ok(await until(()=>!stage().classList.contains('stale'),1500));assert.strictEqual(stName(),'T perm');
+  assert.ok(stMoves().filter(m=>m!=='•').length>=2,'the same case keeps its reveals: '+stMoves().join(' '));
+  user(['F']);
+  assert.ok(await until(()=>!stage().classList.contains('stale')&&stName()!=='T perm',1500),'off the case: '+stName());
+  user(["F'"]);
+  assert.ok(await until(()=>stName()==='T perm'&&!stage().classList.contains('stale'),1500),'back on the case');
+  assert.strictEqual(stMoves().filter(m=>m!=='•').length,0,'hidden again after another stage');
+  // A slice turn: the cube reports two faces and its body turns; the list reads M2.
+  click($('#cubeWinClear'));user(['M2']);
+  assert.ok(await until(()=>readout()==='M2',1500),'R2 L2 and the turn of the body read M2: '+readout());
+  user(['M2']);assert.ok(await until(()=>!readout(),1500),'M2 again takes it off: '+readout());
+  assert.strictEqual(ev('cubeTab.hold'),holdOf('z2'),'back in the hold');
+  // Reset view takes the hold again with nothing on the list.
+  click($('#cubeWinHome'));assert.ok(!readout(),'Reset view puts no turn on the list');
   // ----- Esc collapses the window back into the tab -----
   esc();assert.ok(!$('#cubeWin'),'Esc closes the window');assert.ok($('#cubeTab'),'the tab stays');
   assert.strictEqual($('#cubeTab').getAttribute('aria-expanded'),'false');assert.strictEqual(d.activeElement,$('#cubeTab'),'the tab has the focus');
