@@ -22,8 +22,22 @@
 // list, and sets the hold (`hold`, one of the 24 CUBE_TAB_HOLDS, null for white up, green front).
 // The moves then read as held (cubeTabRelabel): held white down (z2), the cube's R is the user's L.
 // Versions 1.6 to 1.9 took the hold from the cube's tilt reading; it twitched between holds and
-// put turns on the list that the user had not made, so the buttons replaced it (1.10.0). The tilt
-// messages still arrive (gan.js decodes them) and are ignored here.
+// put turns on the list that the user had not made, so the buttons replaced it (1.10.0).
+// The tilt: a gen 2 or gen 4 cube reports its tilt many times a second (a gyro message, `q` in
+// gan.js). From 1.11.0 the tilt drives the picture only (cubeTabGyro): the picture turns as the
+// cube turns in the hands, a little closer each frame, and the hold stays with the buttons. The
+// cube knows which way is up (gravity) but not which way the user faces, so a heading (`basis`,
+// a turn about the vertical) lines the reading up with the hold (cubeTabYawBasis); the first
+// reading sets it, and so does Keep this hold. Until the first layer turn, a heading that drifts
+// from the hold is lined up again on its own: the user is picking the cube up.
+// The warning: the hold the tilt sits in (`away`, the nearest of the 24, cubeTabSnap, once the
+// reading is more than `awayDeg` from the hold and until it is within `backDeg` again) differs
+// from the hold for `awayMs`, and a band under the picture says how the cube sits and how the
+// moves read, with Read as held (the turns from the hold to the cube, cubeTabHoldDelta, pressed
+// for the user) and, where only the heading differs, Keep this hold (the heading is taken
+// again: the cube did not turn). The tab's dot turns orange meanwhile. The stage and the moves
+// keep reading by the hold: the band is the only place the two meet. A gen 3 cube has no tilt,
+// and nothing here changes for it.
 // Above the picture, the stage of a CFOP solve (cfopStage, stage.js): Cross, F2L, or the two-look
 // case ("Sune") with the hold under it and its moves hidden. The stage is read only after the
 // cube has been still for `stillMs` (1200); every `revealMs` (1500) more without a turn, one
@@ -36,6 +50,7 @@
 // for it. A turn of the whole cube with the cube still reads the stage again at once.
 const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,yaw:-32,pitch:28,asked:false,want:false,tipWait:false,spotTimer:0,pos:null,
   q:null,qTo:null,qraf:0,qAt:0,moves:[],hold:null,
+  gyro:false,raw:null,basis:null,turned:false,away:null,awayTimer:0,awayMs:500,awayDeg:55,backDeg:40,warn:false,
   stage:null,done:0,revealed:0,stale:false,stillTimer:0,revealTimer:0,stillMs:1200,revealMs:1500,since:0,keepMoves:12};
 const CUBE_TAB_SHOWN=10;
 const CUBE_TAB_TIP='Click your smart cube to open the Smart Cube interface!';
@@ -59,12 +74,12 @@ function cubeTabRender(){
     b.onclick=()=>{cubeTabSpotEnd();if($('#cubeWin'))cubeTabClose();else cubeTabOpen();};
     const pop=$('#methodPop');if(pop)pop.after(b);else top.appendChild(b);
   }
-  const off=!cubeTab.conn;
-  b.classList.toggle('off',off);
+  const off=!cubeTab.conn,warn=!off&&cubeTab.warn;
+  b.classList.toggle('off',off);b.classList.toggle('warn',warn);
   b.querySelector('.nm').textContent=cubeTab.name;
   b.setAttribute('aria-expanded',String(!!$('#cubeWin')));
-  b.title=off?`${cubeTab.name} is no longer connected. Open its window to connect again.`:`Open the window of ${cubeTab.name}: a live view of your smart cube.`;
-  b.setAttribute('aria-label',off?`${cubeTab.name}, not connected. Open its window.`:`Open the window of your smart cube, ${cubeTab.name}`);
+  b.title=off?`${cubeTab.name} is no longer connected. Open its window to connect again.`:warn?`${cubeTab.name} is held differently from how the moves read. Open its window.`:`Open the window of ${cubeTab.name}: a live view of your smart cube.`;
+  b.setAttribute('aria-label',off?`${cubeTab.name}, not connected. Open its window.`:warn?`Your smart cube, ${cubeTab.name}, is held differently from how the moves read. Open its window.`:`Open the window of your smart cube, ${cubeTab.name}`);
 }
 // ----- the floating window -----
 function cubeTabOpen(){
@@ -73,6 +88,7 @@ function cubeTabOpen(){
   w.innerHTML=`<div class="cw-head" title="Drag to move the window"><span class="dot" aria-hidden="true"></span><b class="nm"></b><button class="small ghost" id="cubeWinClose" title="Collapse the window back into the tab (Esc)">Close<span class="hk" aria-hidden="true">Esc</span></button></div>
    <div class="cw-stage" id="cubeWinStage"><div class="st-name" aria-live="polite"></div><div class="st-sub"></div><div class="st-alg" aria-label="The moves of this case"></div></div>
    <svg id="cubeWinSvg" viewBox="0 0 400 360" role="img" aria-label="Your smart cube, live"></svg>
+   <div class="cw-warn hidden" id="cubeWinWarn" role="status"><span class="txt"></span><span class="btns"><button class="small" id="cubeWinMatch">Read as held</button><button class="small ghost" id="cubeWinKeep" title="The cube did not turn: line the picture up with the hold again.">Keep this hold</button></span></div>
    <div class="cw-turns" id="cubeWinTurns" role="group" aria-label="Turn the whole cube"><span class="lbl" title="Turned the cube in your hands? Press the same turn here, so the picture, the moves and the stage read as you hold it.">Turn the cube</span></div>
    <div class="cw-moves" id="cubeWinMoves" aria-label="Your last moves"></div>
    <div class="cw-row" id="cubeWinView"><div class="cw-side"><button class="small ghost" id="cubeWinClear" title="Empty the list of moves under the picture">Clear moves</button></div></div>
@@ -88,6 +104,7 @@ function cubeTabOpen(){
   $('#cubeWinClose').onclick=cubeTabClose;
   $('#cubeWinConnect').onclick=()=>{cubeTabClose();openSmart();};
   $('#cubeWinClear').onclick=()=>{cubeTab.moves=[];cubeTabMovesDraw();};
+  $('#cubeWinMatch').onclick=cubeTabMatch;$('#cubeWinKeep').onclick=cubeTabKeep;
   document.addEventListener('keydown',cubeTabKeys,true);
   cubeTabDrag(w);
   if(!cubeTab.pos)cubeTab.pos=store.get('cubeWin',null);
@@ -141,9 +158,10 @@ function cubeTabWindow(){
   const off=!cubeTab.conn;
   w.classList.toggle('off',off);
   w.querySelector('.nm').textContent=cubeTab.name;
-  $('#cubeWinNote').textContent=off?'The cube is no longer connected. Turn a face to wake it up, then connect again.':!cubeTab.shown?'Reading the cube.':'Live. Each turn of your cube turns the layer here. When you turn the whole cube in your hands, press the same turn above, so the moves read as you hold it.';
+  $('#cubeWinNote').textContent=off?'The cube is no longer connected. Turn a face to wake it up, then connect again.':!cubeTab.shown?'Reading the cube.':cubeTab.gyro?'Live. Each turn of your cube turns the layer here, and the picture tilts with the cube. When you turn the whole cube in your hands, press the same turn above, so the moves read as you hold it.':'Live. Each turn of your cube turns the layer here. When you turn the whole cube in your hands, press the same turn above, so the moves read as you hold it.';
   $('#cubeWinAgain').classList.toggle('hidden',!off);
   $$('#cubeWinTurns button').forEach(b=>{b.disabled=off;});
+  cubeTabWarnDraw();
   cubeTabMovesDraw();
   cubeTabStageDraw();
   cubeTabDraw();
@@ -169,7 +187,7 @@ function cubeTabRelabel(m,hold){
 // Record the moves the cube made between two states, as held.
 function cubeTabRecord(path){
   for(const m of path)cubeTab.moves=cubeTabMerge(cubeTab.moves,cubeTabRelabel(m,cubeTab.hold));
-  cubeTab.since+=path.length;
+  cubeTab.since+=path.length;cubeTab.turned=true;
   cubeTabMovesDraw();
 }
 // The readout: the last CUBE_TAB_SHOWN moves, and a triangle after them when there are more.
@@ -263,6 +281,7 @@ function cubeTabStopAnim(){if(cubeTab.raf){cancelAnimationFrame(cubeTab.raf);cub
 function quatMul(a,b){const [ax,ay,az,aw]=a,[bx,by,bz,bw]=b;
   return [aw*bx+ax*bw+ay*bz-az*by,aw*by-ax*bz+ay*bw+az*bx,aw*bz+ax*by-ay*bx+az*bw,aw*bw-ax*bx-ay*by-az*bz];}
 function quatNorm(q){const l=Math.hypot(...q)||1;return q.map(v=>v/l);}
+function quatConj(q){return [-q[0],-q[1],-q[2],q[3]];}
 function quatMat(q){const [x,y,z,w]=quatNorm(q);
   return [[1-2*(y*y+z*z),2*(x*y-z*w),2*(x*z+y*w)],[2*(x*y+z*w),1-2*(x*x+z*z),2*(y*z-x*w)],[2*(x*z-y*w),2*(y*z+x*w),1-2*(x*x+y*y)]];}
 // Part of the way from a to b, the short way round. t=1 is b.
@@ -274,16 +293,21 @@ function quatSlerp(a,b,t){
 }
 // The angle between two turns, in degrees.
 function quatAngle(a,b){const d=Math.abs(a[0]*b[0]+a[1]*b[1]+a[2]*b[2]+a[3]*b[3]);return 2*Math.acos(Math.min(1,d))*180/Math.PI;}
-// Turn the picture toward qTo, a little closer each frame, so a press reads as a turn and not a
-// jump. With reduced motion, or with no window, the picture goes straight there.
+// Turn the picture toward qTo, a little closer each frame, so a press, or a turn of the cube in
+// the hands, reads as a turn and not a jump. With reduced motion, or with no window, the picture
+// goes straight there, drawn once a frame at most: the tilt readings come faster than that.
 function cubeTabTurnView(){
   if(!cubeTab.qTo)return;
-  const still=!$('#cubeWin')||(typeof reducedMotion==='function'&&reducedMotion())||typeof requestAnimationFrame!=='function';
-  if(still){cubeTabStopView();cubeTab.q=cubeTab.qTo;if(!cubeTab.raf)cubeTabDraw();return;}
+  const noRaf=typeof requestAnimationFrame!=='function';
+  const still=!$('#cubeWin')||(typeof reducedMotion==='function'&&reducedMotion())||noRaf;
+  if(still){cubeTab.q=cubeTab.qTo;if(!$('#cubeWin')||cubeTab.raf)return;
+    if(noRaf){cubeTabDraw();return;}
+    if(!cubeTab.qraf)cubeTab.qraf=requestAnimationFrame(()=>{cubeTab.qraf=0;if(!cubeTab.raf)cubeTabDraw();});return;}
   if(cubeTab.qraf)return;
   cubeTab.qAt=performance.now();
+  const tc=cubeTab.gyro?70:110; // most of the way within a tenth of a second for the tilt, a quarter for a press
   const step=()=>{
-    const now=performance.now(),k=1-Math.exp(-(now-cubeTab.qAt)/110);cubeTab.qAt=now; // most of the way within a quarter of a second
+    const now=performance.now(),k=1-Math.exp(-(now-cubeTab.qAt)/tc);cubeTab.qAt=now;
     cubeTab.q=cubeTab.q?quatSlerp(cubeTab.q,cubeTab.qTo,k):cubeTab.qTo;
     const done=quatAngle(cubeTab.q,cubeTab.qTo)<0.05;if(done)cubeTab.q=cubeTab.qTo;
     if(!cubeTab.raf)cubeTabDraw(); // a running turn draws every frame already
@@ -292,8 +316,80 @@ function cubeTabTurnView(){
   cubeTab.qraf=requestAnimationFrame(step);
 }
 function cubeTabStopView(){if(cubeTab.qraf){cancelAnimationFrame(cubeTab.qraf);cubeTab.qraf=0;}}
-// Forget the hold: on connect and on disconnect. The picture goes back to the cube's own frame.
-function cubeTabResetView(){cubeTabStopView();cubeTab.q=cubeTab.qTo=null;cubeTab.hold=null;}
+// Forget the hold and the tilt: on connect and on disconnect. The picture goes back to the cube's
+// own frame.
+function cubeTabResetView(){cubeTabStopView();cubeTab.q=cubeTab.qTo=null;cubeTab.hold=null;
+  cubeTab.gyro=false;cubeTab.raw=cubeTab.basis=null;cubeTab.turned=false;cubeTabAwayClear();}
+// ----- the tilt: the picture follows the cube in the hands -----
+// The heading for a reading: the turn about the vertical that puts the cube's axes, seen from
+// above, where the hold puts them. Of the three axes (red, white, green), the one most level in
+// both frames sets it, so a tilt in the reading stays in the picture. Only a yaw: a frame that
+// took the whole reading as the hold went wrong whenever the cube lay some other way (1.6).
+function cubeTabYawBasis(raw,holdQ){
+  const M=quatMat(raw),H=quatMat(holdQ||[0,0,0,1]);
+  let best=-1,a=0;
+  for(const c of [2,0,1]){ // green, red, white
+    const g=[M[0][c],M[2][c]],h=[H[0][c],H[2][c]],lv=Math.min(Math.hypot(g[0],g[1]),Math.hypot(h[0],h[1]));
+    if(lv>best){best=lv;a=Math.atan2(h[0],h[1])-Math.atan2(g[0],g[1]);}
+  }
+  return [0,Math.sin(a/2),0,Math.cos(a/2)];
+}
+const cubeTabHoldQ=()=>(cubeTab.hold||CUBE_TAB_HOLDS[0]).q;
+// A tilt reading from the cube. The first one sets the heading: the cube is taken to sit as the
+// hold says, as far as a turn about the vertical goes. The up face comes from the reading itself.
+function cubeTabGyro(q){
+  q=quatNorm(q);cubeTab.raw=q;
+  if(!cubeTab.basis)cubeTab.basis=cubeTabYawBasis(q,cubeTabHoldQ());
+  cubeTab.qTo=quatNorm(quatMul(cubeTab.basis,q));
+  cubeTabAwayCheck();
+  if(!cubeTab.gyro){cubeTab.gyro=true;cubeTabStopView();cubeTab.q=cubeTab.qTo;cubeTabWindow();return;}
+  cubeTabTurnView();
+}
+// The hold nearest to a turn of the body.
+function cubeTabSnap(q){let best=null,bd=-1;for(const h of CUBE_TAB_HOLDS){const d=Math.abs(q[0]*h.q[0]+q[1]*h.q[1]+q[2]*h.q[2]+q[3]*h.q[3]);if(d>bd){bd=d;best=h;}}return best;}
+// The turns of the whole cube from hold a to hold b (null is white up, green front).
+function cubeTabHoldDelta(a,b){const A=(a||CUBE_TAB_HOLDS[0]).cube,B=(b||CUBE_TAB_HOLDS[0]).cube;const h=CUBE_TAB_HOLD_BY.get(A.inverse().mul(B).center.join());return h?h.moves:[];}
+// Is the tilt away from the hold? More than awayDeg from it, and nearest another hold: `away` is
+// that hold, and the band shows after awayMs of it. Within backDeg again: not away, at once.
+// Before the first layer turn, a heading that is away is lined up again instead: the user is
+// picking the cube up, and the heading was a guess.
+function cubeTabAwayCheck(){
+  if(!cubeTab.qTo)return;
+  const hold=cubeTab.hold||CUBE_TAB_HOLDS[0],deg=quatAngle(cubeTab.qTo,hold.q);
+  let away=cubeTab.away;
+  if(deg>cubeTab.awayDeg){const near=cubeTabSnap(cubeTab.qTo);away=near===hold?null:near;}
+  else if(deg<cubeTab.backDeg||!away)away=null;
+  if(away&&!cubeTab.turned&&away.cube.center[0]===hold.cube.center[0]){cubeTabKeep();return;}
+  if(away===cubeTab.away)return;
+  cubeTab.away=away;clearTimeout(cubeTab.awayTimer);cubeTab.awayTimer=0;
+  if(away){cubeTab.awayTimer=setTimeout(()=>{cubeTab.awayTimer=0;cubeTabWarnSet(true);},cubeTab.awayMs);}
+  else cubeTabWarnSet(false);
+}
+function cubeTabWarnSet(on){if(cubeTab.warn===on)return;cubeTab.warn=on;cubeTabRender();cubeTabWarnDraw();}
+function cubeTabAwayClear(){clearTimeout(cubeTab.awayTimer);cubeTab.awayTimer=0;cubeTab.away=null;cubeTabWarnSet(false);}
+// Read as held: the turns from the hold to the way the cube sits, pressed for the user.
+function cubeTabMatch(){const to=cubeTab.away;if(!to)return;for(const m of cubeTabHoldDelta(cubeTab.hold,to))cubeTabTurn(m);}
+// Keep this hold: the cube did not turn; the heading is taken again so the reading lines up with
+// the hold. Only a turn about the vertical goes: the up face is what gravity says.
+function cubeTabKeep(){
+  if(!cubeTab.raw)return;
+  cubeTab.basis=cubeTabYawBasis(cubeTab.raw,cubeTabHoldQ());cubeTab.qTo=quatNorm(quatMul(cubeTab.basis,cubeTab.raw));
+  cubeTab.away=null;clearTimeout(cubeTab.awayTimer);cubeTab.awayTimer=0;cubeTabWarnSet(false);
+  cubeTabTurnView();
+}
+// A hold in words: the center on top and the one in front.
+function cubeTabHoldWords(h){const c=(h||CUBE_TAB_HOLDS[0]).cube.center;return `${COLOR_NAMES[c[0]]} up, ${COLOR_NAMES[c[2]]} in front`;}
+// The band under the picture: how the cube sits, how the moves read, and the way to match.
+function cubeTabWarnDraw(){
+  const el=$('#cubeWinWarn');if(!el)return;
+  const on=cubeTab.warn&&!!cubeTab.away&&!!cubeTab.conn;
+  el.classList.toggle('hidden',!on);
+  if(!on){el.querySelector('.txt').textContent='';return;}
+  const hold=cubeTab.hold||CUBE_TAB_HOLDS[0],away=cubeTab.away,turns=cubeTabHoldDelta(hold,away);
+  el.querySelector('.txt').textContent=`Your cube sits with ${cubeTabHoldWords(away)}. The moves and the stage read with ${cubeTabHoldWords(hold)}.`;
+  const match=$('#cubeWinMatch');match.title=`Turn the hold to match the cube: ${turns.join(' ')}. The turn goes on the list.`;match.setAttribute('aria-label',`Read as held: ${turns.join(' ')}`);
+  $('#cubeWinKeep').classList.toggle('hidden',away.cube.center[0]!==hold.cube.center[0]); // a different up face is no drift
+}
 // ----- the hold: which way the cube sits in the hands -----
 // The 24 ways to hold a cube, each as the shortest turns from white up, green front (x, y, z and
 // their primes and doubles), the cube after them (its centers say which of the cube's faces is at
@@ -325,8 +421,8 @@ function cubeTabTurn(m){
   cubeTab.hold=h.moves.length?h:null;
   cubeTab.moves=cubeTabMerge(cubeTab.moves,m);
   cubeTabMovesDraw();
-  if(!cubeTab.q)cubeTab.q=[0,0,0,1]; // the first press turns from the cube's own frame
-  cubeTab.qTo=h.q;cubeTabTurnView();
+  if(cubeTab.gyro)cubeTabAwayCheck(); // the picture follows the cube; the press may match it, or leave it
+  else{if(!cubeTab.q)cubeTab.q=[0,0,0,1];cubeTab.qTo=h.q;cubeTabTurnView();} // the first press turns from the cube's own frame
   if(!cubeTab.stillTimer&&cubeTab.target)cubeTabSettle();
 }
 // ----- the stage above the picture -----
@@ -433,10 +529,11 @@ function cubeTabEvent(ev){
     cubeTabSpot();return;
   }
   if(ev.type==='disconnect'){cubeTab.conn=null;cubeTab.name='';cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;cubeTab.moves=[];cubeTabClose();cubeTabResetView();cubeTabStageReset();cubeTabSpotEnd();cubeTabRender();return;}
-  if(ev.type==='gone'){if(ev.conn!==cubeTab.conn)return;cubeTab.conn=null;cubeTab.asked=false;cubeTab.want=false;cubeTabStageStop();cubeTabRender();cubeTabWindow();return;}
+  if(ev.type==='gone'){if(ev.conn!==cubeTab.conn)return;cubeTab.conn=null;cubeTab.asked=false;cubeTab.want=false;cubeTabStageStop();cubeTabAwayClear();cubeTabRender();cubeTabWindow();return;}
   if(ev.type==='close'){if(cubeTab.tipWait)cubeTabSpot();return;}
   if(ev.conn!==cubeTab.conn)return;
   if(ev.type==='move')cubeTabAsk(); // the state that answers shows the turn
+  if(ev.type==='gyro')cubeTabGyro(ev.q);
   if(ev.type==='state'){cubeTab.asked=false;if(cubeTab.want){cubeTab.want=false;cubeTabAsk();}cubeTabShow(ev.cube);}
 }
 if(typeof document!=='undefined')document.addEventListener('cw:smart',e=>cubeTabEvent(e.detail));

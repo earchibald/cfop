@@ -47,11 +47,12 @@ named, and the list keeps what it has. A new connection starts the list again.
 
 Version 1.6.0 turned the picture with the cube's tilt, and version 1.9.0
 took the hold (how the cube sits in the hands) from the same reading. Version
-1.10.0 takes both out: the tilt twitched the picture with every small move of
-the hands, and a hold that snapped to the nearest of the 24 ways to hold a cube
-put turns on the list that the user had not made, and renamed the moves after
-them. A gen 2 or gen 4 cube still reports its tilt many times a second (a
-`gyro` message, a unit quaternion, `ganGyro` in gan.js); the tab ignores it.
+1.10.0 took both out: a hold that snapped to the nearest of the 24 ways to hold
+a cube put turns on the list that the user had not made, and renamed the moves
+after them. Version 1.11.0 brings the tilt back for the picture only, and
+keeps the hold with the buttons: the picture shows the cube as it sits in the
+hands, the moves and the stage read by the hold, and a band under the picture
+says when the two differ. See "The tilt" below.
 
 The hold. The cube names its faces its own way: its white face is U whatever
 way it sits. Six buttons under the picture turn the whole cube: x, y, z and
@@ -72,6 +73,39 @@ that brings the cross down (z2, say) as its first move. A new connection and
 Disconnect both put the hold back to white up, green front; a link that drops
 keeps it, with the buttons disabled until the cube is back. Clear moves
 empties the list.
+
+The tilt. A gen 2 or gen 4 cube reports its tilt many times a second (a `gyro`
+message, a unit quaternion, `ganGyro` in gan.js: the turn of the body, in the
+frame of draw.js). `cubeTabGyro` takes each reading and turns the picture
+toward it, a little closer each frame (most of the way within a tenth of a
+second), so the picture follows the cube in the hands. With reduced motion the
+picture goes straight to the reading, drawn once a frame at most. The cube
+knows which way is up (gravity) but not which way the user faces, so a heading
+(`cubeTab.basis`, a turn about the vertical) lines the reading up with the
+hold: `cubeTabYawBasis(raw, holdQ)` finds the yaw that puts the cube's axes,
+seen from above, where the hold puts them, from whichever of the three axes is
+most level in both frames, so a lean in the reading stays in the picture. The
+first reading sets the heading; Keep this hold sets it again.
+
+The band. The hold the tilt sits in (`cubeTab.away`: the nearest of the 24,
+`cubeTabSnap`, once the reading is more than `awayDeg` (55) from the hold, and
+until it is within `backDeg` (40) again, so a cube turned part way does not
+flicker) differs from the hold for `awayMs` (500), and a band under the
+picture says how the cube sits and how the moves read: "Your cube sits with
+yellow up, green in front. The moves and the stage read with white up, green
+in front." The tab's dot turns orange meanwhile, window or no window. Read as
+held presses the turns from the hold to the way the cube sits for the user
+(`cubeTabHoldDelta`, `cubeTabMatch`): the hold moves on, the turns go on the
+list, and the band goes. Keep this hold (`cubeTabKeep`) says the cube did not
+turn: the heading is taken again so the reading lines up with the hold. It
+shows only where the two holds have the same face up: a different face up is
+what gravity says, not drift. Until the first layer turn after a connection
+(`cubeTab.turned`), a heading away from the hold is lined up again on its own,
+with no band: the user is picking the cube up, and the first heading was a
+guess. The moves and the stage never read from the tilt: the hold is the one
+source for them, the tilt the one source for the picture, and the band is the
+one place the two meet. A gen 3 cube has no tilt; the buttons turn the picture
+for it as in 1.10.0.
 
 The stage. `cfopStage(held, prefer)` in `stage.js` takes the cube as held (the
 reported state turned by the hold, `cubeTabHeld`) and finds where a CFOP
@@ -112,8 +146,8 @@ jump between stages.
 
 The dialog reports the link as `cw:smart` events on `document`: `connect`
 (with `conn` and the first `cube`), `disconnect`, `gone`, `close` (the dialog),
-and each `move`, `state` and `gyro` message. The tab listens (and ignores `gyro`);
-nothing else does yet.
+and each `move`, `state` and `gyro` message. The tab listens; nothing else
+does yet.
 
 The app does not decode the moves themselves yet: the tab infers a move from
 two states. Next steps: decode the face and the direction from the move
