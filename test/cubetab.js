@@ -339,7 +339,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   for(const h of HOLDS)for(const g of HOLDS)assert.ok(w.applyAlg(h.cube,w.cubeTabHoldDelta(h,g)).equals(g.cube),'the turns between two holds');
   // In the window. The cube reports its tilt in its own frame; `tilt` sends the turn of the body
   // the picture should show, through the heading the tab has set.
-  const rawOf=q=>({x:q[0],y:-q[2],z:q[1],w:q[3]}),tilt=q=>dev.notify(gyroMsg(4,rawOf(w.quatMul(w.quatConj(ev('cubeTab.basis')||[0,0,0,1]),q))));
+  const rawOf=q=>({x:-q[0],y:q[2],z:-q[1],w:q[3]}),tilt=q=>dev.notify(gyroMsg(4,rawOf(w.quatMul(w.quatConj(ev('cubeTab.basis')||[0,0,0,1]),q))));
   const warn=()=>$('#cubeWinWarn'),warnOn=()=>!warn().classList.contains('hidden'),warnText=()=>warn().querySelector('.txt').textContent;
   const CN=ev('COLOR_NAMES'),words=h=>CN[h.cube.center[0]]+' up, '+CN[h.cube.center[2]]+' in front';
   ev('cubeTab.awayMs=60');
