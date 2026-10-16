@@ -339,15 +339,19 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   for(const h of HOLDS)for(const g of HOLDS)assert.ok(w.applyAlg(h.cube,w.cubeTabHoldDelta(h,g)).equals(g.cube),'the turns between two holds');
   // In the window. The cube reports its tilt in its own frame; `tilt` sends the turn of the body
   // the picture should show, through the heading the tab has set.
-  const rawOf=q=>({x:-q[0],y:q[2],z:-q[1],w:q[3]}),tilt=q=>dev.notify(gyroMsg(4,rawOf(w.quatMul(w.quatConj(ev('cubeTab.basis')||[0,0,0,1]),q))));
+  const rawOf=q=>({x:q[0],y:-q[2],z:q[1],w:q[3]}),tilt=q=>dev.notify(gyroMsg(4,rawOf(w.quatMul(w.quatConj(ev('cubeTab.basis')||[0,0,0,1]),q))));
   const warn=()=>$('#cubeWinWarn'),warnOn=()=>!warn().classList.contains('hidden'),warnText=()=>warn().querySelector('.txt').textContent;
   const CN=ev('COLOR_NAMES'),words=h=>CN[h.cube.center[0]]+' up, '+CN[h.cube.center[2]]+' in front';
   ev('cubeTab.awayMs=60');
   assert.ok(!ev('cubeTab.gyro')&&!warnOn(),'no tilt yet, no band');
+  assert.ok($('#cubeWinReset').classList.contains('hidden'),'no tilt yet: no Reset view');
   // The first reading: the heading lines the cube up with the hold (z2). Held as the hold says:
   // no band, and the picture is the cube held z2.
   tilt(holdOf('z2').q);await sleep(30);
   assert.ok(ev('cubeTab.gyro'),'the tilt is on');assert.ok(/tilts with the cube/.test($('#cubeWinNote').textContent),'the note says so');
+  assert.ok(!$('#cubeWinReset').classList.contains('hidden')&&!$('#cubeWinReset').disabled,'the tilt is live: Reset view shows');
+  assert.ok($('#cubeWinReset').closest('.cw-side')&&$('#cubeWinReset').nextElementSibling===$('#cubeWinClear'),'beside Clear moves');
+  assert.strictEqual($('#cubeWinReset').title,'Hold the cube with yellow up, green in front, then press. The picture lines up with your cube.');
   assert.ok(!warnOn()&&!ev('cubeTab.away'),'held as the hold says: no band');assert.ok(!$('#cubeTab').classList.contains('warn'));
   assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),fixed(w.applyAlg(cur,['z2']))),1500),'the picture is the cube held z2');
   // A small lean: the picture leans, the hold stays, no band.
@@ -405,6 +409,17 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   // Turned over to z2 and read as held, for the rest of the test.
   tilt(holdOf('z2').q);assert.ok(await until(()=>warnOn(),500));click($('#cubeWinMatch'));
   assert.strictEqual(ev('cubeTab.hold'),holdOf('z2'));assert.ok(!warnOn());
+  // Reset view: the heading drifted (the cube reads a quarter turn away, no button pressed, and
+  // the band is up). The user holds the cube as the moves read and presses: the heading is taken
+  // again, the band goes, the hold and the list stay, and the picture lines up with the hold.
+  tilt(z2y.q);assert.ok(await until(()=>warnOn(),500),'drifted: the band');
+  const basis1=ev('cubeTab.basis'),list1=readout();
+  click($('#cubeWinReset'));
+  assert.ok(!warnOn()&&!ev('cubeTab.away')&&!$('#cubeTab').classList.contains('warn'),'Reset view: the band goes');
+  assert.strictEqual(ev('cubeTab.hold'),holdOf('z2'),'the hold stays');assert.strictEqual(readout(),list1,'nothing goes on the list');
+  assert.ok(w.quatAngle(ev('cubeTab.basis'),basis1)>80,'the heading moved a quarter turn');
+  assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),fixed(w.applyAlg(cur,['z2']))),1500),'the picture lines up with the hold');
+  tilt(holdOf('z2').q);await sleep(100);assert.ok(!warnOn(),'the cube as the hold says: no band');
   // ----- Esc collapses the window back into the tab -----
   esc();assert.ok(!$('#cubeWin'),'Esc closes the window');assert.ok($('#cubeTab'),'the tab stays');
   assert.strictEqual($('#cubeTab').getAttribute('aria-expanded'),'false');assert.strictEqual(d.activeElement,$('#cubeTab'),'the tab has the focus');
@@ -443,17 +458,21 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.strictEqual(d2.querySelector('#cubeTab .nm').textContent,'GAN 356 i Carry');
   d2.dispatchEvent(new w2.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
   assert.ok(!d2.querySelector('#cubeSpot'),'no callout the second time');
-  // Before the first layer turn, a heading away from the hold is lined up again on its own: the
-  // user is picking the cube up, and the heading was a guess. A different face up warns all the same.
+  // Before the first layer turn, a y turn of the cube follows on the picture and brings the band,
+  // as any turn does: nothing lines the heading up on its own (1.11.0 did, and the picture turned
+  // back the other way part way through the turn). Reset view lines it up.
   const ev2=s=>w2.eval(s);ev2('cubeTab.awayMs=60');
   const tilt2=q=>dev.notify(gyroMsg(4,rawOf(w2.quatMul(w2.quatConj(ev2('cubeTab.basis')||[0,0,0,1]),q))));
   click2(d2.querySelector('#cubeTab'));const warn2=()=>!d2.querySelector('#cubeWinWarn').classList.contains('hidden');
-  tilt2([0,0,0,1]);await sleep(30);assert.ok(ev2('cubeTab.gyro')&&!ev2('cubeTab.turned'));
-  tilt2(w2.quatMul(yawQ(90),[0,0,0,1]));await sleep(150);
-  assert.ok(!ev2('cubeTab.away')&&!warn2(),'a heading before the first turn is lined up, not warned');
+  tilt2([0,0,0,1]);await sleep(30);assert.ok(ev2('cubeTab.gyro'));
+  const yq=w2.quatMul(yawQ(90),[0,0,0,1]);tilt2(yq);
+  assert.ok(await until(()=>warn2(),500),'a y turn before the first layer turn brings the band');
+  assert.ok(w2.quatAngle(ev2('cubeTab.qTo'),yq)<1,'the picture follows the cube');
+  click2(d2.querySelector('#cubeWinReset'));
+  assert.ok(!ev2('cubeTab.away')&&!warn2(),'Reset view: the band goes');
   assert.ok(w2.quatAngle(ev2('cubeTab.qTo'),[0,0,0,1])<1,'the picture lines up with the hold');
   tilt2(ev2('CUBE_TAB_HOLDS').find(h=>h.moves.join(' ')==='x').q);
-  assert.ok(await until(()=>warn2(),500),'a different face up warns before the first turn too');
+  assert.ok(await until(()=>warn2(),500),'a different face up warns too');
   assert.ok(d2.querySelector('#cubeWinKeep').classList.contains('hidden'));
   console.log('cubetab ok');process.exit(0);
 }catch(e){console.error(e);process.exit(1);}})();

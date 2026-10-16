@@ -85,7 +85,12 @@ knows which way is up (gravity) but not which way the user faces, so a heading
 hold: `cubeTabYawBasis(raw, holdQ)` finds the yaw that puts the cube's axes,
 seen from above, where the hold puts them, from whichever of the three axes is
 most level in both frames, so a lean in the reading stays in the picture. The
-first reading sets the heading; Keep this hold sets it again.
+first reading sets the heading; Reset view and Keep this hold set it again.
+Reset view sits beside Clear moves and shows while the tilt is live: hold the
+cube as the moves read, then press, and the picture lines up with the hold.
+The heading drifts over a long solve (the cube has no compass), and this is
+the way back. Only the heading goes: a cube held with another face up brings
+the band back.
 
 The band. The hold the tilt sits in (`cubeTab.away`: the nearest of the 24,
 `cubeTabSnap`, once the reading is more than `awayDeg` (55) from the hold, and
@@ -99,10 +104,10 @@ held presses the turns from the hold to the way the cube sits for the user
 list, and the band goes. Keep this hold (`cubeTabKeep`) says the cube did not
 turn: the heading is taken again so the reading lines up with the hold. It
 shows only where the two holds have the same face up: a different face up is
-what gravity says, not drift. Until the first layer turn after a connection
-(`cubeTab.turned`), a heading away from the hold is lined up again on its own,
-with no band: the user is picking the cube up, and the first heading was a
-guess. The moves and the stage never read from the tilt: the hold is the one
+what gravity says, not drift. Nothing lines the heading up on its own: 1.11.0
+did so until the first layer turn, and a y turn of the cube before then showed
+as the picture turned back the other way, which read as a reversed axis.
+The moves and the stage never read from the tilt: the hold is the one
 source for them, the tilt the one source for the picture, and the band is the
 one place the two meet. A gen 3 cube has no tilt; the buttons turn the picture
 for it as in 1.10.0.
@@ -181,16 +186,18 @@ need to know which GAN 12 ui they have.
 - **Tilt.** A gen 2 cube sends event 0x01 with four 16-bit words from bit 4: w,
   x, y, z, each a sign bit and a 15-bit size over 0x7FFF. A gen 4 cube sends
   event 0xEC with the same words from bit 16. Gen 3 has none. The cube's axes go
-  to the page's (x right, y up, z toward the viewer) as gan-cube-sample maps
-  them: x, z, -y, and the vector part is negated. The sign has gone back and
-  forth on the real GAN 12 ui Maglev: 1.6.1 negated it, 1.7.2 took the reading
-  as the sample does, and 1.11.1, with the picture following the tilt again,
-  negated it once more because every axis turned the wrong way. The frame of
-  the sample and ours differ somewhere not yet found. The check before the
-  sign changes again, with the picture following the tilt: hold the cube white
-  up, green toward you, and turn it y (the right face comes to the front): the
-  picture's right face must come to the front. Tip the top toward you: the
-  top of the picture must come toward you.
+  (+x red, +y blue, +z white, right-handed) to the page's (x right, y up, z
+  toward the viewer) as gan-cube-sample maps them: x, z, -y. The reading is the
+  turn of the body. gan-cube-sample and cubing.js both apply it to the cube
+  object as it is, and draw.js takes `rot` the same way, so the sign is not
+  negated. The sign went back and forth on the real GAN 12 ui Maglev: 1.6.1
+  negated it, 1.7.2 did not, 1.11.1 negated it again, and 1.12.0 does not.
+  What read as a reversed axis in 1.11.0 was the heading lined up on its own
+  part way through a y turn, not the sign. The check, with the picture
+  following the tilt and after one layer turn: hold the cube white up, green
+  toward you, and turn it y (the right face comes to the front): the picture's
+  right face must come to the front. Tip the top toward you: the top of the
+  picture must come toward you.
 - **A wrong key.** A wrong MAC address decrypts to noise. Noise almost never
   gives two valid permutations, so `ganDecode` returns `bad`. The cube also
   cannot read a request under a wrong key, so it often stays silent. `readState`

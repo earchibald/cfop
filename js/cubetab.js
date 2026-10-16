@@ -28,8 +28,10 @@
 // cube turns in the hands, a little closer each frame, and the hold stays with the buttons. The
 // cube knows which way is up (gravity) but not which way the user faces, so a heading (`basis`,
 // a turn about the vertical) lines the reading up with the hold (cubeTabYawBasis); the first
-// reading sets it, and so does Keep this hold. Until the first layer turn, a heading that drifts
-// from the hold is lined up again on its own: the user is picking the cube up.
+// reading sets it, and so do Reset view (a button beside Clear moves, shown while the tilt is
+// live: hold the cube as the moves read, then press) and Keep this hold. Nothing lines the
+// heading up on its own: 1.11.0 did so until the first layer turn, and a y turn of the cube
+// before then showed as the picture turned back the other way.
 // The warning: the hold the tilt sits in (`away`, the nearest of the 24, cubeTabSnap, once the
 // reading is more than `awayDeg` from the hold and until it is within `backDeg` again) differs
 // from the hold for `awayMs`, and a band under the picture says how the cube sits and how the
@@ -50,7 +52,7 @@
 // for it. A turn of the whole cube with the cube still reads the stage again at once.
 const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,yaw:-32,pitch:28,asked:false,want:false,tipWait:false,spotTimer:0,pos:null,
   q:null,qTo:null,qraf:0,qAt:0,moves:[],hold:null,
-  gyro:false,raw:null,basis:null,turned:false,away:null,awayTimer:0,awayMs:500,awayDeg:55,backDeg:40,warn:false,
+  gyro:false,raw:null,basis:null,away:null,awayTimer:0,awayMs:500,awayDeg:55,backDeg:40,warn:false,
   stage:null,done:0,revealed:0,stale:false,stillTimer:0,revealTimer:0,stillMs:1200,revealMs:1500,since:0,keepMoves:12};
 const CUBE_TAB_SHOWN=10;
 const CUBE_TAB_TIP='Click your smart cube to open the Smart Cube interface!';
@@ -91,7 +93,7 @@ function cubeTabOpen(){
    <div class="cw-warn hidden" id="cubeWinWarn" role="status"><span class="txt"></span><span class="btns"><button class="small" id="cubeWinMatch">Read as held</button><button class="small ghost" id="cubeWinKeep" title="The cube did not turn: line the picture up with the hold again.">Keep this hold</button></span></div>
    <div class="cw-turns" id="cubeWinTurns" role="group" aria-label="Turn the whole cube"><span class="lbl" title="Turned the cube in your hands? Press the same turn here, so the picture, the moves and the stage read as you hold it.">Turn the cube</span></div>
    <div class="cw-moves" id="cubeWinMoves" aria-label="Your last moves"></div>
-   <div class="cw-row" id="cubeWinView"><div class="cw-side"><button class="small ghost" id="cubeWinClear" title="Empty the list of moves under the picture">Clear moves</button></div></div>
+   <div class="cw-row" id="cubeWinView"><div class="cw-side"><button class="small ghost hidden" id="cubeWinReset">Reset view</button><button class="small ghost" id="cubeWinClear" title="Empty the list of moves under the picture">Clear moves</button></div></div>
    <p class="muted cw-note" id="cubeWinNote"></p>
    <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect">Connect again</button></div>`;
   document.body.appendChild(w);
@@ -104,7 +106,7 @@ function cubeTabOpen(){
   $('#cubeWinClose').onclick=cubeTabClose;
   $('#cubeWinConnect').onclick=()=>{cubeTabClose();openSmart();};
   $('#cubeWinClear').onclick=()=>{cubeTab.moves=[];cubeTabMovesDraw();};
-  $('#cubeWinMatch').onclick=cubeTabMatch;$('#cubeWinKeep').onclick=cubeTabKeep;
+  $('#cubeWinMatch').onclick=cubeTabMatch;$('#cubeWinKeep').onclick=cubeTabKeep;$('#cubeWinReset').onclick=cubeTabKeep;
   document.addEventListener('keydown',cubeTabKeys,true);
   cubeTabDrag(w);
   if(!cubeTab.pos)cubeTab.pos=store.get('cubeWin',null);
@@ -161,6 +163,8 @@ function cubeTabWindow(){
   $('#cubeWinNote').textContent=off?'The cube is no longer connected. Turn a face to wake it up, then connect again.':!cubeTab.shown?'Reading the cube.':cubeTab.gyro?'Live. Each turn of your cube turns the layer here, and the picture tilts with the cube. When you turn the whole cube in your hands, press the same turn above, so the moves read as you hold it.':'Live. Each turn of your cube turns the layer here. When you turn the whole cube in your hands, press the same turn above, so the moves read as you hold it.';
   $('#cubeWinAgain').classList.toggle('hidden',!off);
   $$('#cubeWinTurns button').forEach(b=>{b.disabled=off;});
+  const reset=$('#cubeWinReset');reset.classList.toggle('hidden',!cubeTab.gyro);reset.disabled=off;
+  reset.title=`Hold the cube with ${cubeTabHoldWords(cubeTab.hold)}, then press. The picture lines up with your cube.`;
   cubeTabWarnDraw();
   cubeTabMovesDraw();
   cubeTabStageDraw();
@@ -187,7 +191,7 @@ function cubeTabRelabel(m,hold){
 // Record the moves the cube made between two states, as held.
 function cubeTabRecord(path){
   for(const m of path)cubeTab.moves=cubeTabMerge(cubeTab.moves,cubeTabRelabel(m,cubeTab.hold));
-  cubeTab.since+=path.length;cubeTab.turned=true;
+  cubeTab.since+=path.length;
   cubeTabMovesDraw();
 }
 // The readout: the last CUBE_TAB_SHOWN moves, and a triangle after them when there are more.
@@ -319,7 +323,7 @@ function cubeTabStopView(){if(cubeTab.qraf){cancelAnimationFrame(cubeTab.qraf);c
 // Forget the hold and the tilt: on connect and on disconnect. The picture goes back to the cube's
 // own frame.
 function cubeTabResetView(){cubeTabStopView();cubeTab.q=cubeTab.qTo=null;cubeTab.hold=null;
-  cubeTab.gyro=false;cubeTab.raw=cubeTab.basis=null;cubeTab.turned=false;cubeTabAwayClear();}
+  cubeTab.gyro=false;cubeTab.raw=cubeTab.basis=null;cubeTabAwayClear();}
 // ----- the tilt: the picture follows the cube in the hands -----
 // The heading for a reading: the turn about the vertical that puts the cube's axes, seen from
 // above, where the hold puts them. Of the three axes (red, white, green), the one most level in
@@ -337,6 +341,7 @@ function cubeTabYawBasis(raw,holdQ){
 const cubeTabHoldQ=()=>(cubeTab.hold||CUBE_TAB_HOLDS[0]).q;
 // A tilt reading from the cube. The first one sets the heading: the cube is taken to sit as the
 // hold says, as far as a turn about the vertical goes. The up face comes from the reading itself.
+// The first reading shows the Reset view button.
 function cubeTabGyro(q){
   q=quatNorm(q);cubeTab.raw=q;
   if(!cubeTab.basis)cubeTab.basis=cubeTabYawBasis(q,cubeTabHoldQ());
@@ -351,15 +356,12 @@ function cubeTabSnap(q){let best=null,bd=-1;for(const h of CUBE_TAB_HOLDS){const
 function cubeTabHoldDelta(a,b){const A=(a||CUBE_TAB_HOLDS[0]).cube,B=(b||CUBE_TAB_HOLDS[0]).cube;const h=CUBE_TAB_HOLD_BY.get(A.inverse().mul(B).center.join());return h?h.moves:[];}
 // Is the tilt away from the hold? More than awayDeg from it, and nearest another hold: `away` is
 // that hold, and the band shows after awayMs of it. Within backDeg again: not away, at once.
-// Before the first layer turn, a heading that is away is lined up again instead: the user is
-// picking the cube up, and the heading was a guess.
 function cubeTabAwayCheck(){
   if(!cubeTab.qTo)return;
   const hold=cubeTab.hold||CUBE_TAB_HOLDS[0],deg=quatAngle(cubeTab.qTo,hold.q);
   let away=cubeTab.away;
   if(deg>cubeTab.awayDeg){const near=cubeTabSnap(cubeTab.qTo);away=near===hold?null:near;}
   else if(deg<cubeTab.backDeg||!away)away=null;
-  if(away&&!cubeTab.turned&&away.cube.center[0]===hold.cube.center[0]){cubeTabKeep();return;}
   if(away===cubeTab.away)return;
   cubeTab.away=away;clearTimeout(cubeTab.awayTimer);cubeTab.awayTimer=0;
   if(away){cubeTab.awayTimer=setTimeout(()=>{cubeTab.awayTimer=0;cubeTabWarnSet(true);},cubeTab.awayMs);}
@@ -369,8 +371,9 @@ function cubeTabWarnSet(on){if(cubeTab.warn===on)return;cubeTab.warn=on;cubeTabR
 function cubeTabAwayClear(){clearTimeout(cubeTab.awayTimer);cubeTab.awayTimer=0;cubeTab.away=null;cubeTabWarnSet(false);}
 // Read as held: the turns from the hold to the way the cube sits, pressed for the user.
 function cubeTabMatch(){const to=cubeTab.away;if(!to)return;for(const m of cubeTabHoldDelta(cubeTab.hold,to))cubeTabTurn(m);}
-// Keep this hold: the cube did not turn; the heading is taken again so the reading lines up with
-// the hold. Only a turn about the vertical goes: the up face is what gravity says.
+// Keep this hold, and Reset view: the cube sits as the hold says; the heading is taken again so
+// the reading lines up with the hold. Only a turn about the vertical goes: the up face is what
+// gravity says, and a cube held with another face up brings the band back.
 function cubeTabKeep(){
   if(!cubeTab.raw)return;
   cubeTab.basis=cubeTabYawBasis(cubeTab.raw,cubeTabHoldQ());cubeTab.qTo=quatNorm(quatMul(cubeTab.basis,cubeTab.raw));
