@@ -228,7 +228,7 @@ function cubeTabPath(from,to){
 function cubeTabShow(cube){
   const moved=cubeTabPath(cubeTab.target||cubeTab.shown,cube);
   if(moved&&moved.length)cubeTabRecord(moved);
-  cubeTabStir();
+  if(!moved||moved.length)cubeTabStir(); // the cube changed; a state read again with no turn is not a turn
   const still=(typeof reducedMotion==='function'&&reducedMotion())||typeof requestAnimationFrame!=='function';
   const path=still||!$('#cubeWin')?null:moved;
   if(!path){cubeTabStopAnim();cubeTab.shown=cubeTab.target=cube;cubeTabWindow();return;}
@@ -326,7 +326,9 @@ function cubeTabTurn(m){
   if(!cubeTab.stillTimer&&cubeTab.target)cubeTabSettle();
 }
 // ----- the stage above the picture -----
-// The cube turned: fade the stage, and read it again once the cube has been still for stillMs.
+// The cube turned (its state differs from the picture): fade the stage, and read it again once the
+// cube has been still for stillMs. Only a change counts: a cube can send its state again on its
+// own, and a state that matches the picture must not put the reveals off.
 function cubeTabStir(){
   clearTimeout(cubeTab.stillTimer);clearTimeout(cubeTab.revealTimer);cubeTab.revealTimer=0;
   if(cubeTab.stage&&!cubeTab.stale){cubeTab.stale=true;cubeTabStageDraw();}
@@ -416,7 +418,7 @@ function cubeTabEvent(ev){
   if(ev.type==='gone'){if(ev.conn!==cubeTab.conn)return;cubeTab.conn=null;cubeTab.asked=false;cubeTab.want=false;cubeTabStageStop();cubeTabRender();cubeTabWindow();return;}
   if(ev.type==='close'){if(cubeTab.tipWait)cubeTabSpot();return;}
   if(ev.conn!==cubeTab.conn)return;
-  if(ev.type==='move'){cubeTabAsk();cubeTabStir();}
+  if(ev.type==='move')cubeTabAsk(); // the state that answers shows the turn
   if(ev.type==='state'){cubeTab.asked=false;if(cubeTab.want){cubeTab.want=false;cubeTabAsk();}cubeTabShow(ev.cube);}
 }
 if(typeof document!=='undefined')document.addEventListener('cw:smart',e=>cubeTabEvent(e.detail));

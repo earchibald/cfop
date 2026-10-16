@@ -87,7 +87,11 @@ first in the moves, z2 for a cross on top so the front stays. The window reads
 the stage only after the cube has been still for 1200 ms (`cubeTab.stillMs`);
 a turn fades the panel but leaves it there. The moves show hidden (a dot
 each), and every 1500 ms more without a turn (`cubeTab.revealMs`) one more
-shows. A pause part way through the algorithm keeps the case on the screen,
+shows. Only a change of the cube counts as a turn (`cubeTabStir`, from
+`cubeTabShow`): a cube can send its state again with no turn, and version
+1.10.1 stopped a state that matches the picture from putting the reveals off,
+which had kept every move a dot. A `move` message only asks for the state;
+the state that answers shows the turn. A pause part way through the algorithm keeps the case on the screen,
 with the moves done so far marked (`cfopStageDone` compares the cube as held,
 centers and all, with the case's cube after each prefix of its moves, so a
 turn of the whole cube counts only once the cube was turned). The same case

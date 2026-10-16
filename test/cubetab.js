@@ -6,7 +6,7 @@
 // under the picture (merged, the last ten, a triangle for more), the head drags the window, Close
 // (Esc) collapses it, a dropped link dims the tab, Disconnect removes it.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
-const {fakeDevice,mfDataFor,gyroMsg}=require('./fake-gan');
+const {fakeDevice,mfDataFor,gyroMsg,stateMsg}=require('./fake-gan');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
 function fakeStorage(seed){const m=new Map(Object.entries(seed||{}));return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear(),map:m};}
 const MAC='AB:12:34:5C:9D:E1';
@@ -256,7 +256,10 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.strictEqual(stSub(),'Turn z2: Yellow up, green in front');
   assert.strictEqual(stMoves().join(''),'•'.repeat(st.moves.length),'every move hidden at first: '+stMoves().join(' '));
   assert.ok(st.moves.length>=8,'z2 and the seven moves of Sune');
-  // One move shows every revealMs.
+  // The cube sends its state again with no turn (a real cube does, on its own): the stage does not
+  // fade, and the reveals go on. One move shows every revealMs.
+  for(let i=0;i<3;i++){dev.notify(stateMsg(4,cube,200+i));await sleep(25);}
+  assert.ok(!stage().classList.contains('stale'),'a state read again with no turn does not fade the stage');
   assert.ok(await until(()=>stMoves()[0]==='z2',600),'the first move shows: '+stMoves().join(' '));assert.strictEqual(stMoves()[1],'•');
   assert.ok($('#cubeWinStage .mv.rot'),'a turn of the cube is marked');
   assert.ok(await until(()=>stMoves()[1]!=='•',600),'then the second');
