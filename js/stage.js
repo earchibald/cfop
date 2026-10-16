@@ -18,12 +18,17 @@
 // by default) counts, so a fresh scramble reads as the cross the user means to build. With the
 // cross already down, the hold is kept; otherwise one turn (x, x', z, z', z2 or x2) brings it
 // down, z2 for a cross on top so the front stays.
+// stageRank(stage) orders the stages, so the window can tell a reading that falls behind the one
+// it shows (cubetab.js keeps the stage then: the user may be part way through its algorithm).
 // cfopStageDone(stage, held) counts the moves of `stage` done since, by the cube as held now: the
 // largest n for which the cube is the stage's cube after its first n moves. A pause part way
 // through an algorithm keeps the case on the screen, with the moves so far marked. The centers
 // count, so a whole-cube turn counts only when the cube was turned.
 const STAGE_DOWN=['',"x'",'x','z',"z'",'z2','x2']; // as held; then front, back, right, left down; top down with the front kept, then turned to the back
 const STAGE_ORDER=['cross','f2l','eo','co','cp','ep','auf','solved'];
+// Where a stage stands in the solve, for one stage against another: a stage earlier in the order
+// is further back. 'll' (a last layer no algorithm names) stands with the first last-layer step.
+function stageRank(stage){const i=STAGE_ORDER.indexOf(stage);return i<0?STAGE_ORDER.indexOf('eo'):i;}
 // How far X (the engine's frame, cross on D) is along: a score that grows with every step.
 function stageProgress(X){
   let edges=0;for(let e=4;e<8;e++)if(X.ep[e]===e&&X.eo[e]===0)edges++;

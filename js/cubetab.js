@@ -30,10 +30,13 @@
 // more move shows. A turn fades what is shown but leaves it there, until the cube is still
 // again. A pause part way through the algorithm keeps the case, with the moves done so far
 // marked (cfopStageDone); the same case read again (after a U turn, say) keeps the moves already
-// revealed. A turn of the whole cube with the cube still reads the stage again at once.
+// revealed. The stage never falls back on its own: a reading further back than the stage shown
+// (a Sune breaks the cross with its first move) keeps the stage, cubeTabBehind, until the cube is
+// at or past it again, or more moves have gone by since it was read (`since`) than the user needs
+// for it. A turn of the whole cube with the cube still reads the stage again at once.
 const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,yaw:-32,pitch:28,asked:false,want:false,tipWait:false,spotTimer:0,pos:null,
   q:null,qTo:null,qraf:0,qAt:0,moves:[],hold:null,
-  stage:null,done:0,revealed:0,stale:false,stillTimer:0,revealTimer:0,stillMs:1200,revealMs:1500};
+  stage:null,done:0,revealed:0,stale:false,stillTimer:0,revealTimer:0,stillMs:1200,revealMs:1500,since:0,keepMoves:12};
 const CUBE_TAB_SHOWN=10;
 const CUBE_TAB_TIP='Click your smart cube to open the Smart Cube interface!';
 // The six turns of the whole cube, as buttons, with what each one does in the hands.
@@ -166,6 +169,7 @@ function cubeTabRelabel(m,hold){
 // Record the moves the cube made between two states, as held.
 function cubeTabRecord(path){
   for(const m of path)cubeTab.moves=cubeTabMerge(cubeTab.moves,cubeTabRelabel(m,cubeTab.hold));
+  cubeTab.since+=path.length;
   cubeTabMovesDraw();
 }
 // The readout: the last CUBE_TAB_SHOWN moves, and a triangle after them when there are more.
@@ -335,7 +339,8 @@ function cubeTabStir(){
   cubeTab.stillTimer=setTimeout(cubeTabSettle,cubeTab.stillMs);
 }
 // The cube is still: read the stage. Part way through the algorithm shown, the case stays and the
-// moves done are marked; otherwise the stage is read anew, and the same case keeps its reveals.
+// moves done are marked; otherwise the stage is read anew. A reading that falls behind the stage
+// shown keeps the stage (cubeTabBehind), with no move marked; the same case keeps its reveals.
 function cubeTabSettle(){
   clearTimeout(cubeTab.stillTimer);cubeTab.stillTimer=0;
   const held=cubeTabHeld(cubeTab.target);if(!held)return;
@@ -343,10 +348,23 @@ function cubeTabSettle(){
   if(k>0&&k<old.moves.length){cubeTab.done=k;cubeTab.revealed=Math.max(cubeTab.revealed,k);}
   else{
     const st=cfopStage(held,typeof store!=='undefined'?store.get('crossColor','white'):'white');
-    const same=old&&old.stage===st.stage&&old.name===st.name;
-    cubeTab.stage=st;cubeTab.done=0;cubeTab.revealed=same?Math.min(cubeTab.revealed,st.moves.length):0;
+    if(old&&cubeTabBehind(old,st))cubeTab.done=0;
+    else{
+      const same=old&&old.stage===st.stage&&old.name===st.name;
+      cubeTab.stage=st;cubeTab.done=0;cubeTab.revealed=same?Math.min(cubeTab.revealed,st.moves.length):0;cubeTab.since=0;
+    }
   }
   cubeTab.stale=false;cubeTabStageDraw();cubeTabRevealLater();
+}
+// `st`, read now, falls behind `old`, the stage shown, and the user may be part way through `old`:
+// a Sune breaks the cross with its first move, and any other way through the algorithm (another
+// algorithm for the case, a slip put right) leaves no prefix for cfopStageDone to find. Not behind
+// a solved cube (a turn of it is a scramble) or the cross (nothing comes before it). And not once
+// more moves have gone by since `old` was read than its algorithm twice and four more, twelve at
+// the least (`keepMoves`): the user has moved on to something else, a new scramble say.
+function cubeTabBehind(old,st){
+  if(old.stage==='solved'||old.stage==='cross')return false;
+  return stageRank(st.stage)<stageRank(old.stage)&&cubeTab.since<=Math.max(cubeTab.keepMoves,2*old.moves.length+4);
 }
 // One more move shows every revealMs, until all of them show.
 function cubeTabRevealLater(){
@@ -355,7 +373,7 @@ function cubeTabRevealLater(){
   cubeTab.revealTimer=setTimeout(()=>{cubeTab.revealTimer=0;cubeTab.revealed++;cubeTabStageDraw();cubeTabRevealLater();},cubeTab.revealMs);
 }
 function cubeTabStageStop(){clearTimeout(cubeTab.stillTimer);clearTimeout(cubeTab.revealTimer);cubeTab.stillTimer=cubeTab.revealTimer=0;}
-function cubeTabStageReset(){cubeTabStageStop();cubeTab.stage=null;cubeTab.done=cubeTab.revealed=0;cubeTab.stale=false;}
+function cubeTabStageReset(){cubeTabStageStop();cubeTab.stage=null;cubeTab.done=cubeTab.revealed=cubeTab.since=0;cubeTab.stale=false;}
 // The panel: the name, the line under it, and the moves, each shown or hidden, the done ones marked.
 function cubeTabStageDraw(){
   const el=$('#cubeWinStage');if(!el)return;

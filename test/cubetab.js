@@ -284,8 +284,9 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   user(st.moves.slice(5));
   assert.ok(await until(()=>stName()==='Solved',2500),'the case done: '+stName());
   assert.strictEqual(readout(),st.moves.join(' '),'the list is the case as held: '+readout());
-  // A T perm, set up in the hands. Its moves hide; a wrong move part way reads as another stage;
-  // back on the case, the moves hide again. A U turn on the same case keeps what was revealed.
+  // A T perm, set up in the hands. Its moves hide. A U turn on the same case keeps what was
+  // revealed. A wrong move part way breaks the cross, but the stage never falls back on its own:
+  // the case stays with no move marked, and the slip put right keeps the reveals.
   const tp=ev('ALG_DB').cp[0],setup=w.parseAlg(w.invertAlg(tp.alg));
   for(let i=0;i<setup.length;i+=4){user(setup.slice(i,i+4));await until(()=>!ev('cubeTab.anim')&&ev('cubeTab.target').equals(cur),1500);}
   assert.ok(await until(()=>stName()==='T perm',2500),'T perm: '+stName());assert.strictEqual(stSub(),'Yellow up, green in front');
@@ -293,11 +294,32 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   user(['U']);assert.ok(await until(()=>stage().classList.contains('stale'),300));
   assert.ok(await until(()=>!stage().classList.contains('stale'),1500));assert.strictEqual(stName(),'T perm');
   assert.ok(stMoves().filter(m=>m!=='•').length>=2,'the same case keeps its reveals: '+stMoves().join(' '));
-  user(['F']);
-  assert.ok(await until(()=>!stage().classList.contains('stale')&&stName()!=='T perm',1500),'off the case: '+stName());
+  user(['F']);assert.ok(await until(()=>stage().classList.contains('stale'),300),'the slip fades the stage');
+  assert.ok(await until(()=>!stage().classList.contains('stale'),1500));assert.strictEqual(stName(),'T perm','the cross is broken, but the case stays: '+stName());
+  assert.strictEqual(stDone(),0,'no move marked off the algorithm');
+  assert.strictEqual(w.cfopStage(w.applyAlg(cur,ev('cubeTab.hold').moves),'white').stage,'cross','(the cube itself reads as the cross)');
   user(["F'"]);
   assert.ok(await until(()=>stName()==='T perm'&&!stage().classList.contains('stale'),1500),'back on the case');
-  assert.strictEqual(stMoves().filter(m=>m!=='•').length,0,'hidden again after another stage');
+  assert.ok(stMoves().filter(m=>m!=='•').length>=2,'the slip put right keeps the reveals: '+stMoves().join(' '));
+  // The case done: Solved. A solved cube is not kept: two turns read as the cross at once. (One
+  // turn is AUF: the cube held with the turned layer up is one U turn from solved.)
+  const tpm=ev('cubeTab.stage').moves;
+  for(let i=0;i<tpm.length;i+=4){user(tpm.slice(i,i+4));await until(()=>!ev('cubeTab.anim')&&ev('cubeTab.target').equals(cur),1500);}
+  assert.ok(await until(()=>stName()==='Solved',2500),'the T perm done: '+stName());
+  user(['R','U']);assert.ok(await until(()=>stName()==='Cross',1500),'a solved cube turned is not kept: '+stName());
+  user(["U'","R'"]);assert.ok(await until(()=>stName()==='Solved',1500));
+  // A Sune set up, then a new scramble: the case is kept for a while (the user may be part way
+  // through), and once more moves have gone by than the algorithm twice and four, the cross shows.
+  const sset=w.parseAlg(w.invertAlg(sune.alg));
+  for(let i=0;i<sset.length;i+=4){user(sset.slice(i,i+4));await until(()=>!ev('cubeTab.anim')&&ev('cubeTab.target').equals(cur),1500);}
+  assert.ok(await until(()=>stName()==='Sune',2500),'Sune again: '+stName());
+  const n=ev('cubeTab.stage').moves.length,budget=Math.max(12,2*n+4),scr=w.parseAlg("F L D B R U F' L' D' B' R' U' F2 L2 D2 B2 R2 U2 F L D B R U");
+  assert.ok(scr.length>budget,'the scramble is longer than the budget');
+  let i=0;for(;i<budget-3;i+=4){user(scr.slice(i,i+4));await until(()=>!ev('cubeTab.anim')&&ev('cubeTab.target').equals(cur),1500);}
+  assert.ok(await until(()=>!stage().classList.contains('stale')&&!ev('cubeTab.stillTimer'),1500));
+  assert.strictEqual(stName(),'Sune','the case is kept through '+ev('cubeTab.since')+' moves: '+stName());
+  for(;i<scr.length;i+=4){user(scr.slice(i,i+4));await until(()=>!ev('cubeTab.anim')&&ev('cubeTab.target').equals(cur),1500);}
+  assert.ok(await until(()=>stName()==='Cross',2500),'past the budget, the cross: '+stName());
   // The hold stays through a close and a reopen.
   esc();click($('#cubeTab'));assert.strictEqual(ev('cubeTab.hold'),holdOf('z2'),'the hold survives a close');
   assert.ok(same(winPolys(),fixed(w.applyAlg(cur,['z2']))),'and so does the picture');

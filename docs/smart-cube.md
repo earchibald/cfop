@@ -96,7 +96,17 @@ with the moves done so far marked (`cfopStageDone` compares the cube as held,
 centers and all, with the case's cube after each prefix of its moves, so a
 turn of the whole cube counts only once the cube was turned). The same case
 read again (after a U turn, say) keeps the moves already revealed; another
-stage in between hides them again. A turn of the whole cube with the cube still reads
+stage in between hides them again. The stage never falls back on its own
+(`cubeTabBehind`, version 1.10.2): a reading further back in the solve than the
+stage shown (`stageRank`) keeps the stage, with no move marked. A Sune breaks
+the cross with its first move, and any other way through the algorithm, or a
+slip put right, leaves no prefix for `cfopStageDone` to find; before 1.10.2 the
+case gave way to Cross part way through. The stage is read anew once the cube
+is at or past it again, or once more moves have gone by since it was read
+(`cubeTab.since`) than its algorithm twice and four more, twelve at the least
+(`cubeTab.keepMoves`): the user has moved on, to a new scramble say. A solved
+cube is not kept (a turn of it is a scramble), nor the cross (nothing comes
+before it). A turn of the whole cube with the cube still reads
 the stage again at once. The panel keeps its height, so the picture does not
 jump between stages.
 
