@@ -8,6 +8,7 @@
 | Tests | `test/gan.js` (protocol), `test/smart-ui.js` (dialog), `test/fake-gan.js` (a fake GAN cube) |
 | Saved MAC addresses | `cw:ganMac`, a map from the Bluetooth name to the address |
 | The macOS app (Bluetooth bridge for Safari) | `mac/` (Swift, AppKit, Network, CoreBluetooth); `js/bridge.js` is the page side; `test/bridge.js` and `test/fake-bridge.js` |
+| What comes next | `docs/smart-cube-vision/`: the Smart Cube Horizons page (drift, the data the cube sends that the app drops, browsers, cameras, native apps) with findings the owner approves, parks or closes on the page, and a changelog |
 
 ## What it does now
 

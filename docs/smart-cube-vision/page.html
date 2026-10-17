@@ -1,0 +1,939 @@
+<title>Smart Cube Horizons</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Azeret+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e2e3e8;--panel:#f5f5f7;--panel2:#e4e6eb;--panel3:#d6d8df;--line:#b4b8c2;--text:#121316;--muted:#676a76;--faint:#a3a6b0;
+  --sticker-W:#fcfcfc;--sticker-Y:#f8d000;--sticker-R:#e3262b;--sticker-O:#fb8500;--sticker-G:#25b83c;--sticker-B:#1e78e6;--sticker-X:#c6c8cf;--sticker-line:#dfe1e6;
+  --primary:#121316;--primary-ink:#ffffff;--accent:#f8d000;--accent-ink:#121316;--good:#1a9e37;--warn:#dd6a14;--bad:#d4262b;--link:#1f6fd6;--mod:#d4480c;
+  --sheen:rgba(255,255,255,.55);--shadow:0 1px 0 rgba(0,0,0,.04),0 8px 24px -16px rgba(18,19,22,.35);
+  --sans:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"Azeret Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#0b0b0d;--panel:#151517;--panel2:#1e1e22;--panel3:#27272c;--line:#2a2a30;--text:#f1f0ea;--muted:#8f8f97;--faint:#5a5a62;
+  --sticker-W:#f3f2ec;--sticker-Y:#ffd21e;--sticker-R:#d8283b;--sticker-O:#ff6a1c;--sticker-G:#14a85f;--sticker-B:#2c6fdc;--sticker-X:#36363c;--sticker-line:#0b0b0d;
+  --primary:#f3f2ec;--primary-ink:#0b0b0d;--accent:#ffd21e;--accent-ink:#0b0b0d;--good:#1cb86b;--warn:#ff6a1c;--bad:#e8404f;--link:#5b93ee;--mod:#ff8f3c;
+  --sheen:rgba(255,255,255,.06);--shadow:0 1px 0 rgba(255,255,255,.03),0 8px 24px -16px rgba(0,0,0,.8);
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0b0b0d;--panel:#151517;--panel2:#1e1e22;--panel3:#27272c;--line:#2a2a30;--text:#f1f0ea;--muted:#8f8f97;--faint:#5a5a62;
+  --sticker-W:#f3f2ec;--sticker-Y:#ffd21e;--sticker-R:#d8283b;--sticker-O:#ff6a1c;--sticker-G:#14a85f;--sticker-B:#2c6fdc;--sticker-X:#36363c;--sticker-line:#0b0b0d;
+  --primary:#f3f2ec;--primary-ink:#0b0b0d;--accent:#ffd21e;--accent-ink:#0b0b0d;--good:#1cb86b;--warn:#ff6a1c;--bad:#e8404f;--link:#5b93ee;--mod:#ff8f3c;
+  --sheen:rgba(255,255,255,.06);--shadow:0 1px 0 rgba(255,255,255,.03),0 8px 24px -16px rgba(0,0,0,.8);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:16px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}
+code,.mono{font-family:var(--mono);font-size:.86em}
+code{background:var(--panel2);padding:.08em .35em;border-radius:5px;border:1px solid var(--line)}
+h1,h2,h3,h4{font-weight:600;line-height:1.15;text-wrap:balance;margin:0}
+p{margin:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.shell{max-width:1180px;margin:0 auto;padding-block:0 64px;padding-inline:16px;display:grid;grid-template-columns:1fr;gap:28px}
+@media (min-width:980px){.shell{grid-template-columns:240px minmax(0,1fr);gap:48px;padding-inline:28px}}
+.mast{grid-column:1/-1;padding-block:40px 8px;display:grid;gap:14px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.eyebrow .sq{width:10px;height:10px;border-radius:2px;background:var(--sticker-Y);display:inline-block}
+.mast h1{font-size:clamp(34px,6vw,58px);letter-spacing:-.02em;font-weight:700}
+.dek{font-size:clamp(17px,2vw,20px);color:var(--muted);max-width:62ch;line-height:1.45}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;font-family:var(--mono);font-size:12.5px;color:var(--muted);align-items:center}
+.meta b{color:var(--text);font-weight:500}
+.counts{display:inline-flex;gap:6px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-family:var(--mono);font-size:11.5px;color:var(--text);background:var(--panel)}
+.pill i{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--faint)}
+.pill.s-proposed i{background:var(--faint)}.pill.s-approved i{background:var(--good)}.pill.s-backlog i{background:var(--warn)}.pill.s-closed i{background:var(--bad)}
+.rail{position:relative}
+@media (min-width:980px){.rail-in{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;padding-right:6px}}
+.toc{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.toc li a{display:grid;grid-template-columns:34px 1fr;gap:8px;align-items:baseline;padding:6px 8px;border-radius:7px;color:var(--text);font-size:14px;line-height:1.3}
+.toc li a:hover{background:var(--panel2);text-decoration:none}
+.toc li a.on{background:var(--panel);box-shadow:inset 0 0 0 1px var(--line)}
+.toc .n{font-family:var(--mono);font-size:11.5px;color:var(--muted);letter-spacing:.02em}
+.toc .sub{margin:2px 0 6px 0;padding:0 0 0 12px;list-style:none;display:grid;gap:1px}
+.toc .sub a{font-size:13px;color:var(--muted);grid-template-columns:22px 1fr;padding:3px 8px}
+.toc .sq{width:8px;height:8px;border-radius:2px;display:inline-block;vertical-align:1px}
+.toc-title{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:6px 8px 8px}
+details.tocbox{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:10px 12px}
+details.tocbox summary{cursor:pointer;font-weight:500;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.tocbox summary::-webkit-details-marker{display:none}
+details.tocbox summary::after{content:"+";font-family:var(--mono);color:var(--muted)}
+details.tocbox[open] summary::after{content:"–"}
+@media (min-width:980px){details.tocbox{border:0;background:none;padding:0}details.tocbox summary{display:none}}
+main{min-width:0;display:grid;gap:56px}
+.part{display:grid;gap:22px;scroll-margin-top:16px}
+.part-head{display:grid;gap:10px;padding-top:8px;border-top:1px solid var(--line)}
+.part-head .kicker{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.kicker .sq{width:12px;height:12px;border-radius:3px;display:inline-block;box-shadow:inset 0 1px 0 var(--sheen),0 0 0 1px var(--sticker-line)}
+.part h2{font-size:clamp(26px,3.4vw,36px);letter-spacing:-.015em}
+.part .lede{font-size:17.5px;color:var(--muted);max-width:62ch}
+.prose{display:grid;gap:14px;max-width:72ch}
+.prose h3{font-size:20px;margin-top:14px}
+.prose h4{font-size:16px;margin-top:6px}
+.prose ul,.prose ol{margin:0;padding-left:1.25em;display:grid;gap:6px}
+.prose li{line-height:1.5}
+.prose .note{border-left:3px solid var(--accent);padding:8px 14px;background:var(--panel);border-radius:0 10px 10px 0;color:var(--text)}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);position:relative}
+.tile::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:var(--sheen);border-radius:16px 16px 0 0;pointer-events:none}
+.tiles{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.tile h4{font-size:15px;margin-bottom:6px}
+.tile p{color:var(--muted);font-size:14.5px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+th{font-weight:600;font-size:12.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:var(--panel2)}
+tr:last-child td{border-bottom:0}
+td.m,th.m{font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.yes,.no,.flag{font-family:var(--mono);font-size:12px;padding:1px 7px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+.yes{color:var(--good);border-color:color-mix(in srgb,var(--good) 45%,transparent)}
+.no{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+.flag{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+caption{caption-side:bottom;text-align:left;font-size:13px;color:var(--muted);padding:8px 2px}
+figure{margin:0;display:grid;gap:8px}
+figure svg{width:100%;height:auto;max-width:100%;display:block}
+figcaption{font-size:13.5px;color:var(--muted);max-width:68ch}
+.fig{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
+.matrix{display:grid;grid-template-columns:auto repeat(4,1fr);gap:6px;font-family:var(--mono);font-size:12px}
+.matrix .h{color:var(--muted);text-align:center;padding:4px 0;letter-spacing:.04em}
+.matrix .r{color:var(--muted);padding:6px 8px 0 0;text-align:right}
+.matrix .c{min-height:54px;border:1px dashed var(--line);border-radius:10px;padding:6px;display:flex;flex-wrap:wrap;gap:4px;align-content:flex-start;background:var(--panel)}
+.matrix .c a{color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:11.5px}
+.matrix .c a.s-approved{border-color:var(--good)}.matrix .c a.s-backlog{border-color:var(--warn)}.matrix .c a.s-closed{color:var(--muted);text-decoration:line-through}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;position:sticky;top:0;z-index:3;background:var(--bg);padding:10px 0 12px;border-bottom:1px solid var(--line)}
+.filters .lbl{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+.chip{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:999px;padding:3px 9px;font:500 12.5px var(--sans);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--faint);display:inline-block}
+.chip[aria-pressed="true"]{background:var(--primary);color:var(--primary-ink);border-color:var(--primary)}
+.chip .sq{width:9px;height:9px;border-radius:2px;display:inline-block}
+.theme{display:grid;gap:14px;scroll-margin-top:72px}
+.theme-head{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;padding:4px 0}
+.theme-head .sq{width:22px;height:22px;border-radius:6px;margin-top:4px;box-shadow:inset 0 1px 0 var(--sheen),0 0 0 1px var(--sticker-line)}
+.theme-head h3{font-size:22px}
+.theme-head p{color:var(--muted);font-size:15px}
+.card{display:grid;grid-template-columns:6px 1fr;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;scroll-margin-top:76px}
+.card .stripe{background:var(--faint)}
+.card.s-approved .stripe{background:var(--good)}.card.s-backlog .stripe{background:var(--warn)}.card.s-closed .stripe{background:var(--bad)}
+.card.s-closed .ttl{color:var(--muted)}
+.card .body{padding:14px 18px 16px;display:grid;gap:10px;min-width:0}
+.card .top{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.card .id{font-family:var(--mono);font-size:12.5px;color:var(--muted);font-weight:500}
+.card .ttl{font-size:17px;font-weight:600;flex:1 1 260px;min-width:0}
+.badges{display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center}
+.badge{font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.badge.eff b{color:var(--text);font-weight:600}
+.badge.conf-high{color:var(--good);border-color:color-mix(in srgb,var(--good) 45%,transparent)}
+.badge.conf-medium{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+.badge.conf-low{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+.card .lay{font-size:15px;line-height:1.55;max-width:70ch}
+.card details{border-top:1px dashed var(--line);padding-top:8px}
+.card summary{cursor:pointer;font-weight:500;font-size:14px;color:var(--link);list-style:none;display:inline-flex;gap:6px;align-items:center}
+.card summary::-webkit-details-marker{display:none}
+.card summary::before{content:"▸";font-size:12px;transition:transform .15s}
+.card details[open] summary::before{transform:rotate(90deg)}
+.tech{display:grid;gap:10px;padding-top:8px;font-size:14.5px}
+.tech ul{margin:0;padding-left:1.2em;display:grid;gap:5px}
+.tech .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;margin:0}
+.tech .kv dt{font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.tech .kv dd{margin:0}
+.tech .first{background:var(--panel2);border-radius:10px;padding:8px 12px}
+.tech .first b{font-weight:600}
+.ctl{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel2);flex-wrap:wrap}
+.seg button{border:0;background:transparent;color:var(--muted);font:500 13px var(--sans);padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button i{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--faint)}
+.seg button[data-s="approved"] i{background:var(--good)}.seg button[data-s="backlog"] i{background:var(--warn)}.seg button[data-s="closed"] i{background:var(--bad)}
+.seg button[aria-pressed="true"]{background:var(--primary);color:var(--primary-ink)}
+.seg button:disabled{cursor:not-allowed;opacity:.55}
+.ctl .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ctl textarea{width:100%;min-height:54px;resize:vertical;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--text);font:14px/1.45 var(--sans);padding:8px 10px}
+.ctl .save{border:1px solid var(--primary);background:var(--primary);color:var(--primary-ink);border-radius:10px;padding:6px 14px;font:500 13.5px var(--sans);cursor:pointer}
+.ctl .save:disabled{opacity:.5;cursor:default}
+.ctl .who{font-size:12.5px;color:var(--muted);font-family:var(--mono)}
+.ctl .ro{font-size:13px;color:var(--muted)}
+.hist{font-size:12.5px;color:var(--muted);display:grid;gap:2px;font-family:var(--mono)}
+.card[hidden],.theme[hidden]{display:none}
+.cl-entry{border-left:2px solid var(--line);padding-left:16px;display:grid;gap:8px;margin:0 0 14px}
+.cl-entry h4{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--text)}
+.cl-entry .ver{color:var(--muted);margin-left:8px}
+.cl-entry ul{margin:0;padding-left:1.1em;display:grid;gap:4px;font-size:14px}
+.cl-entry .arrow{color:var(--muted);padding:0 2px}
+.cl-done::marker{color:var(--good)}.cl-started::marker{color:var(--accent)}.cl-decision::marker{color:var(--link)}
+.steps{counter-reset:s;display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.steps li{display:grid;grid-template-columns:30px 1fr;gap:12px;align-items:start}
+.steps li::before{counter-increment:s;content:counter(s);font-family:var(--mono);font-size:12.5px;width:28px;height:28px;border-radius:8px;background:var(--primary);color:var(--primary-ink);display:grid;place-items:center;font-weight:600}
+pre{margin:0;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;overflow-x:auto;font:12.5px/1.5 var(--mono)}
+pre code{background:none;border:0;padding:0;font-size:inherit}
+.src{display:grid;gap:8px;font-size:14px;padding-left:0;list-style:none}
+.src li{display:grid;grid-template-columns:72px 1fr;gap:10px}
+.src .k{font-family:var(--mono);font-size:11.5px;color:var(--muted);padding-top:3px;letter-spacing:.04em;text-transform:uppercase}
+.src a{word-break:break-all}
+footer{grid-column:1/-1;border-top:1px solid var(--line);padding-top:16px;font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 20px}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--primary);color:var(--primary-ink);padding:8px 14px;border-radius:10px;font:500 13.5px var(--sans);box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:13px;color:var(--muted);align-items:center}
+.legend i{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:0}
+</style>
+
+<div class="shell">
+  <header class="mast" id="top">
+    <div class="eyebrow"><span class="sq"></span>Twistwright · docs/smart-cube-vision · v0.1.0</div>
+    <h1>Smart Cube Horizons</h1>
+    <p class="dek">What a GAN smart cube and Web Bluetooth give Twistwright today, what they could give with a tracker, a camera and a native app, and a place to approve, park or close each idea.</p>
+    <div class="meta">
+      <span>Built <b>2026-10-17</b></span>
+      <span>Code at <b class="mono">f28e61a</b></span>
+      <span>Site <b>v1.13.0</b>, lab <b>v0.6.0</b></span>
+      <span class="counts" id="counts" aria-live="polite"></span>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="Contents">
+    <div class="rail-in">
+      <details class="tocbox" id="tocbox" open>
+        <summary>Contents</summary>
+        <div class="toc-title">Contents</div>
+        <ol class="toc" id="toc">
+          <li><a href="#summary"><span class="n">0</span><span>Executive summary</span></a></li>
+          <li><a href="#lay"><span class="n">I</span><span>For everyone</span></a>
+            <ol class="sub">
+              <li><a href="#lay-talk"><span class="n">1.1</span><span>How the cube talks</span></a></li>
+              <li><a href="#lay-drift"><span class="n">1.2</span><span>Why the picture drifts</span></a></li>
+              <li><a href="#lay-today"><span class="n">1.3</span><span>What we do today</span></a></li>
+              <li><a href="#lay-mac"><span class="n">1.4</span><span>Why the Mac needs an app</span></a></li>
+              <li><a href="#lay-unused"><span class="n">1.5</span><span>What we ignore</span></a></li>
+            </ol>
+          </li>
+          <li><a href="#mgmt"><span class="n">II</span><span>Management summary</span></a>
+            <ol class="sub">
+              <li><a href="#mgmt-arch"><span class="n">2.1</span><span>Architecture</span></a></li>
+              <li><a href="#mgmt-platforms"><span class="n">2.2</span><span>Platform matrix</span></a></li>
+              <li><a href="#mgmt-constraints"><span class="n">2.3</span><span>Constraints</span></a></li>
+              <li><a href="#mgmt-options"><span class="n">2.4</span><span>Options and sequence</span></a></li>
+              <li><a href="#mgmt-risks"><span class="n">2.5</span><span>Risks</span></a></li>
+            </ol>
+          </li>
+          <li><a href="#tech"><span class="n">III</span><span>Technical reference</span></a>
+            <ol class="sub">
+              <li><a href="#tech-proto"><span class="n">3.1</span><span>Protocol</span></a></li>
+              <li><a href="#tech-tilt"><span class="n">3.2</span><span>Tilt pipeline</span></a></li>
+              <li><a href="#tech-moves"><span class="n">3.3</span><span>Move inference</span></a></li>
+              <li><a href="#tech-bridge"><span class="n">3.4</span><span>The bridge</span></a></li>
+              <li><a href="#tech-lab"><span class="n">3.5</span><span>Lab detectors</span></a></li>
+              <li><a href="#tech-gaps"><span class="n">3.6</span><span>Known gaps</span></a></li>
+            </ol>
+          </li>
+          <li><a href="#findings"><span class="n">IV</span><span>Findings</span></a>
+            <ol class="sub" id="toc-themes"></ol>
+          </li>
+          <li><a href="#agents"><span class="n">V</span><span>Agents and changelog</span></a></li>
+          <li><a href="#sources"><span class="n">VI</span><span>Sources</span></a></li>
+        </ol>
+      </details>
+    </div>
+  </nav>
+
+  <main>
+    <section class="part" id="summary">
+      <div class="part-head">
+        <div class="kicker"><span class="sq" style="background:var(--sticker-W)"></span>0 · Executive summary</div>
+        <h2>The cube already tells us almost everything. We read a third of it.</h2>
+      </div>
+      <div class="prose">
+        <p>Twistwright connects to a GAN smart cube in Chrome and Edge through Web Bluetooth, and in Safari through a small macOS app that moves the Bluetooth bytes. The page decrypts the cube's messages, keeps a live picture, infers each move from two states, and names the CFOP stage the cube is in. Version 1.13.0 ships this. A separate lab page tests gesture and turn detection on the tilt stream.</p>
+        <p>The picture drifts. The cube knows which way is up but not which way the person faces, so when the person turns in a chair, the picture turns too. Today a button or Reset view puts it right. This document argues that the drift can be removed without a compass. The cube's own speed separates a fidget from a turn. Every algorithm the person executes fixes the hold exactly. A cube at rest on a desk squares itself up. A webcam can anchor the heading when it sees the cube or the face. One tracker that weighs these clues by what the person is doing is the core proposal (F-01 to F-05).</p>
+        <p>The cube also sends data the app drops: the face and direction of each move with a timestamp and a serial, the angular velocity, the battery. Decoding them (F-06 to F-08) gives a timer the cube runs, a replay of every solve and the raw material for a coach (F-09 to F-12, F-20).</p>
+        <p>Platforms set the ceiling. Android Chrome is the best web platform and needs only a manifest and a service worker to install. WebKit opposes Web Bluetooth, so Safari will not get it, and iPhone browsers have none, apart from one wrapper browser and one new Safari extension. The macOS app's bridge shape, where the page keeps the cube logic and a host moves bytes, ports as it is to a WKWebView app on macOS and iOS (F-16, F-21, F-23). A native host adds the camera, background connections, Continuity Camera and Apple's on-device models (F-22). Headsets and radio ranging stay moon shots (F-24, F-25).</p>
+        <div class="tiles">
+          <div class="tile"><h4>We have</h4><p>Three GAN generations decoded, the cipher, the live picture with tilt, moves inferred from states, the CFOP stage, the Mac bridge, a lab with gesture and turn detectors.</p></div>
+          <div class="tile"><h4>We could have soon</h4><p>Drift that corrects itself, every move with its time, a cube-run timer with stage splits, replay, scramble assist, battery, autoconnect, an installable Android app.</p></div>
+          <div class="tile"><h4>We could have with a host app</h4><p>iPhone support, background links, the phone or an iPhone-as-webcam for the cube, Apple's on-device models for a coach, a watch that measures the body.</p></div>
+          <div class="tile"><h4>Decide here</h4><p>Part IV lists 26 findings. Approve, backlog or close each one and leave a note. An agent reads the decisions and the changelog and does the next step.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="part" id="lay">
+      <div class="part-head">
+        <div class="kicker"><span class="sq" style="background:var(--sticker-Y)"></span>Part I · For everyone</div>
+        <h2>A cube that talks, a picture that listens, and why it drifts</h2>
+        <p class="lede">No code in this part. It explains what the smart cube does, what the page does with it, and where the limits come from.</p>
+      </div>
+      <div class="prose">
+        <h3 id="lay-talk">1.1 How the cube talks</h3>
+        <p>A GAN smart cube has a small radio and sensors in its core. It counts every turn of a layer and it senses which way it tilts. Many times a second it sends short encrypted messages over Bluetooth: here is my state, a layer just turned, here is my tilt, here is my battery. The key to the encryption is the cube's own Bluetooth address, so the page must know that address before it can read anything.</p>
+        <figure class="fig">
+          <svg viewBox="0 0 760 170" role="img" aria-labelledby="f1t"><title id="f1t">The path from the cube to the page</title>
+            <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>
+            <g font-family="Rubik,system-ui,sans-serif" font-size="13" fill="var(--text)">
+              <rect x="10" y="40" width="130" height="90" rx="14" fill="var(--panel2)" stroke="var(--line)"/>
+              <g transform="translate(35,58)"><rect width="18" height="18" rx="3" fill="var(--sticker-W)" stroke="var(--sticker-line)"/><rect x="20" width="18" height="18" rx="3" fill="var(--sticker-R)"/><rect x="40" width="18" height="18" rx="3" fill="var(--sticker-G)"/><rect y="20" width="18" height="18" rx="3" fill="var(--sticker-B)"/><rect x="20" y="20" width="18" height="18" rx="3" fill="var(--sticker-Y)"/><rect x="40" y="20" width="18" height="18" rx="3" fill="var(--sticker-O)"/></g>
+              <text x="75" y="118" text-anchor="middle" font-size="12" fill="var(--muted)">GAN cube</text>
+              <line x1="140" y1="85" x2="220" y2="85" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#ar)"/>
+              <text x="180" y="72" text-anchor="middle" font-size="11" fill="var(--muted)">Bluetooth, encrypted</text>
+              <rect x="222" y="18" width="190" height="56" rx="12" fill="var(--panel2)" stroke="var(--line)"/>
+              <text x="317" y="41" text-anchor="middle" font-weight="600">Chrome or Edge</text>
+              <text x="317" y="60" text-anchor="middle" font-size="11.5" fill="var(--muted)">Web Bluetooth, no app</text>
+              <rect x="222" y="96" width="190" height="56" rx="12" fill="var(--panel2)" stroke="var(--line)"/>
+              <text x="317" y="119" text-anchor="middle" font-weight="600">Safari on a Mac</text>
+              <text x="317" y="138" text-anchor="middle" font-size="11.5" fill="var(--muted)">the macOS app moves the bytes</text>
+              <line x1="412" y1="46" x2="490" y2="78" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#ar)"/>
+              <line x1="412" y1="124" x2="490" y2="92" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#ar)"/>
+              <rect x="492" y="40" width="258" height="90" rx="14" fill="var(--panel)" stroke="var(--accent)" stroke-width="1.5"/>
+              <text x="621" y="66" text-anchor="middle" font-weight="600">The page</text>
+              <text x="621" y="86" text-anchor="middle" font-size="12" fill="var(--muted)">decrypts · state · moves · tilt</text>
+              <text x="621" y="106" text-anchor="middle" font-size="12" fill="var(--muted)">live picture · CFOP stage · hold</text>
+            </g>
+          </svg>
+          <figcaption>Two roads into one page. Whichever carries the bytes, the page does all the understanding. That is the shape every future host can reuse.</figcaption>
+        </figure>
+        <p>The page understands three kinds of message. The state says where every piece sits, and the page draws it. The move message says a layer turned, and the page asks for the new state and works out which layer it was. The tilt says how the cube's body is turned, and the page tilts the picture to match, so the picture follows the cube in the hands.</p>
+
+        <h3 id="lay-drift">1.2 Why the picture drifts</h3>
+        <p>The cube senses gravity, so it always knows which face is up. It has no compass, so it does not know which way is north, and it certainly does not know which way you face. When you connect, the page takes your first tilt reading as "this is facing me". From then on the cube's own sensor adds up every small rotation to keep track of the heading, and the page trusts what it reports.</p>
+        <p>Adding up small rotations is where the drift comes from, and it comes from two places. The sensor itself wanders a little over minutes. Far worse, when you turn in your chair, the cube turns with you. Nothing about the cube changed in your hands, but the cube reports that it rotated, and the picture rotates. After a few fidgets the picture faces the wrong way, and the moves it names no longer match your hands.</p>
+        <figure class="fig">
+          <svg viewBox="0 0 760 230" role="img" aria-labelledby="f2t"><title id="f2t">A fidget seen from above</title>
+            <g font-family="Rubik,system-ui,sans-serif" font-size="12.5" fill="var(--text)">
+              <g transform="translate(60,20)">
+                <text x="130" y="12" text-anchor="middle" font-weight="600">Before the fidget</text>
+                <ellipse cx="130" cy="150" rx="46" ry="30" fill="var(--panel2)" stroke="var(--line)"/>
+                <text x="130" y="154" text-anchor="middle" font-size="11" fill="var(--muted)">you, from above</text>
+                <g transform="translate(112,74)"><rect width="36" height="36" rx="6" fill="var(--panel3)" stroke="var(--line)"/><rect x="2" y="2" width="32" height="8" rx="2" fill="var(--sticker-G)"/></g>
+                <path d="M130 66 L130 40" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#ar)"/>
+                <text x="130" y="34" text-anchor="middle" font-size="11" fill="var(--muted)">green toward you</text>
+                <path d="M30 200 L230 200" stroke="var(--faint)" stroke-dasharray="4 4"/><text x="236" y="204" font-size="10.5" fill="var(--faint)">desk edge</text>
+              </g>
+              <g transform="translate(420,20)">
+                <text x="130" y="12" text-anchor="middle" font-weight="600">After you turn 30° in the chair</text>
+                <g transform="rotate(-30 130 150)">
+                  <ellipse cx="130" cy="150" rx="46" ry="30" fill="var(--panel2)" stroke="var(--line)"/>
+                  <g transform="translate(112,74)"><rect width="36" height="36" rx="6" fill="var(--panel3)" stroke="var(--line)"/><rect x="2" y="2" width="32" height="8" rx="2" fill="var(--sticker-G)"/></g>
+                  <path d="M130 66 L130 40" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#ar)"/>
+                </g>
+                <text x="130" y="154" text-anchor="middle" font-size="11" fill="var(--muted)">you, turned</text>
+                <path d="M30 200 L230 200" stroke="var(--faint)" stroke-dasharray="4 4"/>
+                <text x="130" y="222" text-anchor="middle" font-size="11.5" fill="var(--bad)">The cube reports a 30° turn. Your hands did nothing.</text>
+              </g>
+            </g>
+          </svg>
+          <figcaption>Gravity pins the up face. Nothing pins the heading. A turn of the body and a turn of the cube in the hands look the same to the sensor, and the page cannot tell them apart from the tilt alone.</figcaption>
+        </figure>
+        <p>The fix is not a better sensor. It is a better set of assumptions. A chair turn is slow and no layer moves during it. A deliberate turn of the cube is fast, lands on a quarter turn and is followed by layer turns. When you execute an algorithm the page recognizes, the moves themselves say exactly how you hold the cube. When the cube lies on the desk it lies flat and square. Each is a small clue. Together they can hold the heading for a whole session. Indoor navigation has used the same trick for years: trackers that assume corridors meet at right angles cut their heading error by almost ten times. Part IV, theme "The cube in space", lays this out as findings F-01 to F-05.</p>
+
+        <h3 id="lay-today">1.3 What we do today</h3>
+        <ul>
+          <li><b>The hold is yours to press.</b> Six buttons under the picture turn the whole cube (x, y, z and back). A press moves the hold on, puts the turn on the move list and renames the moves after it. The page never guesses the hold from the tilt. Versions 1.6 to 1.9 did, and that put turns on the list that nobody made, so 1.10 replaced it with the buttons.</li>
+          <li><b>The tilt drives the picture only.</b> The picture follows the cube in the hands, but the moves and the stage read from the hold you pressed.</li>
+          <li><b>A band says when the two disagree.</b> If the cube sits in another hold for half a second, a band under the picture names both and offers Read as held (the cube turned) and, when the same face is still up, Keep this hold (you turned, the cube did not).</li>
+          <li><b>Reset view</b> takes the heading again: hold the cube as the moves read and press.</li>
+        </ul>
+        <p class="note">This is sound and honest, and it is manual. Every finding in the "cube in space" theme keeps these rules and only changes how the hold and the heading are chosen.</p>
+
+        <h3 id="lay-mac">1.4 Why the Mac needs an app, and the iPhone has almost nothing</h3>
+        <p>Web Bluetooth lets a web page talk to a Bluetooth device. Chrome and Edge have it on computers and on Android. Apple's WebKit team has said it opposes this kind of API, so Safari does not have it. Firefox calls it harmful and does not either. On iPhone every browser must use Apple's engine, so no ordinary iPhone browser has it. Two workarounds exist: a wrapper browser called Bluefy, and a new Safari extension that adds the API. Neither is tested with Twistwright yet.</p>
+        <p>For Safari on a Mac we built a small menu bar app. It talks to the cube with Apple's Bluetooth and hands the bytes to the page. Safari adds one more rule: a page on the web may not talk to an app on the same computer. So the app serves the page itself, from a local address, and Safari is happy. The page is the same page; only the road for the bytes differs.</p>
+        <p>That road has a shape worth keeping. The page keeps every piece of cube knowledge. The host, whatever it is, only moves bytes. An iPhone app can use the same shape with the same page inside it, and so can a fuller Mac app. Findings F-16, F-21 and F-23 build on exactly this.</p>
+
+        <h3 id="lay-unused">1.5 What the cube knows that we ignore</h3>
+        <ul>
+          <li><b>Which layer turned, which way, and when.</b> The move message carries it, with a counter and a clock. We read only "a move happened" and work the rest out from two states, which fails past four moves at once.</li>
+          <li><b>How fast the cube is spinning.</b> Each tilt message carries a coarse speed per axis. We drop it. It is the clue that separates a fidget from a turn and a tap from a lean.</li>
+          <li><b>Battery and model.</b> The page can decode the battery and never asks. The cube also names its model and firmware.</li>
+          <li><b>More than one cube.</b> Both Bluetooth roads allow several cubes at once. The page assumes one.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="part" id="mgmt">
+      <div class="part-head">
+        <div class="kicker"><span class="sq" style="background:var(--sticker-B)"></span>Part II · Management summary</div>
+        <h2>Where the work is, what blocks it, and in what order</h2>
+        <p class="lede">For the person who decides. Tables first, detail after.</p>
+      </div>
+      <div class="prose">
+        <h3 id="mgmt-arch">2.1 Architecture in one table</h3>
+        <div class="tw"><table>
+          <thead><tr><th>Layer</th><th>Where</th><th>Does</th><th>State</th></tr></thead>
+          <tbody>
+            <tr><td>Protocol and cipher</td><td class="m">js/gan.js</td><td>AES-128-CBC with the MAC as salt; gen 2, 3 and 4; state, gyro and battery decoded, a move message read as a signal only</td><td><span class="yes">shipped</span></td></tr>
+            <tr><td>Bluetooth roads</td><td class="m">js/bridge.js · mac/</td><td>Web Bluetooth in Chrome and Edge; a WebSocket bridge to CoreBluetooth for Safari</td><td><span class="yes">shipped</span></td></tr>
+            <tr><td>Live cube window</td><td class="m">js/cubetab.js</td><td>Moves inferred from states, tilt picture, hold buttons, band, stage reader</td><td><span class="yes">shipped</span></td></tr>
+            <tr><td>CFOP stage</td><td class="m">js/stage.js</td><td>Cross, F2L count, two-look OLL and PLL case by name, moves done so far</td><td><span class="yes">shipped</span></td></tr>
+            <tr><td>Lab</td><td class="m">lab/</td><td>Smack detector, turn detector, hold selects, full-page picture, auto-reconnect</td><td><span class="flag">experimental</span></td></tr>
+            <tr><td>Tracker for hold and heading</td><td class="m">(F-05)</td><td>Fuse speed, algorithms, rest poses, gestures and camera into one heading</td><td><span class="no">proposed</span></td></tr>
+            <tr><td>Native hosts</td><td class="m">(F-21, F-23)</td><td>WKWebView apps on macOS and iOS over the same bridge messages</td><td><span class="no">proposed</span></td></tr>
+          </tbody>
+        </table></div>
+
+        <h3 id="mgmt-platforms">2.2 Platform matrix</h3>
+        <div class="tw"><table>
+          <thead><tr><th>Platform</th><th>Connect</th><th>Address without typing</th><th>Reconnect without a chooser</th><th>Camera for F-17, F-18</th><th>Link in the background</th></tr></thead>
+          <tbody>
+            <tr><td>Chrome, Edge on macOS, Windows, Linux</td><td><span class="yes">Web Bluetooth</span></td><td><span class="flag">behind a flag</span></td><td><span class="flag">behind a flag</span></td><td><span class="yes">getUserMedia, WebGPU</span></td><td><span class="no">tab must stay visible</span></td></tr>
+            <tr><td>Chrome on Android</td><td><span class="yes">Web Bluetooth</span></td><td><span class="flag">behind a flag</span></td><td><span class="flag">behind a flag</span></td><td><span class="yes">getUserMedia</span></td><td><span class="no">foreground only</span></td></tr>
+            <tr><td>Safari on macOS</td><td><span class="yes">via the macOS app</span></td><td><span class="yes">from the app</span></td><td><span class="flag">a list in the dialog, one click; the lab takes a known cube by itself</span></td><td><span class="yes">getUserMedia, WebGPU in 26</span></td><td><span class="no">page must stay open</span></td></tr>
+            <tr><td>Safari and other browsers on iOS</td><td><span class="no">none</span></td><td>–</td><td>–</td><td><span class="yes">getUserMedia</span></td><td>–</td></tr>
+            <tr><td>Bluefy, or the beacio Safari extension, on iOS</td><td><span class="yes">Web Bluetooth</span></td><td><span class="flag">untested</span></td><td><span class="no">no</span></td><td><span class="flag">untested</span></td><td><span class="no">no</span></td></tr>
+            <tr><td>Firefox</td><td><span class="no">none, position "harmful"</span></td><td>–</td><td>–</td><td><span class="yes">getUserMedia</span></td><td>–</td></tr>
+            <tr><td>Twistwright for macOS as an app (F-21)</td><td><span class="yes">CoreBluetooth</span></td><td><span class="yes">advertisement data</span></td><td><span class="yes">remembered cubes</span></td><td><span class="yes">AVFoundation, Continuity Camera</span></td><td><span class="yes">yes</span></td></tr>
+            <tr><td>Twistwright for iOS (F-23)</td><td><span class="yes">CoreBluetooth</span></td><td><span class="yes">advertisement data</span></td><td><span class="yes">remembered cubes, AccessorySetupKit</span></td><td><span class="yes">the phone's camera</span></td><td><span class="yes">bluetooth-central mode</span></td></tr>
+          </tbody>
+          <caption>"Behind a flag" is Chrome's experimental web platform features flag, needed for getDevices and watchAdvertisements, the two calls that read the address and reconnect without a chooser. As of October 2026 neither has a ship date. Part VI names the sources.</caption>
+        </table></div>
+
+        <h3 id="mgmt-constraints">2.3 The constraints that shaped the design</h3>
+        <ul>
+          <li><b>Web Bluetooth hides the address</b>, and the address is the cipher key. The spec requires an opaque device id. Only the advertisement scan (behind the flag) reads the manufacturer data that carries it. Without it the user types it once, and the page saves it by the cube's name. The Mac app reads it from the advertisement, so Safari users never type it.</li>
+          <li><b>Safari blocks a WebSocket from an https page to localhost</b> (tested in Safari 27.2), so the bridge cannot sit beside twistwright.com. The app serves the page from http://127.0.0.1:27272 and the bridge accepts only that origin and its localhost twin.</li>
+          <li><b>No compass in the cube, and no raw sensors.</b> The cube sends one fused quaternion plus a coarse speed. Pitch and roll are absolute; the heading is integrated and drifts. A magnetometer would not help in a cube full of magnets. This is the whole drift problem.</li>
+          <li><b>A move message carries no move to us yet.</b> The page infers moves from states, two out and two back, and gives up past four. Decoding the message (F-06) removes the limit.</li>
+          <li><b>Gen 3 cubes have no tilt.</b> Every tilt feature degrades to the buttons for them.</li>
+          <li><b>Web Bluetooth is Window-only.</b> No service worker can hold a link; a hidden page stops scanning. Background use needs a native host.</li>
+          <li><b>The page's own storage is per origin.</b> History at http://127.0.0.1 is not history at twistwright.com.</li>
+        </ul>
+
+        <h3 id="mgmt-options">2.4 Options, by effort and confidence</h3>
+        <p>Every finding in Part IV carries an effort (S, M, L, XL) and a confidence that it works as described. The grid below places them; the border of each id follows its live status. Select an id to jump to it.</p>
+        <div class="matrix" id="matrix" aria-label="Findings by effort and confidence"></div>
+        <h4>Recommended sequence</h4>
+        <div class="tw"><table>
+          <thead><tr><th>Wave</th><th>Findings</th><th>Why this order</th><th>Needs the real cube?</th></tr></thead>
+          <tbody>
+            <tr><td class="m">1 · Read it all</td><td class="m">F-07, F-06, F-08, F-16</td><td>Small, certain, and every later finding stands on them: speed, moves with time, battery, a written bridge protocol.</td><td>Yes, to confirm the gen 4 layouts</td></tr>
+            <tr><td class="m">2 · Hold the heading</td><td class="m">F-01, F-02, F-04, F-03, then F-05</td><td>Each clue is testable alone in the lab with recordings. The tracker comes last and replays the recordings.</td><td>Yes, recordings are the test data</td></tr>
+            <tr><td class="m">3 · The trainer</td><td class="m">F-11, F-09, F-10, F-14, F-12, F-13, F-15</td><td>What users feel: scramble assist, a cube-run timer with splits, replay, autoconnect, resync, Android install, the iOS workarounds named.</td><td>Partly</td></tr>
+            <tr><td class="m">4 · Hosts</td><td class="m">F-21, F-23, F-22</td><td>The WKWebView apps reuse the page and the bridge messages; on-device models follow once a host exists.</td><td>No for the shell; yes for Bluetooth</td></tr>
+            <tr><td class="m">5 · Eyes, the coach, a second cube</td><td class="m">F-17, F-18, F-19, F-20, F-26</td><td>Camera anchors and the coach are research-grade, best done once the tracker has a place to put a measurement. Two cubes at once is a feature on its own.</td><td>Yes</td></tr>
+            <tr><td class="m">Parked</td><td class="m">F-24, F-25</td><td>Headsets and radio ranging. Recorded so the question is answered, not reopened.</td><td>–</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3 id="mgmt-risks">2.5 Risks</h3>
+        <div class="tw"><table>
+          <thead><tr><th>Risk</th><th>Likelihood</th><th>Effect</th><th>Mitigation</th></tr></thead>
+          <tbody>
+            <tr><td>The tracker snaps to a wrong hold and renames moves the user did not make (the 1.6 to 1.9 failure that 1.10 removed)</td><td>Medium</td><td>Trust in the move list</td><td>Ship in the lab first; log every decision with its evidence; keep the band as the visible disagreement</td></tr>
+            <tr><td>Open-source message layouts differ on the GAN 12 ui Maglev</td><td>Medium</td><td>Wrong moves or speeds</td><td>Record real messages into test fixtures before relying on a field</td></tr>
+            <tr><td>Chrome changes or removes the experimental flag path</td><td>Low</td><td>Address typing returns on desktop Chrome</td><td>Typed address path stays; the Mac app and native hosts do not depend on it</td></tr>
+            <tr><td>Camera features read as surveillance</td><td>Medium</td><td>Users refuse the feature</td><td>Opt-in, on-device only, indicator always visible, no frames stored</td></tr>
+            <tr><td>App Store review of a WKWebView app</td><td>Low</td><td>Delay</td><td>The app adds real native function (Bluetooth, camera, background); usage strings name the benefit</td></tr>
+            <tr><td>Apple Intelligence availability limits F-22 to newer devices</td><td>High</td><td>Coach absent for some users</td><td>Rules engine first (F-20) so every user gets a coach; the model improves it</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section class="part" id="tech">
+      <div class="part-head">
+        <div class="kicker"><span class="sq" style="background:var(--sticker-G)"></span>Part III · Technical reference</div>
+        <h2>What the code does, with the numbers</h2>
+        <p class="lede">Read from the code at commit f28e61a, from docs/smart-cube.md and from the gan-web-bluetooth sources. File names point at the source.</p>
+      </div>
+      <div class="prose">
+        <h3 id="tech-proto">3.1 Protocol</h3>
+        <div class="tw"><table>
+          <thead><tr><th>Gen</th><th>Cubes</th><th>Service</th><th>Length</th><th>Gyro</th></tr></thead>
+          <tbody>
+            <tr><td class="m">2</td><td>GAN12 ui, ui FreePlay, Mini ui FreePlay, 356 i Carry, i Carry S, i 3, MoYu AI 2023</td><td class="m">6e400001-b5a3-f393-e0a9-e50e24dc4179</td><td class="m">20 bytes</td><td>event 0x01, words from bit 4</td></tr>
+            <tr><td class="m">3</td><td>GAN356 i Carry 2</td><td class="m">8653000a-43e6-47b7-9cb0-5fc21d4ae340</td><td class="m">16-byte commands; a state runs past bit 128</td><td>none</td></tr>
+            <tr><td class="m">4</td><td>GAN12 ui Maglev, GAN14 ui FreePlay</td><td class="m">00000010-0000-fff7-fff6-fff5fff4fff0</td><td class="m">20 bytes</td><td>event 0xEC, words from bit 16</td></tr>
+          </tbody>
+        </table></div>
+        <ul>
+          <li><b>Cipher.</b> AES-128-CBC with a fixed key and IV per family (key 0 for GAN, key 1 for the MoYu AiCube). The six MAC bytes, reversed, are added to the first six bytes of key and IV mod 255. Each message encrypts its first 16 bytes, then its last 16; decryption runs in reverse. The code carries its own AES because crypto.subtle cannot decrypt one block without padding. <code>js/gan.js</code></li>
+          <li><b>State.</b> 7 corner positions (3 bits), 7 twists (2 bits), 11 edge positions (4 bits), 11 flips (1 bit); the last of each is derived. Offsets: gen 2 cp 12, co 33, ep 47, eo 91; gen 3 cp 40, co 61, ep 77, eo 121; gen 4 cp 32, co 53, ep 69, eo 113. Kociemba order, so a <code>Cube</code> is built directly. Permutations and the twist range are validated; a failure returns <code>bad</code>, which is how a wrong MAC is caught.</li>
+          <li><b>Gyro.</b> Four 16-bit words w, x, y, z, each a sign bit and a 15-bit size over 0x7FFF. The cube's axes (+x red, +y blue, +z white) map to the page's as x, z, −y. The quaternion is the turn of the body and is applied unnegated. Three 4-bit angular velocity fields (a sign bit and a 3-bit size per axis) follow the words at bit 68 (gen 2) and bit 80 (gen 4); the page does not decode them and nobody has published their units. One review measured about 10 messages a second on a GAN i4; the Maglev's rate is unmeasured.</li>
+          <li><b>Message types decoded.</b> Gen 2: state 0x04, move 0x02, gyro 0x01, battery 0x09, off 0x0D. Gen 3: state 0x02, move 0x01, battery 0x10, off 0x11 (byte 0 must be 0x55). Gen 4: state 0xED, move 0x01, gyro 0xEC, battery 0xEF, off 0xEA. The dialog closes the link on off. Move messages return only the kind.</li>
+          <li><b>In the move message, per gan-web-bluetooth.</b> Gen 2: an 8-bit serial, a face 0 to 5 (U R F D L B), a direction bit, 16-bit elapsed times for the recent moves. Gen 3 and 4: a 16-bit serial, a 32-bit cube timestamp, the face from a bitmask, two bits of direction. Gen 4 has a move history request (0xD1) that re-sends moves from a serial. Hardware info: gen 2 0x05, gen 3 0x07, gen 4 0xFA to 0xFE in parts (versions, name, and a gyro bit on gen 2).</li>
+          <li><b>Commands sent.</b> state (gen 2 <code>04</code>, gen 3 <code>68 01</code>, gen 4 <code>DD 04 00 ED 00 00</code>), reset (with the solved state), battery (only the test sends it). Each is padded to the message length and encrypted.</li>
+          <li><b>Address from the advertisement.</b> Manufacturer data under a company code <code>0xNN01</code>; the MAC is the last six of the first nine data bytes, reversed. Only <code>watchAdvertisements</code> reads it in the browser; the Mac app reads <code>CBAdvertisementDataManufacturerDataKey</code>.</li>
+          <li><b>Tests.</b> AES against FIPS-197 and 200 random blocks; the cipher against a Node reference; 60 random states per generation decode exactly; a wrong MAC gives 0 valid states in 300 tries; battery and gyro mapping per generation; a full fake connect, reset and drop. <code>test/gan.js</code>, <code>test/fake-gan.js</code>. The fake is a protocol simulation, not a real cube.</li>
+        </ul>
+
+        <h3 id="tech-tilt">3.2 The tilt pipeline</h3>
+        <div class="tw"><table>
+          <thead><tr><th>Constant</th><th>Value</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td>Follow time constant</td><td class="m">70 ms with a tilt stream live · 110 ms without</td><td>Per frame k = 1 − exp(−dt/tc); done under 0.05°; a button press with the tilt live follows at 70</td></tr>
+            <tr><td>Camera</td><td class="m">yaw −32°, pitch 28°</td><td>Fixed; the body turns in front of it through <code>rot</code></td></tr>
+            <tr><td>awayDeg / backDeg</td><td class="m">55° / 40°</td><td>Past 55° from the hold the tilt snaps to the nearest of 24; back within 40° it is home. Hysteresis between</td></tr>
+            <tr><td>awayMs</td><td class="m">500 ms</td><td>How long the cube stays away before the band shows</td></tr>
+            <tr><td>stillMs / revealMs</td><td class="m">1200 / 1500 ms</td><td>Still this long before the stage is read; one more hidden move per interval</td></tr>
+            <tr><td>keepMoves</td><td class="m">max(12, 2·len + 4)</td><td>A stage is kept while a reading falls behind it, until this many moves pass</td></tr>
+            <tr><td>Layer turn</td><td class="m">260 ms, 360 ms double</td><td>× 1, 0.65, 0.5 by queue length; × 0.8 past two queued; at least 90 ms; cosine ease</td></tr>
+          </tbody>
+        </table></div>
+        <ul>
+          <li><b>The 24 holds</b> are built by a breadth-first search over x, y, z, their primes and doubles from the identity, keyed by the centers. Each carries the body quaternion in the frame of draw.js. <code>CUBE_TAB_HOLDS</code> in cubetab.js, <code>LAB_HOLDS</code> in lab/lab.js.</li>
+          <li><b>Heading.</b> <code>cubeTabYawBasis(raw, holdQ)</code> picks the cube axis most level in both frames (green, then red, then white) and returns the pure yaw that puts it where the hold has it. The first reading sets it; only Reset view and Keep this hold set it again. Nothing realigns on its own since 1.12.0.</li>
+          <li><b>Rule.</b> The moves and the stage read from the hold; the tilt drives the picture only; the band is the one place they meet.</li>
+        </ul>
+
+        <h3 id="tech-moves">3.3 Move inference</h3>
+        <ul>
+          <li><code>cubeTabPath(from, to)</code> is a meet-in-the-middle search: two moves out from the old state, two back from the new, over 18 face turns, never the same face twice in a row. It returns the shortest path up to four moves, <code>[]</code> for equal states and <code>null</code> beyond four, when the picture jumps and the list keeps what it has. Among equal-length paths it takes the first found (R L against L R is a tie).</li>
+          <li>One state request in flight at a time; a move during a request sets a flag and the answer asks again. There is no timeout. The dialog rereads 150 ms after a move while open.</li>
+          <li><code>cubeTabMerge</code>: same face as the last move adds quarter turns mod 4; zero removes the move. Whole-cube turns merge the same way. <code>cubeTabRelabel</code> renames a face by the hold's centers. The readout shows the last ten.</li>
+          <li>A move and its inverse between two reads are invisible to this method. Decoded moves (F-06) see them.</li>
+        </ul>
+
+        <h3 id="tech-bridge">3.4 The bridge</h3>
+        <p>HTTP on 127.0.0.1:27272 proxies https://www.twistwright.com with no cache, or serves a checkout with <code>--root</code>. The WebSocket on 27273 accepts the origins http://127.0.0.1:27272 and http://localhost:27272. Data travels as hex; UUIDs are 128-bit lower case.</p>
+<pre><code>page → app   {op:"scan"} {op:"stop"} {op:"connect",id} {op:"disconnect",id}
+             {op:"notify",id,char} {op:"write",id,char,data,seq}
+app → page   {ev:"hello",version,bluetooth} {ev:"bluetooth",state}
+             {ev:"device",id,name,mac}            while a scan runs
+             {ev:"connected",id,services:[{uuid,chars:[uuid]}]} {ev:"gone",id}
+             {ev:"value",id,char,data} {ev:"written",seq} {ev:"error",id?,seq?,message}</code></pre>
+        <ul>
+          <li><b>CoreBluetooth used:</b> a lazy central (so the permission prompt comes at Connect), a scan that allows duplicate reports, with the discovery callback keeping only the name prefixes GAN, MG and AiCube, connect, discover services and characteristics, notify on, write with or without response by the characteristic's properties. A page that goes away disconnects its cubes.</li>
+          <li><b>Not used:</b> RSSI (dropped), readValue, notify off (over the bridge the page's <code>stopNotifications</code> does nothing; under Web Bluetooth it is the real call), state restoration, background modes, <code>retrievePeripherals</code> (a cube must be scanned in the current run), MTU.</li>
+          <li><b>Timeouts on the page side:</b> 10 s per request, 3 s per write, 15 s per connect. The MAC comes once per peripheral from the manufacturer data when it has at least 8 bytes.</li>
+          <li><b>Menu:</b> Open Twistwright, Bluetooth state, connected cubes, Copy the address (the page URL, not the MAC), Quit. <code>twistwright://smart</code> opens the page with <code>?smart=1</code>.</li>
+        </ul>
+
+        <h3 id="tech-lab">3.5 Lab detectors</h3>
+        <div class="tw"><table>
+          <thead><tr><th>Detector</th><th>Defaults</th><th>Events</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="m">smackDetector</td><td class="m">jolt 5°, settle 2.5°, within 350 ms, maxDeg 45°, back 0.5, stillSpeed 40°/s, restTc 400 ms, perp 0.45, gap 1500 ms, count 3</td><td class="m">smack, turn, series</td><td>Face is the axis with the least of the jolt (torque is r × F); a face and its opposite cannot be told apart. A 40 ms constant after the peak is not tunable.</td></tr>
+            <tr><td class="m">turnDetector</td><td class="m">start 15°, settle 4°, still 300 ms, updateMs 250, restTc 1500 ms; snap 30° in the lab</td><td class="m">tstart, tupdate, tfinish</td><td>A rest within snap of another hold puts that whole-cube turn on the list, dashed, and moves the hold.</td></tr>
+          </tbody>
+          <caption>Sliders exist for turn start, settle, still, updateMs and snap, and for smack jolt, settle, within, maxDeg, perp and gap; the face is a select. Nothing sets smack back, stillSpeed, restTc, count or turn restTc. Every threshold is untested on a real cube.</caption>
+        </table></div>
+
+        <h3 id="tech-gaps">3.6 Known gaps, from the code and the docs</h3>
+        <ol>
+          <li>Move face and direction are not decoded (docs/smart-cube.md names it as the next step).</li>
+          <li>No timer that starts on the first turn and stops on solved; no player that follows the cube; the stage names Cross and F2L but shows no moves for them.</li>
+          <li>Angular velocity not decoded; lab thresholds untested on a real cube and not yet in cubetab.js.</li>
+          <li>Battery decoded and tested, never requested, never shown. The dialog forwards only move, state and gyro.</li>
+          <li>The "more" triangle under the moves has no action. Only the cube tab listens to <code>cw:smart</code>.</li>
+          <li>The app has no icon; the page does not reconnect when the app restarts; the cube tab's state request has no timeout; the bridge has no notify-off.</li>
+          <li>The stage <code>ll</code> ("Last layer") covers a last layer no algorithm names.</li>
+          <li>docs/smart-cube.md: "sliders for every threshold" overstates; the origin check accepts localhost too; the MoYu AI 2023 and the MG name prefix are supported in code but only partly documented; "Copy the address" copies the page URL, which the docs do not say.</li>
+          <li>If no state ever answers a request, the cube tab's <code>asked</code> flag stays set and every later move only sets <code>want</code>: the tab goes silent for the rest of the link. F-12 covers it.</li>
+          <li>Memory, not code: an Antisune once read as Cross, unexplained.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="part" id="findings">
+      <div class="part-head">
+        <div class="kicker"><span class="sq" style="background:var(--sticker-O)"></span>Part IV · Findings</div>
+        <h2>Twenty-six things we could do, each with a decision</h2>
+        <p class="lede">Each finding has a plain-words paragraph, a technical fold, a first step an agent can take, and a status you set here. Statuses are shared with everyone who opens this page and with the agent that works the backlog.</p>
+      </div>
+      <div class="legend"><span><i style="background:var(--faint)"></i>Proposed: no decision yet</span><span><i style="background:var(--good)"></i>Approved: do it</span><span><i style="background:var(--warn)"></i>Backlog: later</span><span><i style="background:var(--bad)"></i>Closed: no, with the reason in the note</span></div>
+      <div class="filters" id="filters">
+        <span class="lbl">Show</span>
+        <button class="chip" type="button" data-f="all" aria-pressed="true">All</button>
+        <button class="chip" type="button" data-f="proposed"><i style="background:var(--faint)"></i>Proposed</button>
+        <button class="chip" type="button" data-f="approved"><i style="background:var(--good)"></i>Approved</button>
+        <button class="chip" type="button" data-f="backlog"><i style="background:var(--warn)"></i>Backlog</button>
+        <button class="chip" type="button" data-f="closed"><i style="background:var(--bad)"></i>Closed</button>
+        <span class="lbl" style="margin-left:8px">Theme</span>
+        <span id="themechips" style="display:contents"></span>
+      </div>
+      <div id="themes"></div>
+    </section>
+
+    <section class="part" id="agents">
+      <div class="part-head">
+        <div class="kicker"><span class="sq" style="background:var(--sticker-R)"></span>Part V · Agents and changelog</div>
+        <h2>How a coding agent works this document</h2>
+        <p class="lede">The decisions live in this page's store. The history lives in git. An agent reads both and knows what to do next.</p>
+      </div>
+      <div class="prose">
+        <h3>The protocol</h3>
+        <ol class="steps">
+          <li><div><b>Read the decisions.</b> With the ArtifactData tool, list the <code>findings</code> collection of this artifact. Each document is keyed by the finding id and holds <code>status</code>, <code>note</code>, <code>updatedAt</code>, <code>by</code> and a short <code>history</code>. A finding with no document is <code>proposed</code>.</div></li>
+          <li><div><b>Read the history.</b> Open <code>docs/smart-cube-vision/CHANGELOG.md</code> in the repository. Each entry records decisions already acknowledged and work started or done, per finding id.</div></li>
+          <li><div><b>Compute the steps.</b> For each finding: <code>approved</code> with no <code>done</code> line is work to do, in the order of Part II's waves, respecting <code>needs</code>. A <code>note</code> newer than the last changelog line for that id is feedback to read first. <code>backlog</code> and <code>closed</code> need no work; <code>proposed</code> waits for the owner.</div></li>
+          <li><div><b>Do the first step</b> named in the finding, in a worktree, with tests, as CLAUDE.md requires. Raise the app or lab version where a user can see the change.</div></li>
+          <li><div><b>Record it.</b> Append a changelog entry (date and document version), one line per finding: <code>F-NN: started.</code> or <code>F-NN: done.</code> with the commit. If the finding's text must change, edit <code>findings.json</code> and add <code>F-NN: edited.</code></div></li>
+          <li><div><b>Rebuild and republish.</b> Run <code>node docs/smart-cube-vision/build.js</code>, then publish <code>page.html</code> to the artifact URL in <code>README.md</code> with the Artifact tool. Commit the changed files together.</div></li>
+        </ol>
+        <h3>The store, exactly</h3>
+<pre><code>collection: findings          document id: F-01 … F-26
+{
+  "status":    "proposed" | "approved" | "backlog" | "closed",
+  "note":      "free text from the owner, read it as feedback",
+  "updatedAt": "2026-10-17T18:02:11.000Z",
+  "by":        "u_…"  (an opaque viewer id, or null),
+  "history":   [{"status","note","at","by"}, …]   (the last 20)
+}</code></pre>
+        <h3>Changelog</h3>
+        <div id="changelog"><section class="cl-entry"><h4><time>2026-10-17</time> <span class="ver">v0.1.0</span></h4><ul><li class="cl-doc">doc: First publication. 26 findings in six themes, all <code>proposed</code>. Technical facts from an audit of <code>js/gan.js</code>, <code>js/bridge.js</code>, <code>js/cubetab.js</code>, <code>lab/smack.js</code> and <code>mac/Sources/</code> at commit <code>f28e61a</code>, checked by a second reader, and from a sourced research brief (see the Sources section of the page).</li></ul></section></div>
+      </div>
+    </section>
+
+    <section class="part" id="sources">
+      <div class="part-head">
+        <div class="kicker"><span class="sq" style="background:var(--sticker-X)"></span>Part VI · Sources</div>
+        <h2>Where the facts come from</h2>
+        <p class="lede">Code facts come from the repository at commit f28e61a and were checked by a second reader. Platform facts were checked on 2026-10-17; each carries the confidence the research gave it.</p>
+      </div>
+      <div class="prose">
+        <h3>Repository</h3>
+        <ul class="src">
+          <li><span class="k">code</span><span>js/gan.js, js/bridge.js, js/smart-ui.js, js/cubetab.js, js/stage.js, lab/smack.js, lab/lab.js, lab/index.html, mac/Sources/Bridge.swift, Site.swift, App.swift, mac/Info.plist, mac/build.sh; test/gan.js, test/fake-gan.js, test/lab.js</span></li>
+          <li><span class="k">docs</span><span>docs/smart-cube.md (the protocol, the MAC address, browsers, the macOS app, the lab)</span></li>
+        </ul>
+        <h3>GAN protocol</h3>
+        <ul class="src">
+          <li><span class="k">high</span><span>gan-web-bluetooth (Andy Fedotov, MIT): <a href="https://github.com/afedotov/gan-web-bluetooth">github.com/afedotov/gan-web-bluetooth</a>, in particular src/gan-cube-protocol.ts and src/gan-cube-definitions.ts for opcodes, bit layouts, the velocity fields, MOVE_HISTORY and the hardware messages.</span></li>
+          <li><span class="k">high</span><span>gan-cube-sample: <a href="https://github.com/afedotov/gan-cube-sample">github.com/afedotov/gan-cube-sample</a>, the quaternion remap (x, z, −y, w) and the slerp display.</span></li>
+          <li><span class="k">high</span><span>cubing.js Bluetooth support table (orientation only for GAN and GoCube): <a href="https://js.cubing.net/cubing/bluetooth/">js.cubing.net/cubing/bluetooth</a></span></li>
+          <li><span class="k">low</span><span>GAN i4 review with a measured gyro rate of about 10 Hz and a note on drift: <a href="https://acubemy.com/blog/gan-i4-review">acubemy.com/blog/gan-i4-review</a></span></li>
+        </ul>
+        <h3>Web Bluetooth</h3>
+        <ul class="src">
+          <li><span class="k">high</span><span>Implementation status: <a href="https://github.com/WebBluetoothCG/web-bluetooth/blob/main/implementation-status.md">WebBluetoothCG implementation-status.md</a>. Chrome, Edge, Samsung Internet; Firefox "no plan", Mozilla position "harmful".</span></li>
+          <li><span class="k">high</span><span>getDevices behind the flag: <a href="https://developer.mozilla.org/en-US/docs/Web/API/Bluetooth/getDevices">MDN Bluetooth.getDevices</a> and browser-compat-data api/Bluetooth.json.</span></li>
+          <li><span class="k">high</span><span>The spec: opaque device ids, SecureContext and Window-only exposure, scans aborted when the document is hidden: <a href="https://webbluetoothcg.github.io/web-bluetooth/">webbluetoothcg.github.io/web-bluetooth</a></span></li>
+          <li><span class="k">high</span><span>WebKit's position, September 2024: <a href="https://lists.w3.org/Archives/Public/public-web-bluetooth/2024Sep/0002.html">public-web-bluetooth list</a>. Safari 26.0 release notes do not mention Bluetooth: <a href="https://webkit.org/blog/17333/webkit-features-in-safari-26-0/">webkit.org</a></span></li>
+          <li><span class="k">medium</span><span>Persistent permissions roadmap, January 2025: <a href="https://lists.w3.org/Archives/Public/public-web-bluetooth-log/2025Jan/0011.html">public-web-bluetooth-log</a></span></li>
+          <li><span class="k">high</span><span>Bluefy on the App Store: <a href="https://apps.apple.com/app/id1492822055">apps.apple.com/app/id1492822055</a></span></li>
+          <li><span class="k">medium</span><span>beacio (iOSWebBLE), a Safari Web Extension that implements navigator.bluetooth: <a href="https://apps.apple.com/de/app/ioswebble/id6761301368">apps.apple.com/de/app/ioswebble/id6761301368</a></span></li>
+        </ul>
+        <h3>Drift and sensor fusion</h3>
+        <ul class="src">
+          <li><span class="k">high</span><span>Heuristic Drift Reduction (Borenstein, Ojeda, Kwanmuang, Journal of Navigation 2009): <a href="https://www.cambridge.org/core/journals/journal-of-navigation/article/abs/heuristic-reduction-of-gyro-drift-for-personnel-tracking-systems/4216C8E2281D48CC1A9138453087B482">cambridge.org</a>. The published analogue of snapping to the 24 holds.</span></li>
+          <li><span class="k">high</span><span>Why an accelerometer cannot observe yaw: <a href="https://www.analog.com/en/resources/analog-dialogue/raqs/raq-issue-139.html">Analog Devices RAQ 139</a></span></li>
+          <li><span class="k">high</span><span>Core Motion's yaw needs the magnetometer (xArbitraryCorrectedZVertical): <a href="https://developer.apple.com/documentation/coremotion/cmattitudereferenceframe/xarbitrarycorrectedzvertical">developer.apple.com</a></span></li>
+          <li><span class="k">high</span><span>Madgwick filter: <a href="https://ahrs.readthedocs.io/en/stable/filters/madgwick.html">ahrs.readthedocs.io</a>; Mahony complementary filter on SO(3): <a href="https://hal.archives-ouvertes.fr/hal-00488376">hal-00488376</a>; zero-velocity updates, a 15-year review: <a href="https://arxiv.org/abs/2008.09208">arXiv 2008.09208</a></span></li>
+          <li><span class="k">high</span><span>Yaw is unobservable to visual-inertial odometry too (VINS-Mono): <a href="https://arxiv.org/abs/1708.03852">arXiv 1708.03852</a>; MSCKF: <a href="https://intra.ece.ucr.edu/~mourikis/papers/MourikisRoumeliotis-ICRA07.pdf">Mourikis and Roumeliotis 2007</a></span></li>
+        </ul>
+        <h3>In-browser vision and AI</h3>
+        <ul class="src">
+          <li><span class="k">high</span><span>WebGPU in Safari 26: <a href="https://webkit.org/blog/17333/webkit-features-in-safari-26-0/">webkit.org</a>; in Chrome and Edge: <a href="https://web.dev/blog/webgpu-supported-major-browsers">web.dev</a>; Firefox on Apple Silicon from 147 (medium confidence).</span></li>
+          <li><span class="k">high</span><span>MediaPipe Hand Landmarker (21 points, 12 to 17 ms on a Pixel 6): <a href="https://developers.google.com/edge/mediapipe/solutions/vision/hand_landmarker">developers.google.com</a>; @mediapipe/tasks-vision 1.1.1 on npm.</span></li>
+          <li><span class="k">medium</span><span>Hand pose at 48 to 62 fps on a 2019 MacBook Pro in the browser: <a href="https://blog.tensorflow.org/2021/11/3D-handpose.html">blog.tensorflow.org</a></span></li>
+          <li><span class="k">high</span><span>Chrome Prompt API: desktop only, 22 GB free, GPU over 4 GB or 16 GB RAM, JSON Schema output: <a href="https://developer.chrome.com/docs/ai/prompt-api">developer.chrome.com/docs/ai/prompt-api</a></span></li>
+          <li><span class="k">high</span><span>Transformers.js v4 with a WebGPU runtime: <a href="https://github.com/huggingface/transformers.js/releases">github.com/huggingface/transformers.js</a>; ONNX Runtime Web WebGPU: <a href="https://onnxruntime.ai/docs/tutorials/web/ep-webgpu.html">onnxruntime.ai</a></span></li>
+          <li><span class="k">medium</span><span>Cube vision in the open: qbr (OpenCV), rubiks-cube-tracker, a YOLOv8 cube-state paper (<a href="https://arxiv.org/abs/2508.12469v1">arXiv 2508.12469</a>). No maintained in-browser cube reader was found.</span></li>
+        </ul>
+        <h3>Apple platforms</h3>
+        <ul class="src">
+          <li><span class="k">high</span><span>Core Bluetooth background modes and state restoration: <a href="https://developer.apple.com/library/archive/documentation/NetworkingInternetWeb/Conceptual/CoreBluetooth_concepts/CoreBluetoothBackgroundProcessingForIOSApps/PerformingTasksWhileYourAppIsInTheBackground.html">developer.apple.com</a>; the peripheral identifier is a per-app UUID, not the MAC: <a href="https://punchthrough.com/core-bluetooth-guide/">punchthrough.com</a></span></li>
+          <li><span class="k">medium</span><span>AccessorySetupKit (iOS 18): <a href="https://punchthrough.com/ios18-accessorysetupkit-everything-ble-developers-need-to-know/">punchthrough.com</a>; Bluetooth usage string and review (ITMS-90683, Guideline 5.1.1); the Mac sandbox entitlement com.apple.security.device.bluetooth.</span></li>
+          <li><span class="k">high</span><span>Foundation Models: about 3B parameters at 2 bits per weight, @Generable, tool calling: <a href="https://machinelearning.apple.com/research/apple-foundation-models-2025-updates">machinelearning.apple.com</a>; WWDC26 session 241 (context 8192 from iOS 26.4, image attachments, a Private Cloud Compute model, the LanguageModel protocol): <a href="https://developer.apple.com/videos/play/wwdc2026/241/">developer.apple.com</a></span></li>
+          <li><span class="k">high</span><span>Vision: VNDetectHumanHandPoseRequest (WWDC20 10653), VNTrackObjectRequest. ARKit reference-object tracking on iOS 27 and visionOS 2, rigid objects only: <a href="https://developer.apple.com/documentation/visionos/using-a-reference-object-with-arkit-in-ios">developer.apple.com</a></span></li>
+          <li><span class="k">high</span><span>Apple Watch motion: CMBatchedSensorManager (200 Hz device motion in a workout) and CMMotionManager at 100 Hz (WWDC23 10179). Nearby Interaction needs a UWB accessory: <a href="https://developer.apple.com/documentation/nearbyinteraction">developer.apple.com</a>; Continuity Camera requirements: <a href="https://support.apple.com/102418">support.apple.com/102418</a>; App Clips cannot hold Bluetooth or use Core Motion: <a href="https://developer.apple.com/documentation/appclip/choosing-the-right-functionality-for-your-app-clip">developer.apple.com</a></span></li>
+        </ul>
+        <h3>Not verified</h3>
+        <ul>
+          <li>The gyro message rate of the GAN 12 ui Maglev, and the units of the angular velocity fields.</li>
+          <li>Whether GAN cubes carry an accelerometer, a magnetometer or both; the protocol exposes neither.</li>
+          <li>Whether Bluefy or the beacio extension pass manufacturer data and the GAN services.</li>
+          <li>Any default-on shipping of getDevices or watchAdvertisements in Chrome.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Twistwright · Smart Cube Horizons · v0.1.0</span>
+    <span>Source of truth: docs/smart-cube-vision/ in the cfop repository</span>
+    <span><a href="#top">Back to top</a></span>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  const DATA = {"themes":[{"id":"space","name":"The cube in space","sticker":"Y","lead":"Kill the drift. Know how the cube sits in the hands without a compass, a camera or a button."},{"id":"data","name":"More from the cube we have","sticker":"G","lead":"The cube sends more than we read. Decode it and the trainer gets a timer, a replay and a coach."},{"id":"web","name":"Web Bluetooth and the browser","sticker":"B","lead":"What the browser gives today, what sits behind a flag, and what will never come."},{"id":"camera","name":"Camera and in-browser AI","sticker":"O","lead":"A webcam sees the cube and the person. Models that run in the page can read both."},{"id":"native","name":"Native apps, starting with macOS","sticker":"W","lead":"Drop the sidecar. Own Bluetooth, the camera, the background and the on-device models."},{"id":"moon","name":"Moon shots","sticker":"R","lead":"Ideas that need new hardware or new platforms. Kept so we know why they wait."}],"findings":[{"id":"F-01","theme":"space","title":"Fidget or turn? Classify every yaw change by its speed and its company","effort":"M","confidence":"high","lay":"When you shift in your chair, the cube turns with you, slowly, and no layer moves. When you turn the cube on purpose, it swings a quarter turn in well under half a second and a layer turn usually follows. Today the picture treats both the same way and drifts. A tracker that tells the two apart can fold a slow body turn back into the heading and keep the fast one as a real turn of the cube.","tech":["Split the heading estimate in two: the user's facing (a slow random walk) and the cube's yaw in the user's frame (one of four quarter turns, plus a short transient while a turn is in flight).","Classify a yaw change by its peak angular rate, its duration, its final angle (near 90° or not) and whether a layer turn follows within about two seconds. Slow, small, unaccompanied changes update the facing. Fast changes that land near a quarter turn are whole-cube turns and move the hold.","Feed the classifier the angular velocity field in the gyro message (not decoded yet, see F-07) rather than differences of the quaternion, which alias at the message rate.","The lab's turnDetector in lab/smack.js already cuts the stream into turn events (start 15°, settle 4°, still 300 ms, rest time constant 1500 ms); add the slow branch beside it and log both so the thresholds can be tuned on the real cube.","Pitch and roll never drift: gravity fixes them. Only the yaw needs this."],"first":"In lab/smack.js, add a driftDetector that accumulates slow yaw with no layer turn and emits a 'drift' event with the angle; show it in the lab log beside the turn events, and record a session of deliberate fidgets.","needs":["F-07"],"open":["How fast is a real GAN y turn? Measure peak rate and duration on the GAN 12 ui Maglev before choosing thresholds."]},{"id":"F-02","theme":"space","title":"Let the algorithm tell us the hold","effort":"M","confidence":"high","lay":"When you do a T perm, the cube reports moves in its own frame: maybe B, D, B', D'. We know the T perm is R U R' U'. Match the two and the hold falls out exactly, with no sensor at all. Every algorithm you execute becomes a free, exact correction of the drift.","tech":["stage.js already names the case and its algorithm. For each of the 24 holds, relabel the reported moves and compare with the algorithm (and its common alternatives from ALG_DB); a unique match fixes the hold.","Even without a known case, the move distribution over a solve is a strong prior: speedcubers turn R, U, L, F and D far more than B. A hold under which the last twenty moves are mostly B or D is probably wrong by a y or x turn.","Treat the result as a measurement of the yaw hold with high weight and feed it into the tracker of F-05; the tilt picture then snaps to the corrected heading.","This also fixes the stage reader's weakest point: a hold the user never pressed, where the case is named with a whole-cube turn first."],"first":"Add holdFromMoves(moves, algs) to stage.js (pure): return the holds under which the reported moves match a known algorithm; test it with every two-look case from each of the 24 holds.","needs":[],"open":[]},{"id":"F-03","theme":"space","title":"A gesture to say 'this is how I hold it'","effort":"S","confidence":"medium","lay":"Three taps on a face, or a quick shake, and the picture lines up with the hold again. No button, no mouse, hands stay on the cube. The lab already has the detector; what is left is to tune it on a real cube and move it into the app.","tech":["smackDetector in lab/smack.js: a jolt past 5° from the rest pose that comes back within 350 ms; three on one face within 1500 ms of each other make a series. The face comes from the axis with the least of the jolt (torque is r × F, perp 0.45). Right and left faces share an axis and cannot be told apart from the tilt alone.","The angular velocity field (F-07) should give a sharper jolt signal than the tilt difference.","The thresholds are untested on a real cube. Tune them from the lab's log and trace, then port the detector to cubetab.js as a Reset view by gesture."],"first":"Run lab/run.sh with the GAN 12 ui Maglev, record twenty smacks and twenty normal turns, and set the thresholds so no normal turn counts as a smack.","needs":["F-07"],"open":["Does a smack on a Maglev cube ever turn a layer? If so, mask smacks that coincide with a state change."]},{"id":"F-04","theme":"space","title":"Use the rest poses: a cube on the table lies flat and square","effort":"S","confidence":"high","lay":"A cube put down on a desk sits flat, and almost always square to the desk edge, which is square to the person. That rest is a free calibration moment. The picture can relax its heading toward the nearest square pose while the cube lies still and flat.","tech":["Detect rest: angular rate near zero for over a second and gravity along one cube axis within a few degrees. Then pull the yaw toward the nearest multiple of 90° in the user's frame with a slow time constant, as the lab's rest pose already follows a still cube.","This is Heuristic Drift Reduction (Borenstein, Ojeda and Kwanmuang, 2009) applied to a cube: indoor trackers assume corridors meet at right angles and pull the heading toward the nearest dominant direction, which cut heading error by almost an order of magnitude. A cube has 24 dominant directions instead of four.","Never snap during a solve: require the cube to be flat (one face exactly up) and the hands off (no state changes for two seconds).","A desk at an angle to the person breaks the assumption. Make it a setting ('My desk is square to me', on by default) and show the band under the picture when the pull is active."],"first":"Add a restDetector to lab/smack.js beside turnDetector and log 'rest start' and 'rest end' with the gravity axis and the yaw offset from the nearest square pose.","needs":[],"open":[]},{"id":"F-05","theme":"space","title":"One tracker for hold and heading, with switchable assumptions","effort":"L","confidence":"medium","lay":"Put the pieces together: gravity for the tilt, the cube's speed to tell a fidget from a turn, algorithms to fix the hold exactly, rest poses to square it up, and a gesture when all else fails. Each piece is a weak clue; together they hold the picture steady through a whole session. The tracker knows which situation it is in (solving, scrambling, resting, walking around) and weighs the clues differently in each.","tech":["A small state machine over modes: Solving (layer turns frequent, hold stable, facing drifts slowly), Scrambling (same, but any hold), Inspection (no turns, the cube rotates in the hands fast and often), Rest (flat and still), Away (large motion, no turns: walking). Each mode has its own weights for the clues.","State: facing yaw (continuous, slow random walk), hold (one of 24, discrete), transient body rotation (continuous, decays). Observations: the quaternion, the angular velocity, state changes, matched algorithms, rest events, gestures.","A grid filter over the 24 holds × a handful of facing hypotheses is cheap at the gyro's message rate (about 10 Hz on one measured GAN cube; unmeasured on the Maglev) and avoids linearizing a Kalman filter around a discrete variable.","Everything works on top of the cube's own fused quaternion: no open protocol exposes raw gyro or accelerometer data, and no GAN cube is known to carry a magnetometer, which a cube full of magnets would spoil anyway.","Keep the present rule: the moves and the stage read from the hold, the tilt drives the picture only, and the band is where the two meet. The tracker only changes how the hold and the heading are chosen.","Ship it behind the lab first. Every decision goes to the log with its evidence, so a wrong snap can be traced."],"first":"Write docs/smart-cube-tracker.md: the modes, the state, the observations and the weights, with the lab recordings from F-01, F-03 and F-04 as the test data; then implement it as lab/tracker.js (pure) with a replay test over recorded sessions.","needs":["F-01","F-02","F-04","F-07"],"open":["Record and keep real sessions (quaternion stream plus state changes) as test fixtures; without them every threshold is a guess."]},{"id":"F-06","theme":"data","title":"Decode the move message: face, direction and time","effort":"M","confidence":"high","lay":"Today the app learns a move by comparing two pictures of the cube, and gives up when five or more moves happen between two messages. The cube actually tells us each move as it happens, with its own clock. Reading that gives every move at once, in order, with timing good enough to measure turns per second.","tech":["ganDecode returns a bare {type:'move'} for every generation (gan.js). gan-web-bluetooth decodes more: gen 2 carries an 8-bit serial, a face 0 to 5 (U R F D L B), a direction bit and 16-bit elapsed times for the recent moves; gen 3 and 4 carry a 16-bit serial, a 32-bit cube timestamp, the face from a bitmask and two bits of direction. The serial shows a missed message, and gen 4 has a move history request (0xD1) that re-sends moves from a serial.","Replace cubeTabPath inference with decoded moves where the cube offers them; keep the meet-in-the-middle search (two out, two back, up to four moves) as the fallback for a gap in the counter.","Timestamps give turn durations, pauses and TPS per algorithm; store them with the solve so a replay (F-10) can play at real speed."],"first":"In js/gan.js, decode the move fields for gen 2, 3 and 4 per the gan-web-bluetooth layout, add them to the 'move' event, and extend test/gan.js and test/fake-gan.js with a move message of each generation.","needs":[],"open":["Confirm the gen 4 move layout on the real Maglev; the open-source layouts were read from other models."]},{"id":"F-07","theme":"data","title":"Decode the angular velocity in the gyro message","effort":"S","confidence":"high","lay":"Besides the tilt, every gyro message carries how fast the cube is spinning on each axis. We throw it away. It is the signal that separates a quick turn from a slow fidget, and a smack from a lean.","tech":["gan-web-bluetooth reads three 4-bit fields right after the quaternion words (bit 68 for gen 2, bit 80 for gen 4): a sign bit and a 3-bit size per axis. Eight levels per axis is coarse but enough to rank quick against slow. The reference sample only displays the values; nobody has published their units.","Expose it on the gyro event as {wx, wy, wz} in the cube's frame and in the picture's frame; the lab trace can plot it beside the tilt."],"first":"Decode the bits in ganGyro, add them to the gyro event and to the lab's trace; check the scale against a slow and a fast deliberate turn on the real cube.","needs":[],"open":["The units and sign of the three-bit field are undocumented; calibrate from the quaternion derivative."]},{"id":"F-08","theme":"data","title":"Show the battery; read the hardware info","effort":"S","confidence":"high","lay":"The cube reports its battery and its model. The app already understands the battery message but never asks for it and never shows it. Put the level in the cube tab so a session does not end with a dead cube halfway through a drill.","tech":["ganDecode decodes battery for all three generations and test/gan.js proves it; the 'battery' request exists in GAN_GENS but only the test sends it. smart-ui.js forwards only move, state and gyro events.","Send the battery request on connect and every five minutes; forward the event; show the level in the tab's tooltip and warn under 15%.","gan-web-bluetooth also has a hardware info request (gen 2 message 0x05, gen 3 0x07, gen 4 a multi-part 0xFA to 0xFE): hardware and software version, the model name, and on gen 2 a gyro-present bit. On gen 4 the library treats the gyro as present only when the name is GAN12uiM. Decode it and the app knows up front whether a cube has a gyro instead of waiting for the first gyro message."],"first":"Send the battery request from smartConnect after its first readState, forward 'battery' through cw:smart, and show it in the cube window's head.","needs":[],"open":[]},{"id":"F-09","theme":"data","title":"A timer the cube runs","effort":"M","confidence":"high","lay":"Inspection ends when the first layer turns. The solve ends when the cube reads solved. Nobody touches a key or a mat. Each CFOP stage gets its own split, because the app already knows which stage the cube is in.","tech":["Start on the first state change after a scramble is confirmed, stop when the state equals solved; use the move timestamps (F-06) for precision, falling back to the message arrival time.","Splits from cfopStage transitions: cross, each F2L pair, OLL, PLL, AUF. Store them with the time in the existing history under the timer scopes with a 'smart' flag.","Confirm the scramble by watching the cube reach the scrambled state (F-11); until then the timer is armed, not running."],"first":"Add a smart timer mode to the timer panel: armed by the cube tab, started by the first turn, stopped by solved; save with splits.","needs":["F-06","F-11"],"open":[]},{"id":"F-10","theme":"data","title":"Record every solve and replay it","effort":"M","confidence":"high","lay":"Save each solve as a list of timed moves. Then play it back in the player at real speed, scrub through it, and see where the pauses were. A coach line can say: your F2L pairs took twice as long as your cross.","tech":["A solve record: the scramble, the moves with timestamps, the stage splits, the hold changes. Under 4 KB each; keep the last 200 in localStorage under cw:solves.","The player already takes a move list; add a timing track so Play follows the recorded pauses, with a speed control.","Analysis per solve: TPS by stage, longest pause and where, regrips (whole-cube turns), and the moves that undid each other (from cubeTabMerge)."],"first":"Define the record shape in docs/smart-cube.md, write it from the cube tab at solved, and add a Solves list to the History tab with Replay.","needs":["F-06","F-09"],"open":[]},{"id":"F-11","theme":"data","title":"Scramble assist: follow the scramble on the real cube","effort":"S","confidence":"high","lay":"The app shows a scramble; you turn the real cube; the picture ticks off each move as you make it and points at a mistake at once. When the cube reaches the scrambled state, the timer arms itself.","tech":["Compare the cube's state after each move with the expected prefix of the scramble; show the next move large, mark a wrong turn and offer the undo.","Works today with state inference; move decoding (F-06) makes it exact.","Reads by the hold: the user's R must be the scramble's R, so a wrong hold is caught here too, and this is another hold measurement for F-05."],"first":"Add a Scramble with the cube mode to the Solve tab while a cube is connected: the scramble as tiles, each checked off by state.","needs":[],"open":[]},{"id":"F-12","theme":"data","title":"Sleep, missed turns and resync","effort":"S","confidence":"high","lay":"A cube that fell asleep in a bag and was turned while asleep comes back with a state the app cannot trust. Detect it and offer a fix: scan the cube with the camera, or say it is solved.","tech":["On reconnect, compare the reported state with the last known one; a difference with no moves in between means turns were missed. Offer 'My cube is solved' or the scanner (scan.js) to re-seat the state. The reset command only tells the cube it is solved; no generation we know takes an arbitrary state, so a scanned state lives in the app as an offset.","Reconnect by itself when the link drops: the lab already does this with getDevices and watchAdvertisements under a flag, and the bridge always can. The cube tab's state request has no timeout; add one so a silent cube does not leave the tab waiting."],"first":"Port the lab's remembered-cube reconnect into smart-ui.js, add a timeout to cubeTabAsk, and show a 'state unsure' band after a reconnect with a changed state.","needs":["F-14"],"open":[]},{"id":"F-13","theme":"web","title":"Android as the first-class web platform: install the PWA","effort":"S","confidence":"high","lay":"On Android, Chrome has Web Bluetooth with no flag and no sidecar. Add a web app manifest and a service worker and Twistwright installs to the home screen, works offline, and connects to the cube in two taps.","tech":["Manifest, icons, a service worker that caches the static files (no build step, so the list is the script tags). Web Bluetooth works in an installed PWA on Android.","Permission does not persist across page loads without getDevices, so the chooser shows once per session; keep the MAC by name as now. Web Bluetooth is Window-only and the browser stops scans when the page is hidden, so the phone must stay on the page during a session.","Test on a real Android phone; the tilt picture at the gyro's rate on a phone needs the reduced-motion path."],"first":"Add manifest.webmanifest and sw.js, link them from index.html, and verify install and connect on an Android phone.","needs":[],"open":[]},{"id":"F-14","theme":"web","title":"Reconnect without the chooser (getDevices and watchAdvertisements)","effort":"S","confidence":"medium","lay":"Chrome can remember a cube the page was once allowed to use and reconnect when it sees it, with no chooser. The feature sits behind a flag on the computer today. The lab already uses it where it exists.","tech":["navigator.bluetooth.getDevices() and BluetoothDevice.watchAdvertisements() are behind chrome://flags/#enable-experimental-web-platform-features in Chrome, Chrome for Android, Edge and Samsung Internet as of October 2026; persistent permissions sit behind a second flag. Neither has a published ship date.","The same path reads the manufacturer data and so the MAC address, so nobody types it where the flag is on.","Show a one-time tip that names the flag for users who want autoconnect."],"first":"Move the lab's remembered-cube reconnect into smart-ui.js behind a capability check, and write the flag tip.","needs":[],"open":["Watch the Chromium persistent-permissions work (flag enable-web-bluetooth-new-permissions-backend); when it ships, drop the tip."]},{"id":"F-15","theme":"web","title":"iOS in the browser: Bluefy, and nothing else","effort":"S","confidence":"high","lay":"Safari on iPhone has no Web Bluetooth and WebKit has said it opposes such APIs. Third-party browsers on iOS must use Apple's engine too, so Chrome on iPhone has no Bluetooth either. Two workarounds exist: Bluefy, a browser app with its own Bluetooth, and a newer Safari extension that adds navigator.bluetooth to Safari itself. Document them, test them, and point iPhone users at them until there is an app (F-23).","tech":["Bluefy implements most of Web Bluetooth over CoreBluetooth; gan.js already handles its raw manufacturer bytes, so the MAC may come through there.","beacio (listed as iOSWebBLE) is a Safari Web Extension that implements navigator.bluetooth; its 2.2.0 release needs iOS 26.2. If it passes the GAN services and manufacturer data, twistwright.com works in Safari on an iPhone with no app of ours.","The dialog already says 'On an iPhone or iPad, use the Bluefy browser' when no Bluetooth path exists; add the beacio line and a link for each.","This is a stopgap: an iOS app with a WKWebView (F-23) gives the same page full Bluetooth."],"first":"Test the connect flow in Bluefy and in Safari with the beacio extension on an iPhone, note what works, and add the beacio line and links to the Smart cube dialog.","needs":[],"open":["Does Bluefy pass manufacturer data through watchAdvertisements? Test.","Does the beacio extension expose the GAN service UUIDs and manufacturer data? Test on an iPhone on iOS 26.2 or later."]},{"id":"F-16","theme":"web","title":"WebSocket, origins and the one shape for every bridge","effort":"S","confidence":"high","lay":"The Mac app had to serve the page itself because Safari blocks a page on the web from talking to an app on the same computer. That forced a shape: the page keeps all the cube logic, the app only moves bytes. The shape turns out to be the right one for every platform. Keep it, and name it.","tech":["bridgeDevice wraps a link in the shape of a Web Bluetooth device, so ganOpen does not know whether a browser or an app is underneath. A WKWebView bridge on iOS (postMessage both ways) and a native macOS window can use the exact same JSON messages listed at the top of mac/Sources/Bridge.swift: scan, stop, connect, disconnect, notify, write; hello, bluetooth, device, connected, gone, value, written, error.","Write the message list down as docs/bridge-protocol.md with a version, so an app and the page can move independently. Note the gaps the audit found: no unnotify op, RSSI dropped, no state restoration.","Keep the cipher and protocol in JavaScript, in one place, for every host."],"first":"Extract the message list from Bridge.swift into docs/bridge-protocol.md and add a protocol version to the hello message.","needs":[],"open":[]},{"id":"F-17","theme":"camera","title":"The webcam as a yaw anchor","effort":"L","confidence":"medium","lay":"The webcam can see which colors face it. One good look a second is enough to know which way the cube points relative to the screen, and the screen is where you are facing. That one look kills the heading drift for good, as long as the cube is in view.","tech":["scan.js already finds and reads a face from a still image at nine stickers. A continuous, low-rate version (2 to 5 fps) finds the cube, reads the visible one to three faces and their colors, and matches them to the known state to recover the full orientation of the cube relative to the camera.","The state is known from Bluetooth, so the vision problem is small: given the state, which of the 24 orientations best explains the colors seen? That is a lookup, not a model.","Fuse the result as a yaw measurement into the tracker (F-05) with a weight that falls when the cube is small in frame or partly hidden by the hands.","Privacy: frames never leave the device; show the camera indicator and make it opt-in."],"first":"Prototype in the lab: a video element, readFace at 3 fps on a crop around the largest saturated blob, and the best-fit orientation printed in the log beside the tilt reading.","needs":["F-05"],"open":["Hands cover much of the cube during a solve; measure how often a usable view appears."]},{"id":"F-18","theme":"camera","title":"See the person: face direction cancels the fidget","effort":"M","confidence":"medium","lay":"The drift you notice comes from you turning in your seat. A webcam sees your face. Face landmarks give your head's direction to a few degrees many times a second. Subtract that from the cube's heading and the fidget vanishes, cube in view or not.","tech":["MediaPipe Face Landmarker (@mediapipe/tasks-vision 1.x, runs in the browser on WebGL or WebGPU, which Safari 26 now ships too) returns a face transform matrix; its yaw is the person's facing relative to the camera.","Body yaw and head yaw differ (people look around without turning), so use it as a soft measurement with a slow time constant, or gate on shoulder landmarks from the pose model.","Cheap on a laptop: tens of frames a second; a phone needs the lower rate.","The same model gives presence: no face, no one is solving, pause the stage reader."],"first":"Add a lab experiment: Face Landmarker from the MediaPipe CDN, the yaw plotted beside the cube's yaw, and a toggle that subtracts it.","needs":["F-05"],"open":["Confirm MediaPipe's WASM and model files load from a CDN the site can use, or vendor them under lab/."]},{"id":"F-19","theme":"camera","title":"Hands: regrips, fingertricks and the real hold","effort":"L","confidence":"low","lay":"A hand-tracking model sees where your fingers are. That tells us which hand turned a layer, when you regripped, and how you hold the cube, which is the hold the tracker wants. It also lets a coach say: you did that U with your wrist, try the index finger.","tech":["MediaPipe Hand Landmarker gives 21 points per hand. The hands' positions relative to the cube's bounding box give the grip; a change of grip is a regrip event.","Pair each decoded move (F-06) with the hand that moved at the same time to classify the fingertrick.","Hard: the hands hide the cube and each other, and the cube's small size in a laptop frame limits accuracy. Treat as research."],"first":"Record ten solves with the webcam and the move stream; label regrips by hand and see whether the landmark data separates them.","needs":["F-06","F-17"],"open":["Is the accuracy at laptop distance good enough for fingers on a 56 mm cube?"]},{"id":"F-20","theme":"camera","title":"An in-browser coach over the solve history","effort":"M","confidence":"medium","lay":"With solves recorded (F-10), a small language model that runs in the browser can read your last twenty solves and say, in plain words, what to practice: which F2L case stalls you, which PLL you hesitate on. No data leaves the device.","tech":["Chrome's built-in Prompt API (Gemini Nano, web pages from Chrome 148, desktop only, 22 GB free disk and a 4 GB GPU or 16 GB RAM) where available; Transformers.js v4 with a small instruction model over WebGPU elsewhere (WebGPU now ships in Chrome, Edge, Safari 26 and Firefox on Apple Silicon); a plain rules engine as the fallback that always works.","The input is structured: per-case times and pause positions from F-10, not raw moves. The output is three sentences and a drill list that the Practice tab can load.","Keep it honest: every sentence must cite the numbers it came from; show them."],"first":"Write the rules engine first (it is the baseline the models must beat), then try the Prompt API behind a setting.","needs":["F-10"],"open":["Prompt API availability outside Chrome; model size and first-load cost on a phone."]},{"id":"F-21","theme":"native","title":"Twistwright for macOS as a real app: WKWebView first, native views later","effort":"L","confidence":"high","lay":"The Mac app today is a bridge: it serves the page to Safari and moves Bluetooth bytes. Make it the app: a window with the same page inside, Bluetooth direct with no WebSocket and no origin rules, the camera through the app, notifications, the menu bar timer, and a connection that survives in the background. The web page stays the one codebase.","tech":["Host the page in a WKWebView and replace the WebSocket with WKScriptMessageHandler, same JSON messages (F-16). Serve from the bundle or from twistwright.com with the bridge injected.","CoreBluetooth gives background connection, state restoration, RSSI, the advertisement data (and so the MAC), and several cubes at once. The bridge uses none of restoration, RSSI or retrievePeripherals today.","Camera: AVFoundation with Continuity Camera, so an iPhone on a stand is the webcam for F-17 and F-18, with a far better view than a laptop lid.","Then native pieces where they pay: a SwiftUI timer window, Shortcuts actions (start a session, read the last time), a widget with today's average, an app icon.","Distribution: a signed zip on GitHub Releases today, notarized when mac/build.sh runs with --notarize; the Bluetooth usage string is already in mac/Info.plist. The Mac App Store would add the com.apple.security.device.bluetooth sandbox entitlement (plus network.client while the page is proxied), both routine."],"first":"Add a window to the menu bar app with a WKWebView on the served page and a script-message bridge that speaks the Bridge.swift messages; keep the WebSocket for Safari.","needs":["F-16"],"open":[]},{"id":"F-22","theme":"native","title":"On-device Apple models: Foundation Models and Vision","effort":"M","confidence":"medium","lay":"On macOS 26 and iOS 26 an app can call Apple's on-device language model and ask for typed answers: a practice plan with named cases, a sentence about the last solve. The Vision framework reads hands and tracks objects without a third-party model. All of it works offline and sends nothing anywhere.","tech":["FoundationModels: an on-device model of about 3 billion parameters at 2 bits per weight, with guided generation (@Generable structs), tool calling and streaming; a 4,096-token context at launch, 8,192 from iOS 26.4. Good for the coach (F-20) with structured input; not good for long reasoning. Availability depends on Apple Intelligence being on and the device supporting it. WWDC26 added image attachments and a larger Private Cloud Compute model for macOS 27 and iOS 27.","Vision: VNDetectHumanHandPoseRequest for hands (F-19), VNTrackObjectRequest for the cube's position as a 2D box; Core ML for a small custom cube-pose model if needed. iOS 27 adds ARKit reference-object tracking on the phone at full frame rate, but only for rigid objects, which a cube with turning layers is not.","The web page cannot call these; the app exposes them to the page over the same message bridge as a 'coach' and 'vision' service, so the page degrades to the in-browser path elsewhere."],"first":"A Swift prototype that takes a solve record (F-10) as JSON and returns a @Generable PracticePlan; measure latency and quality on an M-series Mac.","needs":["F-21","F-10"],"open":["Does guided generation hold up on the per-case numbers, or does it invent cases? Test with a fixed set."]},{"id":"F-23","theme":"native","title":"Twistwright for iPhone, with the same page and a watch beside it","effort":"L","confidence":"high","lay":"iPhone has no browser path at all. An app with the web page inside and CoreBluetooth underneath fixes that with the code we have. The phone's camera is the best camera we will get for the cube. And a watch on the turning wrist measures the body: a fidget shows up on the watch and the cube together, a cube turn only on the cube.","tech":["WKWebView plus the F-16 bridge: the same page, the same messages. CoreBluetooth on iOS gives the advertisement data (the MAC) and background connection with the bluetooth-central background mode.","Watch: Core Motion's device motion on watchOS gives attitude at 100 Hz, with a magnetic reference for yaw in the xArbitraryCorrectedZVertical frame. Stream it to the phone; the tracker (F-05) subtracts the wrist's yaw drift from the cube's. The watch also starts and stops the timer by haptic. Two cautions: the wrist pose is not the cube pose, and the watch's magnetometer sits a hand's width from a cube full of magnets.","App Store: NSBluetoothAlwaysUsageDescription with a concrete benefit (a vague string fails review), a camera usage string, no private API. AccessorySetupKit (iOS 18) gives a system picker for one accessory with no broad Bluetooth prompt.","The phone replaces Bluefy (F-15) and carries the camera work (F-17, F-18) at arm's length, which is the right distance."],"first":"A SwiftUI iOS target beside the Mac sources (rename mac/ to apple/ when it has two) that loads the page in a WKWebView and connects a cube through the shared bridge messages.","needs":["F-16","F-21"],"open":["Is the watch's yaw stable enough over ten minutes to be a reference, with a magnetic cube that close? Measure the magnetometer disturbance before building on it."]},{"id":"F-24","theme":"moon","title":"The cube in the room: visionOS and the next moves drawn on the real cube","effort":"XL","confidence":"low","lay":"On a headset the problem inverts: the device tracks the real cube in the room with its cameras, so the orientation is never in doubt, and the next move can be drawn as an arrow on the real face. The Bluetooth state says which stickers are where; the headset says where the cube is. Together they are the trainer we cannot build on a screen.","tech":["visionOS 2 and iOS 27 object tracking take a reference object trained in Create ML from a USDZ model (CAD or Object Capture) and track it in space, in an ImmersiveSpace on visionOS and at full frame rate on iPhone, up to ten objects. Apple documents it for rigid objects. A cube turns its layers and changes its pattern, so track the cube body (edges, corners, black plastic) with a custom model and take the sticker layout from Bluetooth.","The same WKWebView-and-bridge app runs on visionOS as an iPad-compatible app for the 2D parts.","Niche hardware today; keep the idea so the tracker (F-05) and the record format (F-10) do not close the door."],"first":"None until F-21 and F-23 exist. Revisit when object tracking of textured, changing objects is documented as workable.","needs":["F-23"],"open":[]},{"id":"F-25","theme":"moon","title":"Range the cube with UWB or the phone's radio","effort":"XL","confidence":"low","lay":"Apple's ultra-wideband chip finds AirTags to the centimeter and points at them. If a phone could range the cube the same way, position would come for free. It cannot: the cube has no UWB radio, and Apple's Nearby Interaction needs one on both ends. Bluetooth signal strength is too coarse for direction. Closed unless GAN ships a UWB cube.","tech":["Nearby Interaction requires an accessory with an approved UWB chip that speaks Apple's Nearby Interaction Accessory Protocol; GAN cubes have a BLE radio only. Wi-Fi Aware (iOS 26) likewise needs a certified accessory.","BLE 5.1 direction finding (AoA/AoD) needs antenna arrays on the receiver; phones and Macs do not expose it.","RSSI gives distance to about a meter at best, no direction."],"first":"None. Record the reason here so the question is not asked again.","needs":[],"open":[]},{"id":"F-26","theme":"moon","title":"Two cubes, one screen: race a friend or pair a teacher with a student","effort":"M","confidence":"high","lay":"Web Bluetooth and CoreBluetooth both allow more than one device at a time. Two cubes on one screen means a head-to-head race with two live pictures and two timers, or a teacher's cube drawn beside a student's so the student copies the move.","tech":["ganOpen already returns a link per device and the bridge keeps per-id tables; the cube tab and the lab hold a single connection. Make the tab a list, one window per cube, and give the timer two lanes.","The teacher mode is a diff: highlight the stickers where the student's cube differs from the teacher's.","Over the bridge the app already lists several cubes in the chooser."],"first":"Connect two cubes in the lab, show both pictures, and see whether the gyro streams of two cubes keep up over one Bluetooth radio.","needs":[],"open":["Throughput of two gyro streams at once on one radio."]}]};
+  if (!DATA) return;
+  const STATUSES = ['proposed','approved','backlog','closed'];
+  const LABEL = {proposed:'Proposed', approved:'Approved', backlog:'Backlog', closed:'Closed'};
+  const EFFORT = {S:'small', M:'medium', L:'large', XL:'very large'};
+  const $ = (s, el) => (el || document).querySelector(s);
+  const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+  const ls = {
+    get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+    set(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+  };
+  // h(tag, attrs, ...children): every string child becomes a text node.
+  function h(tag, attrs){
+    const el = document.createElement(tag);
+    if (attrs) for (const k in attrs) {
+      const v = attrs[k];
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'style') el.style.cssText = v;
+      else if (k === 'dataset') Object.assign(el.dataset, v);
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : v);
+    }
+    for (let i = 2; i < arguments.length; i++) append(el, arguments[i]);
+    return el;
+  }
+  function append(el, c){
+    if (c == null || c === false) return;
+    if (Array.isArray(c)) { c.forEach(x => append(el, x)); return; }
+    el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  }
+  // Text with F-NN tokens turned into links.
+  function linked(s){
+    const out = []; let last = 0;
+    for (const m of s.matchAll(/\b(F-\d\d)\b/g)) {
+      out.push(s.slice(last, m.index));
+      out.push(h('a', {href: '#' + m[1]}, m[1]));
+      last = m.index + m[1].length;
+    }
+    out.push(s.slice(last)); return out;
+  }
+  const byId = {}; DATA.findings.forEach(f => byId[f.id] = f);
+  const state = {};  // id -> {status, note, updatedAt, by, history}
+  const draft = {};  // id -> status chosen but not saved
+  let db = null, user = null, canWrite = null, uid = null;
+  const names = {};
+  const stickerVar = s => 'var(--sticker-' + s + ')';
+  const sq = (s, cls) => h('span', {class: cls || 'sq', style: 'background:' + stickerVar(s)});
+
+  // ---- static render ----
+  const tocThemes = $('#toc-themes'), chips = $('#themechips'), themesEl = $('#themes');
+  for (const t of DATA.themes) {
+    tocThemes.appendChild(h('li', null, h('a', {href: '#theme-' + t.id}, h('span', {class: 'n'}, sq(t.sticker)), h('span', null, t.name))));
+    chips.appendChild(h('button', {class: 'chip', type: 'button', dataset: {t: t.id}, 'aria-pressed': 'false'}, sq(t.sticker), t.name));
+    const sec = h('section', {class: 'theme', id: 'theme-' + t.id, dataset: {themeId: t.id}},
+      h('div', {class: 'theme-head'}, sq(t.sticker), h('div', null, h('h3', null, t.name), h('p', null, t.lead))));
+    DATA.findings.filter(f => f.theme === t.id).forEach(f => sec.appendChild(card(f)));
+    themesEl.appendChild(sec);
+  }
+  function refList(ids){
+    const out = [];
+    ids.forEach((n, i) => { if (i) out.push(h('br')); out.push(h('a', {href: '#' + n}, n)); out.push(' ' + (byId[n] ? byId[n].title : '')); });
+    return out;
+  }
+  function card(f){
+    const kv = h('dl', {class: 'kv'});
+    if (f.needs.length) { kv.appendChild(h('dt', null, 'needs')); kv.appendChild(h('dd', null, refList(f.needs))); }
+    const unlocks = DATA.findings.filter(g => g.needs.includes(f.id)).map(g => g.id);
+    if (unlocks.length) { kv.appendChild(h('dt', null, 'unlocks')); kv.appendChild(h('dd', null, refList(unlocks))); }
+    if (f.open.length) { kv.appendChild(h('dt', null, 'open')); kv.appendChild(h('dd', null, f.open.flatMap((o, i) => i ? [h('br'), o] : [o]))); }
+    return h('article', {class: 'card s-proposed', id: f.id, dataset: {id: f.id, status: 'proposed', themeId: f.theme}},
+      h('div', {class: 'stripe'}),
+      h('div', {class: 'body'},
+        h('div', {class: 'top'},
+          h('span', {class: 'id'}, f.id),
+          h('span', {class: 'ttl'}, f.title),
+          h('span', {class: 'badges'},
+            h('span', {class: 'badge eff', title: 'Effort: ' + EFFORT[f.effort]}, 'effort ', h('b', null, f.effort)),
+            h('span', {class: 'badge conf-' + f.confidence, title: 'Confidence that it works as described'}, f.confidence + ' confidence'),
+            h('span', {class: 'pill s-proposed stat', dataset: {stat: ''}}, h('i'), h('span', null, 'Proposed')))),
+        h('p', {class: 'lay'}, f.lay),
+        h('details', null,
+          h('summary', null, 'Technical detail and first step'),
+          h('div', {class: 'tech'},
+            h('ul', null, f.tech.map(t => h('li', null, linked(t)))),
+            h('div', {class: 'first'}, h('b', null, 'First step. '), linked(f.first)),
+            kv)),
+        h('div', {class: 'ctl', dataset: {ctl: ''}},
+          h('div', {class: 'row'},
+            h('div', {class: 'seg', role: 'group', 'aria-label': 'Status of ' + f.id},
+              STATUSES.map(s => h('button', {type: 'button', dataset: {s}, 'aria-pressed': String(s === 'proposed'), disabled: true}, h('i'), LABEL[s]))),
+            h('span', {class: 'who', dataset: {who: ''}})),
+          h('textarea', {id: 'note-' + f.id, placeholder: 'A note for the agent: why, what to change, what to check first.', disabled: true}),
+          h('div', {class: 'row'},
+            h('button', {type: 'button', class: 'save', dataset: {save: ''}, disabled: true}, 'Save'),
+            h('span', {class: 'ro', dataset: {ro: ''}}, 'Connecting to the shared store…')),
+          h('div', {class: 'hist', dataset: {hist: ''}}))));
+  }
+
+  // ---- matrix ----
+  const matrix = $('#matrix');
+  function drawMatrix(){
+    const effs = ['S','M','L','XL'], confs = ['high','medium','low'];
+    const kids = [h('div')];
+    effs.forEach(e => kids.push(h('div', {class: 'h'}, e)));
+    for (const c of confs) {
+      kids.push(h('div', {class: 'r'}, c));
+      for (const e of effs) {
+        const cell = h('div', {class: 'c'});
+        DATA.findings.filter(f => f.effort === e && f.confidence === c)
+          .forEach(f => cell.appendChild(h('a', {href: '#' + f.id, class: 's-' + ((state[f.id] || {}).status || 'proposed'), title: f.title}, f.id)));
+        kids.push(cell);
+      }
+    }
+    matrix.replaceChildren.apply(matrix, kids);
+  }
+
+  // ---- status rendering ----
+  function fmtWhen(iso){ try { const d = new Date(iso); if (isNaN(d)) return ''; return d.toLocaleDateString(undefined, {year:'numeric', month:'short', day:'numeric'}) + ' ' + d.toLocaleTimeString(undefined, {hour:'2-digit', minute:'2-digit'}); } catch(e){ return ''; } }
+  async function resolveNames(ids){
+    if (!user || !ids.length) return;
+    try { const ps = await user.profiles(ids); ids.forEach(id => { names[id] = (ps[id] && ps[id].name) || ''; }); } catch(e){}
+  }
+  function paint(){
+    const counts = {proposed:0, approved:0, backlog:0, closed:0};
+    for (const f of DATA.findings) {
+      const el = document.getElementById(f.id);
+      const s = state[f.id] || {};
+      const status = STATUSES.includes(s.status) ? s.status : 'proposed';
+      counts[status]++;
+      el.dataset.status = status;
+      el.className = 'card s-' + status;
+      const pill = $('[data-stat]', el);
+      pill.className = 'pill s-' + status + ' stat';
+      $('span', pill).textContent = LABEL[status];
+      const chosen = draft[f.id] || status;
+      $$('.seg button', el).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === chosen)));
+      const who = $('[data-who]', el);
+      who.textContent = s.updatedAt ? fmtWhen(s.updatedAt) + (s.by && names[s.by] ? ' · ' + names[s.by] : '') : '';
+      const ta = $('textarea', el);
+      if (!Object.prototype.hasOwnProperty.call(draft, f.id) && document.activeElement !== ta) ta.value = typeof s.note === 'string' ? s.note : '';
+      const hist = $('[data-hist]', el);
+      const rows = (Array.isArray(s.history) ? s.history : []).slice(-5).reverse().map(x => {
+        const note = typeof x.note === 'string' ? x.note : '';
+        return h('div', null, fmtWhen(x.at) + ' · ' + (LABEL[x.status] || String(x.status || '')) +
+          (x.by && names[x.by] ? ' · ' + names[x.by] : '') + (note ? ' · ' + (note.length > 80 ? note.slice(0, 80) + '…' : note) : ''));
+      });
+      hist.replaceChildren.apply(hist, rows);
+    }
+    const cEl = $('#counts');
+    cEl.replaceChildren.apply(cEl, STATUSES.map(s => h('span', {class: 'pill s-' + s}, h('i'), counts[s] + ' ' + LABEL[s].toLowerCase())));
+    drawMatrix();
+    applyFilter();
+  }
+
+  // ---- filters ----
+  let fStatus = ls.get('horizons:fs') || 'all';
+  let fTheme = ls.get('horizons:ft') || 'all';
+  if (!STATUSES.concat('all').includes(fStatus)) fStatus = 'all';
+  if (fTheme !== 'all' && !DATA.themes.some(t => t.id === fTheme)) fTheme = 'all';
+  function applyFilter(){
+    $$('#filters [data-f]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === fStatus)));
+    $$('#filters [data-t]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.t === fTheme)));
+    for (const sec of $$('.theme')) {
+      let any = false;
+      for (const c of $$('.card', sec)) {
+        const show = (fStatus === 'all' || c.dataset.status === fStatus) && (fTheme === 'all' || c.dataset.themeId === fTheme);
+        c.hidden = !show; if (show) any = true;
+      }
+      sec.hidden = !any;
+    }
+  }
+  $('#filters').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.f) { fStatus = b.dataset.f; ls.set('horizons:fs', fStatus); }
+    if (b.dataset.t) { fTheme = fTheme === b.dataset.t ? 'all' : b.dataset.t; ls.set('horizons:ft', fTheme); }
+    applyFilter();
+  });
+  paint();
+
+  // ---- deep link: show and open the card ----
+  function openHash(){
+    const id = location.hash.replace('#','');
+    if (!byId[id]) return;
+    const el = document.getElementById(id); if (!el) return;
+    if (el.hidden) { fStatus = 'all'; fTheme = 'all'; applyFilter(); }
+    const d = $('details', el); if (d) d.open = true;
+    el.scrollIntoView({block: 'start'});
+  }
+  window.addEventListener('hashchange', openHash);
+  if (location.hash) setTimeout(openHash, 0);
+
+  // ---- toc highlight ----
+  const tocLinks = $$('#toc a');
+  const targets = tocLinks.map(a => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
+  if ('IntersectionObserver' in window) {
+    const seen = new Map();
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(en => seen.set(en.target.id, en.isIntersecting));
+      const first = targets.find(t => seen.get(t.id));
+      if (!first) return;
+      tocLinks.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + first.id));
+    }, {rootMargin: '-10% 0px -70% 0px'});
+    targets.forEach(t => io.observe(t));
+  }
+  if (matchMedia('(max-width: 979px)').matches) $('#tocbox').open = ls.get('horizons:toc') === 'open';
+  $('#tocbox').addEventListener('toggle', e => ls.set('horizons:toc', e.target.open ? 'open' : 'closed'));
+
+  // ---- toast ----
+  let toastT;
+  function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600); }
+
+  // ---- controls ----
+  function setReadOnly(msg){
+    for (const el of $$('[data-ctl]')) {
+      $$('button', el).forEach(b => { b.disabled = true; });
+      $('textarea', el).disabled = true;
+      $('[data-ro]', el).textContent = msg;
+    }
+  }
+  function enableControls(){
+    for (const el of $$('[data-ctl]')) {
+      $$('.seg button', el).forEach(b => { b.disabled = false; });
+      $('textarea', el).disabled = false;
+      $('[data-save]', el).disabled = true;
+      $('[data-ro]', el).textContent = 'Pick a status, add a note, save.';
+    }
+  }
+  themesEl.addEventListener('click', e => {
+    const b = e.target.closest('.seg button'); if (!b || b.disabled) return;
+    const card = b.closest('.card'); const id = card.dataset.id;
+    draft[id] = b.dataset.s;
+    $$('.seg button', card).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    $('[data-save]', card).disabled = false;
+  });
+  themesEl.addEventListener('input', e => {
+    if (e.target.tagName !== 'TEXTAREA') return;
+    const card = e.target.closest('.card'); const id = card.dataset.id;
+    if (!Object.prototype.hasOwnProperty.call(draft, id)) draft[id] = (state[id] || {}).status || 'proposed';
+    $('[data-save]', card).disabled = false;
+  });
+  const saving = {};
+  themesEl.addEventListener('click', async e => {
+    const b = e.target.closest('[data-save]'); if (!b || !db) return;
+    const card = b.closest('.card'); const id = card.dataset.id;
+    if (saving[id]) return;
+    const prev = state[id] || {};
+    const status = draft[id] || prev.status || 'proposed';
+    const note = $('textarea', card).value.trim().slice(0, 4000);
+    if (status === (prev.status || 'proposed') && note === (prev.note || '')) { delete draft[id]; b.disabled = true; return; }
+    const at = new Date().toISOString();
+    const history = (Array.isArray(prev.history) ? prev.history : []).concat([{status, note, at, by: uid}]).slice(-20);
+    saving[id] = true; b.disabled = true; b.textContent = 'Saving…';
+    try {
+      await db.doc('findings/' + id).set({status, note, updatedAt: at, by: uid, history});
+      delete draft[id];
+      toast(id + ' saved as ' + LABEL[status]);
+    } catch (err) {
+      const code = err && err.code;
+      if (code === 'invalid_argument' || code === 'not_granted') { canWrite = false; setReadOnly('You can read this page but not change the decisions.'); }
+      else { toast('Could not save. Try again in a moment.'); b.disabled = false; }
+    } finally {
+      saving[id] = false; b.textContent = 'Save';
+    }
+  });
+
+  // ---- live store ----
+  (async () => {
+    if (!(window.claude && typeof window.claude.use === 'function')) { setReadOnly('Decisions are read-only in this copy. Open the published artifact to change them.'); return; }
+    const got = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    db = got[0]; user = got[1];
+    if (!db) { setReadOnly('Sign in to see and change the decisions.'); return; }
+    try { uid = user ? await user.id() : null; } catch(e){ uid = null; }
+    try { canWrite = user ? await user.can('data.write') : null; } catch(e){ canWrite = null; }
+    if (canWrite === false) setReadOnly('You can read the decisions but not change them. Ask the owner for Contributor access.');
+    else enableControls();
+    db.collection('findings').onSnapshot(async snap => {
+      snap.docs.forEach(d => { if (byId[d.id]) state[d.id] = d.data() || {}; });
+      snap.docChanges().forEach(ch => { if (ch.type === 'removed') delete state[ch.doc.id]; });
+      const ids = new Set();
+      Object.values(state).forEach(s => { if (s.by) ids.add(s.by); (Array.isArray(s.history) ? s.history : []).forEach(x => { if (x && x.by) ids.add(x.by); }); });
+      await resolveNames(Array.from(ids));
+      paint();
+    }, err => {
+      if (err && err.code === 'revoked') setReadOnly('Access to the shared decisions ended for this visit. Reload to try again.');
+      else setReadOnly('The shared store is not reachable right now. The statuses shown may be stale.');
+    });
+  })();
+})();
+</script>
