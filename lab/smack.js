@@ -149,3 +149,23 @@ function turnDetector(opts){
   }
   return {feed,reset,state:st,opts:o,set(k,v){o[k]=v;}};
 }
+// Experiment 3: one face turned and turned back, three times over (R R' R R' R R', or
+// U' U U' U U' U), is a gesture: the lab does Reset cube. Fed each move as the cube reports it,
+// before the list merges it (R then R' merge to nothing). A move of another face, a half turn, or
+// the same quarter turn twice starts the count over; `count` quarter turns in a row is a hit, and
+// the count starts over after it.
+const TWIST_DEFAULTS={count:6};
+function twistDetector(opts){
+  const o=Object.assign({},TWIST_DEFAULTS,opts);
+  const st={moves:[]};
+  function reset(){st.moves=[];}
+  function feed(m){
+    const quarter=/^[URFDLB]'?$/.test(m),last=st.moves[st.moves.length-1];
+    if(!quarter)st.moves=[];
+    else if(last&&last[0]===m[0]&&last!==m)st.moves.push(m);
+    else st.moves=[m];
+    if(st.moves.length<o.count)return false;
+    st.moves=[];return true;
+  }
+  return {feed,reset,state:st,opts:o,set(k,v){o[k]=v;}};
+}

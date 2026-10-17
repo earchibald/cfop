@@ -51,7 +51,7 @@ aside section{margin-bottom:18px}
 #trace{width:100%;height:70px;background:var(--panel2);border-radius:8px}
 #trace polyline{fill:none;stroke:var(--sticker-B);stroke-width:1.5}#trace line{stroke:var(--faint);stroke-dasharray:3 3}
 .log{font-family:var(--mono);font-size:11.5px;line-height:1.5;max-height:220px;overflow:auto;background:var(--panel2);border-radius:8px;padding:6px 8px;color:var(--muted)}
-.log div.tstart{color:var(--text)}.log div.tupdate{color:var(--faint)}.log div.tfinish{color:var(--text)}.log div.tmove{color:var(--warn);font-weight:600}
+.log div.twist{color:var(--warn);font-weight:600}.log div.tstart{color:var(--text)}.log div.tupdate{color:var(--faint)}.log div.tfinish{color:var(--text)}.log div.tmove{color:var(--warn);font-weight:600}
 aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-bottom:6px}
 .log div.smack{color:var(--text)}.log div.series{color:var(--warn);font-weight:600}.log div.solved{color:var(--text)}
 .note{color:var(--muted);font-size:12.5px;margin:6px 0 0}
@@ -105,6 +105,12 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
     <div class="knob tknob"><label for="tUpd">update ms</label><input type="range" id="tUpd" data-k="updateMs" min="50" max="1000" step="10"><output></output></div>
     <div class="knob tknob"><label for="tSnap">snap deg</label><input type="range" id="tSnap" data-k="snap" min="5" max="45" step="1"><output></output></div>
     <p class="note">A turn that comes to rest within the snap of another hold goes on the list, dashed, and the hold follows it. One that rests between holds, or back at the hold, changes nothing. Reset cube starts the rest pose over.</p>
+  </section>
+  <section>
+    <h2>Reset with twists</h2>
+    <label class="chk" title="Turn one face and turn it back, three times over. The lab then does Reset cube, as if R were pressed."><input type="checkbox" id="twistOn" checked> Reset cube after six twists of one face</label>
+    <div class="knob"><label for="twistMs">after ms</label><input type="range" id="twistMs" min="0" max="1000" step="5"><output></output></div>
+    <p class="note">R R' R R' R R', or U' U U' U U' U: six quarter turns of one face, each one undone by the next. They leave the cube, and the list, as they were. Another face, a half turn, or the same turn twice starts the count over. The lab waits the time set, then does Reset cube.</p>
   </section>
   <section>
     <h2>Smack tuning</h2>

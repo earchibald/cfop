@@ -30,6 +30,9 @@
 // within `snap` degrees of another of the 24 holds is that whole-cube turn: it goes on the list,
 // dashed, and the hold moves on, so the moves after it read as held. One that comes to rest
 // between holds, or back at the hold, changes nothing.
+// Experiment 3: one face turned and turned back, three times over (R R' R R' R R'), is a gesture
+// (twistDetector, fed each move before the list merges it): the lab waits `twistMs`, then does
+// Reset cube, as if R were pressed. The six quarter turns leave the cube, and the list, as they were.
 // The moves since the connect sit in a box of their own under the picture, as the cube tab's
 // readout: merged as they come, the last ten shown, a triangle for more, and Clear moves.
 // The hold: the cube names its moves with its white face up and green in front, however it is
@@ -40,7 +43,7 @@
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,
-  busy:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,times:[],trace:[],traceRaf:0,confirmOpen:false};
+  busy:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000;
 // The cameras: straight on, the cube as it sits in space; and isometric, a little from the right
 // and above, the site's usual view.
@@ -167,7 +170,11 @@ function labHoldPick(){
   const up=parseInt($('#holdUp').value,10),front=parseInt($('#holdFront').value,10);
   const ok=f=>Number.isInteger(f)&&f!==up&&f!==(up+3)%6,h=labHoldOf(up,ok(front)?front:ok(2)?2:1);
   if(h)labSetHold(h,'user');
+  labBlur();
 }
+// A select keeps the focus after a choice, and then a key goes to it (R picks red) and not to the
+// page. Let it go.
+function labBlur(){const a=document.activeElement;if(a&&a!==document.body&&a.blur)a.blur();}
 // Set the hold. From the user: the turn from the old hold to the new goes on the list, so the
 // moves before it still read right, the log says so, and the cube as held now is the reference
 // pose (Reset cube) when there is a tilt reading. From a detected turn: the turn goes on the list
@@ -189,7 +196,7 @@ function labSetHold(h,src){
 function labShow(cube){
   if(lab.jump){lab.jump=false;labJump(cube);return;}
   const moved=labPath(lab.target||lab.shown,cube);
-  if(moved&&moved.length){for(const m of moved)lab.moves=labMerge(lab.moves,labRelabel(m));labMovesDraw();}
+  if(moved&&moved.length){for(const m of moved){const r=labRelabel(m);lab.moves=labMerge(lab.moves,r);if($('#twistOn').checked&&lab.twist.feed(r))labTwist(r);}labMovesDraw();}
   if(!moved||!moved.length){labStopAnim();lab.shown=lab.target=cube;labDraw();return;}
   lab.target=cube;lab.queue.push(...moved);
   if(!lab.anim)labNext();
@@ -267,6 +274,13 @@ function labReset(){
   else{lab.q=lab.qTo=null;labDraw();}
   labLog('reset','Reset cube ('+labResetMode()+'): '+labHoldWords(lab.hold)+'.');
 }
+// ----- experiment 3: six twists of one face -----
+// The sixth quarter turn: say so, then Reset cube after the wait. A second gesture within the wait
+// starts the wait over.
+function labTwist(m){
+  labLog('twist',`${m[0]} turned and turned back six times: Reset cube in ${lab.twistMs} ms`);
+  clearTimeout(lab.twistTimer);lab.twistTimer=setTimeout(()=>{lab.twistTimer=0;labReset();},lab.twistMs);
+}
 // ----- the experiment: the panel -----
 function labEvent(ev){
   const f=v=>v.toFixed(2);
@@ -313,7 +327,7 @@ function labTraceDraw(){
 }
 function labKnobs(){
   for(const inp of $$('.knob input[type=range]')){
-    const k=inp.dataset.k,out=inp.parentNode.querySelector('output');
+    const k=inp.dataset.k,out=inp.parentNode.querySelector('output');if(!k)continue;
     inp.value=lab.det.opts[k];out.value=inp.value;
     inp.oninput=()=>{lab.det.set(k,parseFloat(inp.value));out.value=inp.value;};
   }
@@ -322,8 +336,10 @@ function labKnobs(){
     inp.value=k==='snap'?lab.snap:lab.turn.opts[k];out.value=inp.value;
     inp.oninput=()=>{const v=parseFloat(inp.value);if(k==='snap')lab.snap=v;else lab.turn.set(k,v);out.value=inp.value;};
   }
+  const tw=$('#twistMs'),two=tw.parentNode.querySelector('output');tw.value=lab.twistMs;two.value=tw.value;
+  tw.oninput=()=>{lab.twistMs=parseInt(tw.value,10);two.value=tw.value;};
   const face=$('#kFace');face.value=lab.det.opts.face==null?'':String(lab.det.opts.face);
-  face.onchange=()=>{lab.det.set('face',face.value===''?null:parseInt(face.value,10));lab.det.state.series=[];labDots();
+  face.onchange=()=>{labBlur();lab.det.set('face',face.value===''?null:parseInt(face.value,10));lab.det.state.series=[];labDots();
     $('#confirmText').textContent=(face.value===''?'You smacked the cube three times.':`You smacked the ${SMACK_FACES[face.value]} face three times.`)+' Hold the cube white up, green toward you, then press Reset.';};
 }
 function labConfirm(){
@@ -452,7 +468,7 @@ async function labConnect(auto){
     try{
       const cube=await conn.readState(3000);
       labSaveMac(name,conn.mac);labRemember(name,{mac:conn.mac,id:device.id||null});lab.conn=conn;lab.busy=false;
-      lab.moves=[];lab.shown=lab.target=null;lab.asked=false;lab.want=false;lab.gyro=false;lab.raw=lab.basis=lab.q=lab.qTo=null;lab.det.reset();lab.trace=[];lab.times=[];
+      lab.moves=[];lab.shown=lab.target=null;lab.asked=false;lab.want=false;lab.gyro=false;lab.raw=lab.basis=lab.q=lab.qTo=null;lab.det.reset();lab.twist.reset();clearTimeout(lab.twistTimer);lab.twistTimer=0;lab.trace=[];lab.times=[];
       labButtons();labMovesDraw();labDots();labShow(cube);
       labStatus((conn.gen===3?'Live. Each turn of your cube turns the layer. This cube has no tilt sensor.':'Live. Each turn of your cube turns the layer. Waiting for the first tilt reading: move the cube.')+labSolvedHint(cube));
       labLog('link',`Connected to ${conn.name} (gen ${conn.gen}).`);
@@ -481,7 +497,7 @@ function labDisconnect(){
 }
 // ----- start -----
 function labStart(){
-  lab.det=smackDetector({});lab.turn=turnDetector({});
+  lab.det=smackDetector({});lab.turn=turnDetector({});lab.twist=twistDetector({});
   labSetHold(labHoldLoad(),'load');$('#holdUp').onchange=labHoldPick;$('#holdFront').onchange=labHoldPick;
   lab.iso=labIsoLoad();$('#iso').checked=lab.iso;$('#iso').onchange=e=>labIso(e.target.checked);
   labKnobs();labMovesDraw();labDraw();labButtons();

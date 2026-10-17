@@ -15,7 +15,7 @@ const turn=(axis,deg)=>{const h=deg/2*Math.PI/180,s=Math.sin(h);return [axis[0]*
 const unit=v=>{const l=Math.hypot(...v);return v.map(x=>x/l);};
 function pure(){
   const run=require('./vm-load')('lab/smack.js');
-  const quatDelta=run('quatDelta'),quatMul=run('quatMul'),resetBasis=run('resetBasis'),quatMat=run('quatMat'),smackDetector=run('smackDetector'),turnDetector=run('turnDetector'),turnName=run('turnName'),quatSlerp=run('quatSlerp');
+  const quatDelta=run('quatDelta'),quatMul=run('quatMul'),resetBasis=run('resetBasis'),quatMat=run('quatMat'),smackDetector=run('smackDetector'),turnDetector=run('turnDetector'),turnName=run('turnName'),twistDetector=run('twistDetector'),quatSlerp=run('quatSlerp');
   const I=[0,0,0,1];
   // quatDelta: the turn from a to b
   const d=quatDelta(I,turn([0,1,0],30));assert.ok(Math.abs(d.deg-30)<1e-9&&Math.abs(d.axis[1]-1)<1e-9,'quatDelta gives the angle and the axis');
@@ -73,6 +73,15 @@ function pure(){
   const wob=quatMul(turn([0,1,0],8),X);tf(2050,wob);tf(2100,X);tf(2150,X);assert.strictEqual(tev.length,0,'a wobble under start is nothing');
   tf(2200,quatMul(turn([0,1,0],25),X));tf(2250,quatMul(turn([0,1,0],25),X));for(let t=2300;t<=2700;t+=50)tf(t,X);
   assert.deepStrictEqual(tev.map(e=>e.type),['tstart','tupdate','tfinish'],'a turn that comes back: start, update, finish: '+JSON.stringify(tev.map(e=>e.type)));assert.ok(tev[2].deg<2,'back at rest: '+tev[2].deg);
+  // six twists of one face: quarter turns, each undone by the next; anything else starts the count over
+  const tw=twistDetector({}),twf=ms=>ms.split(' ').map(m=>tw.feed(m));
+  assert.deepStrictEqual(twf("R R' R R' R R'"),[false,false,false,false,false,true],'R R\' three times over is a hit');
+  assert.strictEqual(tw.state.moves.length,0,'and the count starts over');
+  assert.deepStrictEqual(twf("U' U U' U U' U"),[false,false,false,false,false,true],'either direction first');
+  assert.deepStrictEqual(twf("R R' R R' R R R' R R' R R'"),[false,false,false,false,false,false,false,false,false,false,true],'the same turn twice starts over');
+  assert.deepStrictEqual(twf("R R' R R' R2 R R' R R' R R'"),[false,false,false,false,false,false,false,false,false,false,true],'a half turn starts over');
+  assert.deepStrictEqual(twf("R R' R U U' U U' U U'"),[false,false,false,false,false,false,false,false,true],'another face starts over');
+  assert.deepStrictEqual(twf("R R' R R' R x R' R R' R R' R"),[false,false,false,false,false,false,false,false,false,false,false,true],'a whole-cube turn starts over');
   console.log('lab pure ok');
 }
 const html=fs.readFileSync(path.join(__dirname,'..','lab','index.html'),'utf8');
@@ -149,6 +158,19 @@ async function page(){
   assert.strictEqual($('#log').children.length,logBefore,'Clear moves leaves the log alone');
   cN=w.applyAlg(cN,['R']);set(cN);dev.notify(Uint8Array.from([0x01,...Array(19).fill(0)]));
   assert.ok(await until(()=>L().moves.join()==='R'),'the list fills again after Clear moves');
+  // experiment 3: six twists of one face (that R, then R' R R' R R') do Reset cube after the wait
+  assert.ok($('#twistOn').checked,'Reset with twists is on');assert.strictEqual($('#twistMs').value,'45','the wait is 45 ms');assert.strictEqual(L().twistMs,45);
+  const resets=$$('#log .reset').length;
+  for(const m of ["R'",'R',"R'",'R',"R'"]){cN=w.applyAlg(cN,[m]);set(cN);dev.notify(Uint8Array.from([0x01,...Array(19).fill(0)]));assert.ok(await until(()=>L().target&&L().target.equals(cN)),'twist '+m+' is heard');}
+  assert.strictEqual(L().moves.length,0,'the twists undo each other on the list: '+L().moves.join(' '));
+  assert.ok($('#log .twist')&&/^\S+ R turned and turned back six times: Reset cube in 45 ms$/.test($('#log .twist').textContent),'the gesture is logged: '+$('#log').textContent);
+  assert.strictEqual($$('#log .reset').length,resets,'the reset waits');
+  assert.ok(await until(()=>$$('#log .reset').length===resets+1,500),'Reset cube follows the wait: '+$('#log').textContent);
+  $('#twistMs').value='200';$('#twistMs').dispatchEvent(new w.Event('input',{bubbles:true}));assert.strictEqual(L().twistMs,200,'the knob sets the wait');assert.strictEqual($('#twistMs').parentNode.querySelector('output').value,'200');
+  $('#twistOn').checked=false;
+  for(const m of ['U',"U'",'U',"U'",'U',"U'"]){cN=w.applyAlg(cN,[m]);set(cN);dev.notify(Uint8Array.from([0x01,...Array(19).fill(0)]));assert.ok(await until(()=>L().target&&L().target.equals(cN)),'twist '+m+' is heard');}
+  await sleep(250);assert.strictEqual($$('#log .twist').length,1,'off: six twists are nothing');assert.strictEqual($$('#log .reset').length,resets+1);
+  $('#twistOn').checked=true;
   // the cube's count is off: the real cube is solved, the cube says R U F. My cube is solved sends the
   // reset, the cube takes its state as solved, the picture jumps there and the move list is unchanged
   set(w.applyAlg(new Cube(),['R','U','F']));
@@ -183,7 +205,7 @@ async function page(){
   assert.ok(await until(()=>!$('#confirm').hidden),'the dialog comes again');
   const before=L().basis.slice();
   click($('#confirmYes'));
-  assert.ok($('#confirm').hidden,'Reset closes the dialog');assert.ok($$('#log .reset').length===1,'Reset cube is logged: '+$('#log').textContent);
+  assert.ok($('#confirm').hidden,'Reset closes the dialog');assert.ok($$('#log .reset').length===resets+2,'Reset cube is logged (the twist reset, then this one): '+$('#log').textContent);
   assert.ok(/\(yaw\)/.test($('#log .reset').textContent),'yaw only by default');
   // Reset cube by hand with the cube yawed: the picture lines up again
   send({w:Math.cos(Math.PI/8),x:0,y:0,z:Math.sin(Math.PI/8)}); // 45 degrees about the cube's z: the page's y
@@ -200,7 +222,9 @@ async function page(){
   assert.strictEqual($('#holdUp').value,'0');assert.strictEqual($('#holdFront').value,'2','white up, green in front at first');
   assert.deepStrictEqual($$('#holdFront option').map(o=>o.textContent),['red','green','orange','blue'],'the front choices leave out the top and its opposite');
   click($('#movesClear'));
+  $('#holdUp').focus();assert.strictEqual(d.activeElement,$('#holdUp'),'the select has the focus');
   $('#holdUp').value='3';$('#holdUp').dispatchEvent(new w.Event('change',{bubbles:true}));
+  assert.notStrictEqual(d.activeElement,$('#holdUp'),'the select lets the focus go after a choice, so the keys reach the page');
   assert.deepStrictEqual($$('#holdFront option').map(o=>o.textContent),['red','green','orange','blue'],'yellow up: white is out');
   assert.strictEqual($('#holdFront').value,'2','green stays in front');
   assert.strictEqual(L().hold.cube.center[0],3,'the hold is yellow up');assert.strictEqual(L().hold.cube.center[2],2);
