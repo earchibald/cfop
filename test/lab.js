@@ -89,6 +89,11 @@ async function page(){
   assert.strictEqual(d.title,'Smart cube lab '+ver,'the title carries the version');
   assert.ok($('#reset').disabled,'Reset cube waits for a cube');assert.ok($('#solved').disabled,'My cube is solved waits for a cube');
   assert.ok($$('#cube polygon').length>0,'the picture is drawn before a cube connects');
+  // the camera: straight on by default, so one face shows; the Isometric box (I) shows three, and is kept
+  const flat=$$('#cube polygon').length;assert.ok(!L().iso&&!$('#iso').checked,'straight on by default');
+  key('i');assert.ok(L().iso&&$('#iso').checked,'I turns Isometric on');assert.ok($$('#cube polygon').length>flat,'three faces show: '+flat+' -> '+$$('#cube polygon').length);
+  assert.strictEqual(w.localStorage.getItem('cw:labIso'),'1','Isometric is kept');
+  $('#iso').checked=false;$('#iso').dispatchEvent(new w.Event('change',{bubbles:true}));assert.ok(!L().iso,'the box turns it off');assert.strictEqual($$('#cube polygon').length,flat,'one face again');
   // the lab opens as if Connect were pressed: the list is up with no click
   assert.ok(!$('#list').hidden,'the list shows by itself');assert.ok(/Looking for cubes|Choose your cube/.test($('#listNote').textContent),'the note: '+$('#listNote').textContent);
   assert.ok(/remembers it/.test($('#status').textContent),'the status says the lab remembers the cube: '+$('#status').textContent);
@@ -110,6 +115,7 @@ async function page(){
   assert.ok(await until(()=>L().target&&L().target.equals(c1)),'the picture heads for the cube after R');
   assert.ok(await until(()=>!L().anim&&L().shown.equals(c1)),'the layer turned');
   assert.strictEqual(L().moves.join(),'R','the move is on the list');assert.strictEqual($('#moves .mv').textContent,'R');
+  assert.ok($('#moves .mv').classList.contains('head'),'the one move is the head');
   // the box of its own: the count in the head, Clear moves, the triangle past ten moves
   assert.ok($('#movesBox')&&$('#movesBox').contains($('#moves'))&&$('#movesBox').contains($('#movesClear')),'the moves sit in a box with Clear moves');
   assert.strictEqual($('#movesCount').textContent,'1 move','the head counts the moves');assert.ok(!$('#movesClear').disabled,'Clear moves is on');
@@ -117,7 +123,7 @@ async function page(){
   for(let i=0;i<10;i++){cN=w.applyAlg(cN,[faces[i%6]]);set(cN);dev.notify(Uint8Array.from([0x01,...Array(19).fill(0)]));
     assert.ok(await until(()=>L().target&&L().target.equals(cN)),'move '+(i+2)+' is heard');}
   assert.ok(await until(()=>L().moves.length===11),'eleven moves: '+L().moves.join(' '));
-  assert.strictEqual($$('#moves .mv').length,10,'the last ten show');assert.strictEqual($$('#moves .mv')[0].textContent,'U','the first move fell off the readout');
+  assert.strictEqual($$('#moves .mv').length,10,'the last ten show');assert.strictEqual($$('#moves .mv.head').length,1,'one head move');assert.ok($$('#moves .mv')[9].classList.contains('head')&&$$('#moves .mv')[9].title==='Your last move','the newest move is the head');assert.strictEqual($$('#moves .mv')[0].textContent,'U','the first move fell off the readout');
   assert.ok($('#moves .more'),'the triangle says there are more');assert.strictEqual($('#moves .more').getAttribute('aria-label'),'1 more');assert.strictEqual($('#moves .more').title,'11 moves in all');
   assert.strictEqual($('#movesCount').textContent,'11 moves');
   const logBefore=$('#log').children.length;

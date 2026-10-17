@@ -12,7 +12,9 @@
 // soon as it is heard, with no click. With Web Bluetooth the browser's chooser needs a click, so
 // the look without one goes through getDevices, the cubes this page was once allowed.
 // The picture: the cube as the cube names it (white up, green front), turned by `q` (the turn of
-// the body in the frame of draw.js), seen from the fixed camera. A tilt reading sets `qTo`, and the
+// the body in the frame of draw.js), seen from the fixed camera: straight on, so a level cube
+// shows the face toward the user alone until it tilts, or with the Isometric box (cw:labIso)
+// from a little to the right and above, so three faces show. A tilt reading sets `qTo`, and the
 // picture turns toward it a little each frame. The heading (`basis`) is what Reset cube sets:
 // the first reading takes the cube as held white up, green toward the viewer, and so does each
 // press, as far as a turn about the vertical goes (or the whole reading with Full reset).
@@ -32,9 +34,12 @@
 // change of the hold is a Reset cube at once), and the hold is kept in cw:labHold.
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,
-  q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,
+  q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,
   busy:false,listEnd:null,pickSeq:0,macWait:null,det:null,times:[],trace:[],traceRaf:0,confirmOpen:false};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000;
+// The cameras: straight on, the cube as it sits in space; and isometric, a little from the right
+// and above, the site's usual view.
+const LAB_FLAT={yaw:0,pitch:0},LAB_ISO={yaw:-32,pitch:28};
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 function labStatus(t){$('#status').textContent=t;}
 function labButtons(){
@@ -54,7 +59,7 @@ function labVersion(){
 }
 // ----- the picture -----
 function labDraw(){
-  const svg=$('#cube'),a=lab.anim,o={n:3,scale:60,cx:200,cy:185};
+  const cam=lab.iso?LAB_ISO:LAB_FLAT,svg=$('#cube'),a=lab.anim,o={n:3,scale:60,cx:200,cy:185,yaw:cam.yaw,pitch:cam.pitch};
   o.rot=quatMat(lab.q||lab.hold.q);
   if(a&&a.t<1)svg.innerHTML=renderCube3D(a.from.toFacelets(),Object.assign(o,{move:a.move,t:Math.max(a.t,0.01)}));
   else{const f=lab.shown?lab.shown.toFacelets():Array.from({length:54},(_,i)=>i%9===4?(i-4)/9:-1);svg.innerHTML=renderCube3D(f,o);}
@@ -100,7 +105,7 @@ function labMovesDraw(){
   $('#movesCount').textContent=ms.length?ms.length+(ms.length===1?' move':' moves'):'';
   el.textContent='';
   if(!ms.length){span('none','No moves yet');return;}
-  for(const m of ms.slice(-LAB_SHOWN))span('mv'+(/^[xyz]/.test(m)?' rot':''),m);
+  ms.slice(-LAB_SHOWN).forEach((m,i,a)=>{const s=span('mv'+(/^[xyz]/.test(m)?' rot':'')+(i===a.length-1?' head':''),m);if(i===a.length-1)s.title='Your last move';});
   if(ms.length>LAB_SHOWN){
     const more=span('more');more.setAttribute('aria-label',`${ms.length-LAB_SHOWN} more`);more.title=`${ms.length} moves in all`;
     const NS='http://www.w3.org/2000/svg',svg=document.createElementNS(NS,'svg'),p=document.createElementNS(NS,'polygon');
@@ -108,6 +113,9 @@ function labMovesDraw(){
   }
 }
 function labMovesClear(){lab.moves=[];labMovesDraw();}
+// Isometric (I): on, the camera looks from a little to the right and above; off, straight on.
+function labIso(on){lab.iso=!!on;$('#iso').checked=lab.iso;try{localStorage.setItem('cw:labIso',lab.iso?'1':'');}catch(e){}labDraw();}
+function labIsoLoad(){try{return !!localStorage.getItem('cw:labIso');}catch(e){return false;}}
 // ----- the hold: which color is up and which faces the user -----
 // The 24 ways to hold the cube, as CUBE_TAB_HOLDS in cubetab.js: the whole-cube turns from the
 // cube's own frame (white up, green in front), the solved cube after them (its centers say which
@@ -307,6 +315,7 @@ function labKeys(e){
   if(k==='s'){e.preventDefault();labSolved();}
   if(k==='l'){e.preventDefault();labSide($('#side').hidden);}
   if(k==='c'){e.preventDefault();labClear();}
+  if(k==='i'){e.preventDefault();labIso(!lab.iso);}
 }
 // Clear all (C): the moves and the log. Clear moves in the box empties the moves alone.
 function labClear(){labMovesClear();$('#log').textContent='';}
@@ -443,6 +452,7 @@ function labDisconnect(){
 function labStart(){
   lab.det=smackDetector({});
   labSetHold(labHoldLoad(),'load');$('#holdUp').onchange=labHoldPick;$('#holdFront').onchange=labHoldPick;
+  lab.iso=labIsoLoad();$('#iso').checked=lab.iso;$('#iso').onchange=e=>labIso(e.target.checked);
   labKnobs();labMovesDraw();labDraw();labButtons();
   $('#connect').onclick=labConnect;$('#disconnect').onclick=labDisconnect;$('#reset').onclick=labReset;$('#solved').onclick=labSolved;$('#clear').onclick=labClear;$('#movesClear').onclick=labMovesClear;
   $('#macGo').onclick=labMacGo;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();labMacGo();}});

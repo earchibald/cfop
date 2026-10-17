@@ -34,6 +34,7 @@ main.side{right:360px}
 .moves{display:flex;align-items:center;gap:4px;min-height:26px;font-family:var(--mono);font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden}
 .moves .mv{flex:none;min-width:28px;padding:2px 6px;text-align:center;border:1px solid var(--line);border-radius:5px;background:var(--panel2)}
 .moves .mv.rot{border-style:dashed;color:var(--muted)}
+.moves .mv.head{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:#fff}
 .moves .none{color:var(--faint);font-family:var(--sans);font-weight:400;font-size:14px}
 .moves .more{flex:none;display:inline-flex;width:8px;height:10px;margin-left:3px;color:var(--muted)}.moves .more svg{width:8px;height:10px;display:block;fill:currentColor}
 .status{margin:8px 16px 14px;color:var(--muted);font-size:14px;text-align:center;max-width:720px;min-height:22px}
@@ -67,6 +68,7 @@ aside section{margin-bottom:18px}
   <span class="hold" id="hold" title="How you hold the cube. The moves read this way, and Reset cube takes the cube as held like this.">I hold it <select id="holdUp" aria-label="The color on top"></select> up, <select id="holdFront" aria-label="The color toward you"></select> toward me</span>
   <button id="reset" disabled title="Hold the cube white up, green toward you, then press. The picture takes that as its facing.">Reset cube<kbd>R</kbd></button>
   <label title="Yaw only keeps the tilt gravity gives. Full takes the whole reading as square."><input type="checkbox" id="full"> Full reset</label>
+  <label title="Look at the cube from a little to the right and above, so three faces show. Off: straight on, as the cube sits in space."><input type="checkbox" id="iso"> Isometric<kbd>I</kbd></label>
   <button id="solved" disabled title="The cube counts its own turns and can lose count. Solve your cube, then press: the cube takes its state as solved.">My cube is solved<kbd>S</kbd></button>
   <span class="grow"></span>
   <span class="muted" id="ver" title="The version of the lab, and of the Twistwright app when it serves the page"></span>
