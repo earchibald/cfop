@@ -47,7 +47,7 @@
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,
-  busy:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,copyTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
+  busy:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,patPos:null,copyTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200;
 const LAB_PAT_STEPS={eo:'OLL edges',co:'OLL corners',cp:'PLL corners',ep:'PLL edges'};
 // The cameras: straight on, the cube as it sits in space; and isometric, a little from the right
@@ -325,6 +325,32 @@ function labPatDraw(){
   }
 }
 function labPatShow(on){$('#pat').hidden=!on;$('#patBtn').setAttribute('aria-pressed',String(!!on));}
+// The window moves: drag it by its head. The place is kept in cw:labPat and clamped to the screen,
+// as the cube window on the site (cubeTabDrag).
+function labPatPlace(x,y,save){
+  const w=$('#pat'),W=window.innerWidth||0,H=window.innerHeight||0,ww=w.offsetWidth||400;
+  x=Math.round(Math.max(8,Math.min(x,Math.max(8,W-ww-8))));y=Math.round(Math.max(0,Math.min(y,Math.max(0,H-48))));
+  w.style.left=x+'px';w.style.top=y+'px';lab.patPos={x,y};
+  if(save)try{localStorage.setItem('cw:labPat',JSON.stringify(lab.patPos));}catch(e){}
+}
+function labPatPosLoad(){try{const p=JSON.parse(localStorage.getItem('cw:labPat')||'null');return p&&isFinite(p.x)&&isFinite(p.y)?p:null;}catch(e){return null;}}
+function labPatDrag(){
+  const w=$('#pat'),h=w.querySelector('.head');
+  const p=labPatPosLoad();if(p)labPatPlace(p.x,p.y,false);
+  h.addEventListener('pointerdown',e=>{
+    if(e.button>0||e.target.closest('button'))return;
+    e.preventDefault();
+    const r=w.getBoundingClientRect(),d={x:e.clientX-r.left,y:e.clientY-r.top,id:e.pointerId};
+    const move=ev=>{if(ev.pointerId===d.id)labPatPlace(ev.clientX-d.x,ev.clientY-d.y,false);};
+    const up=ev=>{if(ev.pointerId!==d.id)return;
+      h.removeEventListener('pointermove',move);h.removeEventListener('pointerup',up);h.removeEventListener('pointercancel',up);
+      w.classList.remove('drag');if(lab.patPos)labPatPlace(lab.patPos.x,lab.patPos.y,true);};
+    h.addEventListener('pointermove',move);h.addEventListener('pointerup',up);h.addEventListener('pointercancel',up);
+    if(h.setPointerCapture)try{h.setPointerCapture(e.pointerId);}catch(_){}
+    w.classList.add('drag');
+  });
+  window.addEventListener('resize',()=>{if(lab.patPos)labPatPlace(lab.patPos.x,lab.patPos.y,false);});
+}
 function labPatClear(){lab.pats=[];lab.patLast=null;labPatSave();labPatDraw();}
 // ----- experiment 3: six twists of one face -----
 // The sixth quarter turn: say so, then Reset cube after the wait. A second gesture within the wait
@@ -559,7 +585,7 @@ function labStart(){
   $('#macGo').onclick=labMacGo;$('#macCopy').onclick=labCopyMac;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();labMacGo();}});
   $('#confirmYes').onclick=()=>labConfirmEnd(true);$('#confirmNo').onclick=()=>labConfirmEnd(false);
   $('#sideBtn').onclick=()=>labSide($('#side').hidden);
-  lab.pats=labPatLoad();labPatDraw();$('#patBtn').onclick=()=>labPatShow($('#pat').hidden);$('#patClose').onclick=()=>labPatShow(false);$('#patClear').onclick=labPatClear;
+  lab.pats=labPatLoad();labPatDraw();$('#patBtn').onclick=()=>labPatShow($('#pat').hidden);$('#patClose').onclick=()=>labPatShow(false);$('#patClear').onclick=labPatClear;labPatDrag();
   document.addEventListener('keydown',labKeys);
   document.addEventListener('cw:bridge',labButtons);
   // Open as if Connect were pressed: the list over the bridge, or the look for a known cube.

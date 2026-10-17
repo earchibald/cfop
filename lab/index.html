@@ -59,7 +59,8 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
 .log div.smack{color:var(--text)}.log div.series{color:var(--warn);font-weight:600}.log div.solved{color:var(--text)}
 .note{color:var(--muted);font-size:12.5px;margin:6px 0 0}
 .patwin{position:fixed;top:64px;left:16px;width:400px;max-height:calc(100% - 80px);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.5);z-index:6}
-.patwin .head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}
+.patwin .head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.patwin.drag .head{cursor:grabbing}
 .patwin .head b{color:var(--text);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:12px}
 .patwin .head .count{font-family:var(--mono);font-size:12px}.patwin .head .grow{flex:1}.patwin .head button{padding:3px 9px;font-size:12.5px}
 .patwin .list{overflow:auto;padding:6px 12px 10px;min-height:60px}
@@ -143,7 +144,7 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
   </section>
 </aside>
 <section class="patwin" id="pat" hidden role="dialog" aria-labelledby="patTitle">
-  <div class="head"><b id="patTitle">Patterns</b><span class="count" id="patCount"></span><span class="grow"></span><button class="ghost" id="patClear" title="Empty the list of patterns">Clear</button><button id="patClose" title="Close the window">Close<kbd>Esc</kbd></button></div>
+  <div class="head" title="Drag to move the window"><b id="patTitle">Patterns</b><span class="count" id="patCount"></span><span class="grow"></span><button class="ghost" id="patClear" title="Empty the list of patterns">Clear</button><button id="patClose" title="Close the window">Close<kbd>Esc</kbd></button></div>
   <div class="list" id="patList" aria-label="The patterns found, newest first"></div>
 </section>
 <div class="modal-bg" id="confirm" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">

@@ -199,6 +199,16 @@ async function page(){
   key('p');assert.ok(!$('#pat').hidden,'P opens the window');assert.strictEqual($('#patBtn').getAttribute('aria-pressed'),'true');
   assert.strictEqual($$('#patList .ent').length,1);assert.ok(/^\d\d:\d\d:\d\dOLL cornersSuneR U R' U R U2 R'$/.test($('#patList .ent').textContent),'the entry: '+$('#patList .ent').textContent);
   assert.strictEqual($('#patCount').textContent,'1 pattern');
+  // the window moves: a drag of its head, kept for the next open; a button in the head is no drag
+  const PE=w.PointerEvent||w.MouseEvent,pev=(t,x,y,extra={})=>new PE(t,Object.assign({bubbles:true,cancelable:true,clientX:x,clientY:y,pointerId:1,button:0},extra));
+  const head=$('#pat .head');assert.strictEqual(head.title,'Drag to move the window');
+  head.dispatchEvent(pev('pointerdown',40,80));assert.ok($('#pat').classList.contains('drag'),'the drag starts');
+  head.dispatchEvent(pev('pointermove',140,230));assert.strictEqual(JSON.stringify(L().patPos),'{"x":100,"y":150}','the window follows the pointer: '+JSON.stringify(L().patPos));
+  assert.strictEqual($('#pat').style.left,'100px');assert.strictEqual($('#pat').style.top,'150px');
+  head.dispatchEvent(pev('pointerup',140,230));assert.ok(!$('#pat').classList.contains('drag'),'the drag ends');
+  assert.deepStrictEqual(JSON.parse(storage.getItem('cw:labPat')),{x:100,y:150},'the place is kept');
+  head.dispatchEvent(pev('pointerdown',140,230));head.dispatchEvent(pev('pointermove',-500,5000));assert.strictEqual(JSON.stringify(L().patPos),JSON.stringify({x:8,y:w.innerHeight-48}),'clamped to the screen: '+JSON.stringify(L().patPos));head.dispatchEvent(pev('pointerup',-500,5000));
+  $('#patClose').dispatchEvent(pev('pointerdown',150,160));assert.ok(!$('#pat').classList.contains('drag'),'a button in the head starts no drag');
   pc=w.applyAlg(pc,['U']);await show(pc);assert.strictEqual(L().pats.length,1,'a U turn is the same case: no new entry');
   pc=w.applyAlg(pc,["U'",...w.parseAlg(ALG_DB.co[0].alg)]);assert.ok(pc.isSolved());await show(pc);assert.strictEqual(L().pats.length,1,'solved: nothing listed');
   await show(w.applyAlg(new Cube(),inv(ALG_DB.co[0].alg)));assert.strictEqual(L().pats.length,2,'the same case after a solve is found again');
