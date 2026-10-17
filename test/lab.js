@@ -82,6 +82,22 @@ function pure(){
   assert.deepStrictEqual(twf("R R' R R' R2 R R' R R' R R'"),[false,false,false,false,false,false,false,false,false,false,true],'a half turn starts over');
   assert.deepStrictEqual(twf("R R' R U U' U U' U U'"),[false,false,false,false,false,false,false,false,true],'another face starts over');
   assert.deepStrictEqual(twf("R R' R R' R x R' R R' R R' R"),[false,false,false,false,false,false,false,false,false,false,false,true],'a whole-cube turn starts over');
+  // crossSolutions (js/engine.js): every solution of the D cross up to a length, each counted once,
+  // against a brute force with the same rules (no face twice, commuting moves in one order, no move
+  // that leaves the cross as it was, stop where the cross is solved)
+  const eng=require('./vm-load')('js/engine.js');
+  const brute=eng(`(()=>{function solved(c){for(let e=4;e<8;e++)if(c.ep[e]!==e||c.eo[e]!==0)return false;return true;}
+    return function(cube,maxLen){const by={};function rec(c,left,path,lf,la){if(path.length&&solved(c)){(by[path.length]||(by[path.length]=[])).push(path.join(' '));return;}if(!left)return;
+      for(let i=0;i<18;i++){const m=FACE_MOVES[i],f=m[0];if(f===lf)continue;const ax=axisOf(m);if(ax===la&&'DLB'.includes(f))continue;const n=c.mul(MOVE_LIST[i]);if(crossIndex(n)===crossIndex(c))continue;path.push(m);rec(n,left-1,path,f,ax);path.pop();}}
+      rec(cube,maxLen,[],'',-1);return by;};})()`);
+  const cs=eng('crossSolutions'),mk=eng('m=>applyAlg(new Cube(),parseAlg(m))'),counts=by=>Object.fromEntries(Object.entries(by).map(([k,v])=>[k,v.length])),all=by=>Object.values(by).flat().sort();
+  for(const m of ['F R','R D L2',"F' D R U B",'L2 B D F']){const a=brute(mk(m),5),b=cs(mk(m),5);
+    assert.deepStrictEqual(counts(b.byLen),counts(a),'the count by length for '+m+': '+JSON.stringify(counts(b.byLen)));assert.deepStrictEqual(all(b.byLen),all(a),'and the same solutions');
+    assert.strictEqual(b.optimal,Math.min(...Object.keys(a).map(Number)),'the shortest length');}
+  assert.strictEqual(JSON.stringify(cs(eng('new Cube()'),7)),'{"optimal":0,"byLen":{}}','a solved cross: nothing to count');
+  assert.strictEqual(JSON.stringify(cs(mk('R L'),2).byLen),'{"2":["L\' R\'"]}','L\' R\' and R\' L\' are one solution');
+  assert.deepStrictEqual(counts(cs(mk('F'),2).byLen),{1:1},'U F\' is no second solution: a U turn leaves the cross as it was');
+  const big=cs(mk(eng('randomMoveScramble("granite-wren-41",22).join(" ")')),7);assert.ok(big.optimal>=4&&big.optimal<=8,'a real scramble: '+big.optimal);assert.ok(Object.keys(big.byLen).every(k=>+k>=big.optimal&&+k<=7),'lengths from the shortest to 7');
   console.log('lab pure ok');
 }
 const html=fs.readFileSync(path.join(__dirname,'..','lab','index.html'),'utf8');
@@ -217,6 +233,20 @@ async function page(){
   assert.strictEqual(JSON.parse(storage.getItem('cw:labPatterns')).length,3,'the list is kept');
   key('Escape');assert.ok($('#pat').hidden,'Esc closes the window');key('p');assert.ok(!$('#pat').hidden);key('p');assert.ok($('#pat').hidden,'P closes it too');
   click($('#patBtn'));assert.ok(!$('#pat').hidden,'the button opens it');click($('#patClose'));assert.ok($('#pat').hidden,'Close closes it');
+  // New scramble (N): a 22-move scramble as held, with the count of the cross solutions by length up to 7 and the shortest ones
+  click($('#patNew'));assert.ok(!$('#pat').hidden,'New scramble opens the window');
+  assert.strictEqual(L().pats.length,4,'the scramble is an entry');const sc=L().pats[0];assert.strictEqual(sc.step,'Scramble');assert.ok(/^[a-z]+-[a-z]+-\d\d$/.test(sc.name),'named by its seed: '+sc.name);
+  assert.strictEqual(w.parseAlg(sc.moves).length,22,'22 moves: '+sc.moves);assert.strictEqual(w.randomMoveScramble(sc.name,22).join(' '),sc.moves,'the seed gives the moves, as on the site');
+  const cr=w.crossSolutions(w.applyAlg(new Cube(),w.parseAlg(sc.moves)),7);assert.strictEqual(sc.cross.optimal,cr.optimal,'the shortest length');assert.strictEqual(sc.cross.color,'yellow','the cross on the bottom as held: white up, so yellow');
+  const want=[];for(let n=cr.optimal;n<=7;n++)want.push(n+' moves: '+(cr.byLen[n]||[]).length);assert.strictEqual(sc.cross.counts,want.join(' · '),'the count by length: '+sc.cross.counts);
+  assert.deepStrictEqual(sc.cross.sols,cr.byLen[cr.optimal],'the shortest solutions');
+  const ent=$$('#patList .ent')[0];assert.strictEqual(ent.querySelector('.name').textContent,sc.name,'newest first');assert.strictEqual(ent.querySelector('code').textContent,sc.moves,'the scramble');
+  assert.ok(ent.querySelector('.data').textContent.startsWith('Yellow cross: shortest '+cr.optimal),'the data line: '+ent.querySelector('.data').textContent);
+  assert.deepStrictEqual([...ent.querySelectorAll('.data .len')].map(x=>x.textContent),want,'one count per line');
+  assert.ok(ent.querySelector('code.sols')&&ent.querySelector('code.sols').textContent.startsWith(cr.byLen[cr.optimal][0]),'the shortest solutions show: '+ent.querySelector('code.sols').textContent);
+  assert.ok(/^\S+ New scramble \S+: .*\. yellow cross: shortest \d; \d moves: \d+/.test($('#log .scramble').textContent),'logged: '+$('#log .scramble').textContent);
+  key('Escape');key('n');assert.ok(!$('#pat').hidden,'N opens the window with another');assert.strictEqual(L().pats.length,5,'N makes another');assert.strictEqual(JSON.parse(storage.getItem('cw:labPatterns')).length,5,'kept');
+  assert.strictEqual(JSON.parse(storage.getItem('cw:labPatterns'))[0].cross.counts,L().pats[0].cross.counts,'with its count');
   click($('#patClear'));assert.strictEqual(L().pats.length,0,'Clear empties the list');assert.ok($('#patList .none'));assert.strictEqual(storage.getItem('cw:labPatterns'),'[]');
   await show(new Cube());
   // the tilt: the first reading sets the heading; the smacks come as jolts that go back

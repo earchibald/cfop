@@ -68,6 +68,8 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
 .patwin .ent time{font-family:var(--mono);font-size:11.5px;color:var(--faint);padding-top:2px}
 .patwin .ent b{color:var(--muted);font-weight:500}.patwin .ent .name{color:var(--text);font-weight:600;margin-left:6px}
 .patwin .ent code{grid-column:2;font-family:var(--mono);font-size:13px;color:var(--text)}
+.patwin .ent .data{grid-column:2;color:var(--muted);font-size:12.5px}.patwin .ent .data b{color:var(--text);font-weight:600}.patwin .ent .data .len{display:block;font-family:var(--mono);font-size:12px}
+.patwin .ent code.sols{color:var(--muted)}.patwin .ent code.sols .more{color:var(--faint);font-family:var(--sans)}
 .patwin .none{color:var(--faint);font-size:13px;padding:8px 0}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:20}
 .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;max-width:380px;box-shadow:0 12px 32px rgba(0,0,0,.5)}
@@ -90,7 +92,7 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
   <span class="grow"></span>
   <span class="muted" id="ver" title="The version of the lab, and of the Twistwright app when it serves the page"></span>
   <button class="ghost" id="clear" title="Empty the moves and the log">Clear all<kbd>C</kbd></button>
-  <button id="patBtn" aria-pressed="false" aria-controls="pat" title="The two-look OLL and PLL cases the cube has shown, with the moves that solve each">Patterns<kbd>P</kbd></button>
+  <button id="patBtn" aria-pressed="false" aria-controls="pat" title="The two-look OLL and PLL cases the cube has shown, with the moves that solve each, and New scramble with its cross count">Patterns<kbd>P</kbd></button>
   <button id="sideBtn" aria-pressed="true" aria-controls="side">Experiments<kbd>L</kbd></button>
 </header>
 <main class="side">
@@ -144,7 +146,7 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
   </section>
 </aside>
 <section class="patwin" id="pat" hidden role="dialog" aria-labelledby="patTitle">
-  <div class="head" title="Drag to move the window"><b id="patTitle">Patterns</b><span class="count" id="patCount"></span><span class="grow"></span><button class="ghost" id="patClear" title="Empty the list of patterns">Clear</button><button id="patClose" title="Close the window">Close<kbd>Esc</kbd></button></div>
+  <div class="head" title="Drag to move the window"><b id="patTitle">Patterns</b><span class="count" id="patCount"></span><span class="grow"></span><button id="patNew" title="A scramble of 22 moves, as you hold the cube. The entry counts the solutions of the cross on the bottom as held, by length up to 7 moves, and shows the shortest.">New scramble<kbd>N</kbd></button><button class="ghost" id="patClear" title="Empty the list of patterns">Clear</button><button id="patClose" title="Close the window">Close<kbd>Esc</kbd></button></div>
   <div class="list" id="patList" aria-label="The patterns found, newest first"></div>
 </section>
 <div class="modal-bg" id="confirm" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">

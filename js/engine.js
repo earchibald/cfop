@@ -157,6 +157,26 @@ function solveCross(cube,extra=0,limit=40){
   // dedupe
   const seen=new Set();return {optimal:d0,solutions:sols.map(s=>s.join(' ')).filter(s=>{if(seen.has(s))return false;seen.add(s);return true;})};
 }
+// ===== Cross count: every solution of the D cross up to `maxLen` moves =====
+// For a scramble report: the shortest length, and the solutions of each length from the shortest up
+// to `maxLen`, so a count by length is `byLen[n].length`. Each solution is counted once: two moves
+// that commute (U and D, R and L, F and B) are taken in one order, a face is never turned twice in
+// a row, a move that leaves the cross as it was (a U turn) is not a solution move, and a sequence
+// stops where the cross is solved, so no solution holds a shorter one. The cross table is exact, so
+// the search visits only sequences that can still solve in the moves left.
+function crossSolutions(cube,maxLen=7){
+  const t=buildCrossTable();const d0=t[crossIndex(cube)];const byLen={};
+  function dfs(c,ci,left,path,lastFace,lastAx){
+    const h=t[ci];
+    if(h===0){if(path.length)(byLen[path.length]||(byLen[path.length]=[])).push(path.join(' '));return;}
+    if(h>left)return;
+    for(let i=0;i<18;i++){const m=FACE_MOVES[i],f=m[0];if(f===lastFace)continue;const ax=axisOf(m);if(ax===lastAx&&'DLB'.includes(f))continue;
+      const n=c.mul(MOVE_LIST[i]),ni=crossIndex(n);if(ni===ci)continue;
+      path.push(m);dfs(n,ni,left-1,path,f,ax);path.pop();}
+  }
+  dfs(cube,crossIndex(cube),maxLen,[],'',-1);
+  return {optimal:d0,byLen};
+}
 // ===== F2L pair solver (IDA*) keeping cross + previously solved pairs =====
 const SLOTS=[{name:'FR',corner:4,edge:8},{name:'FL',corner:5,edge:9},{name:'BL',corner:6,edge:10},{name:'BR',corner:7,edge:11}];
 function slotSolved(c,slot){return c.cp[slot.corner]===slot.corner&&c.co[slot.corner]===0&&c.ep[slot.edge]===slot.edge&&c.eo[slot.edge]===0;}
