@@ -15,7 +15,7 @@ const turn=(axis,deg)=>{const h=deg/2*Math.PI/180,s=Math.sin(h);return [axis[0]*
 const unit=v=>{const l=Math.hypot(...v);return v.map(x=>x/l);};
 function pure(){
   const run=require('./vm-load')('lab/smack.js');
-  const quatDelta=run('quatDelta'),quatMul=run('quatMul'),resetBasis=run('resetBasis'),quatMat=run('quatMat'),smackDetector=run('smackDetector');
+  const quatDelta=run('quatDelta'),quatMul=run('quatMul'),resetBasis=run('resetBasis'),quatMat=run('quatMat'),smackDetector=run('smackDetector'),turnDetector=run('turnDetector'),turnName=run('turnName'),quatSlerp=run('quatSlerp');
   const I=[0,0,0,1];
   // quatDelta: the turn from a to b
   const d=quatDelta(I,turn([0,1,0],30));assert.ok(Math.abs(d.deg-30)<1e-9&&Math.abs(d.axis[1]-1)<1e-9,'quatDelta gives the angle and the axis');
@@ -57,6 +57,22 @@ function pure(){
   // a slow lean follows the rest pose with no event
   det=smackDetector({});evs=[];for(let t=0;t<=4000;t+=50)feed(t,turn([1,0,0],t/4000*40));
   assert.strictEqual(evs.length,0,'a slow lean is no event: '+JSON.stringify(evs));
+  // whole-cube turns: start past 15 degrees from rest, an update every 250 ms, finish after 300 ms still
+  assert.strictEqual(turnName([-1,0,0],90),'x');assert.strictEqual(turnName([0,0.9,0.1],80),"y'");assert.strictEqual(turnName([0,0,-1],170),'z2','the name from the axis');
+  const td=turnDetector({}),tev=[],tf=(t,q)=>{tev.push(...td.feed(t,q));};
+  for(let t=0;t<=300;t+=50)tf(t,I);
+  assert.strictEqual(tev.length,0,'still: nothing');assert.ok(!td.state.turning);
+  const X=[-Math.SQRT1_2,0,0,Math.SQRT1_2]; // the whole cube turned x
+  for(let i=1;i<=10;i++)tf(300+i*50,quatSlerp(I,X,i/10));
+  assert.strictEqual(tev[0].type,'tstart','the turn starts: '+JSON.stringify(tev));assert.strictEqual(tev[0].name,'x');assert.ok(tev[0].deg>15&&tev[0].deg<30,'past start: '+tev[0].deg);
+  assert.ok(tev.filter(e=>e.type==='tupdate').length>=1,'updates on the way');assert.ok(td.state.turning);
+  for(let t=850;t<=1200;t+=50)tf(t,X);
+  const fin=tev.filter(e=>e.type==='tfinish');assert.strictEqual(fin.length,1,'one finish: '+JSON.stringify(tev.map(e=>e.type)));
+  assert.strictEqual(fin[0].name,'x');assert.ok(Math.abs(fin[0].deg-90)<1,'a quarter turn (the rest pose followed the first degrees): '+fin[0].deg);assert.ok(fin[0].ms>=300,'with its length');assert.ok(!td.state.turning);
+  tev.length=0;for(let t=1250;t<=2000;t+=50)tf(t,X);assert.strictEqual(tev.length,0,'at rest again: nothing');
+  const wob=quatMul(turn([0,1,0],8),X);tf(2050,wob);tf(2100,X);tf(2150,X);assert.strictEqual(tev.length,0,'a wobble under start is nothing');
+  tf(2200,quatMul(turn([0,1,0],25),X));tf(2250,quatMul(turn([0,1,0],25),X));for(let t=2300;t<=2700;t+=50)tf(t,X);
+  assert.deepStrictEqual(tev.map(e=>e.type),['tstart','tupdate','tfinish'],'a turn that comes back: start, update, finish: '+JSON.stringify(tev.map(e=>e.type)));assert.ok(tev[2].deg<2,'back at rest: '+tev[2].deg);
   console.log('lab pure ok');
 }
 const html=fs.readFileSync(path.join(__dirname,'..','lab','index.html'),'utf8');
@@ -217,6 +233,36 @@ async function page(){
   assert.strictEqual(L().hold.cube.center[0]+'/'+L().hold.cube.center[2],'0/1','white up: red stays in front');
   $('#holdFront').value='2';$('#holdFront').dispatchEvent(new w.Event('change',{bubbles:true}));
   assert.strictEqual(L().hold,w.eval('LAB_HOLDS')[0],'white up, green in front: the plain hold');
+  // experiment 2: a turn of the whole cube from the tilt. The page's frame from the cube's: x the same, cube y = -page z, cube z = page y
+  key('c');send(rest);await sleep(30);key('r');
+  assert.ok($('#turnOn').checked,'Detect turns is on');assert.strictEqual($('#turnNow').textContent,'–','the rest pose starts over at Reset cube');
+  const page=q=>({w:q[3],x:q[0],y:-q[2],z:q[1]}),hold0=L().hold;
+  const target=w.quatMul([-Math.SQRT1_2,0,0,Math.SQRT1_2],hold0.q),rawFor=q=>w.quatMul(w.quatConj(L().basis),q); // the whole cube turned x, as a reading
+  send(rest);await sleep(50);assert.ok(/still, 0\.0° from rest/.test($('#turnNow').textContent),'the live line: '+$('#turnNow').textContent);
+  for(let i=1;i<=8;i++){send(page(rawFor(w.quatSlerp(L().hold.q,target,i/8))));await sleep(45);}
+  assert.ok($('#log .tstart'),'turn start is logged: '+$('#log').textContent);assert.ok(/turn start: x, \d+\.\d°, axis x -/.test($('#log .tstart').textContent),'named x: '+$('#log .tstart').textContent);
+  assert.ok($('#log .tupdate')&&/turn update: x, \d+\.\d° at \d+ ms/.test($('#log .tupdate').textContent),'turn update is logged: '+$('#log').textContent);
+  assert.ok(/turning/.test($('#turnNow').textContent),'the live line says turning: '+$('#turnNow').textContent);
+  for(let i=0;i<9;i++){send(page(rawFor(target)));await sleep(45);}
+  assert.ok($('#log .tmove'),'turn finish with a move is logged: '+$('#log').textContent);
+  assert.ok(/turn finish: x, [89]\d\.\d° in \d+ ms, axis .* → x, \d+° off\. Hold: green up, yellow toward you\./.test($('#log .tmove').textContent),'the finish names the turn and the new hold: '+$('#log .tmove').textContent);
+  assert.strictEqual($('#holdUp').value+'/'+$('#holdFront').value,'2/3','the hold followed the turn');assert.strictEqual(L().moves.join(' '),'x','the turn is on the list');assert.ok($('#moves .mv.rot.head'),'dashed, and the head');
+  assert.strictEqual($$('#log .reset').length,1,'a detected turn is no Reset cube (the one reset is the key press above)');
+  const n1=$('#log').children.length;for(let i=0;i<8;i++){send(page(rawFor(target)));await sleep(45);}assert.strictEqual($('#log').children.length,n1,'at rest: no more events');
+  // a turn that comes back, and one that rests between holds, change nothing
+  const part=deg=>{const s=Math.sin(deg/2*Math.PI/180),c=Math.cos(deg/2*Math.PI/180);return w.quatMul([0,-s,0,c],target);};
+  send(page(rawFor(part(25))));await sleep(45);send(page(rawFor(part(25))));await sleep(45);for(let i=0;i<9;i++){send(page(rawFor(target)));await sleep(45);}
+  assert.ok(/back at the hold/.test($('#log .tfinish').textContent),'back: '+$('#log .tfinish').textContent);assert.strictEqual(L().moves.join(' '),'x','no move for a turn that comes back');
+  for(let i=1;i<=4;i++){send(page(rawFor(part(i*11))));await sleep(45);}for(let i=0;i<9;i++){send(page(rawFor(part(44))));await sleep(45);}
+  assert.ok(/between holds \(nearest (green up, yellow toward you|green up, red toward you), 4\d° off\); the hold stays/.test($('#log .tfinish').textContent),'between: '+$('#log .tfinish').textContent);
+  assert.strictEqual(L().hold.cube.center[0],2,'the hold stays');
+  for(let i=1;i<=4;i++){send(page(rawFor(part(44+i*11))));await sleep(45);}for(let i=0;i<9;i++){send(page(rawFor(part(88))));await sleep(45);}
+  assert.ok(/Hold: green up, red toward you/.test($('#log .tmove').textContent),'the rest of the way snaps to the next hold: '+$('#log .tmove').textContent);
+  assert.strictEqual(L().moves.join(' '),'x y',"the second turn, y, is on the list: "+L().moves.join(' '));
+  $('#turnOn').checked=false;send(page(rawFor(target)));await sleep(45);send(page(rawFor(target)));await sleep(45);for(let i=0;i<9;i++){send(page(rawFor(target)));await sleep(45);}
+  assert.strictEqual(L().moves.join(' '),'x y','off: the tilt makes no turn');$('#turnOn').checked=true;
+  $('#holdUp').value='0';$('#holdUp').dispatchEvent(new w.Event('change',{bubbles:true}));$('#holdFront').value='2';$('#holdFront').dispatchEvent(new w.Event('change',{bubbles:true}));
+  assert.strictEqual(L().hold,w.eval('LAB_HOLDS')[0],'the plain hold again');
   // keys and buttons
   key('l');assert.ok($('#side').hidden,'L hides the panel');key('l');assert.ok(!$('#side').hidden);
   key('c');assert.strictEqual($('#log').children.length,0,'C clears the log');assert.strictEqual(L().moves.length,0,'and the moves');assert.ok($('#movesClear').disabled);

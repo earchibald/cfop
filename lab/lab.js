@@ -25,6 +25,11 @@
 // jumps there with no moves added to the list.
 // Experiment 1: three smacks on the right face bring the Reset dialog (smackDetector, fed the
 // tilt in the frame of the picture, so "right" is the user's right).
+// Experiment 2: a turn of the cube in the hands, from the tilt (turnDetector, fed the same way).
+// The log says when a turn starts, how it goes on and when it is over. A turn that comes to rest
+// within `snap` degrees of another of the 24 holds is that whole-cube turn: it goes on the list,
+// dashed, and the hold moves on, so the moves after it read as held. One that comes to rest
+// between holds, or back at the hold, changes nothing.
 // The moves since the connect sit in a box of their own under the picture, as the cube tab's
 // readout: merged as they come, the last ten shown, a triangle for more, and Clear moves.
 // The hold: the cube names its moves with its white face up and green in front, however it is
@@ -35,7 +40,7 @@
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,
-  busy:false,listEnd:null,pickSeq:0,macWait:null,det:null,times:[],trace:[],traceRaf:0,confirmOpen:false};
+  busy:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,times:[],trace:[],traceRaf:0,confirmOpen:false};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000;
 // The cameras: straight on, the cube as it sits in space; and isometric, a little from the right
 // and above, the site's usual view.
@@ -165,14 +170,17 @@ function labHoldPick(){
 }
 // Set the hold. From the user: the turn from the old hold to the new goes on the list, so the
 // moves before it still read right, the log says so, and the cube as held now is the reference
-// pose (Reset cube) when there is a tilt reading.
+// pose (Reset cube) when there is a tilt reading. From a detected turn: the turn goes on the list
+// and comes back as words; the picture already shows the cube as held, so no Reset cube.
 function labSetHold(h,src){
   const old=lab.hold;lab.hold=h;
   try{localStorage.setItem('cw:labHold',JSON.stringify({up:h.cube.center[0],front:h.cube.center[2]}));}catch(e){}
   labHoldFill();
   $('#reset').title=`Hold the cube ${labHoldWords(h)}, then press. The picture takes that as its facing.`;
-  if(src!=='user')return;
-  if(old&&old!==h){const d=LAB_HOLD_BY.get(old.cube.inverse().mul(h.cube).center.join());if(d)for(const m of d.moves)lab.moves=labMerge(lab.moves,m);labMovesDraw();}
+  if(src==='load')return '';
+  let turn='';
+  if(old&&old!==h){const d=LAB_HOLD_BY.get(old.cube.inverse().mul(h.cube).center.join());if(d){for(const m of d.moves)lab.moves=labMerge(lab.moves,m);turn=d.moves.join(' ');}labMovesDraw();}
+  if(src==='turn')return turn;
   labLog('hold','Hold: '+labHoldWords(h)+'.');
   if(lab.conn&&lab.raw)labReset();else labDraw();
 }
@@ -245,6 +253,8 @@ function labGyro(q){
   const now=performance.now();
   lab.times.push(now);while(lab.times.length&&now-lab.times[0]>1000)lab.times.shift();
   for(const ev of lab.det.feed(now,lab.qTo))labEvent(ev);
+  if($('#turnOn').checked)for(const ev of lab.turn.feed(now,lab.qTo))labTurnEvent(ev);
+  labTurnNow();
   labMeter(now);
   if(!lab.gyro){lab.gyro=true;labStopView();lab.q=lab.qTo;labDraw();labStatus('Live. Each turn of your cube turns the layer, and the picture tilts with the cube. Hold it white up, green toward you, and press Reset cube (R) to line the picture up.');return;}
   labTurnView();
@@ -253,7 +263,7 @@ function labGyro(q){
 // viewer unless the user said otherwise).
 function labReset(){
   if(!lab.conn)return;
-  if(lab.raw){lab.basis=resetBasis(lab.raw,labResetMode(),lab.hold.q);lab.qTo=quatNorm(quatMul(lab.basis,lab.raw));lab.det.reset();labDots();labTurnView();}
+  if(lab.raw){lab.basis=resetBasis(lab.raw,labResetMode(),lab.hold.q);lab.qTo=quatNorm(quatMul(lab.basis,lab.raw));lab.det.reset();lab.turn.reset();labDots();labTurnNow();labTurnView();}
   else{lab.q=lab.qTo=null;labDraw();}
   labLog('reset','Reset cube ('+labResetMode()+'): '+labHoldWords(lab.hold)+'.');
 }
@@ -265,6 +275,22 @@ function labEvent(ev){
   if(ev.type==='series'){labLog('series',`${ev.smacks.length} smacks on the ${SMACK_FACES[lab.det.opts.face]||'cube'}: reset?`);labConfirm();}
   labDots();
 }
+// ----- experiment 2: whole-cube turns from the tilt -----
+// The nearest of the 24 holds to the pose q, and how far off it is in degrees.
+function labNearestHold(q){let best=null,off=Infinity;for(const h of LAB_HOLDS){const a=quatAngle(h.q,q);if(a<off){off=a;best=h;}}return {hold:best,off};}
+function labTurnEvent(ev){
+  const f=v=>v.toFixed(2),ax=`axis x ${f(ev.axis[0])} y ${f(ev.axis[1])} z ${f(ev.axis[2])}`;
+  if(ev.type==='tstart')labLog('tstart',`turn start: ${ev.name}, ${ev.deg.toFixed(1)}°, ${ax}`);
+  if(ev.type==='tupdate')labLog('tupdate',`turn update: ${ev.name}, ${ev.deg.toFixed(1)}° at ${Math.round(ev.ms)} ms, ${ax}`);
+  if(ev.type==='tfinish'){
+    const n=labNearestHold(ev.q),head=`turn finish: ${ev.name}, ${ev.deg.toFixed(1)}° in ${Math.round(ev.ms)} ms, ${ax}`;
+    if(n.off>lab.snap)labLog('tfinish',`${head} → between holds (nearest ${labHoldWords(n.hold)}, ${n.off.toFixed(0)}° off); the hold stays`);
+    else if(n.hold===lab.hold)labLog('tfinish',`${head} → back at the hold, ${n.off.toFixed(0)}° off`);
+    else{const t=labSetHold(n.hold,'turn');labLog('tmove',`${head} → ${t||'the same hold'}, ${n.off.toFixed(0)}° off. Hold: ${labHoldWords(n.hold)}.`);}
+  }
+}
+// The live line under the box: still or turning, and how far from the rest pose.
+function labTurnNow(){const st=lab.turn.state,el=$('#turnNow');if(!el)return;el.textContent=!st.rest?'–':(st.turning?'turning, ':'still, ')+st.deg.toFixed(1)+'° from rest';}
 function labDots(){const n=lab.det.state.series.length;$$('#dots span').forEach((s,i)=>s.classList.toggle('on',i<n));}
 function labLog(cls,text){
   const el=$('#log'),d=document.createElement('div');d.className=cls;
@@ -290,6 +316,11 @@ function labKnobs(){
     const k=inp.dataset.k,out=inp.parentNode.querySelector('output');
     inp.value=lab.det.opts[k];out.value=inp.value;
     inp.oninput=()=>{lab.det.set(k,parseFloat(inp.value));out.value=inp.value;};
+  }
+  for(const inp of $$('.tknob input[type=range]')){
+    const k=inp.dataset.k,out=inp.parentNode.querySelector('output');
+    inp.value=k==='snap'?lab.snap:lab.turn.opts[k];out.value=inp.value;
+    inp.oninput=()=>{const v=parseFloat(inp.value);if(k==='snap')lab.snap=v;else lab.turn.set(k,v);out.value=inp.value;};
   }
   const face=$('#kFace');face.value=lab.det.opts.face==null?'':String(lab.det.opts.face);
   face.onchange=()=>{lab.det.set('face',face.value===''?null:parseInt(face.value,10));lab.det.state.series=[];labDots();
@@ -450,7 +481,7 @@ function labDisconnect(){
 }
 // ----- start -----
 function labStart(){
-  lab.det=smackDetector({});
+  lab.det=smackDetector({});lab.turn=turnDetector({});
   labSetHold(labHoldLoad(),'load');$('#holdUp').onchange=labHoldPick;$('#holdFront').onchange=labHoldPick;
   lab.iso=labIsoLoad();$('#iso').checked=lab.iso;$('#iso').onchange=e=>labIso(e.target.checked);
   labKnobs();labMovesDraw();labDraw();labButtons();

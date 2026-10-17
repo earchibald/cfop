@@ -105,3 +105,47 @@ function smackDetector(opts){
   }
   return {feed,reset,state:st,opts:o,set(k,v){o[k]=v;}};
 }
+
+// ----- whole-cube turns -----
+// A turn of the cube in the hands, from the tilt alone: the body leaves its rest pose and comes
+// to rest again somewhere else. The detector cuts the readings into turns and says when each one
+// starts, how it goes on, and when it is over; what the new pose means (which of the 24 holds it
+// is nearest, if any) is for the caller, who knows the hold.
+const TURN_DEFAULTS={start:15,settle:4,still:300,updateMs:250,restTc:1500};
+// start: deg from the rest pose, a turn begins past this. settle: deg, the body moved less than
+// this since the last anchor counts as still. still: ms still, and the turn is over. updateMs: ms
+// between two update events. restTc: ms, how fast the rest pose follows a still cube (a slow lean).
+// The name of a turn: the move letter for the axis with the most of it (x right, y up, z toward
+// the viewer), plain for a turn the way x, y and z go, a prime the other way, 2 past 135 degrees.
+function turnName(axis,deg){
+  let i=0;for(let k=1;k<3;k++)if(Math.abs(axis[k])>Math.abs(axis[i]))i=k;
+  const m='xyz'[i];return deg>135?m+'2':axis[i]<0?m:m+"'";
+}
+// feed(t,q) takes one reading and returns the events it makes:
+//   {type:'tstart',t,deg,axis,name}         the body left the rest pose
+//   {type:'tupdate',t,deg,axis,name,ms}     every updateMs while it moves
+//   {type:'tfinish',t,deg,axis,name,ms,q}   still again: the turn from the rest pose, and the new rest pose
+// deg and axis are the turn from the rest pose so far. state: turning (bool), deg, rest.
+function turnDetector(opts){
+  const o=Object.assign({},TURN_DEFAULTS,opts);
+  const st={rest:null,restAt:0,anchor:null,anchorAt:0,turning:false,t0:0,lastUpd:0,deg:0};
+  function reset(){st.rest=null;st.anchor=null;st.turning=false;st.deg=0;}
+  function feed(t,q){
+    q=quatNorm(q);const out=[];
+    if(!st.rest){st.rest=q;st.restAt=t;st.anchor=q;st.anchorAt=t;return out;}
+    const d=quatDelta(st.rest,q);st.deg=d.deg;
+    if(quatAngle(st.anchor,q)>o.settle){st.anchor=q;st.anchorAt=t;}
+    if(!st.turning){
+      if(d.deg>o.start){st.turning=true;st.t0=t;st.lastUpd=t;out.push({type:'tstart',t,deg:d.deg,axis:d.axis,name:turnName(d.axis,d.deg)});}
+      else{st.rest=quatSlerp(st.rest,q,1-Math.exp(-(t-st.restAt)/o.restTc));st.restAt=t;}
+      return out;
+    }
+    if(t-st.anchorAt>=o.still){
+      st.turning=false;st.rest=q;st.restAt=t;
+      out.push({type:'tfinish',t,deg:d.deg,axis:d.axis,name:turnName(d.axis,d.deg),ms:t-st.t0,q});return out;
+    }
+    if(t-st.lastUpd>=o.updateMs){st.lastUpd=t;out.push({type:'tupdate',t,deg:d.deg,axis:d.axis,name:turnName(d.axis,d.deg),ms:t-st.t0});}
+    return out;
+  }
+  return {feed,reset,state:st,opts:o,set(k,v){o[k]=v;}};
+}
