@@ -184,6 +184,24 @@ async function page(){
   assert.ok($$('#log .solved').length===1&&/took its state as solved/.test($('#log .solved').textContent),'the reset is logged: '+$('#log').textContent);
   assert.ok(/counts from solved/.test($('#status').textContent),'the status says so: '+$('#status').textContent);
   assert.ok(!$('#solved').disabled,'the button is on again');
+  // patterns: a two-look case the cube shows goes in the Patterns window, newest first, with its moves as held
+  assert.ok($('#pat').hidden,'the Patterns window starts closed');assert.strictEqual(L().pats.length,0);assert.ok($('#patList .none'),'and empty');
+  const ALG_DB=w.eval('ALG_DB'),inv=a=>w.invertAlg(w.parseAlg(a)),show=async c=>{set(c);dev.notify(Uint8Array.from([0x01,...Array(19).fill(0)]));assert.ok(await until(()=>L().target&&L().target.equals(c)),'the state is heard');};
+  let pc=w.applyAlg(new Cube(),inv(ALG_DB.co[0].alg));await show(pc);
+  assert.strictEqual(L().pats.length,1,'the case is listed');assert.strictEqual(L().pats[0].step,'OLL corners');assert.strictEqual(L().pats[0].name,'Sune');assert.strictEqual(L().pats[0].moves,"R U R' U R U2 R'",'with the moves: '+L().pats[0].moves);
+  key('p');assert.ok(!$('#pat').hidden,'P opens the window');assert.strictEqual($('#patBtn').getAttribute('aria-pressed'),'true');
+  assert.strictEqual($$('#patList .ent').length,1);assert.ok(/^\d\d:\d\d:\d\dOLL cornersSuneR U R' U R U2 R'$/.test($('#patList .ent').textContent),'the entry: '+$('#patList .ent').textContent);
+  assert.strictEqual($('#patCount').textContent,'1 pattern');
+  pc=w.applyAlg(pc,['U']);await show(pc);assert.strictEqual(L().pats.length,1,'a U turn is the same case: no new entry');
+  pc=w.applyAlg(pc,["U'",...w.parseAlg(ALG_DB.co[0].alg)]);assert.ok(pc.isSolved());await show(pc);assert.strictEqual(L().pats.length,1,'solved: nothing listed');
+  await show(w.applyAlg(new Cube(),inv(ALG_DB.co[0].alg)));assert.strictEqual(L().pats.length,2,'the same case after a solve is found again');
+  await show(w.applyAlg(new Cube(),inv(ALG_DB.ep[0].alg)));assert.strictEqual(L().pats.length,3,'a PLL case');
+  assert.strictEqual(L().pats[0].step,'PLL edges');assert.strictEqual(L().pats[0].name,'Ua perm');assert.strictEqual($$('#patList .ent')[0].querySelector('.name').textContent,'Ua perm','newest first');
+  assert.strictEqual(JSON.parse(storage.getItem('cw:labPatterns')).length,3,'the list is kept');
+  key('Escape');assert.ok($('#pat').hidden,'Esc closes the window');key('p');assert.ok(!$('#pat').hidden);key('p');assert.ok($('#pat').hidden,'P closes it too');
+  click($('#patBtn'));assert.ok(!$('#pat').hidden,'the button opens it');click($('#patClose'));assert.ok($('#pat').hidden,'Close closes it');
+  click($('#patClear'));assert.strictEqual(L().pats.length,0,'Clear empties the list');assert.ok($('#patList .none'));assert.strictEqual(storage.getItem('cw:labPatterns'),'[]');
+  await show(new Cube());
   // the tilt: the first reading sets the heading; the smacks come as jolts that go back
   const send=q=>dev.notify(gyroMsg(4,q)); // the cube's own frame: w,x,y,z, where the page's y is the cube's z and the page's z is minus the cube's y
   const rest={w:1,x:0,y:0,z:0};

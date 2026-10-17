@@ -33,6 +33,10 @@
 // Experiment 3: one face turned and turned back, three times over (R R' R R' R R'), is a gesture
 // (twistDetector, fed each move before the list merges it): the lab waits `twistMs`, then does
 // Reset cube, as if R were pressed. The six quarter turns leave the cube, and the list, as they were.
+// Patterns (P): each state the cube reports is read as the CFOP stage of the cube as held
+// (cfopStage, js/stage.js). A two-look OLL or PLL case goes in the Patterns window with the moves
+// that solve it as held, newest first, the same case once until another comes or the cube is
+// solved; kept in cw:labPatterns. P opens the window, Esc or P closes it.
 // The moves since the connect sit in a box of their own under the picture, as the cube tab's
 // readout: merged as they come, the last ten shown, a triangle for more, and Clear moves.
 // The hold: the cube names its moves with its white face up and green in front, however it is
@@ -43,8 +47,9 @@
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,
-  busy:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
-const LAB_SHOWN=10,LAB_TRACE_MS=4000;
+  busy:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,times:[],trace:[],traceRaf:0,confirmOpen:false};
+const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200;
+const LAB_PAT_STEPS={eo:'OLL edges',co:'OLL corners',cp:'PLL corners',ep:'PLL edges'};
 // The cameras: straight on, the cube as it sits in space; and isometric, a little from the right
 // and above, the site's usual view.
 const LAB_FLAT={yaw:0,pitch:0},LAB_ISO={yaw:-32,pitch:28};
@@ -194,6 +199,7 @@ function labSetHold(h,src){
 // Show the real cube's state: up to four moves past the picture turn their layers in a queue;
 // further away, the picture jumps.
 function labShow(cube){
+  labPatRead(cube);
   if(lab.jump){lab.jump=false;labJump(cube);return;}
   const moved=labPath(lab.target||lab.shown,cube);
   if(moved&&moved.length){for(const m of moved){const r=labRelabel(m);lab.moves=labMerge(lab.moves,r);if($('#twistOn').checked&&lab.twist.feed(r))labTwist(r);}labMovesDraw();}
@@ -274,6 +280,38 @@ function labReset(){
   else{lab.q=lab.qTo=null;labDraw();}
   labLog('reset','Reset cube ('+labResetMode()+'): '+labHoldWords(lab.hold)+'.');
 }
+// ----- patterns: the two-look cases the cube shows -----
+// The cube as held: the hold's turns applied, so U is the top as held (cubeTabHeld).
+function labHeld(cube){return cube&&lab.hold&&lab.hold.moves.length?applyAlg(cube,lab.hold.moves):cube;}
+// A state reported: a two-look case goes in the list, once. A solved cube starts the once over.
+function labPatRead(cube){
+  if(!cube||typeof cfopStage!=='function')return;
+  const st=cfopStage(labHeld(cube),'white');
+  if(st.stage==='solved'){lab.patLast=null;return;}
+  const step=LAB_PAT_STEPS[st.stage];if(!step)return;
+  const key=st.stage+':'+st.name;if(key===lab.patLast)return;lab.patLast=key;
+  lab.pats.unshift({t:Date.now(),step,name:st.name,moves:st.moves.join(' '),sub:st.sub});
+  if(lab.pats.length>LAB_PAT_MAX)lab.pats.length=LAB_PAT_MAX;
+  labPatSave();labPatDraw();
+}
+function labPatSave(){try{localStorage.setItem('cw:labPatterns',JSON.stringify(lab.pats));}catch(e){}}
+function labPatLoad(){try{const a=JSON.parse(localStorage.getItem('cw:labPatterns')||'[]');return Array.isArray(a)?a.filter(e=>e&&e.name).slice(0,LAB_PAT_MAX):[];}catch(e){return [];}}
+// The window: the count in the head, the entries newest first (time, step, case, moves).
+function labPatDraw(){
+  const el=$('#patList'),n=lab.pats.length,mk=(tag,cls,text)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(text!=null)x.textContent=text;return x;};
+  $('#patCount').textContent=n?n+(n===1?' pattern':' patterns'):'';$('#patClear').disabled=!n;
+  el.textContent='';
+  if(!n){el.appendChild(mk('div','none','No patterns yet. A two-look OLL or PLL case the cube shows goes here.'));return;}
+  for(const e of lab.pats){
+    const d=mk('div','ent'),t=new Date(e.t),p=x=>String(x).padStart(2,'0');
+    d.appendChild(mk('time',null,`${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}`));
+    const line=mk('span');line.appendChild(mk('b',null,e.step));line.appendChild(mk('span','name',e.name));d.appendChild(line);
+    d.appendChild(mk('code',null,e.moves));if(e.sub)d.title=e.sub;
+    el.appendChild(d);
+  }
+}
+function labPatShow(on){$('#pat').hidden=!on;$('#patBtn').setAttribute('aria-pressed',String(!!on));}
+function labPatClear(){lab.pats=[];lab.patLast=null;labPatSave();labPatDraw();}
 // ----- experiment 3: six twists of one face -----
 // The sixth quarter turn: say so, then Reset cube after the wait. A second gesture within the wait
 // starts the wait over.
@@ -356,8 +394,10 @@ function labSide(on){$('#side').hidden=!on;$('main').classList.toggle('side',on)
 function labKeys(e){
   if(e.target&&/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)&&e.target.type!=='checkbox'&&e.target.type!=='range')return;
   if(lab.confirmOpen){if(e.key==='Escape'){e.preventDefault();labConfirmEnd(false);}if(e.key==='Enter'){e.preventDefault();labConfirmEnd(true);}return;}
+  if(e.key==='Escape'&&!$('#pat').hidden){e.preventDefault();labPatShow(false);return;}
   if(e.metaKey||e.ctrlKey||e.altKey)return;
   const k=e.key.toLowerCase();
+  if(k==='p'){e.preventDefault();labPatShow($('#pat').hidden);}
   if(k==='r'){e.preventDefault();labReset();}
   if(k==='s'){e.preventDefault();labSolved();}
   if(k==='l'){e.preventDefault();labSide($('#side').hidden);}
@@ -505,6 +545,7 @@ function labStart(){
   $('#macGo').onclick=labMacGo;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();labMacGo();}});
   $('#confirmYes').onclick=()=>labConfirmEnd(true);$('#confirmNo').onclick=()=>labConfirmEnd(false);
   $('#sideBtn').onclick=()=>labSide($('#side').hidden);
+  lab.pats=labPatLoad();labPatDraw();$('#patBtn').onclick=()=>labPatShow($('#pat').hidden);$('#patClose').onclick=()=>labPatShow(false);$('#patClear').onclick=labPatClear;
   document.addEventListener('keydown',labKeys);
   document.addEventListener('cw:bridge',labButtons);
   // Open as if Connect were pressed: the list over the bridge, or the look for a known cube.
