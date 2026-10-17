@@ -233,22 +233,38 @@ async function page(){
   assert.strictEqual(JSON.parse(storage.getItem('cw:labPatterns')).length,3,'the list is kept');
   key('Escape');assert.ok($('#pat').hidden,'Esc closes the window');key('p');assert.ok(!$('#pat').hidden);key('p');assert.ok($('#pat').hidden,'P closes it too');
   click($('#patBtn'));assert.ok(!$('#pat').hidden,'the button opens it');click($('#patClose'));assert.ok($('#pat').hidden,'Close closes it');
-  // New scramble (N): a 22-move scramble as held, with the count of the cross solutions by length up to 7 and the shortest ones
+  await show(new Cube());click($('#patClear'));assert.strictEqual(L().pats.length,0,'Clear empties the list');
+  // New scramble (N): no moves are made. The cube in the hands is the scramble: the entry holds the cross on the
+  // bottom as held (white up, so yellow), its shortest length, the count by length up to 7 and the shortest
+  // solutions; the matcher starts over with that cross as its goal and lists it, with the moves, when it is made
+  const scr=w.parseAlg("R U F' D L2 B U' R2 F D' L U2 B' R F2 U D' L' B2 R' U F"),sc0=w.applyAlg(new Cube(),scr);await show(sc0);
+  assert.strictEqual(L().pats.length,0,'a scramble is no pattern');
+  const sc1=w.applyAlg(sc0,['R']);await show(sc1);const at=L().moves.length;assert.strictEqual(L().moves[at-1],'R','the turn is on the list');
   click($('#patNew'));assert.ok(!$('#pat').hidden,'New scramble opens the window');
-  assert.strictEqual(L().pats.length,4,'the scramble is an entry');const sc=L().pats[0];assert.strictEqual(sc.step,'Scramble');assert.ok(/^[a-z]+-[a-z]+-\d\d$/.test(sc.name),'named by its seed: '+sc.name);
-  assert.strictEqual(w.parseAlg(sc.moves).length,22,'22 moves: '+sc.moves);assert.strictEqual(w.randomMoveScramble(sc.name,22).join(' '),sc.moves,'the seed gives the moves, as on the site');
-  const cr=w.crossSolutions(w.applyAlg(new Cube(),w.parseAlg(sc.moves)),7);assert.strictEqual(sc.cross.optimal,cr.optimal,'the shortest length');assert.strictEqual(sc.cross.color,'yellow','the cross on the bottom as held: white up, so yellow');
+  assert.strictEqual(L().pats.length,1,'the scramble is an entry');const sc=L().pats[0];assert.strictEqual(sc.step,'Scramble');assert.strictEqual(sc.name,'Cross first');assert.strictEqual(sc.moves,'','no moves are made');
+  assert.ok(L().target.equals(sc1),'the cube is as it was');assert.strictEqual(L().moves.length,at,'and so is the list');
+  const cr=w.crossSolutions(sc1,7);assert.ok(cr.optimal>0,'the cross is to make');assert.strictEqual(sc.cross.optimal,cr.optimal,'the shortest length');assert.strictEqual(sc.cross.color,'yellow','the cross on the bottom as held: white up, so yellow');
   const want=[];for(let n=cr.optimal;n<=7;n++)want.push(n+' moves: '+(cr.byLen[n]||[]).length);assert.strictEqual(sc.cross.counts,want.join(' · '),'the count by length: '+sc.cross.counts);
   assert.deepStrictEqual(sc.cross.sols,cr.byLen[cr.optimal],'the shortest solutions');
-  const ent=$$('#patList .ent')[0];assert.strictEqual(ent.querySelector('.name').textContent,sc.name,'newest first');assert.strictEqual(ent.querySelector('code').textContent,sc.moves,'the scramble');
+  assert.strictEqual(JSON.stringify(L().goal),JSON.stringify({color:'yellow',optimal:cr.optimal,at}),'the cross is the goal');
+  const ent=$$('#patList .ent')[0];assert.strictEqual(ent.querySelector('.name').textContent,'Cross first');assert.ok(!ent.querySelector('code:not(.sols)'),'no scramble moves to show');
   assert.ok(ent.querySelector('.data').textContent.startsWith('Yellow cross: shortest '+cr.optimal),'the data line: '+ent.querySelector('.data').textContent);
   assert.deepStrictEqual([...ent.querySelectorAll('.data .len')].map(x=>x.textContent),want,'one count per line');
   assert.ok(ent.querySelector('code.sols')&&ent.querySelector('code.sols').textContent.startsWith(cr.byLen[cr.optimal][0]),'the shortest solutions show: '+ent.querySelector('code.sols').textContent);
-  assert.ok(/^\S+ New scramble \S+: .*\. yellow cross: shortest \d; \d moves: \d+/.test($('#log .scramble').textContent),'logged: '+$('#log .scramble').textContent);
-  key('Escape');key('n');assert.ok(!$('#pat').hidden,'N opens the window with another');assert.strictEqual(L().pats.length,5,'N makes another');assert.strictEqual(JSON.parse(storage.getItem('cw:labPatterns')).length,5,'kept');
-  assert.strictEqual(JSON.parse(storage.getItem('cw:labPatterns'))[0].cross.counts,L().pats[0].cross.counts,'with its count');
+  assert.ok(/^\S+ New scramble, as held white up, green toward you\. yellow cross: shortest \d; \d moves: \d+/.test($('#log .scramble').textContent),'logged: '+$('#log .scramble').textContent);
+  // the first move after it is not merged into the one before: R then R reads R R, not R2
+  await show(w.applyAlg(sc1,['R']));assert.strictEqual(L().moves.slice(at-1).join(' '),'R R','the boundary holds: '+L().moves.slice(at-1));
+  await show(sc1);assert.strictEqual(L().moves.length,at,'back: the R\' merges away');assert.strictEqual(L().pats.length,1,'the cross is not made yet');assert.ok(L().goal,'the goal stands');
+  // the cross made: a Cross entry with the moves it took, and the goal is spent
+  const sol=w.parseAlg(cr.byLen[cr.optimal][0]);let c=sc1;for(let i=0;i<sol.length;i+=3){c=w.applyAlg(c,sol.slice(i,i+3));await show(c);}
+  assert.strictEqual(L().pats.length,2,'the cross is an entry');assert.strictEqual(L().pats[0].step,'Cross');assert.strictEqual(L().pats[0].name,sol.length+' moves');assert.strictEqual(L().pats[0].moves,sol.join(' '),'the moves it took: '+L().pats[0].moves);
+  assert.strictEqual(L().goal,null,'the goal is spent');assert.ok(/^\S+ Cross: yellow in \d moves \(shortest \d\): /.test($('#log .cross').textContent),'logged: '+$('#log .cross').textContent);
+  await show(w.applyAlg(c,['U']));assert.strictEqual(L().pats.length,2,'a move after it adds nothing');
+  // N with the cross made: the entry says so, and there is no goal
+  key('Escape');key('n');assert.ok(!$('#pat').hidden,'N opens the window');assert.strictEqual(L().pats.length,3,'another entry');assert.strictEqual(L().pats[0].name,'Cross made');assert.strictEqual(L().pats[0].cross.counts,'already made');assert.strictEqual(L().goal,null,'no goal');
+  assert.ok(/Yellow cross: already made$/.test($$('#patList .ent')[0].querySelector('.data').textContent),'the data line: '+$$('#patList .ent')[0].querySelector('.data').textContent);
+  assert.strictEqual(JSON.parse(storage.getItem('cw:labPatterns')).length,3,'kept');
   click($('#patClear'));assert.strictEqual(L().pats.length,0,'Clear empties the list');assert.ok($('#patList .none'));assert.strictEqual(storage.getItem('cw:labPatterns'),'[]');
-  await show(new Cube());
   // the tilt: the first reading sets the heading; the smacks come as jolts that go back
   const send=q=>dev.notify(gyroMsg(4,q)); // the cube's own frame: w,x,y,z, where the page's y is the cube's z and the page's z is minus the cube's y
   const rest={w:1,x:0,y:0,z:0};

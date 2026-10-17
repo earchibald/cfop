@@ -92,7 +92,7 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
   <span class="grow"></span>
   <span class="muted" id="ver" title="The version of the lab, and of the Twistwright app when it serves the page"></span>
   <button class="ghost" id="clear" title="Empty the moves and the log">Clear all<kbd>C</kbd></button>
-  <button id="patBtn" aria-pressed="false" aria-controls="pat" title="The two-look OLL and PLL cases the cube has shown, with the moves that solve each, and New scramble with its cross count">Patterns<kbd>P</kbd></button>
+  <button id="patBtn" aria-pressed="false" aria-controls="pat" title="The two-look OLL and PLL cases the cube has shown, with the moves that solve each. New scramble starts them over, with the cross as the first goal and its count">Patterns<kbd>P</kbd></button>
   <button id="sideBtn" aria-pressed="true" aria-controls="side">Experiments<kbd>L</kbd></button>
 </header>
 <main class="side">
@@ -146,7 +146,7 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
   </section>
 </aside>
 <section class="patwin" id="pat" hidden role="dialog" aria-labelledby="patTitle">
-  <div class="head" title="Drag to move the window"><b id="patTitle">Patterns</b><span class="count" id="patCount"></span><span class="grow"></span><button id="patNew" title="A scramble of 22 moves, as you hold the cube. The entry counts the solutions of the cross on the bottom as held, by length up to 7 moves, and shows the shortest.">New scramble<kbd>N</kbd></button><button class="ghost" id="patClear" title="Empty the list of patterns">Clear</button><button id="patClose" title="Close the window">Close<kbd>Esc</kbd></button></div>
+  <div class="head" title="Drag to move the window"><b id="patTitle">Patterns</b><span class="count" id="patCount"></span><span class="grow"></span><button id="patNew" title="Press when you have scrambled the cube. No moves are made: the patterns start over, and the cross on the bottom as held is the first goal. The entry counts its solutions by length up to 7 moves and shows the shortest; the cross goes in the list when you make it, with your moves.">New scramble<kbd>N</kbd></button><button class="ghost" id="patClear" title="Empty the list of patterns">Clear</button><button id="patClose" title="Close the window">Close<kbd>Esc</kbd></button></div>
   <div class="list" id="patList" aria-label="The patterns found, newest first"></div>
 </section>
 <div class="modal-bg" id="confirm" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">

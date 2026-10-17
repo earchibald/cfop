@@ -34,12 +34,14 @@
 // (twistDetector, fed each move before the list merges it): the lab waits `twistMs`, then does
 // Reset cube, as if R were pressed. The six quarter turns leave the cube, and the list, as they were.
 // Patterns (P): each state the cube reports is read as the CFOP stage of the cube as held
-// (cfopStage, js/stage.js). A two-look OLL or PLL case goes in the Patterns window with the moves
-// that solve it as held, newest first, the same case once until another comes or the cube is
-// solved; kept in cw:labPatterns. P opens the window, Esc or P closes it. New scramble in the
-// window (N) puts a scramble of 22 moves there, read as held, with the count of the solutions of
-// the cross on the bottom as held, by length up to seven moves (crossSolutions, js/engine.js), and
-// the shortest ones.
+// (cfopStage, js/stage.js), with the color on the bottom as held as the cross. A two-look OLL or
+// PLL case goes in the Patterns window with the moves that solve it as held, newest first, the same
+// case once until another comes or the cube is solved; kept in cw:labPatterns. P opens the window,
+// Esc or P closes it. New scramble (N) is the user's word that the cube in their hands is a fresh
+// scramble: it makes no moves. The matcher starts over with the cross on the bottom as held as its
+// first goal: an entry for the cube as it is, with the shortest cross, the count of the solutions
+// by length up to seven moves (crossSolutions, js/engine.js) and the shortest ones; then, when the
+// cross is made, an entry with the moves it took.
 // The moves since the connect sit in a box of their own under the picture, as the cube tab's
 // readout: merged as they come, the last ten shown, a triangle for more, and Clear moves.
 // The hold: the cube names its moves with its white face up and green in front, however it is
@@ -50,8 +52,8 @@
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,
-  busy:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,patPos:null,copyTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
-const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200,LAB_SCR_LEN=22,LAB_CROSS_MAX=7,LAB_SOLS_SHOWN=3;
+  busy:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,copyTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
+const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200,LAB_CROSS_MAX=7,LAB_SOLS_SHOWN=3;
 const LAB_PAT_STEPS={eo:'OLL edges',co:'OLL corners',cp:'PLL corners',ep:'PLL edges'};
 // The cameras: straight on, the cube as it sits in space; and isometric, a little from the right
 // and above, the site's usual view.
@@ -127,6 +129,9 @@ function labMerge(moves,m){
   const t=(turns(last)+turns(m))%4;
   return moves.slice(0,-1).concat(t?[m[0]+['','','2',"'"][t]]:[]);
 }
+// A move onto the list. The first move after New scramble is not merged into the one before it,
+// so the moves since the scramble stay whole.
+function labAdd(m){lab.moves=lab.goal&&lab.moves.length<=lab.goal.at?lab.moves.concat(m):labMerge(lab.moves,m);}
 // The box under the picture, as the cube tab's readout (cubeTabMovesDraw): the last LAB_SHOWN moves,
 // a triangle after them when there are more, the count in the head, and Clear moves.
 function labMovesDraw(){
@@ -142,7 +147,7 @@ function labMovesDraw(){
     svg.setAttribute('viewBox','0 0 8 10');svg.setAttribute('aria-hidden','true');p.setAttribute('points','0,0 8,5 0,10');svg.appendChild(p);more.appendChild(svg);
   }
 }
-function labMovesClear(){lab.moves=[];labMovesDraw();}
+function labMovesClear(){lab.moves=[];if(lab.goal)lab.goal.at=0;labMovesDraw();}
 // Isometric (I): on, the camera looks from a little to the right and above; off, straight on.
 function labIso(on){lab.iso=!!on;$('#iso').checked=lab.iso;try{localStorage.setItem('cw:labIso',lab.iso?'1':'');}catch(e){}labDraw();}
 function labIsoLoad(){try{return !!localStorage.getItem('cw:labIso');}catch(e){return false;}}
@@ -208,7 +213,7 @@ function labSetHold(h,src){
   $('#reset').title=`Hold the cube ${labHoldWords(h)}, then press. The picture takes that as its facing.`;
   if(src==='load')return '';
   let turn='';
-  if(old&&old!==h){const d=LAB_HOLD_BY.get(old.cube.inverse().mul(h.cube).center.join());if(d){for(const m of d.moves)lab.moves=labMerge(lab.moves,m);turn=d.moves.join(' ');}labMovesDraw();}
+  if(old&&old!==h){const d=LAB_HOLD_BY.get(old.cube.inverse().mul(h.cube).center.join());if(d){for(const m of d.moves)labAdd(m);turn=d.moves.join(' ');}labMovesDraw();}
   if(src==='turn')return turn;
   labLog('hold','Hold: '+labHoldWords(h)+'.');
   if(lab.conn&&lab.raw)labReset();else labDraw();
@@ -216,10 +221,10 @@ function labSetHold(h,src){
 // Show the real cube's state: up to four moves past the picture turn their layers in a queue;
 // further away, the picture jumps.
 function labShow(cube){
-  labPatRead(cube);
-  if(lab.jump){lab.jump=false;labJump(cube);return;}
+  if(lab.jump){lab.jump=false;labJump(cube);labPatRead(cube);return;}
   const moved=labPath(lab.target||lab.shown,cube);
-  if(moved&&moved.length){for(const m of moved){const r=labRelabel(m);lab.moves=labMerge(lab.moves,r);if($('#twistOn').checked&&lab.twist.feed(r))labTwist(r);}labMovesDraw();}
+  if(moved&&moved.length){for(const m of moved){const r=labRelabel(m);labAdd(r);if($('#twistOn').checked&&lab.twist.feed(r))labTwist(r);}labMovesDraw();}
+  labPatRead(cube); // after the moves, so a cross made lists the moves it took
   if(!moved||!moved.length){labStopAnim();lab.shown=lab.target=cube;labDraw();return;}
   lab.target=cube;lab.queue.push(...moved);
   if(!lab.anim)labNext();
@@ -237,8 +242,9 @@ function labNext(){
   lab.raf=requestAnimationFrame(step);
 }
 function labStopAnim(){if(lab.raf){cancelAnimationFrame(lab.raf);lab.raf=0;}lab.anim=null;lab.queue=[];if(lab.target)lab.shown=lab.target;}
-// Show a state at once, as a new start: no layer turns, nothing on the move list.
-function labJump(cube){labStopAnim();lab.shown=lab.target=cube;labDraw();}
+// Show a state at once, as a new start: no layer turns, nothing on the move list, and the cross
+// goal of New scramble is dropped (the moves it took cannot be known).
+function labJump(cube){labStopAnim();lab.shown=lab.target=cube;lab.goal=null;labDraw();}
 // My cube is solved: the reset command, then the state read again. The cube's count was off, so
 // the moves between the old picture and solved are not turns; the picture jumps.
 async function labSolved(){
@@ -301,9 +307,19 @@ function labReset(){
 // The cube as held: the hold's turns applied, so U is the top as held (cubeTabHeld).
 function labHeld(cube){return cube&&lab.hold&&lab.hold.moves.length?applyAlg(cube,lab.hold.moves):cube;}
 // A state reported: a two-look case goes in the list, once. A solved cube starts the once over.
+// After New scramble the cross on the bottom as held is the first goal: once made, it goes in the
+// list with the moves it took, and the goal is spent.
 function labPatRead(cube){
   if(!cube||typeof cfopStage!=='function')return;
-  const st=cfopStage(labHeld(cube),'white');
+  const held=labHeld(cube),st=cfopStage(held,LAB_COLORS[held.center[3]]);
+  if(lab.goal&&st.stage!=='cross'&&st.down===lab.goal.color){
+    const g=lab.goal,moves=lab.moves.slice(g.at),n=moves.length;lab.goal=null;
+    lab.pats.unshift({t:Date.now(),step:'Cross',name:n+(n===1?' move':' moves'),moves:moves.join(' '),
+      sub:`The ${g.color} cross, made in ${n} moves. The shortest was ${g.optimal}.`});
+    if(lab.pats.length>LAB_PAT_MAX)lab.pats.length=LAB_PAT_MAX;
+    labPatSave();labPatDraw();
+    labLog('cross',`Cross: ${g.color} in ${n} moves (shortest ${g.optimal}): ${moves.join(' ')||'no moves'}.`);
+  }
   if(st.stage==='solved'){lab.patLast=null;return;}
   const step=LAB_PAT_STEPS[st.stage];if(!step)return;
   const key=st.stage+':'+st.name;if(key===lab.patLast)return;lab.patLast=key;
@@ -311,20 +327,22 @@ function labPatRead(cube){
   if(lab.pats.length>LAB_PAT_MAX)lab.pats.length=LAB_PAT_MAX;
   labPatSave();labPatDraw();
 }
-// New scramble (N): a scramble as held, in the list with the cross count. The letters are the
-// moves as the user holds the cube, so the cross is the one on the bottom as held; a solved cube
-// scrambled by them has that cross where the engine's D cross is, whatever the colors.
-function labPatScramble(){
-  const seed=randomSeedName(),moves=randomMoveScramble(seed,LAB_SCR_LEN),cube=applyAlg(new Cube(),moves);
-  const r=crossSolutions(cube,LAB_CROSS_MAX),color=LAB_COLORS[lab.hold?lab.hold.cube.center[3]:3];
-  const lens=[];for(let n=r.optimal;n<=LAB_CROSS_MAX;n++)lens.push(n+' moves: '+(r.byLen[n]||[]).length);
-  if(!lens.length)lens.push('none in '+LAB_CROSS_MAX+' moves or fewer');
-  const counts=lens.join(' · '),sols=r.byLen[r.optimal]||[];
-  const e={t:Date.now(),step:'Scramble',name:seed,moves:moves.join(' '),cross:{color,optimal:r.optimal,counts,lens,sols},
+// New scramble (N): the cube in the hands is a fresh scramble; no moves are made. The entry holds
+// the cross on the bottom as held: its color, the shortest length, the count of the solutions by
+// length up to LAB_CROSS_MAX and the shortest ones, in letters as held (reframe puts the bottom as
+// held where the engine's D cross is). The matcher starts over, with that cross as its goal.
+function labPatNew(){
+  const cube=lab.target||lab.shown||new Cube(),held=labHeld(cube),color=LAB_COLORS[held.center[3]];
+  const r=crossSolutions(reframe(held),LAB_CROSS_MAX),made=r.optimal===0;
+  const lens=[];if(!made)for(let n=r.optimal;n<=LAB_CROSS_MAX;n++)lens.push(n+' moves: '+(r.byLen[n]||[]).length);
+  if(!made&&!lens.length)lens.push('none in '+LAB_CROSS_MAX+' moves or fewer');
+  const counts=made?'already made':lens.join(' · '),sols=r.byLen[r.optimal]||[];
+  const e={t:Date.now(),step:'Scramble',name:made?'Cross made':'Cross first',moves:'',cross:{color,optimal:r.optimal,counts,lens,sols},
     sub:`As held: ${labHoldWords(lab.hold)}. The cross on the bottom is ${color}. Each solution is counted once, up to ${LAB_CROSS_MAX} moves.`};
   lab.pats.unshift(e);if(lab.pats.length>LAB_PAT_MAX)lab.pats.length=LAB_PAT_MAX;
+  lab.patLast=null;lab.goal=made?null:{color,optimal:r.optimal,at:lab.moves.length};
   labPatSave();labPatDraw();labPatShow(true);
-  labLog('scramble',`New scramble ${seed}: ${e.moves}. ${color} cross: shortest ${r.optimal}; ${counts}.`);
+  labLog('scramble',`New scramble, as held ${labHoldWords(lab.hold)}. ${color} cross: ${made?'already made':`shortest ${r.optimal}; ${counts}`}.`);
 }
 function labPatSave(){try{localStorage.setItem('cw:labPatterns',JSON.stringify(lab.pats));}catch(e){}}
 function labPatLoad(){try{const a=JSON.parse(localStorage.getItem('cw:labPatterns')||'[]');return Array.isArray(a)?a.filter(e=>e&&e.name).slice(0,LAB_PAT_MAX):[];}catch(e){return [];}}
@@ -338,9 +356,9 @@ function labPatDraw(){
     const d=mk('div','ent'),t=new Date(e.t),p=x=>String(x).padStart(2,'0');
     d.appendChild(mk('time',null,`${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}`));
     const line=mk('span');line.appendChild(mk('b',null,e.step));line.appendChild(mk('span','name',e.name));d.appendChild(line);
-    d.appendChild(mk('code',null,e.moves));if(e.sub)d.title=e.sub;
+    if(e.moves)d.appendChild(mk('code',null,e.moves));if(e.sub)d.title=e.sub;
     if(e.cross){const c=e.cross,data=mk('span','data');data.appendChild(mk('b',null,c.color[0].toUpperCase()+c.color.slice(1)+' cross'));
-      data.appendChild(document.createTextNode(`: shortest ${c.optimal}`));for(const l of c.lens||[c.counts])data.appendChild(mk('span','len',l));d.appendChild(data);
+      data.appendChild(document.createTextNode(c.optimal?`: shortest ${c.optimal}`:': already made'));for(const l of c.lens||[c.counts])data.appendChild(mk('span','len',l));d.appendChild(data);
       if(c.sols&&c.sols.length){const s=mk('code','sols',c.sols.slice(0,LAB_SOLS_SHOWN).join('   '));
         if(c.sols.length>LAB_SOLS_SHOWN)s.appendChild(mk('span','more',`  +${c.sols.length-LAB_SOLS_SHOWN} more`));d.appendChild(s);}}
     el.appendChild(d);
@@ -460,7 +478,7 @@ function labKeys(e){
   if(e.metaKey||e.ctrlKey||e.altKey)return;
   const k=e.key.toLowerCase();
   if(k==='p'){e.preventDefault();labPatShow($('#pat').hidden);}
-  if(k==='n'){e.preventDefault();labPatScramble();}
+  if(k==='n'){e.preventDefault();labPatNew();}
   if(k==='r'){e.preventDefault();labReset();}
   if(k==='s'){e.preventDefault();labSolved();}
   if(k==='l'){e.preventDefault();labSide($('#side').hidden);}
@@ -571,7 +589,7 @@ async function labConnect(auto){
     try{
       const cube=await conn.readState(3000);
       labSaveMac(name,conn.mac);labRemember(name,{mac:conn.mac,id:device.id||null});lab.conn=conn;lab.busy=false;
-      lab.moves=[];lab.shown=lab.target=null;lab.asked=false;lab.want=false;lab.gyro=false;lab.raw=lab.basis=lab.q=lab.qTo=null;lab.det.reset();lab.twist.reset();clearTimeout(lab.twistTimer);lab.twistTimer=0;lab.trace=[];lab.times=[];
+      lab.moves=[];if(lab.goal)lab.goal.at=0;lab.shown=lab.target=null;lab.asked=false;lab.want=false;lab.gyro=false;lab.raw=lab.basis=lab.q=lab.qTo=null;lab.det.reset();lab.twist.reset();clearTimeout(lab.twistTimer);lab.twistTimer=0;lab.trace=[];lab.times=[];
       labButtons();labMovesDraw();labDots();labShow(cube);
       labStatus((conn.gen===3?'Live. Each turn of your cube turns the layer. This cube has no tilt sensor.':'Live. Each turn of your cube turns the layer. Waiting for the first tilt reading: move the cube.')+labSolvedHint(cube));
       labLog('link',`Connected to ${conn.name} (gen ${conn.gen}).`);
@@ -608,7 +626,7 @@ function labStart(){
   $('#macGo').onclick=labMacGo;$('#macCopy').onclick=labCopyMac;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();labMacGo();}});
   $('#confirmYes').onclick=()=>labConfirmEnd(true);$('#confirmNo').onclick=()=>labConfirmEnd(false);
   $('#sideBtn').onclick=()=>labSide($('#side').hidden);
-  lab.pats=labPatLoad();labPatDraw();$('#patBtn').onclick=()=>labPatShow($('#pat').hidden);$('#patClose').onclick=()=>labPatShow(false);$('#patClear').onclick=labPatClear;$('#patNew').onclick=labPatScramble;labPatDrag();
+  lab.pats=labPatLoad();labPatDraw();$('#patBtn').onclick=()=>labPatShow($('#pat').hidden);$('#patClose').onclick=()=>labPatShow(false);$('#patClear').onclick=labPatClear;$('#patNew').onclick=labPatNew;labPatDrag();
   document.addEventListener('keydown',labKeys);
   document.addEventListener('cw:bridge',labButtons);
   // The cross table takes over a second to build: build it while the page is idle, so the first
