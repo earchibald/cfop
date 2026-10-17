@@ -131,6 +131,13 @@ async function page(){
   const known=JSON.parse(storage.getItem('cw:labCubes'));
   assert.strictEqual(known['GAN12uiM_A1B2'].mac,MAC,'the cube is remembered with its address');assert.strictEqual(known['GAN12uiM_A1B2'].id,'p1');
   assert.strictEqual($('#name').textContent,'GAN12uiM_A1B2');assert.ok(!$('#reset').disabled,'Reset cube is on');
+  // the address in the bar, with a copy button: the clipboard gets it and the icon turns to a check
+  assert.ok(!$('#macShow').hidden,'the address shows');assert.strictEqual($('#macText').textContent,MAC,'the MAC address of the cube');
+  let copied=null;Object.defineProperty(w.navigator,'clipboard',{value:{writeText:async t=>{copied=t;}},configurable:true});
+  click($('#macCopy'));assert.ok(await until(()=>copied===MAC),'the address is copied');
+  assert.ok(await until(()=>$('#macCopy').classList.contains('copied')),'the button says Copied');assert.strictEqual($('#macCopy').title,'Copied');assert.strictEqual($('#macCopy').getAttribute('aria-label'),'Copied');
+  assert.ok(await until(()=>!$('#macCopy').classList.contains('copied'),2500),'and goes back after a moment');assert.strictEqual($('#macCopy').title,'Copy the MAC address');
+  assert.ok(/Copied the MAC address AB:12:34:5C:9D:E1/.test($('#log .link').textContent||$$('#log .link').map(e=>e.textContent).join()),'the copy is logged');
   assert.ok(L().shown&&L().shown.isSolved(),'the solved cube came through');assert.ok(!$('#solved').disabled,'My cube is solved is on');
   assert.ok(!/My cube is solved/.test($('#status').textContent),'a solved cube gets no hint: '+$('#status').textContent);
   assert.ok(/State read: WWWWWWWWW RRRRRRRRR GGGGGGGGG YYYYYYYYY OOOOOOOOO BBBBBBBBB \(solved\)/.test($('#log .state').textContent),'the state read is logged as letters: '+$('#log').textContent);
@@ -309,6 +316,7 @@ async function page(){
   key('l');assert.ok($('#side').hidden,'L hides the panel');key('l');assert.ok(!$('#side').hidden);
   key('c');assert.strictEqual($('#log').children.length,0,'C clears the log');assert.strictEqual(L().moves.length,0,'and the moves');assert.ok($('#movesClear').disabled);
   click($('#disconnect'));assert.ok(!L().conn,'Disconnect');assert.ok($('#reset').disabled);
+  assert.ok($('#macShow').hidden,'the address goes with the cube');
   await sleep(50);assert.ok($('#list').hidden,'Disconnect by hand starts no look');
   assert.deepStrictEqual(errs,[],'no script errors on the way');
   console.log('lab page ok');

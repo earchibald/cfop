@@ -47,7 +47,7 @@
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,
-  busy:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,times:[],trace:[],traceRaf:0,confirmOpen:false};
+  busy:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,copyTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200;
 const LAB_PAT_STEPS={eo:'OLL edges',co:'OLL corners',cp:'PLL corners',ep:'PLL edges'};
 // The cameras: straight on, the cube as it sits in space; and isometric, a little from the right
@@ -61,8 +61,22 @@ function labButtons(){
   $('#connect').disabled=lab.busy||!ganAvailable();
   $('#reset').disabled=!on;$('#solved').disabled=!on||lab.busy;
   $('#name').textContent=on?lab.conn.name:'';
+  $('#macShow').hidden=!(on&&lab.conn.mac);$('#macText').textContent=on&&lab.conn.mac?lab.conn.mac:'';
+  if(!on)labCopied(false);
   labVersion();
 }
+// The copy button by the address: the clipboard where the browser gives one, else a select and
+// the old copy command. The icon turns to a check for a moment.
+async function labCopyMac(){
+  const mac=$('#macText').textContent;if(!mac)return;
+  let ok=false;
+  try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(mac);ok=true;}}catch(e){}
+  if(!ok){try{const r=document.createRange();r.selectNodeContents($('#macText'));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);ok=document.execCommand('copy');sel.removeAllRanges();}catch(e){}}
+  if(!ok){labStatus('The browser did not let the page copy. Select the address and copy it yourself.');return;}
+  labCopied(true);labLog('link','Copied the MAC address '+mac+'.');
+  clearTimeout(lab.copyTimer);lab.copyTimer=setTimeout(()=>labCopied(false),1500);
+}
+function labCopied(yes){const b=$('#macCopy');b.classList.toggle('copied',yes);b.title=yes?'Copied':'Copy the MAC address';b.setAttribute('aria-label',b.title);if(!yes){clearTimeout(lab.copyTimer);lab.copyTimer=0;}}
 // The lab's version, and the app's when the bridge serves the page. Numbers and the app's own
 // version string, in the bar and the window title.
 function labVersion(){
@@ -542,7 +556,7 @@ function labStart(){
   lab.iso=labIsoLoad();$('#iso').checked=lab.iso;$('#iso').onchange=e=>labIso(e.target.checked);
   labKnobs();labMovesDraw();labDraw();labButtons();
   $('#connect').onclick=labConnect;$('#disconnect').onclick=labDisconnect;$('#reset').onclick=labReset;$('#solved').onclick=labSolved;$('#clear').onclick=labClear;$('#movesClear').onclick=labMovesClear;
-  $('#macGo').onclick=labMacGo;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();labMacGo();}});
+  $('#macGo').onclick=labMacGo;$('#macCopy').onclick=labCopyMac;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();labMacGo();}});
   $('#confirmYes').onclick=()=>labConfirmEnd(true);$('#confirmNo').onclick=()=>labConfirmEnd(false);
   $('#sideBtn').onclick=()=>labSide($('#side').hidden);
   lab.pats=labPatLoad();labPatDraw();$('#patBtn').onclick=()=>labPatShow($('#pat').hidden);$('#patClose').onclick=()=>labPatShow(false);$('#patClear').onclick=labPatClear;

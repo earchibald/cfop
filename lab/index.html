@@ -20,6 +20,9 @@ kbd{font:600 11px var(--mono);color:var(--muted);border:1px solid var(--line);bo
 input[type=text]{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--text);font:inherit}
 .bar{position:fixed;top:0;left:0;right:0;height:52px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--panel);z-index:5}
 .bar b{font-size:16px;margin-right:4px}.bar .muted{color:var(--muted)}.bar .grow{flex:1}
+.bar .mac{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:13px}.bar .mac code{font-family:var(--mono);font-size:13px;color:var(--text)}
+.bar .mac button{display:inline-flex;align-items:center;padding:3px;border:0;color:var(--muted)}.bar .mac button:hover{color:var(--text)}.bar .mac button svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.bar .mac button.copied{color:var(--ok,#3cb371)}.bar .mac button .check{display:none}.bar .mac button.copied .check{display:block}.bar .mac button.copied .pages{display:none}
 .bar label{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
 .bar .hold{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;white-space:nowrap}
 .bar select{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 4px;color:var(--text);font:inherit;font-size:13px}
@@ -75,6 +78,7 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
 <body>
 <header class="bar">
   <b>Smart cube lab</b><span class="muted" id="name"></span>
+  <span class="mac" id="macShow" hidden title="The MAC address of the cube. The GAN cipher takes it as its salt."><code id="macText"></code><button class="ghost" id="macCopy" title="Copy the MAC address" aria-label="Copy the MAC address"><svg class="pages" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg><svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></span>
   <button class="primary" id="connect">Connect</button>
   <button id="disconnect" hidden>Disconnect</button>
   <span class="hold" id="hold" title="How you hold the cube. The moves read this way, and Reset cube takes the cube as held like this.">I hold it <select id="holdUp" aria-label="The color on top"></select> up, <select id="holdFront" aria-label="The color toward you"></select> toward me</span>
