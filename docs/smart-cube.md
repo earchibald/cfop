@@ -8,6 +8,7 @@
 | Tests | `test/gan.js` (protocol), `test/smart-ui.js` (dialog), `test/fake-gan.js` (a fake GAN cube) |
 | Saved MAC addresses | `cw:ganMac`, a map from the Bluetooth name to the address |
 | The macOS app (Bluetooth bridge for Safari) | `mac/` (Swift, AppKit, Network, CoreBluetooth); `js/bridge.js` is the page side; `test/bridge.js` and `test/fake-bridge.js` |
+| What comes next | `docs/smart-cube-vision/`: the Smart Cube Horizons page (drift, the data the cube sends that the app drops, browsers, cameras, native apps) with findings the owner approves, parks or closes on the page, and a changelog |
 
 ## What it does now
 
@@ -159,6 +160,33 @@ two states. Next steps: decode the face and the direction from the move
 message, a timer that starts on the first turn and stops on the solve, a
 player that follows the cube, and hints for the cross and the pairs (the stage
 names them but shows no moves).
+
+## The lab
+
+`lab/` is a page of its own for work on the smart cube, without the rest of the
+site: `lab/index.html` loads `engine.js`, `draw.js`, `gan.js` and `bridge.js`
+and nothing else of the app, plus `lab/smack.js` (pure) and `lab/lab.js` (the
+UI). `test/lab.js` covers both.
+
+| Part | What |
+|---|---|
+| Run it | `lab/run.sh` builds the macOS app if needed (ad hoc), starts it with `--root` on this checkout and `--no-open`, and opens `http://127.0.0.1:27272/lab/`. The bridge takes that origin, so Safari reaches a cube. A running app that serves twistwright.com has no `/lab/`: `lab/run.sh --restart` quits it first. Chrome at the same address uses Web Bluetooth; `?bridge=1` takes the bridge instead, so the app reads the address. |
+| Version | `LAB_VERSION` in `lab/version.js`, shown in the bar with the app's version when the bridge serves the page, and in the window title. Raise it with any change a user of the lab can see; the site's `APP_VERSION` stays as it is, since the lab is not part of the site. |
+| Connect | The lab opens as if Connect were pressed. Over the bridge the list comes up at once. A cube that once connected is remembered in `cw:labCubes` (by name: the address, the link's id, the time) and is taken as soon as the scan hears it, with no click; the status names the cubes the lab looks for. After the link drops (the cube went to sleep) the look starts again; Disconnect by hand does not. Connect during a look ends it and opens the chooser. With Web Bluetooth the chooser needs a click, so the look with no click goes through `navigator.bluetooth.getDevices` (the cubes this page was once allowed; Chrome has it behind a flag) and `watchAdvertisements`; where the browser has neither, the status asks for Connect. The address goes to `cw:ganMac` as well, the site's map. |
+| The picture | Full page. The camera looks straight at the cube, so a level cube shows the face toward you alone until it tilts; the Isometric box in the bar (I, kept in `cw:labIso`) looks from a little to the right and above instead, the site's usual three-face view. Each turn of the cube turns its layer (`labPath`, the same search as `cubeTabPath`); the tilt turns the whole picture (`labGyro`). The moves since the connect sit in a box of their own under it, as the cube tab's readout: merged as they come, the last ten shown, the newest outlined in the accent color, a triangle with the count for more, and Clear moves. No stage. |
+| The hold | "I hold it <color> up, <color> toward me" in the bar: the user's word on the pose, one of the 24 (`LAB_HOLDS`, as `CUBE_TAB_HOLDS`). The cube names its moves with its white face up and green in front, however it is held; the lab names them by the place each face sits in the hold (`labRelabel`), so with yellow up and green toward you the cube's R reads as L. A change of the hold puts the whole-cube turn from the old hold to the new on the list, dashed, so the moves before it still read right, and is a Reset cube at once. Kept in `cw:labHold`. |
+| My cube is solved | The S key or the button. The cube counts its own turns and reports the count; it cannot see its stickers. A turn made while it slept, or one it missed, leaves the count off, and the picture shows a scramble the real cube does not have. The button sends the reset command (as the site's Smart cube dialog does), reads the state again and jumps the picture there with no moves added. The status after a connect says so when the cube does not read as solved. |
+| Reset cube | The R key or the button. The cube as held now is the reference pose, the hold (`resetBasis` with the hold's turn). Yaw only by default, as Reset view in the app: the tilt stays what gravity says. Full reset (the checkbox) takes the whole reading, so a cube held at a slant shows square. The first tilt reading does the same on its own. |
+| Experiment 2 | A turn of the whole cube, from the tilt. `turnDetector` in `lab/smack.js` cuts the readings into turns: the body past `start` degrees from its rest pose is a turn (a `tstart` event), a `tupdate` every `updateMs` while it moves, and a `tfinish` once the body has moved less than `settle` degrees for `still` ms, with the turn from the rest pose (its angle, its axis, and its name: the move letter for the axis with the most of it). The rest pose follows a still cube slowly, so a slow lean is no turn. The log carries every event with the numbers (`turn start`, `turn update`, `turn finish`). At the finish the lab finds the nearest of the 24 holds: within `snap` degrees of another hold, that whole-cube turn goes on the list, dashed, and the hold moves on (`labSetHold` from a turn: no Reset cube, since the picture already shows the cube as held); back at the hold, or between holds, nothing changes. Detect turns from the tilt in the panel switches it off; the knobs set the numbers. |
+| Experiment 1 | Three smacks on the right face bring a Reset dialog (Reset or Cancel, Enter or Esc). `smackDetector` in `lab/smack.js` takes each tilt reading in the frame of the picture, so its axes are the user's. A smack is a jolt from the rest pose past `jolt` degrees that comes back (under `settle`, or the cube still again with at least `back` of the peak undone) within `within` ms and under `maxDeg`; a jolt that stays is a turn of the cube in the hands, and the rest pose moves there. The rest pose follows a still cube slowly (`restTc`), so a slow lean makes no event. |
+| The face | The cube reports its tilt, not a hit. A push on a face turns the body about an axis across that face (the torque is r × F, and F lies along the face's normal), so the face hit is the axis with the least of the jolt in it, when that share is under `perp`. The right and the left face lie across the same axis; the tilt alone cannot tell them apart, so the dialog says "right or left". |
+| The panel | The count as three dots, the tilt away from rest, the speed, the readings per second, a trace of the last four seconds with the jolt line, sliders for every threshold, the face a series counts (or any), and a log of every smack, turn, reset and link event. L hides the panel, C (Clear all) clears the moves and the log. |
+
+Not done yet: the gyro message also carries a 3-bit angular velocity per axis
+(gan-web-bluetooth reads it at bit 68 for gen 2 and bit 80 for gen 4), which
+`ganGyro` does not decode; it may make a sharper smack signal than the tilt
+difference. The thresholds are untested on a real cube: tune them from the
+log and the trace, then move what works into `cubetab.js`.
 
 ## The GAN protocol
 

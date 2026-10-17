@@ -1,0 +1,534 @@
+{
+  "themes": [
+    {
+      "id": "space",
+      "name": "The cube in space",
+      "sticker": "Y",
+      "lead": "Kill the drift. Know how the cube sits in the hands without a compass, a camera or a button."
+    },
+    {
+      "id": "data",
+      "name": "More from the cube we have",
+      "sticker": "G",
+      "lead": "The cube sends more than we read. Decode it and the trainer gets a timer, a replay and a coach."
+    },
+    {
+      "id": "web",
+      "name": "Web Bluetooth and the browser",
+      "sticker": "B",
+      "lead": "What the browser gives today, what sits behind a flag, and what will never come."
+    },
+    {
+      "id": "camera",
+      "name": "Camera and in-browser AI",
+      "sticker": "O",
+      "lead": "A webcam sees the cube and the person. Models that run in the page can read both."
+    },
+    {
+      "id": "native",
+      "name": "Native apps, starting with macOS",
+      "sticker": "W",
+      "lead": "Drop the sidecar. Own Bluetooth, the camera, the background and the on-device models."
+    },
+    {
+      "id": "moon",
+      "name": "Moon shots",
+      "sticker": "R",
+      "lead": "Ideas that need new hardware or new platforms. Kept so we know why they wait."
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-01",
+      "theme": "space",
+      "title": "Fidget or turn? Classify every yaw change by its speed and its company",
+      "effort": "M",
+      "confidence": "high",
+      "lay": "When you shift in your chair, the cube turns with you, slowly, and no layer moves. When you turn the cube on purpose, it swings a quarter turn in well under half a second and a layer turn usually follows. Today the picture treats both the same way and drifts. A tracker that tells the two apart can fold a slow body turn back into the heading and keep the fast one as a real turn of the cube.",
+      "tech": [
+        "Split the heading estimate in two: the user's facing (a slow random walk) and the cube's yaw in the user's frame (one of four quarter turns, plus a short transient while a turn is in flight).",
+        "Classify a yaw change by its peak angular rate, its duration, its final angle (near 90° or not) and whether a layer turn follows within about two seconds. Slow, small, unaccompanied changes update the facing. Fast changes that land near a quarter turn are whole-cube turns and move the hold.",
+        "Feed the classifier the angular velocity field in the gyro message (not decoded yet, see F-07) rather than differences of the quaternion, which alias at the message rate.",
+        "The lab's turnDetector in lab/smack.js already cuts the stream into turn events (start 15°, settle 4°, still 300 ms, rest time constant 1500 ms); add the slow branch beside it and log both so the thresholds can be tuned on the real cube.",
+        "Pitch and roll never drift: gravity fixes them. Only the yaw needs this."
+      ],
+      "first": "In lab/smack.js, add a driftDetector that accumulates slow yaw with no layer turn and emits a 'drift' event with the angle; show it in the lab log beside the turn events, and record a session of deliberate fidgets.",
+      "needs": [
+        "F-07"
+      ],
+      "open": [
+        "How fast is a real GAN y turn? Measure peak rate and duration on the GAN 12 ui Maglev before choosing thresholds."
+      ]
+    },
+    {
+      "id": "F-02",
+      "theme": "space",
+      "title": "Let the algorithm tell us the hold",
+      "effort": "M",
+      "confidence": "high",
+      "lay": "When you do a T perm, the cube reports moves in its own frame: maybe B, D, B', D'. We know the T perm is R U R' U'. Match the two and the hold falls out exactly, with no sensor at all. Every algorithm you execute becomes a free, exact correction of the drift.",
+      "tech": [
+        "stage.js already names the case and its algorithm. For each of the 24 holds, relabel the reported moves and compare with the algorithm (and its common alternatives from ALG_DB); a unique match fixes the hold.",
+        "Even without a known case, the move distribution over a solve is a strong prior: speedcubers turn R, U, L, F and D far more than B. A hold under which the last twenty moves are mostly B or D is probably wrong by a y or x turn.",
+        "Treat the result as a measurement of the yaw hold with high weight and feed it into the tracker of F-05; the tilt picture then snaps to the corrected heading.",
+        "This also fixes the stage reader's weakest point: a hold the user never pressed, where the case is named with a whole-cube turn first."
+      ],
+      "first": "Add holdFromMoves(moves, algs) to stage.js (pure): return the holds under which the reported moves match a known algorithm; test it with every two-look case from each of the 24 holds.",
+      "needs": [],
+      "open": []
+    },
+    {
+      "id": "F-03",
+      "theme": "space",
+      "title": "A gesture to say 'this is how I hold it'",
+      "effort": "S",
+      "confidence": "medium",
+      "lay": "Three taps on a face, or a quick shake, and the picture lines up with the hold again. No button, no mouse, hands stay on the cube. The lab already has the detector; what is left is to tune it on a real cube and move it into the app.",
+      "tech": [
+        "smackDetector in lab/smack.js: a jolt past 5° from the rest pose that comes back within 350 ms; three on one face within 1500 ms of each other make a series. The face comes from the axis with the least of the jolt (torque is r × F, perp 0.45). Right and left faces share an axis and cannot be told apart from the tilt alone.",
+        "The angular velocity field (F-07) should give a sharper jolt signal than the tilt difference.",
+        "The thresholds are untested on a real cube. Tune them from the lab's log and trace, then port the detector to cubetab.js as a Reset view by gesture."
+      ],
+      "first": "Run lab/run.sh with the GAN 12 ui Maglev, record twenty smacks and twenty normal turns, and set the thresholds so no normal turn counts as a smack.",
+      "needs": [
+        "F-07"
+      ],
+      "open": [
+        "Does a smack on a Maglev cube ever turn a layer? If so, mask smacks that coincide with a state change."
+      ]
+    },
+    {
+      "id": "F-04",
+      "theme": "space",
+      "title": "Use the rest poses: a cube on the table lies flat and square",
+      "effort": "S",
+      "confidence": "high",
+      "lay": "A cube put down on a desk sits flat, and almost always square to the desk edge, which is square to the person. That rest is a free calibration moment. The picture can relax its heading toward the nearest square pose while the cube lies still and flat.",
+      "tech": [
+        "Detect rest: angular rate near zero for over a second and gravity along one cube axis within a few degrees. Then pull the yaw toward the nearest multiple of 90° in the user's frame with a slow time constant, as the lab's rest pose already follows a still cube.",
+        "This is Heuristic Drift Reduction (Borenstein, Ojeda and Kwanmuang, 2009) applied to a cube: indoor trackers assume corridors meet at right angles and pull the heading toward the nearest dominant direction, which cut heading error by almost an order of magnitude. A cube has 24 dominant directions instead of four.",
+        "Never snap during a solve: require the cube to be flat (one face exactly up) and the hands off (no state changes for two seconds).",
+        "A desk at an angle to the person breaks the assumption. Make it a setting ('My desk is square to me', on by default) and show the band under the picture when the pull is active."
+      ],
+      "first": "Add a restDetector to lab/smack.js beside turnDetector and log 'rest start' and 'rest end' with the gravity axis and the yaw offset from the nearest square pose.",
+      "needs": [],
+      "open": []
+    },
+    {
+      "id": "F-05",
+      "theme": "space",
+      "title": "One tracker for hold and heading, with switchable assumptions",
+      "effort": "L",
+      "confidence": "medium",
+      "lay": "Put the pieces together: gravity for the tilt, the cube's speed to tell a fidget from a turn, algorithms to fix the hold exactly, rest poses to square it up, and a gesture when all else fails. Each piece is a weak clue; together they hold the picture steady through a whole session. The tracker knows which situation it is in (solving, scrambling, resting, walking around) and weighs the clues differently in each.",
+      "tech": [
+        "A small state machine over modes: Solving (layer turns frequent, hold stable, facing drifts slowly), Scrambling (same, but any hold), Inspection (no turns, the cube rotates in the hands fast and often), Rest (flat and still), Away (large motion, no turns: walking). Each mode has its own weights for the clues.",
+        "State: facing yaw (continuous, slow random walk), hold (one of 24, discrete), transient body rotation (continuous, decays). Observations: the quaternion, the angular velocity, state changes, matched algorithms, rest events, gestures.",
+        "A grid filter over the 24 holds × a handful of facing hypotheses is cheap at the gyro's message rate (about 10 Hz on one measured GAN cube; unmeasured on the Maglev) and avoids linearizing a Kalman filter around a discrete variable.",
+        "Everything works on top of the cube's own fused quaternion: no open protocol exposes raw gyro or accelerometer data, and no GAN cube is known to carry a magnetometer, which a cube full of magnets would spoil anyway.",
+        "Keep the present rule: the moves and the stage read from the hold, the tilt drives the picture only, and the band is where the two meet. The tracker only changes how the hold and the heading are chosen.",
+        "Ship it behind the lab first. Every decision goes to the log with its evidence, so a wrong snap can be traced."
+      ],
+      "first": "Write docs/smart-cube-tracker.md: the modes, the state, the observations and the weights, with the lab recordings from F-01, F-03 and F-04 as the test data; then implement it as lab/tracker.js (pure) with a replay test over recorded sessions.",
+      "needs": [
+        "F-01",
+        "F-02",
+        "F-04",
+        "F-07"
+      ],
+      "open": [
+        "Record and keep real sessions (quaternion stream plus state changes) as test fixtures; without them every threshold is a guess."
+      ]
+    },
+    {
+      "id": "F-06",
+      "theme": "data",
+      "title": "Decode the move message: face, direction and time",
+      "effort": "M",
+      "confidence": "high",
+      "lay": "Today the app learns a move by comparing two pictures of the cube, and gives up when five or more moves happen between two messages. The cube actually tells us each move as it happens, with its own clock. Reading that gives every move at once, in order, with timing good enough to measure turns per second.",
+      "tech": [
+        "ganDecode returns a bare {type:'move'} for every generation (gan.js). gan-web-bluetooth decodes more: gen 2 carries an 8-bit serial, a face 0 to 5 (U R F D L B), a direction bit and 16-bit elapsed times for the recent moves; gen 3 and 4 carry a 16-bit serial, a 32-bit cube timestamp, the face from a bitmask and two bits of direction. The serial shows a missed message, and gen 4 has a move history request (0xD1) that re-sends moves from a serial.",
+        "Replace cubeTabPath inference with decoded moves where the cube offers them; keep the meet-in-the-middle search (two out, two back, up to four moves) as the fallback for a gap in the counter.",
+        "Timestamps give turn durations, pauses and TPS per algorithm; store them with the solve so a replay (F-10) can play at real speed."
+      ],
+      "first": "In js/gan.js, decode the move fields for gen 2, 3 and 4 per the gan-web-bluetooth layout, add them to the 'move' event, and extend test/gan.js and test/fake-gan.js with a move message of each generation.",
+      "needs": [],
+      "open": [
+        "Confirm the gen 4 move layout on the real Maglev; the open-source layouts were read from other models."
+      ]
+    },
+    {
+      "id": "F-07",
+      "theme": "data",
+      "title": "Decode the angular velocity in the gyro message",
+      "effort": "S",
+      "confidence": "high",
+      "lay": "Besides the tilt, every gyro message carries how fast the cube is spinning on each axis. We throw it away. It is the signal that separates a quick turn from a slow fidget, and a smack from a lean.",
+      "tech": [
+        "gan-web-bluetooth reads three 4-bit fields right after the quaternion words (bit 68 for gen 2, bit 80 for gen 4): a sign bit and a 3-bit size per axis. Eight levels per axis is coarse but enough to rank quick against slow. The reference sample only displays the values; nobody has published their units.",
+        "Expose it on the gyro event as {wx, wy, wz} in the cube's frame and in the picture's frame; the lab trace can plot it beside the tilt."
+      ],
+      "first": "Decode the bits in ganGyro, add them to the gyro event and to the lab's trace; check the scale against a slow and a fast deliberate turn on the real cube.",
+      "needs": [],
+      "open": [
+        "The units and sign of the three-bit field are undocumented; calibrate from the quaternion derivative."
+      ]
+    },
+    {
+      "id": "F-08",
+      "theme": "data",
+      "title": "Show the battery; read the hardware info",
+      "effort": "S",
+      "confidence": "high",
+      "lay": "The cube reports its battery and its model. The app already understands the battery message but never asks for it and never shows it. Put the level in the cube tab so a session does not end with a dead cube halfway through a drill.",
+      "tech": [
+        "ganDecode decodes battery for all three generations and test/gan.js proves it; the 'battery' request exists in GAN_GENS but only the test sends it. smart-ui.js forwards only move, state and gyro events.",
+        "Send the battery request on connect and every five minutes; forward the event; show the level in the tab's tooltip and warn under 15%.",
+        "gan-web-bluetooth also has a hardware info request (gen 2 message 0x05, gen 3 0x07, gen 4 a multi-part 0xFA to 0xFE): hardware and software version, the model name, and on gen 2 a gyro-present bit. On gen 4 the library treats the gyro as present only when the name is GAN12uiM. Decode it and the app knows up front whether a cube has a gyro instead of waiting for the first gyro message."
+      ],
+      "first": "Send the battery request from smartConnect after its first readState, forward 'battery' through cw:smart, and show it in the cube window's head.",
+      "needs": [],
+      "open": []
+    },
+    {
+      "id": "F-09",
+      "theme": "data",
+      "title": "A timer the cube runs",
+      "effort": "M",
+      "confidence": "high",
+      "lay": "Inspection ends when the first layer turns. The solve ends when the cube reads solved. Nobody touches a key or a mat. Each CFOP stage gets its own split, because the app already knows which stage the cube is in.",
+      "tech": [
+        "Start on the first state change after a scramble is confirmed, stop when the state equals solved; use the move timestamps (F-06) for precision, falling back to the message arrival time.",
+        "Splits from cfopStage transitions: cross, each F2L pair, OLL, PLL, AUF. Store them with the time in the existing history under the timer scopes with a 'smart' flag.",
+        "Confirm the scramble by watching the cube reach the scrambled state (F-11); until then the timer is armed, not running."
+      ],
+      "first": "Add a smart timer mode to the timer panel: armed by the cube tab, started by the first turn, stopped by solved; save with splits.",
+      "needs": [
+        "F-06",
+        "F-11"
+      ],
+      "open": []
+    },
+    {
+      "id": "F-10",
+      "theme": "data",
+      "title": "Record every solve and replay it",
+      "effort": "M",
+      "confidence": "high",
+      "lay": "Save each solve as a list of timed moves. Then play it back in the player at real speed, scrub through it, and see where the pauses were. A coach line can say: your F2L pairs took twice as long as your cross.",
+      "tech": [
+        "A solve record: the scramble, the moves with timestamps, the stage splits, the hold changes. Under 4 KB each; keep the last 200 in localStorage under cw:solves.",
+        "The player already takes a move list; add a timing track so Play follows the recorded pauses, with a speed control.",
+        "Analysis per solve: TPS by stage, longest pause and where, regrips (whole-cube turns), and the moves that undid each other (from cubeTabMerge)."
+      ],
+      "first": "Define the record shape in docs/smart-cube.md, write it from the cube tab at solved, and add a Solves list to the History tab with Replay.",
+      "needs": [
+        "F-06",
+        "F-09"
+      ],
+      "open": []
+    },
+    {
+      "id": "F-11",
+      "theme": "data",
+      "title": "Scramble assist: follow the scramble on the real cube",
+      "effort": "S",
+      "confidence": "high",
+      "lay": "The app shows a scramble; you turn the real cube; the picture ticks off each move as you make it and points at a mistake at once. When the cube reaches the scrambled state, the timer arms itself.",
+      "tech": [
+        "Compare the cube's state after each move with the expected prefix of the scramble; show the next move large, mark a wrong turn and offer the undo.",
+        "Works today with state inference; move decoding (F-06) makes it exact.",
+        "Reads by the hold: the user's R must be the scramble's R, so a wrong hold is caught here too, and this is another hold measurement for F-05."
+      ],
+      "first": "Add a Scramble with the cube mode to the Solve tab while a cube is connected: the scramble as tiles, each checked off by state.",
+      "needs": [],
+      "open": []
+    },
+    {
+      "id": "F-12",
+      "theme": "data",
+      "title": "Sleep, missed turns and resync",
+      "effort": "S",
+      "confidence": "high",
+      "lay": "A cube that fell asleep in a bag and was turned while asleep comes back with a state the app cannot trust. Detect it and offer a fix: scan the cube with the camera, or say it is solved.",
+      "tech": [
+        "On reconnect, compare the reported state with the last known one; a difference with no moves in between means turns were missed. Offer 'My cube is solved' or the scanner (scan.js) to re-seat the state. The reset command only tells the cube it is solved; no generation we know takes an arbitrary state, so a scanned state lives in the app as an offset.",
+        "Reconnect by itself when the link drops: the lab already does this with getDevices and watchAdvertisements under a flag, and the bridge always can. The cube tab's state request has no timeout; add one so a silent cube does not leave the tab waiting."
+      ],
+      "first": "Port the lab's remembered-cube reconnect into smart-ui.js, add a timeout to cubeTabAsk, and show a 'state unsure' band after a reconnect with a changed state.",
+      "needs": [
+        "F-14"
+      ],
+      "open": []
+    },
+    {
+      "id": "F-13",
+      "theme": "web",
+      "title": "Android as the first-class web platform: install the PWA",
+      "effort": "S",
+      "confidence": "high",
+      "lay": "On Android, Chrome has Web Bluetooth with no flag and no sidecar. Add a web app manifest and a service worker and Twistwright installs to the home screen, works offline, and connects to the cube in two taps.",
+      "tech": [
+        "Manifest, icons, a service worker that caches the static files (no build step, so the list is the script tags). Web Bluetooth works in an installed PWA on Android.",
+        "Permission does not persist across page loads without getDevices, so the chooser shows once per session; keep the MAC by name as now. Web Bluetooth is Window-only and the browser stops scans when the page is hidden, so the phone must stay on the page during a session.",
+        "Test on a real Android phone; the tilt picture at the gyro's rate on a phone needs the reduced-motion path."
+      ],
+      "first": "Add manifest.webmanifest and sw.js, link them from index.html, and verify install and connect on an Android phone.",
+      "needs": [],
+      "open": []
+    },
+    {
+      "id": "F-14",
+      "theme": "web",
+      "title": "Reconnect without the chooser (getDevices and watchAdvertisements)",
+      "effort": "S",
+      "confidence": "medium",
+      "lay": "Chrome can remember a cube the page was once allowed to use and reconnect when it sees it, with no chooser. The feature sits behind a flag on the computer today. The lab already uses it where it exists.",
+      "tech": [
+        "navigator.bluetooth.getDevices() and BluetoothDevice.watchAdvertisements() are behind chrome://flags/#enable-experimental-web-platform-features in Chrome, Chrome for Android, Edge and Samsung Internet as of October 2026; persistent permissions sit behind a second flag. Neither has a published ship date.",
+        "The same path reads the manufacturer data and so the MAC address, so nobody types it where the flag is on.",
+        "Show a one-time tip that names the flag for users who want autoconnect."
+      ],
+      "first": "Move the lab's remembered-cube reconnect into smart-ui.js behind a capability check, and write the flag tip.",
+      "needs": [],
+      "open": [
+        "Watch the Chromium persistent-permissions work (flag enable-web-bluetooth-new-permissions-backend); when it ships, drop the tip."
+      ]
+    },
+    {
+      "id": "F-15",
+      "theme": "web",
+      "title": "iOS in the browser: Bluefy, and nothing else",
+      "effort": "S",
+      "confidence": "high",
+      "lay": "Safari on iPhone has no Web Bluetooth and WebKit has said it opposes such APIs. Third-party browsers on iOS must use Apple's engine too, so Chrome on iPhone has no Bluetooth either. Two workarounds exist: Bluefy, a browser app with its own Bluetooth, and a newer Safari extension that adds navigator.bluetooth to Safari itself. Document them, test them, and point iPhone users at them until there is an app (F-23).",
+      "tech": [
+        "Bluefy implements most of Web Bluetooth over CoreBluetooth; gan.js already handles its raw manufacturer bytes, so the MAC may come through there.",
+        "beacio (listed as iOSWebBLE) is a Safari Web Extension that implements navigator.bluetooth; its 2.2.0 release needs iOS 26.2. If it passes the GAN services and manufacturer data, twistwright.com works in Safari on an iPhone with no app of ours.",
+        "The dialog already says 'On an iPhone or iPad, use the Bluefy browser' when no Bluetooth path exists; add the beacio line and a link for each.",
+        "This is a stopgap: an iOS app with a WKWebView (F-23) gives the same page full Bluetooth."
+      ],
+      "first": "Test the connect flow in Bluefy and in Safari with the beacio extension on an iPhone, note what works, and add the beacio line and links to the Smart cube dialog.",
+      "needs": [],
+      "open": [
+        "Does Bluefy pass manufacturer data through watchAdvertisements? Test.",
+        "Does the beacio extension expose the GAN service UUIDs and manufacturer data? Test on an iPhone on iOS 26.2 or later."
+      ]
+    },
+    {
+      "id": "F-16",
+      "theme": "web",
+      "title": "WebSocket, origins and the one shape for every bridge",
+      "effort": "S",
+      "confidence": "high",
+      "lay": "The Mac app had to serve the page itself because Safari blocks a page on the web from talking to an app on the same computer. That forced a shape: the page keeps all the cube logic, the app only moves bytes. The shape turns out to be the right one for every platform. Keep it, and name it.",
+      "tech": [
+        "bridgeDevice wraps a link in the shape of a Web Bluetooth device, so ganOpen does not know whether a browser or an app is underneath. A WKWebView bridge on iOS (postMessage both ways) and a native macOS window can use the exact same JSON messages listed at the top of mac/Sources/Bridge.swift: scan, stop, connect, disconnect, notify, write; hello, bluetooth, device, connected, gone, value, written, error.",
+        "Write the message list down as docs/bridge-protocol.md with a version, so an app and the page can move independently. Note the gaps the audit found: no unnotify op, RSSI dropped, no state restoration.",
+        "Keep the cipher and protocol in JavaScript, in one place, for every host."
+      ],
+      "first": "Extract the message list from Bridge.swift into docs/bridge-protocol.md and add a protocol version to the hello message.",
+      "needs": [],
+      "open": []
+    },
+    {
+      "id": "F-17",
+      "theme": "camera",
+      "title": "The webcam as a yaw anchor",
+      "effort": "L",
+      "confidence": "medium",
+      "lay": "The webcam can see which colors face it. One good look a second is enough to know which way the cube points relative to the screen, and the screen is where you are facing. That one look kills the heading drift for good, as long as the cube is in view.",
+      "tech": [
+        "scan.js already finds and reads a face from a still image at nine stickers. A continuous, low-rate version (2 to 5 fps) finds the cube, reads the visible one to three faces and their colors, and matches them to the known state to recover the full orientation of the cube relative to the camera.",
+        "The state is known from Bluetooth, so the vision problem is small: given the state, which of the 24 orientations best explains the colors seen? That is a lookup, not a model.",
+        "Fuse the result as a yaw measurement into the tracker (F-05) with a weight that falls when the cube is small in frame or partly hidden by the hands.",
+        "Privacy: frames never leave the device; show the camera indicator and make it opt-in."
+      ],
+      "first": "Prototype in the lab: a video element, readFace at 3 fps on a crop around the largest saturated blob, and the best-fit orientation printed in the log beside the tilt reading.",
+      "needs": [
+        "F-05"
+      ],
+      "open": [
+        "Hands cover much of the cube during a solve; measure how often a usable view appears."
+      ]
+    },
+    {
+      "id": "F-18",
+      "theme": "camera",
+      "title": "See the person: face direction cancels the fidget",
+      "effort": "M",
+      "confidence": "medium",
+      "lay": "The drift you notice comes from you turning in your seat. A webcam sees your face. Face landmarks give your head's direction to a few degrees many times a second. Subtract that from the cube's heading and the fidget vanishes, cube in view or not.",
+      "tech": [
+        "MediaPipe Face Landmarker (@mediapipe/tasks-vision 1.x, runs in the browser on WebGL or WebGPU, which Safari 26 now ships too) returns a face transform matrix; its yaw is the person's facing relative to the camera.",
+        "Body yaw and head yaw differ (people look around without turning), so use it as a soft measurement with a slow time constant, or gate on shoulder landmarks from the pose model.",
+        "Cheap on a laptop: tens of frames a second; a phone needs the lower rate.",
+        "The same model gives presence: no face, no one is solving, pause the stage reader."
+      ],
+      "first": "Add a lab experiment: Face Landmarker from the MediaPipe CDN, the yaw plotted beside the cube's yaw, and a toggle that subtracts it.",
+      "needs": [
+        "F-05"
+      ],
+      "open": [
+        "Confirm MediaPipe's WASM and model files load from a CDN the site can use, or vendor them under lab/."
+      ]
+    },
+    {
+      "id": "F-19",
+      "theme": "camera",
+      "title": "Hands: regrips, fingertricks and the real hold",
+      "effort": "L",
+      "confidence": "low",
+      "lay": "A hand-tracking model sees where your fingers are. That tells us which hand turned a layer, when you regripped, and how you hold the cube, which is the hold the tracker wants. It also lets a coach say: you did that U with your wrist, try the index finger.",
+      "tech": [
+        "MediaPipe Hand Landmarker gives 21 points per hand. The hands' positions relative to the cube's bounding box give the grip; a change of grip is a regrip event.",
+        "Pair each decoded move (F-06) with the hand that moved at the same time to classify the fingertrick.",
+        "Hard: the hands hide the cube and each other, and the cube's small size in a laptop frame limits accuracy. Treat as research."
+      ],
+      "first": "Record ten solves with the webcam and the move stream; label regrips by hand and see whether the landmark data separates them.",
+      "needs": [
+        "F-06",
+        "F-17"
+      ],
+      "open": [
+        "Is the accuracy at laptop distance good enough for fingers on a 56 mm cube?"
+      ]
+    },
+    {
+      "id": "F-20",
+      "theme": "camera",
+      "title": "An in-browser coach over the solve history",
+      "effort": "M",
+      "confidence": "medium",
+      "lay": "With solves recorded (F-10), a small language model that runs in the browser can read your last twenty solves and say, in plain words, what to practice: which F2L case stalls you, which PLL you hesitate on. No data leaves the device.",
+      "tech": [
+        "Chrome's built-in Prompt API (Gemini Nano, web pages from Chrome 148, desktop only, 22 GB free disk and a 4 GB GPU or 16 GB RAM) where available; Transformers.js v4 with a small instruction model over WebGPU elsewhere (WebGPU now ships in Chrome, Edge, Safari 26 and Firefox on Apple Silicon); a plain rules engine as the fallback that always works.",
+        "The input is structured: per-case times and pause positions from F-10, not raw moves. The output is three sentences and a drill list that the Practice tab can load.",
+        "Keep it honest: every sentence must cite the numbers it came from; show them."
+      ],
+      "first": "Write the rules engine first (it is the baseline the models must beat), then try the Prompt API behind a setting.",
+      "needs": [
+        "F-10"
+      ],
+      "open": [
+        "Prompt API availability outside Chrome; model size and first-load cost on a phone."
+      ]
+    },
+    {
+      "id": "F-21",
+      "theme": "native",
+      "title": "Twistwright for macOS as a real app: WKWebView first, native views later",
+      "effort": "L",
+      "confidence": "high",
+      "lay": "The Mac app today is a bridge: it serves the page to Safari and moves Bluetooth bytes. Make it the app: a window with the same page inside, Bluetooth direct with no WebSocket and no origin rules, the camera through the app, notifications, the menu bar timer, and a connection that survives in the background. The web page stays the one codebase.",
+      "tech": [
+        "Host the page in a WKWebView and replace the WebSocket with WKScriptMessageHandler, same JSON messages (F-16). Serve from the bundle or from twistwright.com with the bridge injected.",
+        "CoreBluetooth gives background connection, state restoration, RSSI, the advertisement data (and so the MAC), and several cubes at once. The bridge uses none of restoration, RSSI or retrievePeripherals today.",
+        "Camera: AVFoundation with Continuity Camera, so an iPhone on a stand is the webcam for F-17 and F-18, with a far better view than a laptop lid.",
+        "Then native pieces where they pay: a SwiftUI timer window, Shortcuts actions (start a session, read the last time), a widget with today's average, an app icon.",
+        "Distribution: a signed zip on GitHub Releases today, notarized when mac/build.sh runs with --notarize; the Bluetooth usage string is already in mac/Info.plist. The Mac App Store would add the com.apple.security.device.bluetooth sandbox entitlement (plus network.client while the page is proxied), both routine."
+      ],
+      "first": "Add a window to the menu bar app with a WKWebView on the served page and a script-message bridge that speaks the Bridge.swift messages; keep the WebSocket for Safari.",
+      "needs": [
+        "F-16"
+      ],
+      "open": []
+    },
+    {
+      "id": "F-22",
+      "theme": "native",
+      "title": "On-device Apple models: Foundation Models and Vision",
+      "effort": "M",
+      "confidence": "medium",
+      "lay": "On macOS 26 and iOS 26 an app can call Apple's on-device language model and ask for typed answers: a practice plan with named cases, a sentence about the last solve. The Vision framework reads hands and tracks objects without a third-party model. All of it works offline and sends nothing anywhere.",
+      "tech": [
+        "FoundationModels: an on-device model of about 3 billion parameters at 2 bits per weight, with guided generation (@Generable structs), tool calling and streaming; a 4,096-token context at launch, 8,192 from iOS 26.4. Good for the coach (F-20) with structured input; not good for long reasoning. Availability depends on Apple Intelligence being on and the device supporting it. WWDC26 added image attachments and a larger Private Cloud Compute model for macOS 27 and iOS 27.",
+        "Vision: VNDetectHumanHandPoseRequest for hands (F-19), VNTrackObjectRequest for the cube's position as a 2D box; Core ML for a small custom cube-pose model if needed. iOS 27 adds ARKit reference-object tracking on the phone at full frame rate, but only for rigid objects, which a cube with turning layers is not.",
+        "The web page cannot call these; the app exposes them to the page over the same message bridge as a 'coach' and 'vision' service, so the page degrades to the in-browser path elsewhere."
+      ],
+      "first": "A Swift prototype that takes a solve record (F-10) as JSON and returns a @Generable PracticePlan; measure latency and quality on an M-series Mac.",
+      "needs": [
+        "F-21",
+        "F-10"
+      ],
+      "open": [
+        "Does guided generation hold up on the per-case numbers, or does it invent cases? Test with a fixed set."
+      ]
+    },
+    {
+      "id": "F-23",
+      "theme": "native",
+      "title": "Twistwright for iPhone, with the same page and a watch beside it",
+      "effort": "L",
+      "confidence": "high",
+      "lay": "iPhone has no browser path at all. An app with the web page inside and CoreBluetooth underneath fixes that with the code we have. The phone's camera is the best camera we will get for the cube. And a watch on the turning wrist measures the body: a fidget shows up on the watch and the cube together, a cube turn only on the cube.",
+      "tech": [
+        "WKWebView plus the F-16 bridge: the same page, the same messages. CoreBluetooth on iOS gives the advertisement data (the MAC) and background connection with the bluetooth-central background mode.",
+        "Watch: Core Motion's device motion on watchOS gives attitude at 100 Hz, with a magnetic reference for yaw in the xArbitraryCorrectedZVertical frame. Stream it to the phone; the tracker (F-05) subtracts the wrist's yaw drift from the cube's. The watch also starts and stops the timer by haptic. Two cautions: the wrist pose is not the cube pose, and the watch's magnetometer sits a hand's width from a cube full of magnets.",
+        "App Store: NSBluetoothAlwaysUsageDescription with a concrete benefit (a vague string fails review), a camera usage string, no private API. AccessorySetupKit (iOS 18) gives a system picker for one accessory with no broad Bluetooth prompt.",
+        "The phone replaces Bluefy (F-15) and carries the camera work (F-17, F-18) at arm's length, which is the right distance."
+      ],
+      "first": "A SwiftUI iOS target beside the Mac sources (rename mac/ to apple/ when it has two) that loads the page in a WKWebView and connects a cube through the shared bridge messages.",
+      "needs": [
+        "F-16",
+        "F-21"
+      ],
+      "open": [
+        "Is the watch's yaw stable enough over ten minutes to be a reference, with a magnetic cube that close? Measure the magnetometer disturbance before building on it."
+      ]
+    },
+    {
+      "id": "F-24",
+      "theme": "moon",
+      "title": "The cube in the room: visionOS and the next moves drawn on the real cube",
+      "effort": "XL",
+      "confidence": "low",
+      "lay": "On a headset the problem inverts: the device tracks the real cube in the room with its cameras, so the orientation is never in doubt, and the next move can be drawn as an arrow on the real face. The Bluetooth state says which stickers are where; the headset says where the cube is. Together they are the trainer we cannot build on a screen.",
+      "tech": [
+        "visionOS 2 and iOS 27 object tracking take a reference object trained in Create ML from a USDZ model (CAD or Object Capture) and track it in space, in an ImmersiveSpace on visionOS and at full frame rate on iPhone, up to ten objects. Apple documents it for rigid objects. A cube turns its layers and changes its pattern, so track the cube body (edges, corners, black plastic) with a custom model and take the sticker layout from Bluetooth.",
+        "The same WKWebView-and-bridge app runs on visionOS as an iPad-compatible app for the 2D parts.",
+        "Niche hardware today; keep the idea so the tracker (F-05) and the record format (F-10) do not close the door."
+      ],
+      "first": "None until F-21 and F-23 exist. Revisit when object tracking of textured, changing objects is documented as workable.",
+      "needs": [
+        "F-23"
+      ],
+      "open": []
+    },
+    {
+      "id": "F-25",
+      "theme": "moon",
+      "title": "Range the cube with UWB or the phone's radio",
+      "effort": "XL",
+      "confidence": "low",
+      "lay": "Apple's ultra-wideband chip finds AirTags to the centimeter and points at them. If a phone could range the cube the same way, position would come for free. It cannot: the cube has no UWB radio, and Apple's Nearby Interaction needs one on both ends. Bluetooth signal strength is too coarse for direction. Closed unless GAN ships a UWB cube.",
+      "tech": [
+        "Nearby Interaction requires an accessory with an approved UWB chip that speaks Apple's Nearby Interaction Accessory Protocol; GAN cubes have a BLE radio only. Wi-Fi Aware (iOS 26) likewise needs a certified accessory.",
+        "BLE 5.1 direction finding (AoA/AoD) needs antenna arrays on the receiver; phones and Macs do not expose it.",
+        "RSSI gives distance to about a meter at best, no direction."
+      ],
+      "first": "None. Record the reason here so the question is not asked again.",
+      "needs": [],
+      "open": []
+    },
+    {
+      "id": "F-26",
+      "theme": "moon",
+      "title": "Two cubes, one screen: race a friend or pair a teacher with a student",
+      "effort": "M",
+      "confidence": "high",
+      "lay": "Web Bluetooth and CoreBluetooth both allow more than one device at a time. Two cubes on one screen means a head-to-head race with two live pictures and two timers, or a teacher's cube drawn beside a student's so the student copies the move.",
+      "tech": [
+        "ganOpen already returns a link per device and the bridge keeps per-id tables; the cube tab and the lab hold a single connection. Make the tab a list, one window per cube, and give the timer two lanes.",
+        "The teacher mode is a diff: highlight the stickers where the student's cube differs from the teacher's.",
+        "Over the bridge the app already lists several cubes in the chooser."
+      ],
+      "first": "Connect two cubes in the lab, show both pictures, and see whether the gyro streams of two cubes keep up over one Bluetooth radio.",
+      "needs": [],
+      "open": [
+        "Throughput of two gyro streams at once on one radio."
+      ]
+    }
+  ]
+}
