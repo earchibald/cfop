@@ -23,12 +23,13 @@
 // turn made while it slept, or one it missed, leaves the count off from the real cube, and the
 // picture shows a scramble the cube does not have. My cube is solved (S) sends the reset command,
 // as the site's Smart cube dialog does: the cube takes its state now as solved, and the picture
-// jumps there with no moves added to the list. Scan my cube and Paint my cube read the colors of
-// the real cube as it is (the camera, scan.js; by hand, paint.js) and hand them to conn.correct
-// (gan.js): the link takes them as the real state now and corrects every state after, as the
-// site's Smart cube dialog does. The fix is kept by the cube's name in cw:ganFix, the site's map,
-// so a correction made here holds on the site too, and one made there holds here. My cube is
-// solved drops it: the cube counts from solved again.
+// jumps there with no moves added to the list. Scan my cube asks the cube for its state again, as
+// the lab does when it connects, and the picture jumps there with no moves added. Paint my cube
+// reads the colors of the real cube by hand (paint.js) and hands them to conn.correct (gan.js):
+// the link takes them as the real state now and corrects every state after, as the site's Smart
+// cube dialog does. The fix is kept by the cube's name in cw:ganFix, the site's map, so a
+// correction made here holds on the site too, and one made there holds here. My cube is solved
+// drops it: the cube counts from solved again.
 // Experiment 1: three smacks on the right face bring the Reset dialog (smackDetector, fed the
 // tilt in the frame of the picture, so "right" is the user's right).
 // Experiment 2: a turn of the cube in the hands, from the tilt (turnDetector, fed the same way).
@@ -70,7 +71,7 @@ function labButtons(){
   $('#connect').hidden=on;$('#disconnect').hidden=!on;
   $('#connect').disabled=lab.busy||!ganAvailable();
   $('#reset').disabled=!on;$('#solved').disabled=!on||lab.busy;
-  $('#scan').disabled=!on||lab.busy||typeof openScan!=='function';$('#paint').disabled=!on||lab.busy||typeof openPaint!=='function';
+  $('#scan').disabled=!on||lab.busy;$('#paint').disabled=!on||lab.busy||typeof openPaint!=='function';
   $('#name').textContent=on?lab.conn.name:'';
   $('#macShow').hidden=!(on&&lab.conn.mac);$('#macText').textContent=on&&lab.conn.mac?lab.conn.mac:'';
   if(!on)labCopied(false);
@@ -266,26 +267,43 @@ async function labSolved(){
   }catch(e){lab.jump=false;labLog('solved','The reset failed: '+e.message);labStatus('The cube did not take the change: '+e.message);}
   lab.busy=false;labButtons();
 }
-// Scan my cube or Paint my cube: the dialog of the site opens over the lab (the link stays), the
-// cube that comes back is the real state, and the picture jumps to it. The state the cube reports
-// is not the real one, so the moves between the two are not turns: nothing goes on the list.
-function labReadColors(how){
+// Scan my cube: the state read from the cube again, as at connect. A read that matches the
+// picture changes nothing. Any other read is one the lab had not seen (a turn it missed while
+// the link was busy, or a state the cube did not report), so the moves between the two are not
+// known as turns: nothing goes on the list, and the picture jumps.
+async function labRead(){
   if(!lab.conn||lab.busy)return;
-  const conn=lab.conn,name=conn.name,open=how==='scan'?openScan:openPaint;
-  if(typeof open!=='function')return;
+  const conn=lab.conn;lab.busy=true;lab.reading=true;labButtons();
+  try{
+    const cube=await conn.readState(3000);
+    lab.reading=false;
+    const same=!!lab.target&&lab.target.equals(cube);
+    if(!same){lab.jump=true;labShow(cube);}
+    labLog('state','State read: '+labFaceletText(cube)+(cube.isSolved()?' (solved)':'')+(same?' (as the picture)':''));
+    labStatus(same?'The cube reads as the picture shows.'+labSolvedHint(cube):'The picture now shows the cube as it reads. Each turn of your cube turns the layer from here.'+labSolvedHint(cube));
+  }catch(e){lab.reading=false;labLog('state','The read failed: '+e.message);labStatus('The cube did not answer. Turn a face to wake it up, then press Scan my cube again.');}
+  lab.busy=false;labButtons();
+}
+// Paint my cube: the painter of the site opens over the lab (the link stays), the cube that comes
+// back is the real state, and the picture jumps to it. The state the cube reports is not the real
+// one, so the moves between the two are not turns: nothing goes on the list.
+function labPaint(){
+  if(!lab.conn||lab.busy)return;
+  const conn=lab.conn,name=conn.name;
+  if(typeof openPaint!=='function')return;
   lab.busy=true;labButtons();
-  labStatus(how==='scan'?'Show each face of your cube to the camera.':'Paint the colors of your cube as it is, yellow up and green toward you.');
-  open({n:3,go:'Use this cube',
+  labStatus('Paint the colors of your cube as it is, yellow up and green toward you.');
+  openPaint({go:'Use this cube',
     onCube:async cube=>{
       if(conn!==lab.conn){lab.busy=false;labButtons();labStatus('The cube is no longer connected. Connect, then read the colors again.');return;}
       let fixed=null;
       lab.reading=true;
-      try{fixed=await conn.correct(cube,3000);labFixSave(name,conn.fix,how);}
+      try{fixed=await conn.correct(cube,3000);labFixSave(name,conn.fix,'paint');}
       catch(e){lab.reading=false;lab.busy=false;labButtons();labLog('fix','The colors were not used: the cube did not answer.');labStatus('The cube did not answer, so the colors were not used. Turn a face to wake it up, then try again.');return;}
       lab.reading=false;lab.jump=true;labShow(fixed);
       lab.busy=false;labButtons();
-      labLog('fix',`The state is corrected from the colors ${how==='scan'?'scanned':'painted'}: `+labFaceletText(fixed)+(fixed.isSolved()?' (solved)':''));
-      labStatus(`The picture now shows your cube as ${how==='scan'?'scanned':'painted'}. Each turn of your cube turns the layer from here.`);
+      labLog('fix','The state is corrected from the colors painted: '+labFaceletText(fixed)+(fixed.isSolved()?' (solved)':''));
+      labStatus('The picture now shows your cube as painted. Each turn of your cube turns the layer from here.');
     },
     onClose:()=>{lab.busy=false;labButtons();labStatus('The colors were not read. The picture shows the cube as the cube counts it.');}});
 }
@@ -658,13 +676,15 @@ function labStart(){
   labSetHold(labHoldLoad(),'load');$('#holdUp').onchange=labHoldPick;$('#holdFront').onchange=labHoldPick;
   lab.iso=labIsoLoad();$('#iso').checked=lab.iso;$('#iso').onchange=e=>labIso(e.target.checked);
   labKnobs();labMovesDraw();labDraw();labButtons();
-  $('#connect').onclick=labConnect;$('#disconnect').onclick=labDisconnect;$('#reset').onclick=labReset;$('#solved').onclick=labSolved;$('#scan').onclick=()=>labReadColors('scan');$('#paint').onclick=()=>labReadColors('paint');$('#clear').onclick=labClear;$('#movesClear').onclick=labMovesClear;
+  $('#connect').onclick=labConnect;$('#disconnect').onclick=labDisconnect;$('#reset').onclick=labReset;$('#solved').onclick=labSolved;$('#scan').onclick=labRead;$('#paint').onclick=labPaint;$('#clear').onclick=labClear;$('#movesClear').onclick=labMovesClear;
   $('#macGo').onclick=labMacGo;$('#macCopy').onclick=labCopyMac;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();labMacGo();}});
   $('#confirmYes').onclick=()=>labConfirmEnd(true);$('#confirmNo').onclick=()=>labConfirmEnd(false);
   $('#sideBtn').onclick=()=>labSide($('#side').hidden);
   lab.pats=labPatLoad();labPatDraw();$('#patBtn').onclick=()=>labPatShow($('#pat').hidden);$('#patClose').onclick=()=>labPatShow(false);$('#patClear').onclick=labPatClear;$('#patNew').onclick=labPatNew;labPatDrag();
   document.addEventListener('keydown',labKeys);
   document.addEventListener('cw:bridge',labButtons);
+  // The bar wraps onto more rows in a narrow window. The Patterns window opens under its last row.
+  if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>document.documentElement.style.setProperty('--barh',$('.bar').offsetHeight+'px')).observe($('.bar'));
   // The cross table takes over a second to build: build it while the page is idle, so the first
   // New scramble answers at once.
   if(typeof requestIdleCallback==='function')requestIdleCallback(()=>buildCrossTable());

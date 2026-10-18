@@ -403,6 +403,7 @@ async function corrected(bridge,dev,storage,cube){
   // Paint my cube in the lab: the painted colors are the real state, the picture jumps there with
   // no moves added, and the fix goes to the site's map
   assert.ok(!$('#paint').disabled&&!$('#scan').disabled,'Scan my cube and Paint my cube are on while connected');
+  assert.ok(!w.eval('typeof openScan=="function"'),'the camera scanner is not loaded in the lab');
   const real=w.applyAlg(new Cube(),['F','D2','L']),cubeOf=()=>new Cube([...cube.cp],[...cube.co],[...cube.ep],[...cube.eo]);
   assert.ok(cubeOf().isSolved(),'the fake cube counts from solved after the reset');
   click($('#paint'));assert.ok($('#paintBg'),'Paint my cube opens the painter over the lab');
@@ -422,13 +423,21 @@ async function corrected(bridge,dev,storage,cube){
   dev.notify(Uint8Array.from([0x01,...Array(19).fill(0)]));
   assert.ok(await until(()=>L().target&&L().target.equals(w.applyAlg(real,['R']))),'R on the cube is R on the painted state');
   assert.ok(await until(()=>L().moves.length===1),'and the move is listed: '+L().moves.join(' '));
-  // Scan my cube opens the scanner; Esc closes it, and the lab goes on as it was
-  click($('#scan'));assert.ok($('#scanBg'),'Scan my cube opens the scanner over the lab');assert.ok(L().busy);
-  d.body.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
-  assert.ok(!$('#scanBg'),'Esc closes the scanner');assert.ok(!L().busy,'the lab is free again');
-  assert.ok(/were not read/.test($('#status').textContent),'the status says the colors were not read');
-  assert.ok(L().conn.fix&&JSON.parse(storage.getItem('cw:ganFix')).GAN12uiM_A1B2,'the fix stays');
   assert.ok(await until(()=>!L().anim),'the turn is drawn');
+  // Scan my cube reads the state from the cube, as at connect: a turn the lab never saw (no move
+  // message) brings the picture there with no move added, through the fix; a read that matches
+  // the picture changes nothing
+  const unseen=w.applyAlg(cubeOf(),['U']);Object.assign(cube,{cp:[...unseen.cp],co:[...unseen.co],ep:[...unseen.ep],eo:[...unseen.eo]});
+  const reads=()=>($('#log').textContent.match(/State read: /g)||[]).length,before=reads();
+  click($('#scan'));assert.ok(L().busy,'the lab is busy while it reads');
+  assert.ok(await until(()=>!L().busy&&L().shown&&L().shown.equals(w.applyAlg(real,['R','U']))),'Scan my cube: the picture jumps to the state the cube reads');
+  assert.strictEqual(L().moves.length,1,'no move was added for the jump');
+  assert.ok(reads()>before,'the log shows the read');
+  assert.ok(/shows the cube as it reads/.test($('#status').textContent),'the status says so: '+$('#status').textContent);
+  assert.ok(L().conn.fix&&JSON.parse(storage.getItem('cw:ganFix')).GAN12uiM_A1B2,'the fix stays');
+  click($('#scan'));assert.ok(await until(()=>!L().busy),'the second read ends');
+  assert.ok(/reads as the picture shows/.test($('#status').textContent),'a read that matches changes nothing: '+$('#status').textContent);
+  assert.strictEqual(L().moves.length,1,'and adds no move');assert.ok(!$('#scanBg'),'no camera scanner opens in the lab');
   // leave the fake cube off from solved again, as `again` expects
   const back=w.applyAlg(new Cube(),['R']);Object.assign(cube,{cp:[...back.cp],co:[...back.co],ep:[...back.ep],eo:[...back.eo]});
   assert.deepStrictEqual(errs,[]);
