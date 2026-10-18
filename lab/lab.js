@@ -2,8 +2,9 @@
 // A page of its own for work on the smart cube, without the rest of Twistwright: a full-page live
 // cube that turns with the real cube and tilts with it, Reset cube for the facing, and the
 // experiments in the panel on the right. It loads engine.js, draw.js, gan.js and bridge.js from
-// the site, and lab/smack.js (the quaternions and the smack detector, pure). Nothing here touches
-// the site's own pages.
+// the site, the scanner and the painter (scan-assemble.js, scan.js, paint.js, with lab/helpers.js
+// for the few helpers of app.js they expect), and lab/smack.js (the quaternions and the smack
+// detector, pure). Nothing here touches the site's own pages.
 // The link: Web Bluetooth where the browser has it (Chrome), else the bridge of the macOS app,
 // which serves this checkout at http://127.0.0.1:27272/ when run with --root (lab/run.sh). The
 // address of a cube is saved by its name in cw:ganMac, the same map as the site, so a cube known
@@ -22,7 +23,12 @@
 // turn made while it slept, or one it missed, leaves the count off from the real cube, and the
 // picture shows a scramble the cube does not have. My cube is solved (S) sends the reset command,
 // as the site's Smart cube dialog does: the cube takes its state now as solved, and the picture
-// jumps there with no moves added to the list.
+// jumps there with no moves added to the list. Scan my cube and Paint my cube read the colors of
+// the real cube as it is (the camera, scan.js; by hand, paint.js) and hand them to conn.correct
+// (gan.js): the link takes them as the real state now and corrects every state after, as the
+// site's Smart cube dialog does. The fix is kept by the cube's name in cw:ganFix, the site's map,
+// so a correction made here holds on the site too, and one made there holds here. My cube is
+// solved drops it: the cube counts from solved again.
 // Experiment 1: three smacks on the right face bring the Reset dialog (smackDetector, fed the
 // tilt in the frame of the picture, so "right" is the user's right).
 // Experiment 2: a turn of the cube in the hands, from the tilt (turnDetector, fed the same way).
@@ -52,19 +58,19 @@
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,
-  busy:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,copyTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
+  busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,copyTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200,LAB_CROSS_MAX=7,LAB_SOLS_SHOWN=3;
 const LAB_PAT_STEPS={eo:'OLL edges',co:'OLL corners',cp:'PLL corners',ep:'PLL edges'};
 // The cameras: straight on, the cube as it sits in space; and isometric, a little from the right
 // and above, the site's usual view.
 const LAB_FLAT={yaw:0,pitch:0},LAB_ISO={yaw:-32,pitch:28};
-const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 function labStatus(t){$('#status').textContent=t;}
 function labButtons(){
   const on=!!lab.conn;
   $('#connect').hidden=on;$('#disconnect').hidden=!on;
   $('#connect').disabled=lab.busy||!ganAvailable();
   $('#reset').disabled=!on;$('#solved').disabled=!on||lab.busy;
+  $('#scan').disabled=!on||lab.busy||typeof openScan!=='function';$('#paint').disabled=!on||lab.busy||typeof openPaint!=='function';
   $('#name').textContent=on?lab.conn.name:'';
   $('#macShow').hidden=!(on&&lab.conn.mac);$('#macText').textContent=on&&lab.conn.mac?lab.conn.mac:'';
   if(!on)labCopied(false);
@@ -259,6 +265,29 @@ async function labSolved(){
     labStatus(cube.isSolved()?'The cube now counts from solved. Each turn of your cube turns the layer.':'The cube did not take the change. Press My cube is solved again.');
   }catch(e){lab.jump=false;labLog('solved','The reset failed: '+e.message);labStatus('The cube did not take the change: '+e.message);}
   lab.busy=false;labButtons();
+}
+// Scan my cube or Paint my cube: the dialog of the site opens over the lab (the link stays), the
+// cube that comes back is the real state, and the picture jumps to it. The state the cube reports
+// is not the real one, so the moves between the two are not turns: nothing goes on the list.
+function labReadColors(how){
+  if(!lab.conn||lab.busy)return;
+  const conn=lab.conn,name=conn.name,open=how==='scan'?openScan:openPaint;
+  if(typeof open!=='function')return;
+  lab.busy=true;labButtons();
+  labStatus(how==='scan'?'Show each face of your cube to the camera.':'Paint the colors of your cube as it is, yellow up and green toward you.');
+  open({n:3,go:'Use this cube',
+    onCube:async cube=>{
+      if(conn!==lab.conn){lab.busy=false;labButtons();labStatus('The cube is no longer connected. Connect, then read the colors again.');return;}
+      let fixed=null;
+      lab.reading=true;
+      try{fixed=await conn.correct(cube,3000);labFixSave(name,conn.fix,how);}
+      catch(e){lab.reading=false;lab.busy=false;labButtons();labLog('fix','The colors were not used: the cube did not answer.');labStatus('The cube did not answer, so the colors were not used. Turn a face to wake it up, then try again.');return;}
+      lab.reading=false;lab.jump=true;labShow(fixed);
+      lab.busy=false;labButtons();
+      labLog('fix',`The state is corrected from the colors ${how==='scan'?'scanned':'painted'}: `+labFaceletText(fixed)+(fixed.isSolved()?' (solved)':''));
+      labStatus(`The picture now shows your cube as ${how==='scan'?'scanned':'painted'}. Each turn of your cube turns the layer from here.`);
+    },
+    onClose:()=>{lab.busy=false;labButtons();labStatus('The colors were not read. The picture shows the cube as the cube counts it.');}});
 }
 // The state as 54 letters, face by face (U R F D L B), to compare with the net in the site's
 // Smart cube dialog.
@@ -500,6 +529,8 @@ function labMacs(){try{return JSON.parse(localStorage.getItem('cw:ganMac')||'{}'
 // drops it, here and in storage.
 function labFixLoad(name){try{const e=(JSON.parse(localStorage.getItem('cw:ganFix')||'{}')||{})[name];return e?ganFixLoad(e.fix):null;}catch(e){return null;}}
 function labFixDrop(name){try{const m=JSON.parse(localStorage.getItem('cw:ganFix')||'{}')||{};if(m[name]){delete m[name];localStorage.setItem('cw:ganFix',JSON.stringify(m));}}catch(e){}}
+// A fix made here, in the site's shape: {fix:{cp,co,ep,eo}, from:'scan'|'paint', at:ms}.
+function labFixSave(name,fix,from){try{const m=JSON.parse(localStorage.getItem('cw:ganFix')||'{}')||{};m[name]={fix:ganFixSave(fix),from,at:Date.now()};localStorage.setItem('cw:ganFix',JSON.stringify(m));}catch(e){}}
 function labSaveMac(name,mac){try{const m=labMacs();if(mac)m[name]=mac;else delete m[name];localStorage.setItem('cw:ganMac',JSON.stringify(m));}catch(e){}}
 function labAskMac(name){
   $('#macRow').hidden=false;const inp=$('#mac');inp.value=labMacs()[name]||'';setTimeout(()=>inp.focus(),20);
@@ -615,7 +646,7 @@ function labLink(ev,conn){
   if(ev.type==='off'){conn.close();return;}
   if(ev.type==='move')labAsk();
   if(ev.type==='gyro')labGyro(ev.q);
-  if(ev.type==='state'){lab.asked=false;if(lab.want){lab.want=false;labAsk();}labShow(ev.cube);}
+  if(ev.type==='state'){lab.asked=false;if(lab.want){lab.want=false;labAsk();}if(!lab.reading)labShow(ev.cube);} // a read for a correction shows nothing: labReadColors jumps to the corrected state
 }
 function labDisconnect(){
   if(lab.conn){const c=lab.conn;lab.conn=null;c.close();labLog('link','Disconnected.');}
@@ -627,7 +658,7 @@ function labStart(){
   labSetHold(labHoldLoad(),'load');$('#holdUp').onchange=labHoldPick;$('#holdFront').onchange=labHoldPick;
   lab.iso=labIsoLoad();$('#iso').checked=lab.iso;$('#iso').onchange=e=>labIso(e.target.checked);
   labKnobs();labMovesDraw();labDraw();labButtons();
-  $('#connect').onclick=labConnect;$('#disconnect').onclick=labDisconnect;$('#reset').onclick=labReset;$('#solved').onclick=labSolved;$('#clear').onclick=labClear;$('#movesClear').onclick=labMovesClear;
+  $('#connect').onclick=labConnect;$('#disconnect').onclick=labDisconnect;$('#reset').onclick=labReset;$('#solved').onclick=labSolved;$('#scan').onclick=()=>labReadColors('scan');$('#paint').onclick=()=>labReadColors('paint');$('#clear').onclick=labClear;$('#movesClear').onclick=labMovesClear;
   $('#macGo').onclick=labMacGo;$('#macCopy').onclick=labCopyMac;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();labMacGo();}});
   $('#confirmYes').onclick=()=>labConfirmEnd(true);$('#confirmNo').onclick=()=>labConfirmEnd(false);
   $('#sideBtn').onclick=()=>labSide($('#side').hidden);

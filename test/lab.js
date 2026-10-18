@@ -400,6 +400,35 @@ async function corrected(bridge,dev,storage,cube){
   click($('#solved'));
   assert.ok(await until(()=>L().shown&&L().shown.isSolved()),'My cube is solved: the picture is solved');
   assert.ok(!JSON.parse(storage.getItem('cw:ganFix')).GAN12uiM_A1B2,'and the saved fix is gone');
+  // Paint my cube in the lab: the painted colors are the real state, the picture jumps there with
+  // no moves added, and the fix goes to the site's map
+  assert.ok(!$('#paint').disabled&&!$('#scan').disabled,'Scan my cube and Paint my cube are on while connected');
+  const real=w.applyAlg(new Cube(),['F','D2','L']),cubeOf=()=>new Cube([...cube.cp],[...cube.co],[...cube.ep],[...cube.eo]);
+  assert.ok(cubeOf().isSolved(),'the fake cube counts from solved after the reset');
+  click($('#paint'));assert.ok($('#paintBg'),'Paint my cube opens the painter over the lab');
+  assert.strictEqual($('#paintGo').textContent,'Use this cube');assert.ok(L().busy,'the lab is busy while the painter is open');
+  const held=w.applyAlg(real,['z2']).toFacelets();
+  for(let i=0;i<54;i++){if(i%9===4)continue;click($(`#paintPalette .pt-swatch[data-c="${held[i]}"]`));click($(`#paintNet button[data-i="${i}"]`));}
+  assert.ok(!$('#paintGo').disabled,'every tile is painted');click($('#paintGo'));assert.ok(!$('#paintBg'),'Use this cube closes the painter');
+  assert.ok(await until(()=>!L().busy&&L().shown&&L().shown.equals(real)),'the picture is the painted cube');
+  assert.strictEqual(L().moves.length,0,'no moves were added for the jump');
+  const saved=JSON.parse(storage.getItem('cw:ganFix')).GAN12uiM_A1B2;assert.ok(saved&&saved.from==='paint'&&saved.fix,'the fix is saved as painted, in the site\'s shape');
+  assert.ok(L().conn.fix,'the link carries the fix');
+  assert.ok(/corrected from the colors painted/.test($('#log').textContent),'the log says so');
+  assert.ok(/shows your cube as painted/.test($('#status').textContent),'the status says so: '+$('#status').textContent);
+  // a turn after the correction moves the real state the same way, and goes on the list
+  Object.assign(cube,{cp:[0,1,2,3,4,5,6,7],co:Array(8).fill(0),ep:[...Array(12).keys()],eo:Array(12).fill(0)});
+  const turned=w.applyAlg(cubeOf(),['R']);Object.assign(cube,{cp:[...turned.cp],co:[...turned.co],ep:[...turned.ep],eo:[...turned.eo]});
+  dev.notify(Uint8Array.from([0x01,...Array(19).fill(0)]));
+  assert.ok(await until(()=>L().target&&L().target.equals(w.applyAlg(real,['R']))),'R on the cube is R on the painted state');
+  assert.ok(await until(()=>L().moves.length===1),'and the move is listed: '+L().moves.join(' '));
+  // Scan my cube opens the scanner; Esc closes it, and the lab goes on as it was
+  click($('#scan'));assert.ok($('#scanBg'),'Scan my cube opens the scanner over the lab');assert.ok(L().busy);
+  d.body.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+  assert.ok(!$('#scanBg'),'Esc closes the scanner');assert.ok(!L().busy,'the lab is free again');
+  assert.ok(/were not read/.test($('#status').textContent),'the status says the colors were not read');
+  assert.ok(L().conn.fix&&JSON.parse(storage.getItem('cw:ganFix')).GAN12uiM_A1B2,'the fix stays');
+  assert.ok(await until(()=>!L().anim),'the turn is drawn');
   // leave the fake cube off from solved again, as `again` expects
   const back=w.applyAlg(new Cube(),['R']);Object.assign(cube,{cp:[...back.cp],co:[...back.co],ep:[...back.ep],eo:[...back.eo]});
   assert.deepStrictEqual(errs,[]);

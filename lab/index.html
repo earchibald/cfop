@@ -71,10 +71,35 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
 .patwin .ent .data{grid-column:2;color:var(--muted);font-size:12.5px}.patwin .ent .data b{color:var(--text);font-weight:600}.patwin .ent .data .len{display:block;font-family:var(--mono);font-size:12px}
 .patwin .ent code.sols{color:var(--muted)}.patwin .ent code.sols .more{color:var(--faint);font-family:var(--sans)}
 .patwin .none{color:var(--faint);font-size:13px;padding:8px 0}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:20}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;max-width:380px;box-shadow:0 12px 32px rgba(0,0,0,.5)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
+.modal{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;max-width:380px;max-height:92vh;overflow:auto;box-shadow:0 12px 32px rgba(0,0,0,.5)}
 .modal h2{margin:0 0 6px;font-size:18px}.modal p{margin:0 0 14px;color:var(--muted)}
 .modal .btns{display:flex;gap:8px;justify-content:flex-end}
+.modal .close{position:absolute;top:10px;right:10px}
+/* The scanner and the painter of the site (js/scan.js, js/paint.js): the rules they need from css/app.css, on this page's colors. */
+.muted{color:var(--muted)}.hidden{display:none!important}button.small{padding:4px 10px;font-size:14px}
+.notice{background:var(--panel2);border-radius:8px;padding:8px 12px;font-size:14px}
+.modal .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-start;margin:0}
+.scan-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}.scan-row label{display:inline-flex;align-items:center;gap:6px;font-size:14px}
+.modal-bg.scan-bg{background:rgba(0,0,0,.92)}
+.modal.scan{max-width:980px;width:100%}.modal.scan h2{margin-top:0}.modal.scan button:disabled{cursor:not-allowed}
+.scan-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:start;margin-bottom:10px}
+.scan-view{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/9}
+.scan-view video,.scan-view canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.scan-view.mirror video,.scan-view.mirror canvas{transform:scaleX(-1)}
+.scan-net svg{width:100%;height:auto;display:block}.scan-net g{transition:opacity .2s}.scan-net g.flash{animation:scanflash .6s}
+@keyframes scanflash{0%,100%{opacity:1}40%{opacity:.25}}
+.modal.paint{max-width:640px;width:100%}.modal.paint h2{margin-top:0}
+.pt-body{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin-top:10px}
+.pt-net{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;flex:0 0 380px;width:380px;max-width:100%}
+.pt-slot{display:flex}
+.pt-face{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:2px;background:var(--sticker-line);padding:2px;border-radius:6px;width:100%;aspect-ratio:1}
+.pt-tile{border:0;padding:0;border-radius:3px;aspect-ratio:1;min-width:0;cursor:pointer}
+.pt-tile:disabled{cursor:default;opacity:1}.pt-tile.pt-center{box-shadow:inset 0 0 0 2px rgba(0,0,0,.3)}
+.pt-side{flex:1;min-width:220px;display:flex;flex-direction:column;gap:12px}
+.pt-palette{display:flex;gap:8px;flex-wrap:wrap}
+.pt-swatch{width:36px;height:36px;border-radius:8px;border:2px solid var(--line);padding:0;cursor:pointer}.pt-swatch.on{border-color:var(--text);border-width:3px}
+.pt-count{font-size:14px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -89,6 +114,8 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
   <label title="Yaw only keeps the tilt gravity gives. Full takes the whole reading as square."><input type="checkbox" id="full"> Full reset</label>
   <label title="Look at the cube from a little to the right and above, so three faces show. Off: straight on, as the cube sits in space."><input type="checkbox" id="iso"> Isometric<kbd>I</kbd></label>
   <button id="solved" disabled title="The cube counts its own turns and can lose count. Solve your cube, then press: the cube takes its state as solved.">My cube is solved<kbd>S</kbd></button>
+  <button id="scan" disabled title="Read the colors of your cube with the camera, as it is. The picture then follows your cube from that state.">Scan my cube</button>
+  <button id="paint" disabled title="Paint the colors of your cube by hand, as it is. The picture then follows your cube from that state.">Paint my cube</button>
   <span class="grow"></span>
   <span class="muted" id="ver" title="The version of the lab, and of the Twistwright app when it serves the page"></span>
   <button class="ghost" id="clear" title="Empty the moves and the log">Clear all<kbd>C</kbd></button>
@@ -160,7 +187,11 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
 <script src="../js/draw.js"></script>
 <script src="../js/gan.js"></script>
 <script src="../js/bridge.js"></script>
+<script src="../js/scan-assemble.js"></script>
 <script src="version.js"></script>
+<script src="helpers.js"></script>
+<script src="../js/scan.js"></script>
+<script src="../js/paint.js"></script>
 <script src="smack.js"></script>
 <script src="lab.js"></script>
 </body>
