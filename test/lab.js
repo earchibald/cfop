@@ -213,8 +213,16 @@ async function page(){
   let pc=w.applyAlg(new Cube(),inv(ALG_DB.co[0].alg));await show(pc);
   assert.strictEqual(L().pats.length,1,'the case is listed');assert.strictEqual(L().pats[0].step,'OLL corners');assert.strictEqual(L().pats[0].name,'Sune');assert.strictEqual(L().pats[0].moves,"R U R' U R U2 R'",'with the moves: '+L().pats[0].moves);
   key('p');assert.ok(!$('#pat').hidden,'P opens the window');assert.strictEqual($('#patBtn').getAttribute('aria-pressed'),'true');
-  assert.strictEqual($$('#patList .ent').length,1);assert.ok(/^\d\d:\d\d:\d\dOLL cornersSuneR U R' U R U2 R'$/.test($('#patList .ent').textContent),'the entry: '+$('#patList .ent').textContent);
+  assert.strictEqual($$('#patList .ent').length,1);assert.ok(/^\d\d:\d\d:\d\dOLL cornersSuneR U R' U R U2 R'Reveal 6 more moves$/.test($('#patList .ent').textContent),'the entry: '+$('#patList .ent').textContent);
   assert.strictEqual($('#patCount').textContent,'1 pattern');
+  // the moves show their first move only: a cover on each move after it; a click reveals the next, Reveal the rest, a click on an open line covers again
+  let sp=$('#patList .ent code .spoil');assert.ok(sp,'the moves are a covered line');assert.strictEqual(sp.querySelectorAll('.sp-m').length,6,'six moves covered after the first');assert.strictEqual(sp.querySelectorAll('.sp-m.on').length,0,'all covered');assert.ok(!sp.classList.contains('open'));
+  assert.strictEqual(sp.firstChild.textContent,'R','the first move shows');assert.strictEqual(sp.querySelector('.sp-btn').textContent,'Reveal 6 more moves');
+  click(sp.querySelector('.sp-m'));assert.strictEqual(sp.querySelectorAll('.sp-m.on').length,1,'a click reveals one');assert.strictEqual(sp.querySelector('.sp-m.on').textContent,'U','the next move');assert.strictEqual(sp.querySelector('.sp-btn').textContent,'Reveal 5 more moves');
+  click(sp);assert.strictEqual(sp.querySelectorAll('.sp-m.on').length,2,'and the next');
+  click(sp.querySelector('.sp-btn'));assert.strictEqual(sp.querySelectorAll('.sp-m:not(.on)').length,0,'Reveal uncovers the rest');assert.ok(sp.classList.contains('open'),'the line is open');
+  click(sp);assert.strictEqual(sp.querySelectorAll('.sp-m.on').length,0,'a click on an open line covers it again');assert.ok(!sp.classList.contains('open'));
+  click(sp);click(sp);assert.strictEqual(sp.querySelectorAll('.sp-m.on').length,2,'two revealed');
   // the window moves: a drag of its head, kept for the next open; a button in the head is no drag
   const PE=w.PointerEvent||w.MouseEvent,pev=(t,x,y,extra={})=>new PE(t,Object.assign({bubbles:true,cancelable:true,clientX:x,clientY:y,pointerId:1,button:0},extra));
   const head=$('#pat .head');assert.strictEqual(head.title,'Drag to move the window');
@@ -229,6 +237,8 @@ async function page(){
   pc=w.applyAlg(pc,["U'",...w.parseAlg(ALG_DB.co[0].alg)]);assert.ok(pc.isSolved());await show(pc);assert.strictEqual(L().pats.length,1,'solved: nothing listed');
   await show(w.applyAlg(new Cube(),inv(ALG_DB.co[0].alg)));assert.strictEqual(L().pats.length,2,'the same case after a solve is found again');
   await show(w.applyAlg(new Cube(),inv(ALG_DB.ep[0].alg)));assert.strictEqual(L().pats.length,3,'a PLL case');
+  sp=$$('#patList .ent')[2].querySelector('code .spoil');assert.strictEqual(sp.querySelectorAll('.sp-m.on').length,2,'the redraw keeps what was revealed on the Sune line');
+  assert.strictEqual($$('#patList .ent')[0].querySelectorAll('.sp-m.on').length,0,'the new entry is covered');
   assert.strictEqual(L().pats[0].step,'PLL edges');assert.strictEqual(L().pats[0].name,'Ua perm');assert.strictEqual($$('#patList .ent')[0].querySelector('.name').textContent,'Ua perm','newest first');
   assert.strictEqual(JSON.parse(storage.getItem('cw:labPatterns')).length,3,'the list is kept');
   key('Escape');assert.ok($('#pat').hidden,'Esc closes the window');key('p');assert.ok(!$('#pat').hidden);key('p');assert.ok($('#pat').hidden,'P closes it too');
@@ -247,10 +257,15 @@ async function page(){
   const want=[];for(let n=cr.optimal;n<=7;n++)want.push(n+' moves: '+(cr.byLen[n]||[]).length);assert.strictEqual(sc.cross.counts,want.join(' · '),'the count by length: '+sc.cross.counts);
   assert.deepStrictEqual(sc.cross.sols,cr.byLen[cr.optimal],'the shortest solutions');
   assert.strictEqual(JSON.stringify(L().goal),JSON.stringify({color:'yellow',optimal:cr.optimal,at}),'the cross is the goal');
-  const ent=$$('#patList .ent')[0];assert.strictEqual(ent.querySelector('.name').textContent,'Cross first');assert.ok(!ent.querySelector('code:not(.sols)'),'no scramble moves to show');
+  const ent=$$('#patList .ent')[0];assert.strictEqual(ent.querySelector('.name').textContent,'Cross first');assert.ok(!ent.querySelector(':scope > code'),'no scramble moves to show');
   assert.ok(ent.querySelector('.data').textContent.startsWith('Yellow cross: shortest '+cr.optimal),'the data line: '+ent.querySelector('.data').textContent);
   assert.deepStrictEqual([...ent.querySelectorAll('.data .len')].map(x=>x.textContent),want,'one count per line');
-  assert.ok(ent.querySelector('code.sols')&&ent.querySelector('code.sols').textContent.startsWith(cr.byLen[cr.optimal][0]),'the shortest solutions show: '+ent.querySelector('code.sols').textContent);
+  // up to three of the shortest, one per line, each with its first move shown and the rest covered; the count of the others
+  const best=cr.byLen[cr.optimal],lines=[...ent.querySelectorAll('.sols code')];assert.strictEqual(lines.length,Math.min(3,best.length),'up to three lines: '+lines.length);
+  lines.forEach((l,i)=>{const s=l.querySelector('.spoil'),t=best[i].split(' ');assert.strictEqual(s.firstChild.textContent,t[0],'line '+i+' shows its first move');
+    assert.deepStrictEqual([...s.querySelectorAll('.sp-m')].map(x=>x.textContent),t.slice(1),'and covers the rest: '+best[i]);assert.strictEqual(s.querySelectorAll('.sp-m.on').length,0);});
+  const more=ent.querySelector('.sols .more');if(best.length>3)assert.strictEqual(more.textContent,'+'+(best.length-3)+' more','the others are counted');else assert.ok(!more,'no note when all show');
+  click(lines[0].querySelector('.spoil'));assert.strictEqual(lines[0].querySelectorAll('.sp-m.on').length,1,'a click on a solution reveals its next move');assert.strictEqual(lines[lines.length-1].querySelectorAll('.sp-m.on').length,lines.length>1?0:1,'the other lines are as they were');
   assert.ok(/^\S+ New scramble, as held white up, green toward you\. yellow cross: shortest \d; \d moves: \d+/.test($('#log .scramble').textContent),'logged: '+$('#log .scramble').textContent);
   // the first move after it is not merged into the one before: R then R reads R R, not R2
   await show(w.applyAlg(sc1,['R']));assert.strictEqual(L().moves.slice(at-1).join(' '),'R R','the boundary holds: '+L().moves.slice(at-1));

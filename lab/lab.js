@@ -47,8 +47,11 @@
 // Esc or P closes it. New scramble (N) is the user's word that the cube in their hands is a fresh
 // scramble: it makes no moves. The matcher starts over with the cross on the bottom as held as its
 // first goal: an entry for the cube as it is, with the shortest cross, the count of the solutions
-// by length up to seven moves (crossSolutions, js/engine.js) and the shortest ones; then, when the
-// cross is made, an entry with the moves it took.
+// by length up to seven moves (crossSolutions, js/engine.js) and up to three of the shortest, one
+// per line; then, when the cross is made, an entry with the moves it took. A case's moves and each
+// shortest solution show their first move only: a cover hides each move after it, as the site's
+// Reference does (labSpoil). A click on the line uncovers the next move, Reveal uncovers the rest,
+// and a click on an open line covers it again. The moves the user made for the cross stay plain.
 // The moves since the connect sit in a box of their own under the picture, as the cube tab's
 // readout: merged as they come, the last ten shown, a triangle for more, and Clear moves.
 // The hold: the cube names its moves with its white face up and green in front, however it is
@@ -57,7 +60,7 @@
 // the old hold to the new goes on the list, Reset cube takes the cube as held that way (and a
 // change of the hold is a Reset cube at once), and the hold is kept in cw:labHold.
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
-const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,
+const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,patOpen:{},
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,
   busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,copyTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200,LAB_CROSS_MAX=7,LAB_SOLS_SHOWN=3;
@@ -403,14 +406,35 @@ function labPatDraw(){
     const d=mk('div','ent'),t=new Date(e.t),p=x=>String(x).padStart(2,'0');
     d.appendChild(mk('time',null,`${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}`));
     const line=mk('span');line.appendChild(mk('b',null,e.step));line.appendChild(mk('span','name',e.name));d.appendChild(line);
-    if(e.moves)d.appendChild(mk('code',null,e.moves));if(e.sub)d.title=e.sub;
+    if(e.moves){const c=mk('code');if(e.step==='Cross')c.textContent=e.moves;else c.appendChild(labSpoil(e.moves,e.t+':alg'));d.appendChild(c);}if(e.sub)d.title=e.sub;
     if(e.cross){const c=e.cross,data=mk('span','data');data.appendChild(mk('b',null,c.color[0].toUpperCase()+c.color.slice(1)+' cross'));
       data.appendChild(document.createTextNode(c.optimal?`: shortest ${c.optimal}`:': already made'));for(const l of c.lens||[c.counts])data.appendChild(mk('span','len',l));d.appendChild(data);
-      if(c.sols&&c.sols.length){const s=mk('code','sols',c.sols.slice(0,LAB_SOLS_SHOWN).join('   '));
-        if(c.sols.length>LAB_SOLS_SHOWN)s.appendChild(mk('span','more',`  +${c.sols.length-LAB_SOLS_SHOWN} more`));d.appendChild(s);}}
+      if(c.sols&&c.sols.length){const s=mk('div','sols');c.sols.slice(0,LAB_SOLS_SHOWN).forEach((sol,i)=>{const line=mk('code');line.appendChild(labSpoil(sol,e.t+':sol:'+i));s.appendChild(line);});
+        if(c.sols.length>LAB_SOLS_SHOWN)s.appendChild(mk('span','more',`+${c.sols.length-LAB_SOLS_SHOWN} more`));d.appendChild(s);}}
     el.appendChild(d);
   }
 }
+// A line of moves with its first move shown and a cover on each move after it (the site's Reference
+// spoilers, spoilAlg in js/app.js). A lead whole-cube turn is a hold: the move after it shows too. A
+// click on the line uncovers the next move, the Reveal button uncovers the rest, and a click on an
+// open line covers it again. What is open is kept for the session by entry and line in lab.patOpen,
+// so a redraw for a new entry does not cover a line again. A line of one move has no cover.
+function labSpoil(moves,key){
+  const t=moves.trim().split(/\s+/).filter(Boolean),s=document.createElement('span');s.className='spoil';s.dataset.key=key;
+  let k=0;while(k<t.length-1&&/^[xyz]/.test(t[k]))k++;
+  s.appendChild(document.createTextNode(t.slice(0,k+1).join(' ')));
+  const rest=t.slice(k+1),open=lab.patOpen[key]||0;
+  if(!rest.length){s.classList.add('open');s.classList.add('one');return s;}
+  rest.forEach((m,i)=>{s.appendChild(document.createTextNode(' '));const x=document.createElement('span');x.className='sp-m'+(i<open?' on':'');x.textContent=m;s.appendChild(x);});
+  const b=document.createElement('button');b.type='button';b.className='sp-btn';s.appendChild(b);
+  labSpoilSync(s);return s;
+}
+function labSpoilSync(s){const left=s.querySelectorAll('.sp-m:not(.on)').length,b=s.querySelector('.sp-btn');s.classList.toggle('open',!left);
+  if(b)b.textContent=`Reveal ${left} more move${left===1?'':'s'}`;s.title=left?'Click to reveal the next move':'Click to cover the moves again';
+  if(s.dataset.key)lab.patOpen[s.dataset.key]=s.querySelectorAll('.sp-m.on').length;}
+function labSpoilStep(s,all){const hid=[...s.querySelectorAll('.sp-m:not(.on)')];
+  if(!hid.length)s.querySelectorAll('.sp-m.on').forEach(m=>m.classList.remove('on'));else(all?hid:hid.slice(0,1)).forEach(m=>m.classList.add('on'));
+  labSpoilSync(s);}
 function labPatShow(on){$('#pat').hidden=!on;$('#patBtn').setAttribute('aria-pressed',String(!!on));}
 // The window moves: drag it by its head. The place is kept in cw:labPat and clamped to the screen,
 // as the cube window on the site (cubeTabDrag).
@@ -681,6 +705,7 @@ function labStart(){
   $('#confirmYes').onclick=()=>labConfirmEnd(true);$('#confirmNo').onclick=()=>labConfirmEnd(false);
   $('#sideBtn').onclick=()=>labSide($('#side').hidden);
   lab.pats=labPatLoad();labPatDraw();$('#patBtn').onclick=()=>labPatShow($('#pat').hidden);$('#patClose').onclick=()=>labPatShow(false);$('#patClear').onclick=labPatClear;$('#patNew').onclick=labPatNew;labPatDrag();
+  $('#patList').addEventListener('click',e=>{const s=e.target.closest&&e.target.closest('.spoil');if(!s||s.classList.contains('one'))return;e.preventDefault();labSpoilStep(s,!!e.target.closest('.sp-btn'));});
   document.addEventListener('keydown',labKeys);
   document.addEventListener('cw:bridge',labButtons);
   // The bar wraps onto more rows in a narrow window. The Patterns window opens under its last row.
