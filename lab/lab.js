@@ -251,7 +251,7 @@ async function labSolved(){
   if(!lab.conn||lab.busy)return;
   const conn=lab.conn;lab.busy=true;labButtons();
   try{
-    lab.jump=true;await conn.send('reset');
+    lab.jump=true;await conn.send('reset');labFixDrop(conn.name);
     await new Promise(r=>setTimeout(r,100));
     const cube=await conn.readState(3000);
     lab.jump=false;labJump(cube);
@@ -495,6 +495,11 @@ function labRemember(name,d){try{const m=labKnown();m[name]=Object.assign(m[name
 function labIsKnown(d,known){return !!(known[d.name]||Object.values(known).some(k=>k.id&&k.id===d.id));}
 // ----- the link -----
 function labMacs(){try{return JSON.parse(localStorage.getItem('cw:ganMac')||'{}')||{};}catch(e){return {};}}
+// The site's correction of a cube whose count is off (cw:ganFix by name, from Scan my cube or
+// Paint my cube in the Smart cube dialog): the link applies it to every state. My cube is solved
+// drops it, here and in storage.
+function labFixLoad(name){try{const e=(JSON.parse(localStorage.getItem('cw:ganFix')||'{}')||{})[name];return e?ganFixLoad(e.fix):null;}catch(e){return null;}}
+function labFixDrop(name){try{const m=JSON.parse(localStorage.getItem('cw:ganFix')||'{}')||{};if(m[name]){delete m[name];localStorage.setItem('cw:ganFix',JSON.stringify(m));}}catch(e){}}
 function labSaveMac(name,mac){try{const m=labMacs();if(mac)m[name]=mac;else delete m[name];localStorage.setItem('cw:ganMac',JSON.stringify(m));}catch(e){}}
 function labAskMac(name){
   $('#macRow').hidden=false;const inp=$('#mac');inp.value=labMacs()[name]||'';setTimeout(()=>inp.focus(),20);
@@ -584,7 +589,7 @@ async function labConnect(auto){
     if(!mac){lab.busy=false;labButtons();mac=await labAskMac(name);typed=true;if(!mac)return;lab.busy=true;labButtons();}
     labStatus(`Connecting to ${name}.`);
     let conn=null;
-    try{conn=await ganOpen(device,mac,ev=>labLink(ev,conn));}
+    try{conn=await ganOpen(device,mac,ev=>labLink(ev,conn),{fix:labFixLoad(name)});}
     catch(e){lab.busy=false;labButtons();labStatus(e.code==='model'?e.message:'The connection did not start. Turn the cube to wake it up, then press Connect again.');return;}
     try{
       const cube=await conn.readState(3000);
@@ -592,7 +597,7 @@ async function labConnect(auto){
       lab.moves=[];if(lab.goal)lab.goal.at=0;lab.shown=lab.target=null;lab.asked=false;lab.want=false;lab.gyro=false;lab.raw=lab.basis=lab.q=lab.qTo=null;lab.det.reset();lab.twist.reset();clearTimeout(lab.twistTimer);lab.twistTimer=0;lab.trace=[];lab.times=[];
       labButtons();labMovesDraw();labDots();labShow(cube);
       labStatus((conn.gen===3?'Live. Each turn of your cube turns the layer. This cube has no tilt sensor.':'Live. Each turn of your cube turns the layer. Waiting for the first tilt reading: move the cube.')+labSolvedHint(cube));
-      labLog('link',`Connected to ${conn.name} (gen ${conn.gen}).`);
+      labLog('link',`Connected to ${conn.name} (gen ${conn.gen}).`+(conn.fix?' The state is corrected from the colors read in the Smart cube dialog.':''));
       labLog('state','State read: '+labFaceletText(cube)+(cube.isSolved()?' (solved)':''));
       return;
     }catch(e){

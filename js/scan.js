@@ -346,13 +346,15 @@ function voteDrop(v,id){delete v.faces[id];v.order=v.order.filter(x=>x!==id);if(
 // ---------- UI ----------
 // The dialog's markup is built from this module's own fixed strings, the face size and the
 // color names; nothing from outside goes into it.
-let scanStream=null,scanTimer=0,scanVoter=null,scanRes=null,scanWork=null,scanLast=null,scanN=3;
+let scanStream=null,scanTimer=0,scanVoter=null,scanRes=null,scanWork=null,scanLast=null,scanN=3,scanOnCube=null,scanOnClose=null;
 // The working frame: 320 px wide, 480 for the 4x4 so its small tiles keep their grooves.
 function scanWidth(n){return n===4?480:320;}
-// Open the scanner for the current puzzle, or for opts.n (2, 3 or 4).
+// Open the scanner for the current puzzle, or for opts.n (2, 3 or 4). With opts.onCube, Use this
+// cube hands the Cube to it and closes, instead of loading a scramble; opts.onClose is called
+// when the dialog closes any other way (the Smart cube dialog, which opens again).
 function openScan(opts){
   if($('#scanBg'))return;
-  scanN=opts&&opts.n||(typeof puzzleN==='function'?puzzleN():3);
+  scanN=opts&&opts.n||(typeof puzzleN==='function'?puzzleN():3);scanOnCube=opts&&opts.onCube||null;scanOnClose=opts&&opts.onClose||null;
   scanVoter=makeVoter({n:scanN});scanRes=null;scanLast=null;
   const free=scanN!==3;
   const bg=document.createElement('div');bg.className='modal-bg scan-bg';bg.id='scanBg';
@@ -400,7 +402,7 @@ async function startCamera(){
   }
 }
 function stopCamera(){clearTimeout(scanTimer);scanTimer=0;if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null;}}
-function closeScan(){document.removeEventListener('keydown',scanKeys,true);stopCamera();const b=$('#scanBg');if(b)b.remove();}
+function closeScan(){document.removeEventListener('keydown',scanKeys,true);stopCamera();scanOnCube=null;const b=$('#scanBg');if(b)b.remove();const f=scanOnClose;scanOnClose=null;if(f)f();}
 function scanKeys(e){
   if(!$('#scanBg'))return;
   if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeScan();return;}
@@ -487,6 +489,7 @@ function scanNextFit(){
 }
 function scanUse(){
   if(!scanRes||!scanRes.ok||!scanRes.cube)return;
+  if(scanOnCube){const f=scanOnCube,c=scanRes.cube;scanOnClose=null;closeScan();f(c);return;}
   const r=scrambleFromCube(scanRes.cube,customName('scan'));
   if(r.ok)closeScan();else scanStatus(r.errors.join(' '));
 }

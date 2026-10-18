@@ -186,12 +186,33 @@ function ganWatchMac(device,ms){
     device.watchAdvertisements({signal:ab.signal}).catch(()=>end(null));
   });
 }
+// A correction for a cube whose count is off. The cube cannot see its stickers: it counts its
+// turns from the last reset, and a turn it missed leaves the count off for good. A scan or a
+// painted net gives the real state `actual` while the cube reports `raw`. Every later turn moves
+// both the same way, so the real state stays fix.mul(reported) with fix = actual.mul(raw.inverse()).
+// ganFixFor builds the fix; ganFixApply applies one (null is no fix). A fix is a plain Cube and
+// survives in storage as {cp,co,ep,eo}: ganFixSave and ganFixLoad.
+function ganFixFor(actual,raw){return actual.mul(raw.inverse());}
+function ganFixApply(fix,cube){return fix?fix.mul(cube):cube;}
+function ganFixSave(fix){return fix?{cp:fix.cp.slice(),co:fix.co.slice(),ep:fix.ep.slice(),eo:fix.eo.slice()}:null;}
+function ganFixLoad(o){
+  if(!o||!Array.isArray(o.cp)||!Array.isArray(o.co)||!Array.isArray(o.ep)||!Array.isArray(o.eo))return null;
+  if(o.cp.length!==8||o.co.length!==8||o.ep.length!==12||o.eo.length!==12)return null;
+  return new Cube(o.cp.slice(),o.co.slice(),o.ep.slice(),o.eo.slice());
+}
 // Connect and start notifications. onEvent gets each decoded message, then {type:'gone'} when the
-// link drops. Returns {gen, name, mac, send(kind), readState(ms), close()}.
+// link drops. Returns {gen, name, mac, fix, raw, send(kind), readState(ms), correct(actual, ms),
+// setFix(fix), close()}.
 // readState asks for the state and resolves with a Cube. It rejects with code 'badmac' when the
 // cube talks but nothing decodes, and 'timeout' when there is no answer. A wrong MAC address
 // often gives a timeout too: the cube cannot read the request, so it does not answer.
-async function ganOpen(device,mac,onEvent){
+// Every state goes through the fix (opts.fix to start, ganFixFor above): readState, the state
+// events and the 'connect' cube all show the corrected cube; `raw` is the last state as the cube
+// sent it. correct(actual) reads the cube, takes `actual` as its real state now, sets the fix and
+// sends a state event with the corrected cube. setFix(null) drops the fix. The reset command
+// drops it too: the cube counts from solved again, and the fix would be wrong.
+async function ganOpen(device,mac,onEvent,opts){
+  opts=opts||{};
   const server=await device.gatt.connect();
   const uuids=(await server.getPrimaryServices()).map(s=>s.uuid.toLowerCase());
   const gen=[4,3,2].find(g=>uuids.includes(GAN_GENS[g].service));
@@ -199,11 +220,12 @@ async function ganOpen(device,mac,onEvent){
   const g=GAN_GENS[gen],svc=await server.getPrimaryService(g.service);
   const cmd=await svc.getCharacteristic(g.cmd),st=await svc.getCharacteristic(g.state);
   const cipher=ganCipher(mac,gen===2&&/^AiCube/.test(device.name||'')?1:0);
-  const waiting=[];let heard=0,known=0;
+  const waiting=[];let heard=0,known=0,conn=null;
   const onValue=e=>{
     const v=e.target.value;if(!v||v.byteLength<16)return;heard++;
-    const ev=ganDecode(gen,cipher.decrypt(new Uint8Array(v.buffer,v.byteOffset,v.byteLength)));if(!ev)return;
+    let ev=ganDecode(gen,cipher.decrypt(new Uint8Array(v.buffer,v.byteOffset,v.byteLength)));if(!ev)return;
     if(ev.type!=='bad')known++;
+    if(ev.type==='state'){const fix=conn?conn.fix:opts.fix||null;if(conn)conn.raw=ev.cube;ev={type:'state',cube:ganFixApply(fix,ev.cube)};}
     if(ev.type==='state'||ev.type==='bad')waiting.splice(0).forEach(w=>w(ev));
     if(ev.type!=='bad')onEvent&&onEvent(ev);
   };
@@ -211,8 +233,16 @@ async function ganOpen(device,mac,onEvent){
   st.addEventListener('characteristicvaluechanged',onValue);
   device.addEventListener('gattserverdisconnected',onGone);
   await st.startNotifications();
-  const conn={gen,name:device.name||'GAN cube',mac:ganParseMac(mac),
-    send:kind=>cmd.writeValue(cipher.encrypt(ganCommand(gen,kind))),
+  conn={gen,name:device.name||'GAN cube',mac:ganParseMac(mac),fix:opts.fix||null,raw:null,
+    send(kind){if(kind==='reset')conn.fix=null;return cmd.writeValue(cipher.encrypt(ganCommand(gen,kind)));},
+    setFix(fix){conn.fix=fix||null;},
+    async correct(actual,ms){
+      await conn.readState(ms);
+      conn.fix=ganFixFor(actual,conn.raw);
+      const cube=ganFixApply(conn.fix,conn.raw);
+      onEvent&&onEvent({type:'state',cube});
+      return cube;
+    },
     readState(ms){
       return new Promise((res,rej)=>{
         const t=setTimeout(()=>{const i=waiting.indexOf(f);if(i>=0)waiting.splice(i,1);const noise=heard>0&&!known;

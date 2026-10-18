@@ -50,7 +50,7 @@ function heldToEngineFacelets(H){
 // ---------- the dialog's own state ----------
 // A 2×2 has 4 tiles a face and no centers. Its net is in the engine frame (white up, green in
 // front, as the player shows) and goes to twoFromFacelets; the 3×3 net is in the held frame.
-let paintH=null,paintColor=0;
+let paintH=null,paintColor=0,paintOnCube=null,paintOnClose=null;
 function paintN(){return puzzleN()===2?4:puzzleN()===4?16:9;}
 
 // The held centers: always the same six colors, in held-face order, however the cube is
@@ -118,6 +118,7 @@ function paintNotice(errors){
 function paintStart(){
   const res=paintN()===4?twoFromFacelets(paintH):paintN()===16?fourFromFacelets(paintH):fromFacelets(heldToEngineFacelets(paintH));
   if(!res.ok){paintNotice(res.errors);return;}
+  if(paintOnCube){const f=paintOnCube;paintOnClose=null;closePaint();f(res.cube);return;}
   const sres=scrambleFromCube(res.cube,customName('paint'));
   if(!sres.ok){paintNotice(sres.errors);return;}
   closePaint();
@@ -130,12 +131,17 @@ function paintKeys(e){
   e.stopPropagation(); // keep tab/timer keys out while the dialog is open
 }
 function closePaint(){
-  document.removeEventListener('keydown',paintKeys,true);
+  document.removeEventListener('keydown',paintKeys,true);paintOnCube=null;
   const bg=$('#paintBg');if(bg)bg.remove();
+  const f=paintOnClose;paintOnClose=null;if(f)f();
 }
-function openPaint(){
+// With opts.onCube, the Go button (opts.go names it) hands the Cube to it and closes, instead of
+// starting a solve; opts.onClose is called when the dialog closes any other way (the Smart cube
+// dialog, which opens again).
+function openPaint(opts){
   if($('#paintBg'))return;
-  paintH=paintReset();paintColor=0;
+  opts=opts&&opts.onCube?opts:{};
+  paintH=paintReset();paintColor=0;paintOnCube=opts.onCube||null;paintOnClose=opts.onClose||null;
   const bg=document.createElement('div');bg.className='modal-bg';bg.id='paintBg';
   bg.innerHTML=`<div class="modal paint" role="dialog" aria-label="Paint my cube">
    <button class="close small ghost" id="paintClose" aria-label="Close">✕</button>
@@ -148,7 +154,7 @@ function openPaint(){
      <div class="pt-count" id="paintCount"></div>
      <div id="paintNotice" class="notice hidden"></div>
      <div class="row">
-      <button type="button" class="primary" id="paintGo" disabled>Start the solve</button>
+      <button type="button" class="primary" id="paintGo" disabled>${esc(opts.go||'Start the solve')}</button>
       <button type="button" class="ghost" id="paintClear">Clear</button>
       <button type="button" class="ghost" id="paintCancel">Cancel</button>
      </div>

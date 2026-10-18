@@ -3,6 +3,12 @@
 // same cube (scrambleFromCube). The link stays open when the dialog closes, so a second read
 // needs no new connection. While the dialog is open, the net follows each turn of the cube.
 // The protocol is in gan.js. The MAC address of each cube is saved by its name in cw:ganMac.
+// The cube cannot see its stickers: it counts its turns from the last reset, and a turn it missed
+// leaves the count off until the next reset. Scan my cube (the camera, scan.js) and Paint my cube
+// (paint.js) read the real state and hand it to conn.correct (gan.js): from then on every state
+// from the cube is corrected, here, in the cube tab and in the lab. The fix is kept by the cube's
+// name in cw:ganFix, with the day it was made, and goes to the link on connect. My cube is solved
+// drops it: the cube counts from solved again.
 // Without Web Bluetooth, the page can reach a cube through the Twistwright app for macOS
 // (bridge.js): the app serves the page and the chooser is a list in this dialog. A Mac with
 // neither gets the download dialog instead.
@@ -42,8 +48,10 @@ function smartLabel(){
   b.textContent=dl?'Download macOS app to use a Smart Cube':'Smart cube';
   b.title=dl?'Safari cannot use Bluetooth. The Twistwright app for macOS connects to your cube.':'Read a GAN smart cube with Bluetooth';
 }
-function openSmart(){
+// With `note`, the dialog opens on the cube it has (smartCube) and says `note`, with no new read.
+function openSmart(note){
   if($('#smartBg'))return;
+  if(typeof note!=='string')note='';
   if(smartMode()==='download'){openSmartDownload();return;}
   const bg=document.createElement('div');bg.className='modal-bg';bg.id='smartBg';
   bg.innerHTML=`<div class="modal smart" role="dialog" aria-label="Smart cube">
@@ -64,8 +72,9 @@ function openSmart(){
       <div class="scan-row"><input id="smartMac" placeholder="AB:12:34:56:78:9A" spellcheck="false" autocomplete="off" style="flex:1;min-width:180px"><button class="primary" id="smartMacGo">Use this address</button></div>
      </div>
      <div class="scan-row"><button class="primary" id="smartUse" disabled>Use this cube</button><button class="small" id="smartRead" disabled>Read again</button></div>
-     <p class="muted" style="font-size:13px;margin:6px 0">The cube counts its own turns. If the net does not match your cube, solve your cube, then press My cube is solved.</p>
-     <div class="scan-row"><button class="small ghost" id="smartSolved" disabled>My cube is solved</button></div>
+     <p class="muted" style="font-size:13px;margin:6px 0">The cube counts its own turns. It cannot see its colors. If the net does not match your cube, solve your cube, then press My cube is solved. Or read the colors of your cube as it is, with the camera or by hand: the net then follows your cube from that state.</p>
+     <div class="scan-row"><button class="small ghost" id="smartSolved" disabled>My cube is solved</button><button class="small ghost" id="smartScan" disabled>Scan my cube</button><button class="small ghost" id="smartPaint" disabled>Paint my cube</button></div>
+     <p class="muted hidden" id="smartFixNote" style="font-size:13px;margin:6px 0"></p>
     </div>
    </div>
    <div id="smartStatus" class="notice"></div>
@@ -77,12 +86,15 @@ function openSmart(){
   $('#smartDisconnect').onclick=smartDisconnect;
   $('#smartRead').onclick=()=>smartRead();
   $('#smartSolved').onclick=smartSolved;
+  $('#smartScan').onclick=()=>smartReadColors('scan');
+  $('#smartPaint').onclick=()=>smartReadColors('paint');
   $('#smartUse').onclick=smartUse;
   $('#smartMacGo').onclick=smartMacGo;
   $('#smartMac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();smartMacGo();}});
   document.addEventListener('keydown',smartKeys,true);
   smartDraw();smartButtons();
   if(!ganAvailable())smartStatus('This browser cannot use Bluetooth. Use Chrome or Edge on a computer or an Android phone. On an iPhone or iPad, use the Bluefy browser.');
+  else if(smartConn&&note&&smartCube)smartStatus(note);
   else if(smartConn){smartStatus(`Connected to ${smartConn.name}. Reading the cube.`);smartRead();}
   else if(smartMode()==='bridge')smartStatus('Press Connect, then choose your cube in the list.');
   else smartStatus('Press Connect, then choose your cube in the list that the browser shows.');
@@ -134,8 +146,33 @@ function smartButtons(){
   $('#smartConnect').classList.toggle('hidden',on);$('#smartDisconnect').classList.toggle('hidden',!on);
   $('#smartConnect').disabled=smartBusy||!ganAvailable();
   $('#smartRead').disabled=!on||smartBusy;$('#smartSolved').disabled=!on||smartBusy;
+  $('#smartScan').disabled=!on||smartBusy||typeof openScan!=='function';$('#smartPaint').disabled=!on||smartBusy||typeof openPaint!=='function';
   $('#smartUse').disabled=!on||!smartCube||smartBusy;
   $('#smartInfo').textContent=on?smartConn.name:'';
+  const note=$('#smartFixNote'),fix=on?smartFixes()[smartConn.name]:null;
+  note.classList.toggle('hidden',!(on&&smartConn.fix&&fix));
+  if(on&&smartConn.fix&&fix)note.textContent=`The net is corrected from ${fix.from==='paint'?'the colors you painted':'a scan'}${fix.at?' on '+new Date(fix.at).toLocaleDateString():''}. My cube is solved drops the correction.`;
+}
+// The fixes by cube name: {fix:{cp,co,ep,eo}, from:'scan'|'paint', at:ms}.
+function smartFixes(){return store.get('ganFix',{});}
+function smartSaveFix(name,fix,from){const m=smartFixes();if(fix)m[name]={fix:ganFixSave(fix),from,at:Date.now()};else delete m[name];store.set('ganFix',m);}
+function smartLoadFix(name){const e=smartFixes()[name];return e?ganFixLoad(e.fix):null;}
+// Scan my cube or Paint my cube: the dialog closes for the scanner or the painter (the link stays),
+// the cube that comes back is the real state, and the dialog opens again on the corrected net.
+function smartReadColors(how){
+  if(!smartConn||smartBusy)return;
+  const conn=smartConn,name=conn.name;
+  if(typeof (how==='scan'?openScan:openPaint)!=='function')return;
+  const open=how==='scan'?opts=>openScan(Object.assign({n:3},opts)):opts=>openPaint(opts);
+  closeSmart();
+  open({onCube:async cube=>{
+    if(conn!==smartConn){openSmart();smartStatus('The cube is no longer connected. Connect, then read the colors again.');return;}
+    smartBusy=true;
+    try{smartCube=await conn.correct(cube,3000);smartSaveFix(name,conn.fix,how);}
+    catch(e){smartBusy=false;openSmart('The cube did not answer, so the colors were not used. Turn a face to wake it up, then try again.');return;}
+    smartBusy=false;
+    openSmart(`The net now shows your cube as ${how==='scan'?'scanned':'painted'}. Each turn of your cube turns the net from here.`);
+  },onClose:()=>openSmart(),go:'Use this cube'});
 }
 function smartMacs(){return store.get('ganMac',{});}
 function smartSaveMac(name,mac){const m=smartMacs();if(mac)m[name]=mac;else delete m[name];store.set('ganMac',m);}
@@ -195,7 +232,7 @@ async function smartConnect(){
   const name=device.name||'GAN cube';
   smartBusy=true;smartButtons();
   // The app reads the address from the advertisement (device.mac); a saved one is the next best.
-  let mac=device.mac||smartMacs()[name],typed=false;
+  let mac=device.mac||smartMacs()[name],typed=false;const fix=smartLoadFix(name);
   if(!mac){smartStatus(`Looking for the address of ${name}. Turn a face now and then to keep the cube awake.`);mac=await ganWatchMac(device,8000);}
   for(;;){
     if(!mac){
@@ -207,7 +244,7 @@ async function smartConnect(){
     }
     smartStatus(`Connecting to ${name}.`);
     let conn=null;
-    try{conn=await ganOpen(device,mac,ev=>smartEvent(ev,conn));}
+    try{conn=await ganOpen(device,mac,ev=>smartEvent(ev,conn),{fix});}
     catch(e){smartBusy=false;smartButtons();smartStatus(e.code==='model'?e.message:'The connection did not start. Turn the cube to wake it up, then press Connect again.');return;}
     try{
       const cube=await conn.readState(3000);
@@ -245,6 +282,7 @@ function smartGot(cube){
 async function smartSolved(){
   if(!smartConn||smartBusy)return;
   try{await smartConn.send('reset');}catch(e){smartStatus('The cube did not take the change: '+e.message);return;}
+  smartSaveFix(smartConn.name,null); // the reset dropped the fix on the link (gan.js); drop the saved one too
   clearTimeout(smartTimer); // a quiet read after a turn would take the place of this read, and its status
   await new Promise(r=>setTimeout(r,100));await smartRead();
 }

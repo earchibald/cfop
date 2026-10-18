@@ -51,11 +51,47 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   const c2=w.applyAlg(c1,['U']);set(c2);
   const mv=new Uint8Array(20);mv[0]=0x01;dev.notify(mv);
   assert.ok(await until(()=>netColors().join()===colorsOf(c2).join()),'the net follows a turn');
-  // ----- My cube is solved -----
+  // ----- Scan my cube: the dialog closes for the scanner, the scanned cube is the real state -----
+  assert.ok(!$('#smartScan').disabled&&!$('#smartPaint').disabled,'Scan my cube and Paint my cube are on while connected');
+  assert.ok($('#smartFixNote').classList.contains('hidden'),'no correction note before a scan');
+  click($('#smartScan'));await sleep(20);
+  assert.ok(!$('#smartBg')&&$('#scanBg'),'the Smart cube dialog gives way to the scanner');
+  assert.ok(w.eval('smartConn'),'the link stays');
+  d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await sleep(20);
+  assert.ok(!$('#scanBg')&&$('#smartBg'),'a cancelled scan brings the Smart cube dialog back');
+  assert.ok(await until(()=>!$('#smartUse').disabled),'and it reads the cube again');
+  click($('#smartScan'));await sleep(20);assert.ok($('#scanBg'));
+  // What the camera sees; the cube itself still says c2. scanRes is a let in a classic script, so it is set by eval.
+  const real=w.eval(`scanRes={ok:true,cube:applyAlg(new Cube(),['L','D2',"B'",'U'])};scanRes.cube`);
+  $('#scanUse').disabled=false;click($('#scanUse'));
+  assert.ok(await until(()=>$('#smartBg')&&!$('#scanBg')&&netColors().join()===colorsOf(real).join()),'the net shows the scanned cube: '+($('#smartStatus')||{}).textContent);
+  assert.ok(/as scanned/.test($('#smartStatus').textContent),'the status says so: '+$('#smartStatus').textContent);
+  assert.ok(!$('#smartFixNote').classList.contains('hidden')&&/corrected from a scan/.test($('#smartFixNote').textContent),'the note names the correction: '+$('#smartFixNote').textContent);
+  const saved=JSON.parse(w.localStorage.getItem('cw:ganFix'))['GAN12uiM_A1B2'];
+  assert.ok(saved&&saved.from==='scan'&&saved.fix&&saved.fix.cp.length===8,'the fix is saved by the cube\'s name');
+  // a turn after the scan: the cube counts on from its own state, the net from the scanned one
+  const c3=w.applyAlg(c2,["R'"]);set(c3);dev.notify(mv);
+  assert.ok(await until(()=>netColors().join()===colorsOf(w.applyAlg(real,["R'"])).join()),'the net follows a turn from the scanned state');
+  // Paint my cube: the painter opens with Use this cube; cancelled, the dialog comes back
+  click($('#smartPaint'));await sleep(20);
+  assert.ok(!$('#smartBg')&&$('#paintBg'),'the dialog gives way to the painter');assert.strictEqual($('#paintGo').textContent,'Use this cube');
+  d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await sleep(20);
+  assert.ok(!$('#paintBg')&&$('#smartBg'),'a cancelled paint brings the dialog back');
+  assert.ok(await until(()=>netColors().join()===colorsOf(w.applyAlg(real,["R'"])).join()),'the corrected net is read again');
+  // the fix survives a new connection
+  click($('#smartDisconnect'));assert.ok(/Disconnected/.test($('#smartStatus').textContent));
+  click($('#smartConnect'));
+  assert.ok(await until(()=>!$('#smartUse').disabled),'connected again');
+  assert.strictEqual(netColors().join(),colorsOf(w.applyAlg(real,["R'"])).join(),'the saved fix applies on the new link');
+  assert.ok(!$('#smartFixNote').classList.contains('hidden'),'the note shows again');
+  set(c2);dev.notify(mv);await sleep(60); // back to where the test was
+  // ----- My cube is solved: the reset drops the correction -----
   click($('#smartSolved'));
   assert.ok(await until(()=>netColors().join()===colorsOf(new Cube()).join()),'reset shows a solved cube');
   assert.ok(dev.writes.some(m=>m[0]===0xD2),'the reset command went to the cube');
   assert.ok(/solved/.test($('#smartStatus').textContent));
+  assert.ok(!JSON.parse(w.localStorage.getItem('cw:ganFix'))['GAN12uiM_A1B2'],'My cube is solved drops the saved fix');
+  assert.ok($('#smartFixNote').classList.contains('hidden'),'and the note');assert.strictEqual(w.eval('smartConn').fix,null);
   click($('#smartUse'));assert.ok($('#smartBg'),'a solved cube is not used');assert.ok(/Mix it up first/.test($('#smartStatus').textContent));
   // ----- Use this cube -----
   set(c2);dev.notify(mv);

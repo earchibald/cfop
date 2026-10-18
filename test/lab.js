@@ -377,8 +377,33 @@ async function page(){
   assert.deepStrictEqual(errs,[],'no script errors on the way');
   console.log('lab page ok');
   set(w.applyAlg(new Cube(),['R'])); // the cube's count is off at the next connect
+  await corrected(bridge,dev,storage,cube);
   await again(bridge,dev,storage);
   await chrome(storage);
+}
+// The site's correction (cw:ganFix, from Scan my cube or Paint my cube) applies to the lab's link
+// too: the picture shows the real state. My cube is solved drops it.
+async function corrected(bridge,dev,storage,cube){
+  const {w,d,errs}=await boot(bridge,{storage});
+  const $=s=>d.querySelector(s),$$=s=>[...d.querySelectorAll(s)],L=()=>w.eval('lab'),Cube=w.eval('Cube');
+  const click=el=>{assert.ok(el,'element to click');el.dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true}));};
+  assert.ok(await until(()=>!!L().conn),'the remembered cube connects');
+  const raw=new Cube([...cube.cp],[...cube.co],[...cube.ep],[...cube.eo]),actual=w.applyAlg(new Cube(),['R','U']);
+  assert.ok(!raw.isSolved(),'the fake cube is off from solved for this test');
+  assert.ok(await until(()=>L().shown&&L().shown.equals(raw)),'without a fix, the picture is the cube\'s own state');
+  w.eval('labDisconnect()');assert.ok(await until(()=>!L().conn));
+  storage.setItem('cw:ganFix',JSON.stringify({GAN12uiM_A1B2:{fix:w.ganFixSave(w.ganFixFor(actual,raw)),from:'scan',at:Date.now()}}));
+  click($('#connect'));assert.ok(await until(()=>$$('#listItems button').length===1),'the list shows');click($('#listItems button'));
+  assert.ok(await until(()=>!!L().conn),'connects again');
+  assert.ok(await until(()=>L().shown&&L().shown.equals(actual)),'with the fix, the picture is the real state');
+  assert.ok(/corrected from the colors/.test($('#log').textContent),'the log says so');
+  click($('#solved'));
+  assert.ok(await until(()=>L().shown&&L().shown.isSolved()),'My cube is solved: the picture is solved');
+  assert.ok(!JSON.parse(storage.getItem('cw:ganFix')).GAN12uiM_A1B2,'and the saved fix is gone');
+  // leave the fake cube off from solved again, as `again` expects
+  const back=w.applyAlg(new Cube(),['R']);Object.assign(cube,{cp:[...back.cp],co:[...back.co],ep:[...back.ep],eo:[...back.eo]});
+  assert.deepStrictEqual(errs,[]);
+  console.log('lab corrected ok');
 }
 // A second open with the cube remembered: it connects with no click, and again after the link drops.
 async function again(bridge,dev,storage){

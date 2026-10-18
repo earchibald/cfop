@@ -54,6 +54,19 @@ assert.strictEqual(ganDecode(3,gyroMsg(3,{w:1,x:0,y:0,z:0})),null,'gen 3: no suc
 assert.strictEqual(ganMacFromData(mfDataFor(MAC)),MAC);assert.strictEqual(ganMacFromData(mfDataFor(MAC,0xFF01)),MAC);
 assert.strictEqual(ganMacFromData(new Map()),null);assert.strictEqual(ganMacFromData(new Map([[0x004C,new DataView(new ArrayBuffer(9))]])),null,'another company is not a GAN cube');
 // ----- a whole read from a fake cube -----
+// ----- the correction: a scan says `actual` while the cube says `raw`; every later turn moves both -----
+const ganFixFor=run('ganFixFor'),ganFixApply=run('ganFixApply'),ganFixSave=run('ganFixSave'),ganFixLoad=run('ganFixLoad');
+{
+  const raw=applyAlg(new Cube(),randomMoveScramble(20)),actual=applyAlg(new Cube(),randomMoveScramble(20)),fix=ganFixFor(actual,raw);
+  assert.ok(ganFixApply(fix,raw).equals(actual),'the fix takes the cube\'s state to the real one');
+  const later=randomMoveScramble(15);
+  assert.ok(ganFixApply(fix,applyAlg(raw,later)).equals(applyAlg(actual,later)),'and stays right after more turns');
+  assert.ok(ganFixApply(null,raw).equals(raw),'no fix changes nothing');
+  const back=ganFixLoad(JSON.parse(JSON.stringify(ganFixSave(fix))));
+  assert.ok(back&&back.equals(fix),'a fix survives storage');
+  assert.strictEqual(ganFixLoad(null),null);assert.strictEqual(ganFixLoad({cp:[1]}),null,'a broken fix loads as none');
+  assert.strictEqual(ganFixSave(null),null);
+}
 const ganOpen=run('ganOpen'),ganWatchMac=run('ganWatchMac');
 (async()=>{
   for(const gen of [2,3,4]){
@@ -74,6 +87,27 @@ const ganOpen=run('ganOpen'),ganWatchMac=run('ganWatchMac');
     await assert.rejects(bad2.readState(80),e=>e.code==='badmac','a wrong MAC address and a cube that talks: noise');bad2.close();
     const mute=await ganOpen(fakeDevice(gen,MAC,{...new Cube()},{silent:true}),MAC,()=>{});
     await assert.rejects(mute.readState(80),e=>e.code==='timeout','no answer times out');
+    // The correction on the link: correct(actual) reads the cube, sets the fix and sends a state
+    // event; readState and the state events then show the corrected cube; a fix given at open
+    // applies from the first read; the reset command drops it.
+    const raw=applyAlg(new Cube(),randomMoveScramble(20)),actual=applyAlg(new Cube(),['R','U',"F'"]),cube2={cp:[...raw.cp],co:[...raw.co],ep:[...raw.ep],eo:[...raw.eo]};
+    const evs2=[],dev2=fakeDevice(gen,MAC,cube2),fx=await ganOpen(dev2,MAC,e=>evs2.push(e));
+    assert.ok((await fx.readState(500)).equals(raw),'before the correction, the state is the cube\'s own');
+    assert.ok(fx.raw.equals(raw),'raw is the last state as sent');assert.strictEqual(fx.fix,null);
+    const got2=await fx.correct(actual,500);
+    assert.ok(got2.equals(actual),'correct gives the real state');assert.ok(fx.fix&&fx.fix.equals(ganFixFor(actual,raw)),'and sets the fix');
+    assert.ok(evs2.filter(e=>e.type==='state').pop().cube.equals(actual),'a state event with the corrected cube went out');
+    const turned=applyAlg(raw,['L2','D']);Object.assign(cube2,{cp:[...turned.cp],co:[...turned.co],ep:[...turned.ep],eo:[...turned.eo]});
+    assert.ok((await fx.readState(500)).equals(applyAlg(actual,['L2','D'])),'later states are corrected');
+    assert.ok(fx.raw.equals(turned),'raw stays the cube\'s own');
+    await fx.send('reset');assert.strictEqual(fx.fix,null,'the reset command drops the fix');await new Promise(r=>setTimeout(r,30));
+    assert.ok((await fx.readState(500)).isSolved(),'and the cube reads solved');
+    fx.close();
+    const fix3=ganFixFor(actual,raw),cube3={cp:[...raw.cp],co:[...raw.co],ep:[...raw.ep],eo:[...raw.eo]},evs3=[];
+    const op=await ganOpen(fakeDevice(gen,MAC,cube3),MAC,e=>evs3.push(e),{fix:fix3});
+    assert.ok((await op.readState(500)).equals(actual),'a fix given at open applies from the first read');
+    assert.ok(evs3.filter(e=>e.type==='state').pop().cube.equals(actual),'and to the state events');
+    op.setFix(null);assert.ok((await op.readState(500)).equals(raw),'setFix(null) drops it');op.close();
   }
   assert.strictEqual(await ganWatchMac(fakeDevice(4,MAC,{},{noWatch:true}),100),null,'no watchAdvertisements, no MAC address');
   assert.strictEqual(await ganWatchMac(fakeDevice(4,MAC,{}),60),null,'no manufacturer data, no MAC address');
