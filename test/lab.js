@@ -135,6 +135,17 @@ async function page(){
   key('i');assert.ok(L().iso&&$('#iso').checked,'I turns Isometric on');assert.ok($$('#cube polygon').length>flat,'three faces show: '+flat+' -> '+$$('#cube polygon').length);
   assert.strictEqual(w.localStorage.getItem('cw:labIso'),'1','Isometric is kept');
   $('#iso').checked=false;$('#iso').dispatchEvent(new w.Event('change',{bubbles:true}));assert.ok(!L().iso,'the box turns it off');assert.strictEqual($$('#cube polygon').length,flat,'one face again');
+  // a drag on the picture spins the view: half a degree per pixel, pitch within 80 degrees; a double click puts it back
+  {const PE=w.PointerEvent||w.MouseEvent,pev=(t,x,y,extra={})=>new PE(t,Object.assign({bubbles:true,cancelable:true,clientX:x,clientY:y,pointerId:1,button:0},extra));
+    const cube=$('#cube');cube.dispatchEvent(pev('pointerdown',100,100));assert.ok(L().drag&&w.document.body.classList.contains('cube-drag'),'the drag starts');
+    cube.dispatchEvent(pev('pointermove',160,120));assert.strictEqual(JSON.stringify(L().view),'{"yaw":30,"pitch":10}','the view follows the pointer: '+JSON.stringify(L().view));
+    assert.ok($$('#cube polygon').length>flat,'more faces show once the view turns');
+    cube.dispatchEvent(pev('pointerup',160,120));assert.ok(!L().drag&&!w.document.body.classList.contains('cube-drag'),'the drag ends');
+    cube.dispatchEvent(pev('pointermove',0,0));assert.strictEqual(JSON.stringify(L().view),'{"yaw":30,"pitch":10}','no drag, no change');
+    cube.dispatchEvent(pev('pointerdown',100,100,{button:2}));assert.ok(!L().drag,'a right button starts no drag');
+    cube.dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));assert.strictEqual(JSON.stringify(L().view),'{"yaw":0,"pitch":0}','a double click puts the view back');assert.strictEqual($$('#cube polygon').length,flat,'one face again after the double click');
+    cube.dispatchEvent(pev('pointerdown',100,100));cube.dispatchEvent(pev('pointermove',100,400));cube.dispatchEvent(pev('pointerup',100,400));assert.strictEqual(L().view.pitch,150,'the offset is kept as dragged');
+    key('i');assert.strictEqual(JSON.stringify(L().view),'{"yaw":0,"pitch":0}','the Isometric box puts the view back');key('i');assert.ok(!L().iso,'off again');}
   // the lab opens as if Connect were pressed: the list is up with no click
   assert.ok(!$('#list').hidden,'the list shows by itself');assert.ok(/Looking for cubes|Choose your cube/.test($('#listNote').textContent),'the note: '+$('#listNote').textContent);
   assert.ok(/remembers it/.test($('#status').textContent),'the status says the lab remembers the cube: '+$('#status').textContent);

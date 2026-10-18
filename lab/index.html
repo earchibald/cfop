@@ -30,7 +30,8 @@ input[type=text]{background:var(--panel);border:1px solid var(--line);border-rad
 .bar .hold{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;white-space:nowrap}
 .bar select{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 4px;color:var(--text);font:inherit;font-size:13px}
 main{position:relative;min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;overflow:hidden}
-#cube{flex:1;width:100%;min-height:0}
+#cube{flex:1;width:100%;min-height:0;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+body.cube-drag,body.cube-drag *{user-select:none!important;-webkit-user-select:none!important;cursor:grabbing}
 .movebox{width:min(100% - 32px,720px);margin:0 16px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:8px 12px 10px}
 .movebox .head{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:13px;color:var(--muted)}
 .movebox .head b{color:var(--text);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:12px}
@@ -122,7 +123,7 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
   <button id="sideBtn" aria-pressed="true" aria-controls="side">Experiments<kbd>L</kbd></button>
 </header>
 <main class="side">
-  <svg id="cube" viewBox="0 0 400 360" role="img" aria-label="Your smart cube, live"></svg>
+  <svg id="cube" viewBox="0 0 400 360" role="img" aria-label="Your smart cube, live. Drag to spin the view, double click to put it back"></svg>
   <section class="movebox" id="movesBox" aria-label="Your moves">
     <div class="head"><b>Moves</b><span class="count" id="movesCount"></span><span class="grow"></span><button class="ghost" id="movesClear" title="Empty the list of moves" disabled>Clear moves</button></div>
     <div class="moves" id="moves" aria-label="Your last moves"></div>

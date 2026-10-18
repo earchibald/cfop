@@ -61,7 +61,7 @@
 // change of the hold is a Reset cube at once), and the hold is kept in cw:labHold.
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,patOpen:{},
-  q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,
+  q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,view:{yaw:0,pitch:0},drag:null,
   busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,copyTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200,LAB_CROSS_MAX=7,LAB_SOLS_SHOWN=3;
 const LAB_PAT_STEPS={eo:'OLL edges',co:'OLL corners',cp:'PLL corners',ep:'PLL edges'};
@@ -100,8 +100,10 @@ function labVersion(){
   document.title='Smart cube lab '+LAB_VERSION;
 }
 // ----- the picture -----
+// A drag on the picture spins the view, as on the site's cube: lab.view is the drag's offset over
+// the camera, pitch held within 80 degrees of level. A double click or the Isometric box puts it back.
 function labDraw(){
-  const cam=lab.iso?LAB_ISO:LAB_FLAT,svg=$('#cube'),a=lab.anim,o={n:3,scale:60,cx:200,cy:185,yaw:cam.yaw,pitch:cam.pitch};
+  const cam=lab.iso?LAB_ISO:LAB_FLAT,svg=$('#cube'),a=lab.anim,o={n:3,scale:60,cx:200,cy:185,yaw:cam.yaw+lab.view.yaw,pitch:Math.max(-80,Math.min(80,cam.pitch+lab.view.pitch))};
   o.rot=quatMat(lab.q||lab.hold.q);
   if(a&&a.t<1)svg.innerHTML=renderCube3D(a.from.toFacelets(),Object.assign(o,{move:a.move,t:Math.max(a.t,0.01)}));
   else{const f=lab.shown?lab.shown.toFacelets():Array.from({length:54},(_,i)=>i%9===4?(i-4)/9:-1);svg.innerHTML=renderCube3D(f,o);}
@@ -159,8 +161,29 @@ function labMovesDraw(){
 }
 function labMovesClear(){lab.moves=[];if(lab.goal)lab.goal.at=0;labMovesDraw();}
 // Isometric (I): on, the camera looks from a little to the right and above; off, straight on.
-function labIso(on){lab.iso=!!on;$('#iso').checked=lab.iso;try{localStorage.setItem('cw:labIso',lab.iso?'1':'');}catch(e){}labDraw();}
+function labIso(on){lab.iso=!!on;$('#iso').checked=lab.iso;try{localStorage.setItem('cw:labIso',lab.iso?'1':'');}catch(e){}lab.view={yaw:0,pitch:0};labDraw();}
 function labIsoLoad(){try{return !!localStorage.getItem('cw:labIso');}catch(e){return false;}}
+// Drag to spin: half a degree per pixel, as the site's cube. The pointer is captured, so the drag
+// goes on outside the picture. preventDefault and body.cube-drag keep it from selecting page text.
+function labViewDrag(){
+  const svg=$('#cube');
+  const stop=ev=>{if(!lab.drag||(ev&&ev.pointerId!==lab.drag.id))return;lab.drag=null;document.body.classList.remove('cube-drag');};
+  svg.addEventListener('pointerdown',e=>{
+    if(e.button)return;e.preventDefault();
+    lab.drag={id:e.pointerId,x:e.clientX,y:e.clientY,yaw:lab.view.yaw,pitch:lab.view.pitch};
+    document.body.classList.add('cube-drag');
+    if(svg.setPointerCapture)try{svg.setPointerCapture(e.pointerId);}catch(_){}
+  });
+  svg.addEventListener('pointermove',e=>{
+    if(!lab.drag||e.pointerId!==lab.drag.id)return;
+    lab.view={yaw:lab.drag.yaw+(e.clientX-lab.drag.x)*0.5,pitch:lab.drag.pitch+(e.clientY-lab.drag.y)*0.5};
+    labDraw();
+  });
+  svg.addEventListener('pointerup',stop);svg.addEventListener('pointercancel',stop);
+  svg.addEventListener('dblclick',()=>labViewReset());
+}
+// The view back to the camera: straight on, or isometric.
+function labViewReset(){lab.view={yaw:0,pitch:0};labDraw();}
 // ----- the hold: which color is up and which faces the user -----
 // The 24 ways to hold the cube, as CUBE_TAB_HOLDS in cubetab.js: the whole-cube turns from the
 // cube's own frame (white up, green in front), the solved cube after them (its centers say which
@@ -698,7 +721,7 @@ function labDisconnect(){
 function labStart(){
   lab.det=smackDetector({});lab.turn=turnDetector({});lab.twist=twistDetector({});
   labSetHold(labHoldLoad(),'load');$('#holdUp').onchange=labHoldPick;$('#holdFront').onchange=labHoldPick;
-  lab.iso=labIsoLoad();$('#iso').checked=lab.iso;$('#iso').onchange=e=>labIso(e.target.checked);
+  lab.iso=labIsoLoad();$('#iso').checked=lab.iso;$('#iso').onchange=e=>labIso(e.target.checked);labViewDrag();
   labKnobs();labMovesDraw();labDraw();labButtons();
   $('#connect').onclick=labConnect;$('#disconnect').onclick=labDisconnect;$('#reset').onclick=labReset;$('#solved').onclick=labSolved;$('#scan').onclick=labRead;$('#paint').onclick=labPaint;$('#clear').onclick=labClear;$('#movesClear').onclick=labMovesClear;
   $('#macGo').onclick=labMacGo;$('#macCopy').onclick=labCopyMac;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();labMacGo();}});
