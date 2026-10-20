@@ -166,6 +166,14 @@ async function page(){
   assert.ok(await until(()=>!$('#macCopy').classList.contains('copied'),2500),'and goes back after a moment');assert.strictEqual($('#macCopy').title,'Copy the MAC address');
   assert.ok(/Copied the MAC address AB:12:34:5C:9D:E1/.test($('#log .link').textContent||$$('#log .link').map(e=>e.textContent).join()),'the copy is logged');
   assert.ok(L().shown&&L().shown.isSolved(),'the solved cube came through');assert.ok(!$('#solved').disabled,'My cube is solved is on');
+  // Copy state: the state as 54 letters to the clipboard, the button says Copied for a moment, the log keeps it
+  assert.ok(!$('#copyState').disabled,'Copy state is on once the lab has a state');
+  copied=null;click($('#copyState'));
+  assert.ok(await until(()=>copied==='WWWWWWWWW RRRRRRRRR GGGGGGGGG YYYYYYYYY OOOOOOOOO BBBBBBBBB'),'the state is copied as letters: '+copied);
+  assert.strictEqual(copied,w.stateText(L().target),'the same text stateText writes');
+  assert.ok(await until(()=>$('#copyState').textContent==='Copied'&&$('#copyState').classList.contains('copied')),'the button says Copied');
+  assert.ok(await until(()=>$('#copyState').textContent==='Copy state',2500),'and goes back after a moment');
+  assert.ok($$('#log .link').some(e=>/Copied the state WWWWWWWWW RRRRRRRRR GGGGGGGGG YYYYYYYYY OOOOOOOOO BBBBBBBBB \(solved\)/.test(e.textContent)),'the copy is logged');
   assert.ok(!/My cube is solved/.test($('#status').textContent),'a solved cube gets no hint: '+$('#status').textContent);
   assert.ok(/State read: WWWWWWWWW RRRRRRRRR GGGGGGGGG YYYYYYYYY OOOOOOOOO BBBBBBBBB \(solved\)/.test($('#log .state').textContent),'the state read is logged as letters: '+$('#log').textContent);
   // a turn: the move message asks for the state, the state turns the layer

@@ -25,7 +25,7 @@ input[type=text]{background:var(--panel);border:1px solid var(--line);border-rad
 .bar b{font-size:16px;margin-right:4px}.bar .muted{color:var(--muted)}.bar .grow{flex:1}
 .bar .mac{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:13px}.bar .mac code{font-family:var(--mono);font-size:13px;color:var(--text)}
 .bar .mac button{display:inline-flex;align-items:center;padding:3px;border:0;color:var(--muted)}.bar .mac button:hover{color:var(--text)}.bar .mac button svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.bar .mac button.copied{color:var(--ok,#3cb371)}.bar .mac button .check{display:none}.bar .mac button.copied .check{display:block}.bar .mac button.copied .pages{display:none}
+.bar .mac button.copied,.bar #copyState.copied{color:var(--ok,#3cb371)}.bar .mac button .check{display:none}.bar .mac button.copied .check{display:block}.bar .mac button.copied .pages{display:none}
 .bar label{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
 .bar .hold{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;white-space:nowrap}
 .bar select{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 4px;color:var(--text);font:inherit;font-size:13px}
@@ -116,6 +116,7 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
   <button id="solved" disabled title="The cube counts its own turns and can lose count. Solve your cube, then press: the cube takes its state as solved.">My cube is solved<kbd>S</kbd></button>
   <button id="scan" disabled title="Ask the cube for its state, as the lab does when it connects. The picture jumps there: no moves are added.">Scan my cube</button>
   <button id="paint" disabled title="Paint the colors of your cube by hand, as it is. The picture then follows your cube from that state.">Paint my cube</button>
+  <button id="copyState" disabled title="Copy the state of the cube as 54 letters, face by face. Paste it on the site, or into its Enter a scramble dialog, to load the cube there.">Copy state</button>
   <span class="grow"></span>
   <span class="muted" id="ver" title="The version of the lab, and of the Twistwright app when it serves the page"></span>
   <button class="ghost" id="clear" title="Empty the moves and the log">Clear all<kbd>C</kbd></button>
@@ -182,6 +183,7 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
   <div class="btns"><button class="ghost" id="confirmNo">Cancel<kbd>Esc</kbd></button><button class="primary" id="confirmYes">Reset<kbd>Enter</kbd></button></div>
 </div></div>
 <script src="../js/engine.js"></script>
+<script src="../js/state-text.js"></script>
 <script src="../js/algs.js"></script>
 <script src="../js/stage.js"></script>
 <script src="../js/draw.js"></script>

@@ -26,9 +26,9 @@ function openEnter(){
   bg.innerHTML=`<div class="modal enter" role="dialog" aria-label="Enter a scramble">
    <button class="close small ghost" id="enterClose" aria-label="Close">✕</button>
    <h2>Enter a scramble</h2>
-   <p class="muted" style="margin-top:0">Type a scramble in standard notation. Twistwright loads it like a seed, so Plan, Cross, auto-step and the timer all work.</p>
+   <p class="muted" style="margin-top:0">Type a scramble in standard notation, or paste the letters of a cube state. Twistwright loads it like a seed, so Plan, Cross, auto-step and the timer all work.</p>
    <div class="scan-row"><input id="enterType" placeholder="e.g. R U R' U' F2 D L2 B'" style="flex:1;min-width:260px"><button class="primary" id="enterGo">Load scramble</button></div>
-   <div id="enterStatus" class="notice" style="margin-top:10px">Use face turns only: U R F D L B, each with an optional <span class="kbd">'</span> or <span class="kbd">2</span>.</div>
+   <div id="enterStatus" class="notice" style="margin-top:10px">Use face turns only: U R F D L B, each with an optional <span class="kbd">'</span> or <span class="kbd">2</span>. A state is one letter per sticker, W R G Y O B, face by face: top, right, front, bottom, left, back. The lab's Copy state writes one.</div>
   </div>`;
   document.body.appendChild(bg);
   bg.addEventListener('click',e=>{if(e.target===bg)closeEnter();});
@@ -45,10 +45,33 @@ function enterKeys(e){
   e.stopPropagation(); // keep tab/timer keys out while typing
 }
 function enterLoad(){
-  const t=$('#enterType').value.trim();if(!t)return;let ms;
+  const t=$('#enterType').value.trim();if(!t)return;
+  if(stateLetters(t)){enterState(t);return;}
+  let ms;
   try{ms=parseAlg(t);applyAlg(new Cube(),ms);}catch(e){$('#enterStatus').textContent='That scramble has a move I do not know: '+e.message.replace('bad move ','');return;}
   if(ms.some(m=>!FACE_MOVES.includes(m))){$('#enterStatus').textContent="Use face turns only (U R F D L B with ' or 2).";return;}
   closeEnter();loadScramble(customName('typed'),ms,true);goSolveTab();
 }
+// The letters of a cube state (stateFromText in state-text.js): the cube loads through
+// scrambleFromCube, as a scanned or smart cube does. The state must be of the current puzzle. An
+// error goes in the dialog, opened where it is not.
+function enterState(text){
+  const r=stateFromText(text);
+  const fail=msg=>{if(!$('#enterBg'))openEnter();$('#enterType').value=text.trim();$('#enterStatus').textContent=msg;};
+  if(!r.ok)return fail(r.errors.join(' '));
+  const n=puzzleN();
+  if(r.n!==n)return fail(`These letters are a ${r.n}x${r.n} state. This is the ${n}x${n}: choose a ${r.n}x${r.n} method first, then load it again.`);
+  const res=scrambleFromCube(r.cube,customName('state'));
+  if(!res.ok)return fail(res.errors.join(' '));
+  closeEnter();
+}
+// A paste anywhere on the page, outside a field: the letters of a cube state load the cube, as
+// from the dialog. Other text is left to the page.
+document.addEventListener('paste',e=>{
+  const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;
+  const text=e.clipboardData?e.clipboardData.getData('text'):'';
+  if(!stateLetters(text))return;
+  e.preventDefault();enterState(text);
+});
 $('#scanBtn').onclick=openEnter;
 

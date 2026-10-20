@@ -62,7 +62,7 @@
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,patOpen:{},
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,view:{yaw:0,pitch:0},drag:null,
-  busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,copyTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
+  busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200,LAB_CROSS_MAX=7,LAB_SOLS_SHOWN=3;
 const LAB_PAT_STEPS={eo:'OLL edges',co:'OLL corners',cp:'PLL corners',ep:'PLL edges'};
 // The cameras: straight on, the cube as it sits in space; and isometric, a little from the right
@@ -92,6 +92,24 @@ async function labCopyMac(){
   clearTimeout(lab.copyTimer);lab.copyTimer=setTimeout(()=>labCopied(false),1500);
 }
 function labCopied(yes){const b=$('#macCopy');b.classList.toggle('copied',yes);b.title=yes?'Copied':'Copy the MAC address';b.setAttribute('aria-label',b.title);if(!yes){clearTimeout(lab.copyTimer);lab.copyTimer=0;}}
+// Copy state: the cube the picture heads for, as 54 letters (stateText in js/state-text.js), to the
+// clipboard. The site reads the letters: a paste on its page, or in Enter a scramble, loads the
+// cube. The button says Copied for a moment. On while the lab has a state, connected or not.
+async function labCopyState(){
+  const cube=lab.target||lab.shown;if(!cube)return;
+  const text=stateText(cube);
+  const ok=await labClip(text);
+  if(!ok){labStatus('The browser did not let the page copy. The state is in the log: select it and copy it yourself.');labLog('state','State: '+text);return;}
+  const b=$('#copyState');b.textContent='Copied';b.classList.add('copied');
+  clearTimeout(lab.copyStateTimer);lab.copyStateTimer=setTimeout(()=>{b.textContent='Copy state';b.classList.remove('copied');},1500);
+  labLog('link','Copied the state '+text+(cube.isSolved()?' (solved)':'')+'.');
+}
+// Text to the clipboard: the clipboard where the browser gives one, else a hidden field, a select
+// and the old copy command.
+async function labClip(text){
+  try{if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(text);return true;}}catch(e){}
+  try{const ta=document.createElement('textarea');ta.value=text;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;left:-9999px';document.body.appendChild(ta);ta.select();const ok=document.execCommand('copy');ta.remove();return !!ok;}catch(e){return false;}
+}
 // The lab's version, and the app's when the bridge serves the page. Numbers and the app's own
 // version string, in the bar and the window title.
 function labVersion(){
@@ -107,6 +125,7 @@ function labDraw(){
   o.rot=quatMat(lab.q||lab.hold.q);
   if(a&&a.t<1)svg.innerHTML=renderCube3D(a.from.toFacelets(),Object.assign(o,{move:a.move,t:Math.max(a.t,0.01)}));
   else{const f=lab.shown?lab.shown.toFacelets():Array.from({length:54},(_,i)=>i%9===4?(i-4)/9:-1);svg.innerHTML=renderCube3D(f,o);}
+  $('#copyState').disabled=!(lab.target||lab.shown);
 }
 // ----- the moves: the cube's turns, found between two states -----
 // One state request at a time; a turn during a request asks again when the answer lands.
@@ -333,9 +352,9 @@ function labPaint(){
     },
     onClose:()=>{lab.busy=false;labButtons();labStatus('The colors were not read. The picture shows the cube as the cube counts it.');}});
 }
-// The state as 54 letters, face by face (U R F D L B), to compare with the net in the site's
-// Smart cube dialog.
-function labFaceletText(cube){const L='WRGYOB';return cube.toFacelets().map((c,i)=>(i&&i%9===0?' ':'')+L[c]).join('');}
+// The state as 54 letters, face by face (U R F D L B): stateText in js/state-text.js, the text
+// Copy state writes and the site reads.
+function labFaceletText(cube){return stateText(cube);}
 // The hint after a connect where the cube does not read as solved. Its count may be off.
 function labSolvedHint(cube){return cube.isSolved()?'':' If your cube is solved, press My cube is solved: the cube counts its own turns and can lose count.';}
 // ----- the tilt: the picture follows the cube in the hands -----
@@ -724,7 +743,7 @@ function labStart(){
   lab.iso=labIsoLoad();$('#iso').checked=lab.iso;$('#iso').onchange=e=>labIso(e.target.checked);labViewDrag();
   labKnobs();labMovesDraw();labDraw();labButtons();
   $('#connect').onclick=labConnect;$('#disconnect').onclick=labDisconnect;$('#reset').onclick=labReset;$('#solved').onclick=labSolved;$('#scan').onclick=labRead;$('#paint').onclick=labPaint;$('#clear').onclick=labClear;$('#movesClear').onclick=labMovesClear;
-  $('#macGo').onclick=labMacGo;$('#macCopy').onclick=labCopyMac;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();labMacGo();}});
+  $('#macGo').onclick=labMacGo;$('#macCopy').onclick=labCopyMac;$('#copyState').onclick=labCopyState;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();labMacGo();}});
   $('#confirmYes').onclick=()=>labConfirmEnd(true);$('#confirmNo').onclick=()=>labConfirmEnd(false);
   $('#sideBtn').onclick=()=>labSide($('#side').hidden);
   lab.pats=labPatLoad();labPatDraw();$('#patBtn').onclick=()=>labPatShow($('#pat').hidden);$('#patClose').onclick=()=>labPatShow(false);$('#patClear').onclick=labPatClear;$('#patNew').onclick=labPatNew;labPatDrag();
