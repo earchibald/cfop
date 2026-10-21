@@ -80,6 +80,35 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
 .sp-m.on{background:none;box-shadow:none;color:inherit;user-select:auto;-webkit-user-select:auto}
 .sp-btn{font-family:var(--sans);font-size:11.5px;padding:1px 7px;margin-left:6px;vertical-align:1px;color:var(--muted)}.spoil:hover .sp-btn{color:var(--text)}.spoil.open .sp-btn{display:none}
 .patwin .none{color:var(--faint);font-size:13px;padding:8px 0}
+/* The F2L guide: a window as Patterns, to its right by default. */
+.f2lwin{left:432px;width:380px}
+.f2l,.f2l-main{display:flex;flex-direction:column;gap:10px}.f2l{padding-top:10px}
+.f2l p{margin:0}.f2l code{font-family:var(--mono);font-size:13px;color:var(--text)}
+.f2l-cross{font-size:13px;color:var(--muted)}.f2l-cross b{color:var(--text);font-weight:600}.f2l-cross code{display:block;margin-top:4px}
+.f2l-chips{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.f2l-chip{display:flex;align-items:center;gap:6px;padding:5px 8px;font-size:12.5px;font-weight:500;text-align:left;line-height:1.3}
+.f2l-chip .ck{flex:none;width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;visibility:hidden}
+.f2l-chip .sw{flex:none;display:inline-flex;gap:2px}.f2l-chip .sw i{width:9px;height:9px;border-radius:2px;border:1px solid rgba(0,0,0,.35)}
+.f2l-chip.solved{color:var(--muted);border-style:dashed}.f2l-chip.solved .ck{visibility:visible;color:var(--ok,#3cb371)}
+.f2l-chip.target{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.f2l-chip[aria-disabled=true]{cursor:default}.f2l-chip[aria-disabled=true]:hover{border-color:var(--line)}.f2l-chip.target[aria-disabled=true]:hover{border-color:var(--accent)}
+.f2l-mode{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.seg{display:inline-flex}.seg button{border-radius:0;padding:3px 10px;font-size:12.5px}.seg button:first-child{border-radius:8px 0 0 8px}.seg button:last-child{border-radius:0 8px 8px 0;margin-left:-1px}
+.seg button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+.f2l-mode .grow{flex:1}.f2l-mode>button{padding:3px 10px;font-size:12.5px}
+.f2l-order{display:flex;flex-wrap:wrap;gap:6px}
+.f2l-ord{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line);border-radius:8px;padding:1px 2px;font-size:12.5px}
+.f2l-ord span{padding:0 2px}.f2l-ord button{padding:1px 6px;border:0;background:none;font-size:13px;color:var(--muted)}.f2l-ord button:hover:not(:disabled){color:var(--text)}
+.f2l-card{border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:8px 10px;font-size:13px;min-height:40px}
+.f2l-card .tgt b{font-weight:600}.f2l-card .hint{display:block;margin:5px 0 3px;font-size:15px}
+.f2l-did{color:var(--faint)}
+.f2l-card .cnt{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.f2l-card .warn{color:var(--warn);margin-top:4px}.f2l-card .muted{color:var(--muted)}
+.f2l .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.f2l-combos{display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted)}
+.f2l-alt{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center}.f2l-alt code{grid-column:1}.f2l-alt button{grid-column:2;grid-row:1/3;padding:3px 9px;font-size:12.5px}
+.f2l-then{font-size:13px;color:var(--muted)}.f2l-then b{color:var(--text);font-weight:500}
+.f2l-done h3{margin:0;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
 .modal{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;max-width:380px;max-height:92vh;overflow:auto;box-shadow:0 12px 32px rgba(0,0,0,.5)}
 .modal h2{margin:0 0 6px;font-size:18px}.modal p{margin:0 0 14px;color:var(--muted)}
@@ -121,6 +150,7 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
   <span class="muted" id="ver" title="The version of the lab, and of the Twistwright app when it serves the page"></span>
   <button class="ghost" id="clear" title="Empty the moves and the log">Clear all<kbd>C</kbd></button>
   <button id="patBtn" aria-pressed="false" aria-controls="pat" title="The two-look OLL and PLL cases the cube has shown, with the moves that solve each, first move shown: click a line to reveal the next move. New scramble starts them over, with the cross as the first goal and its count">Patterns<kbd>P</kbd></button>
+  <button id="f2lBtn" aria-pressed="false" aria-controls="f2l" title="Solve the first two layers on your cube, one pair at a time. Each hint shows its first move: click the line to reveal the next move">F2L guide<kbd>F</kbd></button>
   <button id="sideBtn" aria-pressed="true" aria-controls="side">Experiments<kbd>L</kbd></button>
 </header>
 <main class="side">
@@ -177,6 +207,22 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
   <div class="head" title="Drag to move the window"><b id="patTitle">Patterns</b><span class="count" id="patCount"></span><span class="grow"></span><button id="patNew" title="Press when you have scrambled the cube. No moves are made: the patterns start over, and the cross on the bottom as held is the first goal. The entry counts its solutions by length up to 7 moves and lists up to three of the shortest, first move shown: click a line to reveal the next move. The cross goes in the list when you make it, with your moves.">New scramble<kbd>N</kbd></button><button class="ghost" id="patClear" title="Empty the list of patterns">Clear</button><button id="patClose" title="Close the window">Close<kbd>Esc</kbd></button></div>
   <div class="list" id="patList" aria-label="The patterns found, newest first"></div>
 </section>
+<section class="patwin f2lwin" id="f2l" hidden role="dialog" aria-labelledby="f2lTitle">
+  <div class="head" title="Drag to move the window"><b id="f2lTitle">F2L guide</b><span class="count" id="f2lCount"></span><span class="grow"></span><button id="f2lClose" title="Close the window">Close<kbd>Esc</kbd></button></div>
+  <div class="list f2l" id="f2lBody">
+    <div class="f2l-cross" id="f2lCross"></div>
+    <div class="f2l-main" id="f2lMain" hidden>
+      <div class="f2l-chips" id="f2lChips" role="group" aria-label="The four pairs, in order"></div>
+      <div class="f2l-mode">Target<span class="seg" role="group" aria-label="How the guide picks the next target"><button id="f2lShortest" aria-pressed="true" title="The pair with the fewest moves from here">Shortest</button><button id="f2lCorner" aria-pressed="false" title="The next pair in your order">By corner</button></span><span class="grow"></span><button class="ghost" id="f2lOrderBtn" aria-expanded="false" aria-controls="f2lOrder" title="Set the order of the pairs. By corner follows this order.">Order</button></div>
+      <div class="f2l-order" id="f2lOrder" hidden role="group" aria-label="The order of the pairs"></div>
+      <div class="f2l-card" id="f2lCard" aria-live="polite"></div>
+      <label class="chk" title="Also look for a hint that makes a second pair too, and for one that leaves the next pair shortest"><input type="checkbox" id="f2lCombo"> Look for combinations</label>
+      <div class="f2l-combos" id="f2lCombos" hidden></div>
+      <p class="f2l-then" id="f2lThen" hidden></p>
+      <div class="f2l-done" id="f2lDone" hidden></div>
+    </div>
+  </div>
+</section>
 <div class="modal-bg" id="confirm" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
   <h2 id="confirmTitle">Reset the cube?</h2>
   <p id="confirmText">You smacked the right or left face three times. Hold the cube white up, green toward you, then press Reset.</p>
@@ -193,6 +239,7 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
 <script src="helpers.js"></script>
 <script src="../js/paint.js"></script>
 <script src="smack.js"></script>
+<script src="f2l.js"></script>
 <script src="lab.js"></script>
 </body>
 </html>

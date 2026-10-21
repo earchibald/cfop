@@ -52,6 +52,18 @@
 // shortest solution show their first move only: a cover hides each move after it, as the site's
 // Reference does (labSpoil). A click on the line uncovers the next move, Reveal uncovers the rest,
 // and a click on an open line covers it again. The moves the user made for the cross stay plain.
+// F2L guide (F): a window beside Patterns that guides the first two layers on the cube in the
+// hands, one pair at a time (lab/f2l.js, pure). It reads the cube as held, as Patterns does: the
+// cross is the color on the bottom as held, and the slots are named by their place as held. Until
+// the cross is made it shows the cross and one shortest solution. Then four chips (the pairs, in the
+// order), the target picked by the mode (Shortest, or By corner: the next pair in the order kept in
+// cw:labF2LOrder), and the step card: the hint as held, first move shown, the rest covered as in
+// Patterns (labSpoil). The moves made along the hint turn plain and dim; a move off the hint asks
+// for a new hint, with the same target. A click on a chip makes that pair the target now. Look for
+// combinations adds a hint that makes a second pair too, and the hint that leaves the next pair
+// shortest. The solved pairs are listed with the moves the user made. Each state recomputes after
+// F2L_WAIT_MS of quiet; the combinations run one per turn of the event loop, and a newer state
+// cancels them (lab.f2l.seq). New scramble and My cube is solved start the guide over.
 // The moves since the connect sit in a box of their own under the picture, as the cube tab's
 // readout: merged as they come, the last ten shown, a triangle for more, and Clear moves.
 // The hold: the cube names its moves with its white face up and green in front, however it is
@@ -62,7 +74,7 @@
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,patOpen:{},
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,view:{yaw:0,pitch:0},drag:null,
-  busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
+  busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,f2l:null,f2lPos:null,winTop:'pat',copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200,LAB_CROSS_MAX=7,LAB_SOLS_SHOWN=3;
 const LAB_PAT_STEPS={eo:'OLL edges',co:'OLL corners',cp:'PLL corners',ep:'PLL edges'};
 // The cameras: straight on, the cube as it sits in space; and isometric, a little from the right
@@ -160,9 +172,12 @@ function labMerge(moves,m){
   const t=(turns(last)+turns(m))%4;
   return moves.slice(0,-1).concat(t?[m[0]+['','','2',"'"][t]]:[]);
 }
-// A move onto the list. The first move after New scramble is not merged into the one before it,
-// so the moves since the scramble stay whole.
-function labAdd(m){lab.moves=lab.goal&&lab.moves.length<=lab.goal.at?lab.moves.concat(m):labMerge(lab.moves,m);}
+// A move onto the list. The first move after New scramble, or after the start of an F2L step, is
+// not merged into the one before it, so the moves since then stay whole.
+function labAdd(m){
+  const b=Math.max(lab.goal?lab.goal.at:-1,lab.f2l&&lab.f2l.open?lab.f2l.at:-1);
+  lab.moves=lab.moves.length<=b?lab.moves.concat(m):labMerge(lab.moves,m);
+}
 // The box under the picture, as the cube tab's readout (cubeTabMovesDraw): the last LAB_SHOWN moves,
 // a triangle after them when there are more, the count in the head, and Clear moves.
 function labMovesDraw(){
@@ -178,7 +193,7 @@ function labMovesDraw(){
     svg.setAttribute('viewBox','0 0 8 10');svg.setAttribute('aria-hidden','true');p.setAttribute('points','0,0 8,5 0,10');svg.appendChild(p);more.appendChild(svg);
   }
 }
-function labMovesClear(){lab.moves=[];if(lab.goal)lab.goal.at=0;labMovesDraw();}
+function labMovesClear(){lab.moves=[];if(lab.goal)lab.goal.at=0;labF2LMovesGone();labMovesDraw();}
 // Isometric (I): on, the camera looks from a little to the right and above; off, straight on.
 function labIso(on){lab.iso=!!on;$('#iso').checked=lab.iso;try{localStorage.setItem('cw:labIso',lab.iso?'1':'');}catch(e){}lab.view={yaw:0,pitch:0};labDraw();}
 function labIsoLoad(){try{return !!localStorage.getItem('cw:labIso');}catch(e){return false;}}
@@ -266,6 +281,7 @@ function labSetHold(h,src){
   if(src==='load')return '';
   let turn='';
   if(old&&old!==h){const d=LAB_HOLD_BY.get(old.cube.inverse().mul(h.cube).center.join());if(d){for(const m of d.moves)labAdd(m);turn=d.moves.join(' ');}labMovesDraw();}
+  if(old!==h&&lab.f2l&&lab.f2l.open&&(lab.target||lab.shown))labF2LRead(lab.target||lab.shown); // the guide names the places anew
   if(src==='turn')return turn;
   labLog('hold','Hold: '+labHoldWords(h)+'.');
   if(lab.conn&&lab.raw)labReset();else labDraw();
@@ -273,10 +289,11 @@ function labSetHold(h,src){
 // Show the real cube's state: up to four moves past the picture turn their layers in a queue;
 // further away, the picture jumps.
 function labShow(cube){
-  if(lab.jump){lab.jump=false;labJump(cube);labPatRead(cube);return;}
+  if(lab.jump){lab.jump=false;labJump(cube);labPatRead(cube);labF2LRead(cube);return;}
   const moved=labPath(lab.target||lab.shown,cube);
   if(moved&&moved.length){for(const m of moved){const r=labRelabel(m);labAdd(r);if($('#twistOn').checked&&lab.twist.feed(r))labTwist(r);}labMovesDraw();}
   labPatRead(cube); // after the moves, so a cross made lists the moves it took
+  labF2LRead(cube); // the same: a pair solved lists the moves it took
   if(!moved||!moved.length){labStopAnim();lab.shown=lab.target=cube;labDraw();return;}
   lab.target=cube;lab.queue.push(...moved);
   if(!lab.anim)labNext();
@@ -295,8 +312,9 @@ function labNext(){
 }
 function labStopAnim(){if(lab.raf){cancelAnimationFrame(lab.raf);lab.raf=0;}lab.anim=null;lab.queue=[];if(lab.target)lab.shown=lab.target;}
 // Show a state at once, as a new start: no layer turns, nothing on the move list, and the cross
-// goal of New scramble is dropped (the moves it took cannot be known).
-function labJump(cube){labStopAnim();lab.shown=lab.target=cube;lab.goal=null;labDraw();}
+// goal of New scramble is dropped (the moves it took cannot be known). The F2L step starts over
+// from the new state; the pairs solved stay.
+function labJump(cube){labStopAnim();lab.shown=lab.target=cube;lab.goal=null;labF2LMovesGone();labDraw();}
 // My cube is solved: the reset command, then the state read again. The cube's count was off, so
 // the moves between the old picture and solved are not turns; the picture jumps.
 async function labSolved(){
@@ -306,7 +324,7 @@ async function labSolved(){
     lab.jump=true;await conn.send('reset');labFixDrop(conn.name);
     await new Promise(r=>setTimeout(r,100));
     const cube=await conn.readState(3000);
-    lab.jump=false;labJump(cube);
+    lab.jump=false;labJump(cube);labF2LReset();
     labLog('solved',cube.isSolved()?'The cube took its state as solved.':'The cube answered, but not with a solved state.');
     labStatus(cube.isSolved()?'The cube now counts from solved. Each turn of your cube turns the layer.':'The cube did not take the change. Press My cube is solved again.');
   }catch(e){lab.jump=false;labLog('solved','The reset failed: '+e.message);labStatus('The cube did not take the change: '+e.message);}
@@ -433,7 +451,7 @@ function labPatNew(){
     sub:`As held: ${labHoldWords(lab.hold)}. The cross on the bottom is ${color}. Each solution is counted once, up to ${LAB_CROSS_MAX} moves.`};
   lab.pats.unshift(e);if(lab.pats.length>LAB_PAT_MAX)lab.pats.length=LAB_PAT_MAX;
   lab.patLast=null;lab.goal=made?null:{color,optimal:r.optimal,at:lab.moves.length};
-  labPatSave();labPatDraw();labPatShow(true);
+  labPatSave();labPatDraw();labPatShow(true);labF2LReset();
   labLog('scramble',`New scramble, as held ${labHoldWords(lab.hold)}. ${color} cross: ${made?'already made':`shortest ${r.optimal}; ${counts}`}.`);
 }
 function labPatSave(){try{localStorage.setItem('cw:labPatterns',JSON.stringify(lab.pats));}catch(e){}}
@@ -477,34 +495,305 @@ function labSpoilSync(s){const left=s.querySelectorAll('.sp-m:not(.on)').length,
 function labSpoilStep(s,all){const hid=[...s.querySelectorAll('.sp-m:not(.on)')];
   if(!hid.length)s.querySelectorAll('.sp-m.on').forEach(m=>m.classList.remove('on'));else(all?hid:hid.slice(0,1)).forEach(m=>m.classList.add('on'));
   labSpoilSync(s);}
-function labPatShow(on){$('#pat').hidden=!on;$('#patBtn').setAttribute('aria-pressed',String(!!on));}
-// The window moves: drag it by its head. The place is kept in cw:labPat and clamped to the screen,
-// as the cube window on the site (cubeTabDrag).
-function labPatPlace(x,y,save){
-  const w=$('#pat'),W=window.innerWidth||0,H=window.innerHeight||0,ww=w.offsetWidth||400;
+function labPatShow(on){$('#pat').hidden=!on;$('#patBtn').setAttribute('aria-pressed',String(!!on));if(on)labWinFront('pat');}
+// The floating windows (Patterns, the F2L guide) move: drag one by its head. The place is kept in
+// localStorage under `key` (cw:labPat, cw:labF2LWin) and in lab.<id>Pos, clamped to the screen, as
+// the cube window on the site (cubeTabDrag). A press anywhere in a window brings it to the front.
+function labWinPlace(w,x,y,save,key){
+  const W=window.innerWidth||0,H=window.innerHeight||0,ww=w.offsetWidth||400;
   x=Math.round(Math.max(8,Math.min(x,Math.max(8,W-ww-8))));y=Math.round(Math.max(0,Math.min(y,Math.max(0,H-48))));
-  w.style.left=x+'px';w.style.top=y+'px';lab.patPos={x,y};
-  if(save)try{localStorage.setItem('cw:labPat',JSON.stringify(lab.patPos));}catch(e){}
+  w.style.left=x+'px';w.style.top=y+'px';const pos=lab[w.id+'Pos']={x,y};
+  if(save)try{localStorage.setItem(key,JSON.stringify(pos));}catch(e){}
 }
-function labPatPosLoad(){try{const p=JSON.parse(localStorage.getItem('cw:labPat')||'null');return p&&isFinite(p.x)&&isFinite(p.y)?p:null;}catch(e){return null;}}
-function labPatDrag(){
-  const w=$('#pat'),h=w.querySelector('.head');
-  const p=labPatPosLoad();if(p)labPatPlace(p.x,p.y,false);
+function labWinPosLoad(key){try{const p=JSON.parse(localStorage.getItem(key)||'null');return p&&isFinite(p.x)&&isFinite(p.y)?p:null;}catch(e){return null;}}
+function labWinDrag(w,key){
+  const h=w.querySelector('.head'),pos=()=>lab[w.id+'Pos'];
+  const p=labWinPosLoad(key);if(p)labWinPlace(w,p.x,p.y,false,key);
+  w.addEventListener('pointerdown',()=>labWinFront(w.id),true);
   h.addEventListener('pointerdown',e=>{
     if(e.button>0||e.target.closest('button'))return;
     e.preventDefault();
     const r=w.getBoundingClientRect(),d={x:e.clientX-r.left,y:e.clientY-r.top,id:e.pointerId};
-    const move=ev=>{if(ev.pointerId===d.id)labPatPlace(ev.clientX-d.x,ev.clientY-d.y,false);};
+    const move=ev=>{if(ev.pointerId===d.id)labWinPlace(w,ev.clientX-d.x,ev.clientY-d.y,false,key);};
     const up=ev=>{if(ev.pointerId!==d.id)return;
       h.removeEventListener('pointermove',move);h.removeEventListener('pointerup',up);h.removeEventListener('pointercancel',up);
-      w.classList.remove('drag');if(lab.patPos)labPatPlace(lab.patPos.x,lab.patPos.y,true);};
+      w.classList.remove('drag');if(pos())labWinPlace(w,pos().x,pos().y,true,key);};
     h.addEventListener('pointermove',move);h.addEventListener('pointerup',up);h.addEventListener('pointercancel',up);
     if(h.setPointerCapture)try{h.setPointerCapture(e.pointerId);}catch(_){}
     w.classList.add('drag');
   });
-  window.addEventListener('resize',()=>{if(lab.patPos)labPatPlace(lab.patPos.x,lab.patPos.y,false);});
+  window.addEventListener('resize',()=>{if(pos())labWinPlace(w,pos().x,pos().y,false,key);});
 }
+// The window in front: the last one opened or pressed. Esc closes it first.
+function labWinFront(id){lab.winTop=id;for(const x of ['pat','f2l']){const el=$('#'+x);if(el)el.style.zIndex=x===id?'7':'6';}}
 function labPatClear(){lab.pats=[];lab.patLast=null;labPatSave();labPatDraw();}
+// ----- the F2L guide: the first two layers, one pair at a time -----
+// lab.f2l: open; mode ('shortest' or 'corner'); order (the four slot names, cw:labF2LOrder); combo
+// (Look for combinations); target (a pair the user clicked, or null); done (the pairs the guide has
+// seen solved, as they came); step (the current target: slot, at (the index into lab.moves where
+// the step began, as lab.goal.at), best (its shortest length when it began), base (the cube the
+// hint starts from), moves (the hint), n (the moves of the hint made so far), then, combos); log
+// (the solved steps, newest first); at (where the next step begins); seq (a newer state cancels
+// work in flight); X (the cube as held, in the engine's frame), held, holdKey.
+const F2L_WAIT_MS=200,F2L_PART_NODES=4000000; // the wait after the last state; the budget of each combination part (about 150 ms at worst)
+const F2L_STICKER={white:'W',red:'R',green:'G',yellow:'Y',orange:'O',blue:'B'};
+function labF2LStart(){
+  const get=(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:v;}catch(e){return d;}};
+  let order=null;try{order=JSON.parse(get('cw:labF2LOrder','null'));}catch(e){}
+  if(!Array.isArray(order)||order.length!==4||F2L_ORDER_DEFAULT.some(n=>!order.includes(n)))order=F2L_ORDER_DEFAULT.slice();
+  lab.f2l={open:false,mode:get('cw:labF2LMode','shortest')==='corner'?'corner':'shortest',order,combo:get('cw:labF2LCombo','')==='1',orderOpen:false,
+    target:null,done:[],step:null,log:[],at:lab.moves.length,seq:0,timer:0,X:null,held:null,holdKey:null,working:false,broke:''};
+  $('#f2lCombo').checked=lab.f2l.combo;
+  $('#f2lBtn').onclick=()=>labF2LShow($('#f2l').hidden);$('#f2lClose').onclick=()=>labF2LShow(false);
+  $('#f2lShortest').onclick=()=>labF2LMode('shortest');$('#f2lCorner').onclick=()=>labF2LMode('corner');
+  $('#f2lOrderBtn').onclick=()=>{lab.f2l.orderOpen=!lab.f2l.orderOpen;labF2LDraw();};
+  $('#f2lCombo').onchange=e=>labF2LCombo(e.target.checked);
+  $('#f2l').addEventListener('click',labF2LClick);
+  labWinDrag($('#f2l'),'cw:labF2LWin');
+  labF2LDraw();
+}
+function labF2LSave(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+// F (or the button) opens and closes the window. It reads the cube as it is now.
+function labF2LShow(on){
+  const f=lab.f2l;f.open=!!on;$('#f2l').hidden=!on;$('#f2lBtn').setAttribute('aria-pressed',String(!!on));
+  if(!on){clearTimeout(f.timer);f.timer=0;f.seq++;f.working=false;return;}
+  labWinFront('f2l');
+  if(!f.step)f.at=lab.moves.length;
+  const c=lab.target||lab.shown;if(c)labF2LRead(c);else labF2LDraw();
+}
+// New scramble, My cube is solved: all pairs open again, no clicked target, the solved list empty.
+function labF2LReset(){
+  const f=lab.f2l;if(!f)return;
+  clearTimeout(f.timer);f.timer=0;f.seq++;
+  Object.assign(f,{target:null,done:[],step:null,log:[],at:lab.moves.length,broke:'',working:false});
+  const c=lab.target||lab.shown;if(f.open&&c)labF2LRead(c);else labF2LDraw();
+}
+// The move list was emptied, or the cube jumped to a state with no moves: the step counts from here.
+function labF2LMovesGone(){const f=lab.f2l;if(!f)return;f.at=lab.moves.length;if(f.step)f.step.at=f.at;}
+const labF2LPos=n=>F2L_POS[n];
+const labF2LCap=t=>t[0].toUpperCase()+t.slice(1);
+// The live entry: each state the cube reports, from labShow. On the hint, the moves made walk along
+// it at once. Anything else waits F2L_WAIT_MS for the cube to rest, then asks for a new hint.
+function labF2LRead(cube){
+  const f=lab.f2l;if(!f||!cube||!f.open)return;
+  const held=labHeld(cube),X=reframe(held),hk=held.center.join();
+  f.held=held;f.X=X;
+  // A new hold renames the places: the pairs solved now are the solved list, and the step starts over.
+  if(f.holdKey!==hk){if(f.holdKey!=null){f.done=f2lState(X,[]).solved;f.target=null;f.step=null;f.at=lab.moves.length;f.broke='';}f.holdKey=hk;}
+  const s=f.step;
+  if(s&&s.moves.length){
+    const n=f2lDone(s.base,s.moves,X),half=n<0?f2lPart(s.base,s.moves,X):-1;
+    if((n>=0&&n<s.moves.length)||half>=0){s.n=n>=0?n:half;labF2LDraw();return;}
+  }
+  const st=f2lState(X,f.done);
+  if(!st.cross&&!(s&&s.moves.length)){f.step=null;labF2LIdle();return;} // the cross first: a step with no hint ends here
+  if(st.broken.length){f.done=f.done.filter(n=>!st.broken.includes(n));f.broke=st.broken.map(n=>`The ${labF2LPos(n)} pair came out.`).join(' ');labLog('f2l',f.broke);}
+  if(s&&st.cross&&st.solved.includes(s.slot))labF2LStepDone(X);
+  if(st.cross&&st.solved.length===4){labF2LIdle();return;}
+  labF2LSchedule(F2L_WAIT_MS);
+}
+// Nothing to compute: cancel what is in flight and draw.
+function labF2LIdle(){const f=lab.f2l;clearTimeout(f.timer);f.timer=0;f.seq++;f.working=false;labF2LDraw();}
+// The target is solved with the cross and the solved pairs: the step goes in the list with the moves
+// the user made since it began, with any other pair it solved on the way.
+function labF2LStepDone(X){
+  const f=lab.f2l,s=f.step,solved=f2lState(X,[]).solved;
+  const slots=[s.slot,...f.order.filter(n=>n!==s.slot&&solved.includes(n)&&!f.done.includes(n))];
+  const moves=lab.moves.slice(s.at);
+  f.log.unshift({t:Date.now(),slots,n:moves.length,best:s.best,moves:moves.join(' ')});
+  f.done.push(...slots);if(slots.includes(f.target))f.target=null;
+  f.step=null;f.at=lab.moves.length;f.broke='';
+  labLog('f2l',`F2L: ${slots.map(labF2LPos).join(' and ')} in ${moves.length} moves (shortest ${s.best}): ${moves.join(' ')||'no moves'}.`);
+}
+function labF2LSchedule(ms){
+  const f=lab.f2l;clearTimeout(f.timer);const seq=++f.seq;f.working=true;labF2LDraw();
+  f.timer=setTimeout(()=>{f.timer=0;if(seq===f.seq)labF2LCompute(seq);},ms);
+}
+// The hint for the cube now. The target is the clicked pair, else the current one once the user has
+// begun it (a move since it began), else the mode's pick. A hint the user still follows stays.
+function labF2LCompute(seq){
+  const f=lab.f2l,X=f.X;f.working=false;if(!X)return;
+  const st=f2lState(X,f.done);
+  if(st.cross&&st.solved.length===4){f.step=null;labF2LDraw();return;}
+  const s=f.step,begun=!!s&&lab.moves.length>s.at;
+  const pin=f.target&&!st.solved.includes(f.target)?f.target:(begun?s.slot:null);
+  if(!(s&&s.moves.length&&pin===s.slot&&f2lDone(s.base,s.moves,X)>=0)){
+    const r=f2lNext(X,{mode:f.mode,order:f.order,done:f.done,target:pin});
+    if(!r){f.step=null;labF2LDraw();return;}
+    const same=!!s&&s.slot===r.slot;
+    f.step={slot:r.slot,at:s?s.at:f.at,best:same&&s.best!=null?s.best:r.optimal,base:X,moves:r.moves||[],plain:r.moves||[],optimal:r.optimal,sols:r.sols,
+      n:0,then:null,combos:null,idx:f.log.length,reveal:0,key:null,keyN:0};
+  }
+  labF2LDraw();
+  labF2LThen(seq,true);
+}
+// Then: the pairs after the target, from the cube after the hint. Then the combinations, if asked.
+function labF2LThen(seq,combos){
+  const f=lab.f2l,s=f.step;if(!s||!s.moves.length)return;
+  setTimeout(()=>{
+    if(seq!==f.seq||f.step!==s)return;
+    s.then=f2lThen(applyAlg(s.base,s.moves),{mode:f.mode,order:f.order});labF2LDraw();
+    if(combos&&f.combo&&s.n===0&&!s.combos)labF2LCombos(seq);
+  },0);
+}
+// The combinations for the target, one part per turn of the event loop: each other open pair
+// (Also makes), then the setup. A newer state cancels the rest.
+function labF2LCombos(seq){
+  const f=lab.f2l,s=f.step;if(!s||!s.moves.length||s.optimal==null)return;
+  const X=s.base,keep=f2lState(X,[]).solved,others=f.order.filter(n=>n!==s.slot&&!keep.includes(n));
+  s.combos={also:[],setup:null,partial:false,busy:true};labF2LDraw();
+  const parts=others.map(o=>()=>{const a=f2lAlso(X,s.slot,keep,o,{max:s.optimal+F2L_COMBO_EXTRA,nodeLimit:F2L_PART_NODES});if(a&&a.partial)s.combos.partial=true;else if(a)s.combos.also.push(a);});
+  parts.push(()=>{const b={left:F2L_PART_NODES};s.combos.setup=f2lSetup(X,s.slot,s.sols,{mode:f.mode,order:f.order,budget:b});if(b.left<=0)s.combos.partial=true;});
+  const next=()=>{if(seq!==f.seq||f.step!==s)return;const p=parts.shift();if(!p){s.combos.busy=false;labF2LDraw();return;}p();labF2LDraw();setTimeout(next,0);};
+  setTimeout(next,0);
+}
+// A click on a waiting chip: that pair is the target now. The order stays; after this pair the
+// guide goes back to it.
+function labF2LPick(n){
+  const f=lab.f2l,s=f.step;if(!f.X||(s&&s.slot===n)||f2lState(f.X,[]).solved.includes(n))return;
+  f.target=n;f.step=null;f.at=lab.moves.length;
+  labF2LSchedule(0);
+}
+// The mode: it counts at the next step, or now when the user has not begun this one.
+function labF2LMode(m){
+  const f=lab.f2l;if(f.mode===m)return;f.mode=m;labF2LSave('cw:labF2LMode',m);
+  if(f.step)f.step.combos=null;
+  if(f.X&&(f.step||crossSolved(f.X)))labF2LSchedule(0);else labF2LDraw();
+}
+// Move a pair one place earlier (-1) or later (+1) in the order. The focus stays on the arrow.
+function labF2LOrderMove(n,dir){
+  const f=lab.f2l,o=f.order.slice(),i=o.indexOf(n),j=i+dir;if(i<0||j<0||j>3)return;
+  [o[i],o[j]]=[o[j],o[i]];f.order=o;labF2LSave('cw:labF2LOrder',JSON.stringify(o));
+  if(f.step)f.step.combos=null;
+  if(f.X&&(f.step||crossSolved(f.X)))labF2LSchedule(0);else labF2LDraw();
+}
+// Use this: a combination's moves become the hint, from the same cube. The plain hint comes back
+// with the plain button, or by itself after a move off the hint.
+function labF2LUse(moves){
+  const f=lab.f2l,s=f.step;if(!s||s.n)return;
+  s.moves=moves.slice();s.n=0;s.then=null;s.key=null;s.reveal=0;
+  labF2LDraw();labF2LThen(f.seq,false);
+}
+function labF2LCombo(on){
+  const f=lab.f2l;f.combo=!!on;labF2LSave('cw:labF2LCombo',on?'1':'');labBlur();
+  if(on&&f.step&&f.step.n===0&&!f.step.combos&&!f.working)labF2LCombos(f.seq);
+  labF2LDraw();
+}
+function labF2LClick(e){
+  const t=e.target;if(!t.closest)return;
+  const sp=t.closest('.spoil');
+  if(sp){if(!sp.classList.contains('one')){e.preventDefault();labSpoilStep(sp,!!t.closest('.sp-btn'));}return;}
+  const chip=t.closest('[data-chip]');if(chip){if(chip.getAttribute('aria-disabled')!=='true')labF2LPick(chip.dataset.chip);return;}
+  const ord=t.closest('[data-ord]');if(ord){labF2LOrderMove(ord.dataset.ord,parseInt(ord.dataset.dir,10));return;}
+  const use=t.closest('[data-use]');if(use&&lab.f2l.step){const s=lab.f2l.step,c=s.combos,u=use.dataset.use;
+    labF2LUse(u==='plain'?s.plain:u==='setup'?c.setup.moves:c.also[parseInt(u,10)].moves);}
+}
+// ----- the window -----
+function labF2LEl(tag,cls,text){const x=document.createElement(tag);if(cls)x.className=cls;if(text!=null)x.textContent=text;return x;}
+function labF2LWords(n){const w=f2lSlotWords(lab.f2l.held||new Cube())[n];return w;}
+// A redraw builds the buttons again. The focus goes back to the same control (the same arrow of the
+// same pair, or its other arrow at the end of the row), so the keyboard can go on.
+function labF2LDraw(){
+  const a=document.activeElement,box=$('#f2l');
+  const fo=a&&box&&box.contains(a)&&a.dataset?(a.dataset.ord?`[data-ord="${a.dataset.ord}"]`:a.dataset.chip?`[data-chip="${a.dataset.chip}"]`:a.dataset.use?`[data-use="${a.dataset.use}"]`:null):null;
+  const dir=a&&a.dataset&&a.dataset.dir;
+  labF2LDrawAll();
+  if(fo&&!box.contains(document.activeElement)){const b=(dir&&$(`#f2l ${fo}[data-dir="${dir}"]:not(:disabled)`))||$(`#f2l ${fo}:not(:disabled)`);if(b)b.focus();}
+}
+function labF2LDrawAll(){
+  const f=lab.f2l;if(!f)return;
+  const X=f.X,el=labF2LEl,st=X?f2lState(X,f.done):null,s=f.step;
+  const color=f.held?LAB_COLORS[f.held.center[3]]:'',main=!!X&&(!!s||st.cross);
+  // the cross line
+  const cr=$('#f2lCross');cr.textContent='';
+  if(!X)cr.appendChild(el('span',null,'No cube yet. Connect your cube to start.'));
+  else if(st.cross){const b=el('b',null,`${labF2LCap(color)} cross on the bottom: made.`);cr.appendChild(b);}
+  else if(s&&s.moves.length)cr.appendChild(el('span',null,`The hint takes the ${color} cross apart for a few moves. It makes the cross again before it ends.`));
+  else{
+    const d0=buildCrossTable()[crossIndex(X)],r=crossSolutions(X,d0),sol=f2lSort(r.byLen[d0]||[])[0];
+    cr.appendChild(el('b',null,`Make the ${color} cross first.`));cr.appendChild(document.createTextNode(` Shortest: ${d0} move${d0===1?'':'s'}.`));
+    if(sol){const c=el('code');c.appendChild(labSpoil(sol,'f2l:cross:'+sol));cr.appendChild(c);}
+  }
+  $('#f2lMain').hidden=!main;
+  const solvedN=st&&st.cross?st.solved.length:0;
+  $('#f2lCount').textContent=main?`${solvedN} of 4 pairs`:'';
+  if(!main)return;
+  // the chips, in the order
+  const chips=$('#f2lChips');chips.textContent='';
+  for(const n of f.order){
+    const w=labF2LWords(n),solved=st.solved.includes(n)||(!!s&&f.done.includes(n)),target=!!s&&s.slot===n||(!s&&f.target===n);
+    const b=el('button','f2l-chip'+(solved?' solved':target?' target':''));b.type='button';b.dataset.chip=n;
+    const NS='http://www.w3.org/2000/svg',ck=document.createElementNS(NS,'svg'),p=document.createElementNS(NS,'path');
+    ck.setAttribute('class','ck');ck.setAttribute('viewBox','0 0 24 24');ck.setAttribute('aria-hidden','true');p.setAttribute('d','M5 12.5l4.5 4.5L19 7.5');ck.appendChild(p);b.appendChild(ck);
+    b.appendChild(el('span',null,`${labF2LCap(w.pos)} · ${w.colors.join(' ')}`));
+    const sw=el('span','sw');sw.setAttribute('aria-hidden','true');for(const c of w.colors){const i=el('i');i.style.background=`var(--sticker-${F2L_STICKER[c]})`;sw.appendChild(i);}b.appendChild(sw);
+    // A solved chip and the target chip use aria-disabled, not disabled: they stay in the Tab order, so a
+    // screen reader can say "solved" or "the target". labF2LClick ignores them.
+    if(solved){b.setAttribute('aria-disabled','true');b.title=`The ${w.pos} pair is solved`;b.setAttribute('aria-label',`${labF2LCap(w.pos)}, ${w.colors.join(', ')}: solved`);}
+    else if(target){b.setAttribute('aria-disabled','true');b.setAttribute('aria-current','true');b.title=`The ${w.pos} pair is the target`;b.setAttribute('aria-label',`${labF2LCap(w.pos)}, ${w.colors.join(', ')}: the target`);}
+    else{b.title=`Make the ${w.pos} pair the target now`;b.setAttribute('aria-label',`${labF2LCap(w.pos)}, ${w.colors.join(', ')}: make it the target`);}
+    chips.appendChild(b);
+  }
+  // the mode and the order
+  $('#f2lShortest').setAttribute('aria-pressed',String(f.mode==='shortest'));$('#f2lCorner').setAttribute('aria-pressed',String(f.mode==='corner'));
+  $('#f2lOrderBtn').setAttribute('aria-expanded',String(f.orderOpen));
+  const ord=$('#f2lOrder');ord.hidden=!f.orderOpen;ord.textContent='';
+  f.order.forEach((n,i)=>{
+    const g=el('span','f2l-ord'),mk=(dir,txt,lbl)=>{const b=el('button',null,txt);b.type='button';b.dataset.ord=n;b.dataset.dir=String(dir);b.setAttribute('aria-label',lbl);b.title=lbl;b.disabled=dir<0?i===0:i===3;return b;};
+    g.appendChild(mk(-1,'←',`Move ${labF2LPos(n)} one place earlier`));g.appendChild(el('span',null,`${i+1}. ${labF2LCap(labF2LPos(n))}`));g.appendChild(mk(1,'→',`Move ${labF2LPos(n)} one place later`));
+    ord.appendChild(g);
+  });
+  // the step card
+  const card=$('#f2lCard');card.textContent='';
+  if(st.cross&&st.solved.length===4)card.appendChild(el('p',null,'The first two layers are solved.'));
+  else if(!s||f.working&&!s.moves.length)card.appendChild(el('p','muted','Working.'));
+  else{
+    const w=labF2LWords(s.slot),tg=el('p','tgt');tg.appendChild(document.createTextNode('Target: '));tg.appendChild(el('b',null,w.pos));tg.appendChild(document.createTextNode(` (${w.colors.join(', ')}).`));card.appendChild(tg);
+    if(!s.moves.length)card.appendChild(el('p','warn',`No hint in ${F2L_MAX_DEPTH} moves or fewer. Make the ${color} cross again, or press New scramble.`));
+    else{
+      const code=el('code','hint');
+      s.moves.slice(0,s.n).forEach(m=>{code.appendChild(el('span','f2l-did',m));code.appendChild(document.createTextNode(' '));});
+      // What is revealed follows the hint: a move made uncovers no more than was open.
+      const key=`f2l:${s.idx}:hint:${s.moves.join(' ')}@${s.n}`;
+      if(s.key&&s.key!==key)s.reveal=s.keyN+1+(lab.patOpen[s.key]||0);
+      if(lab.patOpen[key]==null)lab.patOpen[key]=Math.max(0,s.reveal-(s.n+1));
+      s.key=key;s.keyN=s.n;
+      code.appendChild(labSpoil(s.moves.slice(s.n).join(' '),key));card.appendChild(code);
+      const ln=s.moves.length;card.appendChild(el('span','cnt',`${ln} move${ln===1?'':'s'}`+(s.n?`, ${s.n} made`:'')+(s.moves!==s.plain&&s.moves.join(' ')!==s.plain.join(' ')?' · a combination':'')));
+    }
+    if(f.working)card.appendChild(el('p','muted','Working.'));
+  }
+  if(f.broke)card.appendChild(el('p','warn',f.broke));
+  // the combinations
+  const cb=$('#f2lCombos');cb.textContent='';const c=s&&s.combos;
+  cb.hidden=!(f.combo&&s&&s.moves.length&&s.n===0&&!(st.cross&&st.solved.length===4));
+  if(!cb.hidden){
+    if(!c)cb.appendChild(el('p',null,'Looking for combinations.'));
+    else{
+      const line=(text,moves,use,key)=>{const d=el('div','f2l-alt');d.appendChild(el('span',null,text));const code=el('code');code.appendChild(labSpoil(moves.join(' '),key));d.appendChild(code);
+        const on=s.moves.join(' ')===moves.join(' '),b=el('button',null,on?'In use':'Use this');b.type='button';b.dataset.use=use;b.disabled=on;d.appendChild(b);cb.appendChild(d);};
+      c.also.forEach((a,i)=>line(`Also makes ${labF2LPos(a.slot)}: ${a.n} moves`,a.moves,String(i),`f2l:${s.idx}:also:${a.moves.join(' ')}`));
+      if(c.setup)line(`Sets up ${labF2LPos(c.setup.slot)}: then it takes ${c.setup.after} moves. After the plain hint, the next pair takes ${c.setup.plain} moves.`,c.setup.moves,'setup',`f2l:${s.idx}:setup:${c.setup.moves.join(' ')}`);
+      if(c.busy)cb.appendChild(el('p',null,'Looking for combinations.'));
+      else if(!c.also.length&&!c.setup)cb.appendChild(el('p',null,c.partial?'No combinations found. The search stopped early.':`No combinations in ${F2L_COMBO_EXTRA} more moves or fewer.`));
+      else if(c.partial)cb.appendChild(el('p',null,'The search stopped early. These are some of them.'));
+      if(s.moves.join(' ')!==s.plain.join(' ')){const b=el('button','ghost','Use the plain hint');b.type='button';b.dataset.use='plain';cb.appendChild(b);}
+    }
+  }
+  // then
+  const th=$('#f2lThen');th.textContent='';const then=s&&s.moves.length&&s.then;
+  th.hidden=!(then&&then.length);
+  if(!th.hidden){th.appendChild(document.createTextNode('Then '));
+    then.forEach((t,i)=>{if(i)th.appendChild(document.createTextNode(' · '));th.appendChild(el('b',null,labF2LPos(t.slot)));th.appendChild(document.createTextNode(t.n==null?', no count':i?`, ${t.n}`:`, ${t.n} move${t.n===1?'':'s'}`));});}
+  // the solved pairs, newest first, with the moves the user made
+  const dn=$('#f2lDone');dn.textContent='';dn.hidden=!f.log.length;
+  if(f.log.length){dn.appendChild(el('h3',null,'Solved pairs'));
+    for(const e of f.log){const d=el('div','ent'),t=new Date(e.t),p=x=>String(x).padStart(2,'0');
+      d.appendChild(el('time',null,`${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}`));
+      d.appendChild(el('span','name',`${labF2LCap(e.slots.map(labF2LPos).join(' and '))}: ${e.n} move${e.n===1?'':'s'}`+(e.best!=null?` (shortest was ${e.best})`:'')));
+      if(e.moves)d.appendChild(el('code',null,e.moves));
+      dn.appendChild(d);}}
+}
 // ----- experiment 3: six twists of one face -----
 // The sixth quarter turn: say so, then Reset cube after the wait. A second gesture within the wait
 // starts the wait over.
@@ -587,10 +876,12 @@ function labSide(on){$('#side').hidden=!on;$('main').classList.toggle('side',on)
 function labKeys(e){
   if(e.target&&/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)&&e.target.type!=='checkbox'&&e.target.type!=='range')return;
   if(lab.confirmOpen){if(e.key==='Escape'){e.preventDefault();labConfirmEnd(false);}if(e.key==='Enter'){e.preventDefault();labConfirmEnd(true);}return;}
-  if(e.key==='Escape'&&!$('#pat').hidden){e.preventDefault();labPatShow(false);return;}
+  if(e.key==='Escape'){const open=['pat','f2l'].filter(id=>!$('#'+id).hidden);
+    if(open.length){e.preventDefault();const id=open.includes(lab.winTop)?lab.winTop:open[0];if(id==='pat')labPatShow(false);else labF2LShow(false);return;}}
   if(e.metaKey||e.ctrlKey||e.altKey)return;
   const k=e.key.toLowerCase();
   if(k==='p'){e.preventDefault();labPatShow($('#pat').hidden);}
+  if(k==='f'){e.preventDefault();labF2LShow($('#f2l').hidden);}
   if(k==='n'){e.preventDefault();labPatNew();}
   if(k==='r'){e.preventDefault();labReset();}
   if(k==='s'){e.preventDefault();labSolved();}
@@ -709,7 +1000,7 @@ async function labConnect(auto){
     try{
       const cube=await conn.readState(3000);
       labSaveMac(name,conn.mac);labRemember(name,{mac:conn.mac,id:device.id||null});lab.conn=conn;lab.busy=false;
-      lab.moves=[];if(lab.goal)lab.goal.at=0;lab.shown=lab.target=null;lab.asked=false;lab.want=false;lab.gyro=false;lab.raw=lab.basis=lab.q=lab.qTo=null;lab.det.reset();lab.twist.reset();clearTimeout(lab.twistTimer);lab.twistTimer=0;lab.trace=[];lab.times=[];
+      lab.moves=[];if(lab.goal)lab.goal.at=0;labF2LMovesGone();lab.shown=lab.target=null;lab.asked=false;lab.want=false;lab.gyro=false;lab.raw=lab.basis=lab.q=lab.qTo=null;lab.det.reset();lab.twist.reset();clearTimeout(lab.twistTimer);lab.twistTimer=0;lab.trace=[];lab.times=[];
       labButtons();labMovesDraw();labDots();labShow(cube);
       labStatus((conn.gen===3?'Live. Each turn of your cube turns the layer. This cube has no tilt sensor.':'Live. Each turn of your cube turns the layer. Waiting for the first tilt reading: move the cube.')+labSolvedHint(cube));
       labLog('link',`Connected to ${conn.name} (gen ${conn.gen}).`+(conn.fix?' The state is corrected from the colors read in the Smart cube dialog.':''));
@@ -746,7 +1037,8 @@ function labStart(){
   $('#macGo').onclick=labMacGo;$('#macCopy').onclick=labCopyMac;$('#copyState').onclick=labCopyState;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();labMacGo();}});
   $('#confirmYes').onclick=()=>labConfirmEnd(true);$('#confirmNo').onclick=()=>labConfirmEnd(false);
   $('#sideBtn').onclick=()=>labSide($('#side').hidden);
-  lab.pats=labPatLoad();labPatDraw();$('#patBtn').onclick=()=>labPatShow($('#pat').hidden);$('#patClose').onclick=()=>labPatShow(false);$('#patClear').onclick=labPatClear;$('#patNew').onclick=labPatNew;labPatDrag();
+  lab.pats=labPatLoad();labPatDraw();$('#patBtn').onclick=()=>labPatShow($('#pat').hidden);$('#patClose').onclick=()=>labPatShow(false);$('#patClear').onclick=labPatClear;$('#patNew').onclick=labPatNew;labWinDrag($('#pat'),'cw:labPat');
+  labF2LStart();
   $('#patList').addEventListener('click',e=>{const s=e.target.closest&&e.target.closest('.spoil');if(!s||s.classList.contains('one'))return;e.preventDefault();labSpoilStep(s,!!e.target.closest('.sp-btn'));});
   document.addEventListener('keydown',labKeys);
   document.addEventListener('cw:bridge',labButtons);

@@ -299,6 +299,113 @@ async function page(){
   assert.ok(/Yellow cross: already made$/.test($$('#patList .ent')[0].querySelector('.data').textContent),'the data line: '+$$('#patList .ent')[0].querySelector('.data').textContent);
   assert.strictEqual(JSON.parse(storage.getItem('cw:labPatterns')).length,3,'kept');
   click($('#patClear'));assert.strictEqual(L().pats.length,0,'Clear empties the list');assert.ok($('#patList .none'));assert.strictEqual(storage.getItem('cw:labPatterns'),'[]');
+  // the F2L guide (F): before the cross, the cross line alone with one shortest cross covered; with the cross, the
+  // chips, the step card with the hint covered after its first move, Then, and the solved pairs; a turn along the hint
+  // marks the move made, a turn off it asks for a new hint with the same target; a chip click, the mode and the
+  // order arrows change the target; combinations; Esc closes the window in front; New scramble starts it over
+  {const SL=w.eval('SLOTS'),F=L().f2l,step=()=>L().f2l.step,ready=()=>until(()=>{const s=L().f2l.step;return !L().f2l.working&&!!s&&s.moves.length>0;},4000);
+    const spoilMoves=sp=>[sp.firstChild.textContent,...[...sp.querySelectorAll('.sp-m')].map(x=>x.textContent)].join(' ').trim().split(/\s+/);
+    click($('#patClose'));assert.ok($('#f2l').hidden&&!F.open,'the F2L guide starts closed');assert.strictEqual($('#f2lBtn').textContent,'F2L guideF','the button names its key');
+    await show(sc1);
+    key('f');assert.ok(!$('#f2l').hidden&&L().f2l.open,'F opens the guide');assert.strictEqual($('#f2lBtn').getAttribute('aria-pressed'),'true');
+    assert.ok(/^Make the yellow cross first\. Shortest: \d moves?\./.test($('#f2lCross').textContent),'the cross line: '+$('#f2lCross').textContent);
+    const cs=$('#f2lCross .spoil');assert.ok(cs,'one shortest cross, as a covered line');assert.strictEqual(cs.querySelectorAll('.sp-m.on').length,0,'covered after its first move');
+    assert.ok(w.crossSolved(w.applyAlg(sc1,spoilMoves(cs))),'the line makes the cross');
+    assert.ok($('#f2lMain').hidden,'nothing below it before the cross');assert.strictEqual($('#f2lCount').textContent,'');
+    assert.ok($('#f2l').style.zIndex==='7','the window opened last is in front');
+    // the cross made, the pairs out: R U R' and its kin keep the cross
+    const F0=w.applyAlg(new Cube(),w.parseAlg("R U R' U' L' U2 L B U' B' U2 F' U F"));assert.ok(w.crossSolved(F0));
+    await show(F0);assert.ok(await ready(),'a hint comes after the wait');
+    assert.strictEqual($('#f2lCross').textContent,'Yellow cross on the bottom: made.');assert.ok(!$('#f2lMain').hidden,'the rest shows');
+    const open0=['FR','FL','BL','BR'].filter(n=>!w.slotSolved(F0,SL.find(s=>s.name===n)));assert.ok(open0.length>=2,'two pairs or more to make: '+open0);
+    assert.strictEqual($('#f2lCount').textContent,(4-open0.length)+' of 4 pairs');
+    const chips=$$('#f2lChips .f2l-chip');assert.deepStrictEqual(chips.map(c=>c.dataset.chip),['FR','FL','BL','BR'],'four chips, in the order');
+    assert.strictEqual(chips[0].textContent,'Front right · green red yellow','white up: the front right corner is green, red, yellow');
+    let s=step();assert.ok(open0.includes(s.slot),'the target is an open pair');assert.strictEqual(L().f2l.mode,'shortest','shortest by default');
+    assert.strictEqual($$('#f2lChips .target').length,1);assert.strictEqual($('#f2lChips .target').dataset.chip,s.slot,'the target chip has the accent');
+    assert.strictEqual($$('#f2lChips .solved').length,4-open0.length,'the solved chips have the check');
+    const pos={FR:'front right',FL:'front left',BL:'back left',BR:'back right'};
+    assert.ok($('#f2lCard .tgt').textContent.startsWith('Target: '+pos[s.slot]+' ('),'the step card names the target: '+$('#f2lCard .tgt').textContent);
+    let hs=$('#f2lCard .hint .spoil');assert.deepStrictEqual(spoilMoves(hs),[...s.moves],'the hint is the step\'s moves');assert.strictEqual(hs.firstChild.textContent,s.moves[0],'its first move shows');
+    assert.strictEqual(hs.querySelectorAll('.sp-m.on').length,0,'the rest is covered');assert.strictEqual($('#f2lCard .cnt').textContent,s.moves.length+' moves');
+    const X0=w.reframe(F0),best=w.f2lPairSolutions(X0,s.slot,w.f2lState(X0,[]).solved).optimal;assert.strictEqual(s.moves.length,best,'a shortest hint');
+    assert.ok(await until(()=>!$('#f2lThen').hidden),'Then follows');assert.ok(/^Then (front|back) (right|left), \d+ moves?/.test($('#f2lThen').textContent),'Then: '+$('#f2lThen').textContent);
+    // the reveal is as in Patterns: a click shows the next move
+    hs=$('#f2lCard .hint .spoil');click(hs);assert.strictEqual($('#f2lCard .hint .spoil').querySelectorAll('.sp-m.on').length,1,'a click reveals the next move');
+    // a turn along the hint: the move is made, plain and dim, and the next one is first
+    let cur=w.applyAlg(F0,[s.moves[0]]);await show(cur);
+    assert.strictEqual(step().n,1,'one move made');assert.deepStrictEqual($$('#f2lCard .f2l-did').map(x=>x.textContent),[s.moves[0]],'the move made is plain');
+    hs=$('#f2lCard .hint .spoil');assert.strictEqual(hs.firstChild.textContent,s.moves[1],'the next move shows');assert.strictEqual(hs.querySelectorAll('.sp-m.on').length,0,'the move revealed is now the first: no more is open');
+    assert.ok(/, 1 made$/.test($('#f2lCard .cnt').textContent),'the count: '+$('#f2lCard .cnt').textContent);
+    assert.strictEqual(L().moves[L().moves.length-1],s.moves[0],'the move is on the list');
+    // a turn off the hint: a new hint from the cube as it is, the same target
+    const slot0=s.slot,off=['U','R','F','D','L','B'].find(f=>f!==s.moves[1][0]&&f!==s.moves[0][0]);cur=w.applyAlg(cur,[off]);await show(cur);
+    assert.ok(await until(()=>{const t=step();return t&&!L().f2l.working&&t.base.equals(w.reframe(cur));},4000),'a new hint from here');
+    assert.strictEqual(step().slot,slot0,'the target stays');assert.strictEqual(step().n,0);
+    // follow it to the end: the pair goes in the solved list with the moves made
+    const at0=step().at;for(const m of step().moves.slice()){cur=w.applyAlg(cur,[m]);await show(cur);}
+    assert.ok(w.slotSolved(w.reframe(cur),SL.find(x=>x.name===slot0)),'the pair is solved');
+    assert.strictEqual(L().f2l.log.length,1,'a solved step');const e0=L().f2l.log[0];assert.strictEqual(e0.slots[0],slot0);assert.strictEqual(e0.best,best,'the shortest when it began');
+    assert.strictEqual(e0.moves,L().moves.slice(at0).join(' '),'the moves the user made: '+e0.moves);
+    assert.ok(L().f2l.done.includes(slot0),'the pair is done');
+    assert.ok(new RegExp('^\\d\\d:\\d\\d:\\d\\d'+pos[slot0][0].toUpperCase()+pos[slot0].slice(1)+'.*: '+e0.n+' moves \\(shortest was '+best+'\\)').test($('#f2lDone .ent').textContent),'the solved list: '+$('#f2lDone .ent').textContent);
+    assert.strictEqual($('#f2lDone .ent code').textContent,e0.moves,'with the moves, plain');
+    assert.ok(/^\S+ F2L: /.test($('#log .f2l').textContent),'logged: '+$('#log .f2l').textContent);
+    // the next step: the mode switch to By corner picks the first open pair of the order, at once (no move yet)
+    assert.ok(await ready());const openNow=()=>['FR','FL','BL','BR'].filter(n=>!w.slotSolved(w.reframe(cur),SL.find(x=>x.name===n)));
+    click($('#f2lCorner'));assert.strictEqual(L().f2l.mode,'corner');assert.strictEqual(storage.getItem('cw:labF2LMode'),'corner','the mode is kept');
+    assert.strictEqual($('#f2lCorner').getAttribute('aria-pressed'),'true');assert.strictEqual($('#f2lShortest').getAttribute('aria-pressed'),'false');
+    assert.ok(await ready());assert.strictEqual(step().slot,openNow()[0],'by corner: the first open pair in the order');
+    // the order: the arrows move a pair; the target follows the order; the focus stays on the arrow
+    assert.ok($('#f2lOrder').hidden,'the order row is closed');click($('#f2lOrderBtn'));assert.ok(!$('#f2lOrder').hidden,'Order opens it');assert.strictEqual($('#f2lOrderBtn').getAttribute('aria-expanded'),'true');
+    assert.deepStrictEqual($$('#f2lOrder .f2l-ord span').map(x=>x.textContent),['1. Front right','2. Front left','3. Back left','4. Back right']);
+    const last=openNow()[openNow().length-1];
+    while(L().f2l.order[0]!==last){const b=$(`#f2lOrder [data-ord="${last}"][data-dir="-1"]`);assert.ok(!b.disabled);b.focus();click(b);} // as the keyboard does: the focus on the arrow, then Enter
+    assert.strictEqual(d.activeElement&&d.activeElement.dataset.ord,last,'the focus stays on the pair moved');
+    assert.ok($(`#f2lOrder [data-ord="${last}"][data-dir="-1"]`).disabled,'first: no earlier');
+    assert.strictEqual(JSON.parse(storage.getItem('cw:labF2LOrder'))[0],last,'the order is kept');
+    assert.ok(await ready());assert.strictEqual(step().slot,last,'the target follows the order');
+    assert.deepStrictEqual($$('#f2lChips .f2l-chip').map(c=>c.dataset.chip),[...L().f2l.order],'the chips follow the order');
+    // a chip click: that pair is the target now; Shortest keeps it
+    const other=openNow().find(n=>n!==last);
+    if(other){click($(`#f2lChips [data-chip="${other}"]`));assert.strictEqual(L().f2l.target,other);assert.ok(await ready());assert.strictEqual(step().slot,other,'the clicked pair is the target');
+      click($('#f2lShortest'));assert.ok(await ready());assert.strictEqual(step().slot,other,'Shortest keeps a clicked target');
+      click($(`#f2lChips [data-chip="${last}"]`));assert.ok(await ready());assert.strictEqual(step().slot,last);}
+    click($(`#f2lChips [data-chip="${openNow().length===4?'zz':SL.map(x=>x.name).find(n=>!openNow().includes(n))}"]`)||$('#f2lChips .solved'));assert.ok(await ready());assert.ok(openNow().includes(step().slot),'a solved chip is no target');
+    // combinations: off by default; on, they come under the card, and Use this puts one in the card
+    assert.ok(!$('#f2lCombo').checked&&$('#f2lCombos').hidden,'no combinations by default');
+    $('#f2lCombo').checked=true;$('#f2lCombo').dispatchEvent(new w.Event('change',{bubbles:true}));assert.strictEqual(storage.getItem('cw:labF2LCombo'),'1','kept');
+    assert.ok(!$('#f2lCombos').hidden,'the box shows');
+    assert.ok(await until(()=>step().combos&&!step().combos.busy,8000),'the combinations come');
+    assert.ok(/Also makes|Sets up|No combinations/.test($('#f2lCombos').textContent),'the box: '+$('#f2lCombos').textContent);
+    const alt=$('#f2lCombos .f2l-alt');
+    if(alt){const mv=spoilMoves(alt.querySelector('.spoil'));const use=alt.querySelector('button[data-use]');assert.strictEqual(use.textContent,'Use this');click(use);assert.deepStrictEqual([...step().moves],mv,'Use this puts it in the card');
+      assert.ok(/a combination$/.test($('#f2lCard .cnt').textContent),'the count says so');assert.strictEqual($('#f2lCombos .f2l-alt button[data-use]').textContent,'In use','its button says In use');
+      click($('#f2lCombos [data-use="plain"]'));assert.strictEqual(step().moves.join(' '),step().plain.join(' '),'the plain hint again');}
+    $('#f2lCombo').checked=false;$('#f2lCombo').dispatchEvent(new w.Event('change',{bubbles:true}));assert.ok($('#f2lCombos').hidden);
+    // a solved pair that comes apart: the step card says so, and the pair is open again
+    assert.ok(w.slotSolved(w.reframe(cur),SL.find(x=>x.name===slot0)),'the first pair is still in');
+    cur=w.applyAlg(cur,w.parseAlg(w.invertAlg(e0.moves)));await show(cur);
+    assert.ok(await until(()=>!L().f2l.working),'a new hint');
+    assert.ok(!L().f2l.done.includes(slot0),'the pair is open again');assert.strictEqual($('#f2lCard .warn').textContent,`The ${pos[slot0]} pair came out.`,'the card says so');
+    assert.ok(!$(`#f2lChips [data-chip="${slot0}"]`).classList.contains('solved'),'its chip has no check');
+    // Esc closes the window in front, then the other; F closes too
+    key('p');assert.ok(!$('#pat').hidden&&$('#pat').style.zIndex==='7','Patterns in front');
+    $('#f2l').dispatchEvent(new w.MouseEvent('pointerdown',{bubbles:true}));assert.strictEqual($('#f2l').style.zIndex,'7','a press brings the guide to the front');
+    key('Escape');assert.ok($('#f2l').hidden&&!$('#pat').hidden,'Esc closes the window in front');key('Escape');assert.ok($('#pat').hidden,'then the other');
+    key('f');assert.ok(!$('#f2l').hidden);
+    // the window moves by its head, and the place is kept
+    const PE2=w.PointerEvent||w.MouseEvent,pv=(t,x,y)=>new PE2(t,{bubbles:true,cancelable:true,clientX:x,clientY:y,pointerId:2,button:0});
+    const fh=$('#f2l .head');fh.dispatchEvent(pv('pointerdown',500,80));fh.dispatchEvent(pv('pointermove',560,130));fh.dispatchEvent(pv('pointerup',560,130));
+    assert.deepStrictEqual(JSON.parse(storage.getItem('cw:labF2LWin')),{...L().f2lPos},'the place is kept');assert.strictEqual($('#f2l').style.top,L().f2lPos.y+'px');
+    // New scramble starts the guide over
+    key('n');assert.strictEqual(L().f2l.log.length,0,'the solved list is empty');assert.strictEqual(L().f2l.done.length,0);assert.strictEqual(L().f2l.target,null);
+    assert.ok($('#f2lDone').hidden);key('Escape');key('Escape');
+    // My cube is solved too
+    L().f2l.done=['FR'];key('s');assert.ok(await until(()=>!L().busy&&L().f2l.done.length===0),'My cube is solved starts it over');
+    key('f');assert.ok(!$('#f2l').hidden,'F opens it');key('f');assert.ok($('#f2l').hidden,'F closes the guide');click($('#patClear'));
+    // the defaults back for the tests after this one
+    click($('#f2lBtn'));click($('#f2lShortest'));click($('#f2lOrderBtn'));L().f2l.order=['FR','FL','BL','BR'];click($('#f2lClose'));}
   // the tilt: the first reading sets the heading; the smacks come as jolts that go back
   const send=q=>dev.notify(gyroMsg(4,q)); // the cube's own frame: w,x,y,z, where the page's y is the cube's z and the page's z is minus the cube's y
   const rest={w:1,x:0,y:0,z:0};
@@ -343,6 +450,8 @@ async function page(){
   assert.deepStrictEqual($$('#holdFront option').map(o=>o.textContent),['red','green','orange','blue'],'yellow up: white is out');
   assert.strictEqual($('#holdFront').value,'2','green stays in front');
   assert.strictEqual(L().hold.cube.center[0],3,'the hold is yellow up');assert.strictEqual(L().hold.cube.center[2],2);
+  key('f');assert.ok(/white cross/i.test($('#f2lCross').textContent),'the F2L guide reads the cube as held: the white cross on the bottom: '+$('#f2lCross').textContent);
+  assert.ok(!L().f2l.held||L().f2l.held.center[3]===0,'the bottom as held is white');key('f');
   assert.strictEqual($$('#moves .mv.rot').map(s=>s.textContent).join(),'z2','the turn to the new hold is on the list, dashed');
   assert.ok(/Hold: yellow up, green toward you/.test($('#log .hold').textContent),'the hold is logged: '+$('#log').textContent);
   assert.deepStrictEqual(JSON.parse(storage.getItem('cw:labHold')),{up:3,front:2},'the hold is kept');
