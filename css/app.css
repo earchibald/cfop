@@ -723,6 +723,15 @@ body[data-kind="beg"][data-key] #progressPanel,body[data-kind="beg"][data-key] .
 .cubetab.off{color:var(--muted)}
 .cubetab.warn .dot{background:var(--warn);box-shadow:0 0 0 0 color-mix(in srgb,var(--warn) 50%,transparent)}
 @keyframes livedot{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 50%,transparent)}70%,100%{box-shadow:0 0 0 6px transparent}}
+/* The charge of a smart cube (smartBatteryDraw): a small battery filled to the level, and the percent */
+.batt{display:inline-flex;align-items:center;gap:5px;flex:none;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--muted);cursor:help}
+.batt[hidden]{display:none}
+.batt-box{position:relative;width:18px;height:9px;border:1px solid currentColor;border-radius:2px;flex:none}
+.batt-box::after{content:"";position:absolute;right:-4px;top:2px;width:2px;height:3px;background:currentColor;border-radius:0 1px 1px 0}
+.batt-fill{position:absolute;left:1px;top:1px;bottom:1px;max-width:calc(100% - 2px);background:var(--good);border-radius:1px}
+.batt.low{color:var(--warn)}.batt.low .batt-fill{background:var(--warn)}
+.cubetab .batt{margin-left:2px}.cubetab.off .batt{display:none}
+.cubewin .cw-head .batt{margin-right:2px}
 .cubewin{position:fixed;top:calc(var(--toph,58px) + 10px);right:18px;width:320px;z-index:12;padding:10px 14px 12px;box-shadow:var(--shadow)}
 .cubewin .cw-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
 .cubewin.drag .cw-head{cursor:grabbing}

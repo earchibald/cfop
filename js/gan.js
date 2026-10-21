@@ -200,9 +200,12 @@ function ganFixLoad(o){
   if(o.cp.length!==8||o.co.length!==8||o.ep.length!==12||o.eo.length!==12)return null;
   return new Cube(o.cp.slice(),o.co.slice(),o.ep.slice(),o.eo.slice());
 }
+// How often the link asks the cube for its charge. The first ask comes soon after the connect, once
+// the caller's first read is on its way. A cube sends the level by itself now and then too.
+const GAN_BATTERY_MS=60000,GAN_BATTERY_FIRST_MS=300;
 // Connect and start notifications. onEvent gets each decoded message, then {type:'gone'} when the
-// link drops. Returns {gen, name, mac, fix, raw, send(kind), readState(ms), correct(actual, ms),
-// setFix(fix), close()}.
+// link drops. Returns {gen, name, mac, fix, raw, battery, send(kind), readState(ms), correct(actual, ms),
+// setFix(fix), close()}. `battery` is the charge, 0 to 100, or null until the cube has said.
 // readState asks for the state and resolves with a Cube. It rejects with code 'badmac' when the
 // cube talks but nothing decodes, and 'timeout' when there is no answer. A wrong MAC address
 // often gives a timeout too: the cube cannot read the request, so it does not answer.
@@ -226,14 +229,16 @@ async function ganOpen(device,mac,onEvent,opts){
     let ev=ganDecode(gen,cipher.decrypt(new Uint8Array(v.buffer,v.byteOffset,v.byteLength)));if(!ev)return;
     if(ev.type!=='bad')known++;
     if(ev.type==='state'){const fix=conn?conn.fix:opts.fix||null;if(conn)conn.raw=ev.cube;ev={type:'state',cube:ganFixApply(fix,ev.cube)};}
+    if(ev.type==='battery'&&conn)conn.battery=ev.level;
     if(ev.type==='state'||ev.type==='bad')waiting.splice(0).forEach(w=>w(ev));
     if(ev.type!=='bad')onEvent&&onEvent(ev);
   };
-  const onGone=()=>{st.removeEventListener('characteristicvaluechanged',onValue);device.removeEventListener('gattserverdisconnected',onGone);onEvent&&onEvent({type:'gone'});};
+  let batTimer=0;
+  const onGone=()=>{clearTimeout(batTimer);st.removeEventListener('characteristicvaluechanged',onValue);device.removeEventListener('gattserverdisconnected',onGone);onEvent&&onEvent({type:'gone'});};
   st.addEventListener('characteristicvaluechanged',onValue);
   device.addEventListener('gattserverdisconnected',onGone);
   await st.startNotifications();
-  conn={gen,name:device.name||'GAN cube',mac:ganParseMac(mac),fix:opts.fix||null,raw:null,
+  conn={gen,name:device.name||'GAN cube',mac:ganParseMac(mac),fix:opts.fix||null,raw:null,battery:null,
     send(kind){if(kind==='reset')conn.fix=null;return cmd.writeValue(cipher.encrypt(ganCommand(gen,kind)));},
     setFix(fix){conn.fix=fix||null;},
     async correct(actual,ms){
@@ -252,7 +257,9 @@ async function ganOpen(device,mac,onEvent,opts){
         conn.send('state').catch(e=>{clearTimeout(t);const i=waiting.indexOf(f);if(i>=0)waiting.splice(i,1);rej(e);});
       });
     },
-    close(){try{st.stopNotifications().catch(()=>{});}catch(e){}if(device.gatt.connected)device.gatt.disconnect();},
+    close(){clearTimeout(batTimer);try{st.stopNotifications().catch(()=>{});}catch(e){}if(device.gatt.connected)device.gatt.disconnect();},
   };
+  const askBattery=()=>{batTimer=setTimeout(askBattery,GAN_BATTERY_MS);if(device.gatt.connected)conn.send('battery').catch(()=>{});};
+  batTimer=setTimeout(askBattery,GAN_BATTERY_FIRST_MS);
   return conn;
 }

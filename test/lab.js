@@ -158,6 +158,8 @@ async function page(){
   const known=JSON.parse(storage.getItem('cw:labCubes'));
   assert.strictEqual(known['GAN12uiM_A1B2'].mac,MAC,'the cube is remembered with its address');assert.strictEqual(known['GAN12uiM_A1B2'].id,'p1');
   assert.strictEqual($('#name').textContent,'GAN12uiM_A1B2');assert.ok(!$('#reset').disabled,'Reset cube is on');
+  assert.ok(await until(()=>!$('#batt').hidden&&$('#batt').textContent==='77%'),'the bar shows the charge: '+$('#batt').textContent);
+  assert.ok($$('#log div').some(x=>/Charge 77%/.test(x.textContent)),'the log notes the charge');
   // the address in the bar, with a copy button: the clipboard gets it and the icon turns to a check
   assert.ok(!$('#macShow').hidden,'the address shows');assert.strictEqual($('#macText').textContent,MAC,'the MAC address of the cube');
   let copied=null;Object.defineProperty(w.navigator,'clipboard',{value:{writeText:async t=>{copied=t;}},configurable:true});

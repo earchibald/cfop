@@ -47,6 +47,10 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.strictEqual(JSON.parse(w.localStorage.getItem('cw:ganMac'))['GAN12uiM_A1B2'],MAC,'the MAC address is saved by name');
   assert.ok($('#smartConnect').classList.contains('hidden')&&!$('#smartDisconnect').classList.contains('hidden'));
   assert.strictEqual($('#smartInfo').textContent,'GAN12uiM_A1B2');
+  // ----- the charge: asked for by the link, shown by the name -----
+  assert.ok(await until(()=>!$('#smartBatt').hidden&&$('#smartBatt').textContent==='77%'),'the charge shows by the name: '+$('#smartBatt').textContent);
+  assert.strictEqual($('#smartBatt').querySelector('.batt-fill').style.width,'77%','the battery is filled to the level');
+  assert.ok(!$('#smartBatt').classList.contains('low')&&/77%/.test($('#smartBatt').title));
   // ----- a turn: the net follows -----
   const c2=w.applyAlg(c1,['U']);set(c2);
   const mv=new Uint8Array(20);mv[0]=0x01;dev.notify(mv);

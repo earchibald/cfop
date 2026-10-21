@@ -13,8 +13,11 @@
 // (bridge.js): the app serves the page and the chooser is a list in this dialog. A Mac with
 // neither gets the download dialog instead.
 // Every change of the link goes out as a cw:smart event on document, for the cube tab in the top
-// bar (cubetab.js): {type:'connect',conn}, 'disconnect', 'gone', and each 'move', 'state' and 'gyro'
-// message.
+// bar (cubetab.js): {type:'connect',conn}, 'disconnect', 'gone', and each 'move', 'state', 'gyro'
+// and 'battery' message.
+// The charge: the link asks the cube for it on connect and once a minute (gan.js), and the dialog
+// shows it by the cube's name as a small battery with the percent, smartBatteryDraw. The cube tab
+// and the lab draw theirs the same way.
 let smartConn=null,smartCube=null,smartBusy=false,smartTimer=0,smartMacWait=null,smartListEnd=null;
 function smartNotify(detail){if(typeof document!=='undefined')document.dispatchEvent(new CustomEvent('cw:smart',{detail}));}
 const MAC_APP_URL='https://github.com/earchibald/cfop/releases/latest/download/Twistwright-mac.zip';
@@ -61,7 +64,7 @@ function openSmart(note){
    <div class="smart-grid">
     <div class="scan-net" id="smartNet"><svg viewBox="0 0 400 300" role="img" aria-label="The cube as the smart cube reads it"></svg></div>
     <div>
-     <div class="scan-row"><button class="primary" id="smartConnect">Connect</button><button class="small ghost hidden" id="smartDisconnect">Disconnect</button><span class="muted" id="smartInfo" style="font-size:13px"></span></div>
+     <div class="scan-row"><button class="primary" id="smartConnect">Connect</button><button class="small ghost hidden" id="smartDisconnect">Disconnect</button><span class="muted" id="smartInfo" style="font-size:13px"></span><span class="batt" id="smartBatt" hidden></span></div>
      <div id="smartList" class="hidden">
       <p class="muted" id="smartListNote" style="font-size:13px;margin:6px 0"></p>
       <div class="scan-row" id="smartListItems"></div>
@@ -149,9 +152,26 @@ function smartButtons(){
   $('#smartScan').disabled=!on||smartBusy||typeof openScan!=='function';$('#smartPaint').disabled=!on||smartBusy||typeof openPaint!=='function';
   $('#smartUse').disabled=!on||!smartCube||smartBusy;
   $('#smartInfo').textContent=on?smartConn.name:'';
+  smartBatteryDraw($('#smartBatt'),on?smartConn.battery:null);
   const note=$('#smartFixNote'),fix=on?smartFixes()[smartConn.name]:null;
   note.classList.toggle('hidden',!(on&&smartConn.fix&&fix));
   if(on&&smartConn.fix&&fix)note.textContent=`The net is corrected from ${fix.from==='paint'?'the colors you painted':'a scan'}${fix.at?' on '+new Date(fix.at).toLocaleDateString():''}. My cube is solved drops the correction.`;
+}
+// The charge of the cube in `el`: a small battery, filled to the level, and the percent. Under
+// SMART_BATTERY_LOW it is marked low. null (the cube has not said, or no cube) hides it.
+const SMART_BATTERY_LOW=20;
+function smartBatteryDraw(el,level){
+  if(!el)return;
+  const known=typeof level==='number'&&level>=0;
+  el.hidden=!known;
+  if(!known){el.textContent='';el.classList.remove('low');return;}
+  const pct=Math.max(0,Math.min(100,Math.round(level)));
+  if(!el.querySelector('.batt-box'))el.innerHTML='<span class="batt-box" aria-hidden="true"><span class="batt-fill"></span></span><span class="batt-pct"></span>';
+  el.querySelector('.batt-fill').style.width=pct+'%';
+  el.querySelector('.batt-pct').textContent=pct+'%';
+  el.classList.toggle('low',pct<SMART_BATTERY_LOW);
+  el.title=`The charge of the cube: ${pct}%`+(pct<SMART_BATTERY_LOW?'. Charge the cube soon.':'');
+  el.setAttribute('aria-label',`Charge ${pct}%`);
 }
 // The fixes by cube name: {fix:{cp,co,ep,eo}, from:'scan'|'paint', at:ms}.
 function smartFixes(){return store.get('ganFix',{});}
@@ -262,7 +282,8 @@ async function smartConnect(){
 function smartEvent(ev,conn){
   if(!conn||conn!==smartConn)return;
   if(ev.type==='gone'){smartConn=null;smartBusy=false;smartButtons();smartStatus('The cube is no longer connected. Press Connect to connect again.');smartNotify({type:'gone',conn});return;}
-  if(ev.type==='move'||ev.type==='state'||ev.type==='gyro')smartNotify(Object.assign({conn},ev));
+  if(ev.type==='move'||ev.type==='state'||ev.type==='gyro'||ev.type==='battery')smartNotify(Object.assign({conn},ev));
+  if(ev.type==='battery')smartBatteryDraw($('#smartBatt'),ev.level);
   if(ev.type==='off'){conn.close();return;}
   // A turn: read the state again once the turns stop for a moment.
   if(ev.type==='move'&&$('#smartBg')){clearTimeout(smartTimer);smartTimer=setTimeout(()=>smartRead(true),150);}

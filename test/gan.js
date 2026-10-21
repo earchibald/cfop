@@ -75,6 +75,8 @@ const ganOpen=run('ganOpen'),ganWatchMac=run('ganWatchMac');
     const evs=[];const conn=await ganOpen(dev,MAC,e=>evs.push(e));
     assert.strictEqual(conn.gen,gen,'the service names the protocol');
     const got=await conn.readState(500);assert.ok(got.equals(c),'gen '+gen+' reads the fake cube');
+    assert.strictEqual(conn.battery,null,'the charge is unknown until the cube says');
+    await new Promise(r=>setTimeout(r,400));assert.strictEqual(conn.battery,77,'the link asks for the charge by itself and keeps it');
     await conn.send('reset');await conn.send('battery');await new Promise(r=>setTimeout(r,30));
     assert.ok((await conn.readState(500)).isSolved(),'reset marks the cube solved');
     assert.ok(evs.some(e=>e.type==='battery'&&e.level===77),'the battery level arrives as an event');
@@ -82,11 +84,11 @@ const ganOpen=run('ganOpen'),ganWatchMac=run('ganWatchMac');
     // the wrong MAC address
     // A wrong MAC address: the fake cube cannot read the request, so it does not answer.
     const bad=await ganOpen(fakeDevice(gen,MAC,{...new Cube()}),'11:22:33:44:55:66',()=>{});
-    await assert.rejects(bad.readState(80),e=>e.code==='timeout','a wrong MAC address and a quiet cube: no answer');
+    await assert.rejects(bad.readState(80),e=>e.code==='timeout','a wrong MAC address and a quiet cube: no answer');bad.close();
     const badDev=fakeDevice(gen,MAC,{...new Cube()},{chatter:true}),bad2=await ganOpen(badDev,'11:22:33:44:55:66',()=>{});
     await assert.rejects(bad2.readState(80),e=>e.code==='badmac','a wrong MAC address and a cube that talks: noise');bad2.close();
     const mute=await ganOpen(fakeDevice(gen,MAC,{...new Cube()},{silent:true}),MAC,()=>{});
-    await assert.rejects(mute.readState(80),e=>e.code==='timeout','no answer times out');
+    await assert.rejects(mute.readState(80),e=>e.code==='timeout','no answer times out');mute.close();
     // The correction on the link: correct(actual) reads the cube, sets the fix and sends a state
     // event; readState and the state events then show the corrected cube; a fix given at open
     // applies from the first read; the reset command drops it.

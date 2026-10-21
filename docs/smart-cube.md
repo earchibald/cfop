@@ -33,6 +33,18 @@ buttons names it. My cube is solved sends the reset command and drops the fix,
 on the link and in storage: the cube counts from solved again. A cancelled scan
 or paint brings the dialog back.
 
+Version 1.16.0 shows the charge of the cube. The protocol has a battery
+request and a battery message in every generation (`ganDecode` read them since
+1.2.0, but nothing asked). `ganOpen` now sends the request 300 ms after the
+notifications start, so the first state read goes first, and then once a
+minute; the level, 0 to 100, stays on the link as `conn.battery` and goes out
+as a `battery` event. The Smart cube dialog shows it by the cube's name, the
+cube tab after the name and the head of its window the same way, and the lab
+in its bar after the name, with a line in the log at each change. The glyph is
+a small battery filled to the level with the percent after it
+(`smartBatteryDraw`, `labBatteryDraw`); under 20% it turns the warn color and
+its title says to charge the cube. It goes while the link is down.
+
 Version 1.4.0 adds the cube tab. While a cube is connected, the top bar carries
 a tab with the cube's name (`GAN12uiM_A1B2` reads "GAN 12 ui Maglev"). The tab
 opens a floating window with a live cube. Each move message asks the cube for

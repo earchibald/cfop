@@ -71,10 +71,13 @@
 // of the 24 (LAB_HOLDS, as CUBE_TAB_HOLDS): the moves read as held (labRelabel), the turn from
 // the old hold to the new goes on the list, Reset cube takes the cube as held that way (and a
 // change of the hold is a Reset cube at once), and the hold is kept in cw:labHold.
+// The charge: the link asks the cube for it on connect and once a minute (gan.js). The bar shows
+// it after the cube's name as a small battery with the percent (labBatteryDraw, as the site's
+// smartBatteryDraw), and the log notes each change.
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,patOpen:{},
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,view:{yaw:0,pitch:0},drag:null,
-  busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,f2l:null,f2lPos:null,winTop:'pat',copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
+  battLogged:null,busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,f2l:null,f2lPos:null,winTop:'pat',copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200,LAB_CROSS_MAX=7,LAB_SOLS_SHOWN=3;
 const LAB_PAT_STEPS={eo:'OLL edges',co:'OLL corners',cp:'PLL corners',ep:'PLL edges'};
 // The cameras: straight on, the cube as it sits in space; and isometric, a little from the right
@@ -88,9 +91,26 @@ function labButtons(){
   $('#reset').disabled=!on;$('#solved').disabled=!on||lab.busy;
   $('#scan').disabled=!on||lab.busy;$('#paint').disabled=!on||lab.busy||typeof openPaint!=='function';
   $('#name').textContent=on?lab.conn.name:'';
+  labBatteryDraw($('#batt'),on?lab.conn.battery:null);
   $('#macShow').hidden=!(on&&lab.conn.mac);$('#macText').textContent=on&&lab.conn.mac?lab.conn.mac:'';
   if(!on)labCopied(false);
   labVersion();
+}
+// The charge of the cube in `el`: a small battery filled to the level, and the percent; low under
+// LAB_BATTERY_LOW. null hides it.
+const LAB_BATTERY_LOW=20;
+function labBatteryDraw(el,level){
+  if(!el)return;
+  const known=typeof level==='number'&&level>=0;
+  el.hidden=!known;
+  if(!known){el.textContent='';el.classList.remove('low');return;}
+  const pct=Math.max(0,Math.min(100,Math.round(level)));
+  if(!el.querySelector('.batt-box'))el.innerHTML='<span class="batt-box" aria-hidden="true"><span class="batt-fill"></span></span><span class="batt-pct"></span>';
+  el.querySelector('.batt-fill').style.width=pct+'%';
+  el.querySelector('.batt-pct').textContent=pct+'%';
+  el.classList.toggle('low',pct<LAB_BATTERY_LOW);
+  el.title=`The charge of the cube: ${pct}%`+(pct<LAB_BATTERY_LOW?'. Charge the cube soon.':'');
+  el.setAttribute('aria-label',`Charge ${pct}%`);
 }
 // The copy button by the address: the clipboard where the browser gives one, else a select and
 // the old copy command. The icon turns to a check for a moment.
@@ -1000,7 +1020,7 @@ async function labConnect(auto){
     try{
       const cube=await conn.readState(3000);
       labSaveMac(name,conn.mac);labRemember(name,{mac:conn.mac,id:device.id||null});lab.conn=conn;lab.busy=false;
-      lab.moves=[];if(lab.goal)lab.goal.at=0;labF2LMovesGone();lab.shown=lab.target=null;lab.asked=false;lab.want=false;lab.gyro=false;lab.raw=lab.basis=lab.q=lab.qTo=null;lab.det.reset();lab.twist.reset();clearTimeout(lab.twistTimer);lab.twistTimer=0;lab.trace=[];lab.times=[];
+      lab.battLogged=null;lab.moves=[];if(lab.goal)lab.goal.at=0;labF2LMovesGone();lab.shown=lab.target=null;lab.asked=false;lab.want=false;lab.gyro=false;lab.raw=lab.basis=lab.q=lab.qTo=null;lab.det.reset();lab.twist.reset();clearTimeout(lab.twistTimer);lab.twistTimer=0;lab.trace=[];lab.times=[];
       labButtons();labMovesDraw();labDots();labShow(cube);
       labStatus((conn.gen===3?'Live. Each turn of your cube turns the layer. This cube has no tilt sensor.':'Live. Each turn of your cube turns the layer. Waiting for the first tilt reading: move the cube.')+labSolvedHint(cube));
       labLog('link',`Connected to ${conn.name} (gen ${conn.gen}).`+(conn.fix?' The state is corrected from the colors read in the Smart cube dialog.':''));
@@ -1021,6 +1041,7 @@ function labLink(ev,conn){
   if(ev.type==='off'){conn.close();return;}
   if(ev.type==='move')labAsk();
   if(ev.type==='gyro')labGyro(ev.q);
+  if(ev.type==='battery'){labBatteryDraw($('#batt'),ev.level);if(ev.level!==lab.battLogged){lab.battLogged=ev.level;labLog('link',`Charge ${ev.level}%.`);}}
   if(ev.type==='state'){lab.asked=false;if(lab.want){lab.want=false;labAsk();}if(!lab.reading)labShow(ev.cube);} // a read for a correction shows nothing: labReadColors jumps to the corrected state
 }
 function labDisconnect(){

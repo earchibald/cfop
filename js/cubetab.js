@@ -9,6 +9,9 @@
 // The window moves: drag it by its head. The place is kept in cw:cubeWin and clamped to the screen.
 // The dialog reports every change of the link as a cw:smart event (smart-ui.js); nothing here
 // reaches into the dialog. All markup here is fixed text; the cube's name goes in as text.
+// The charge (`battery`, from the link and each battery event) shows after the name, on the tab
+// and in the head of the window, as the dialog shows it (smartBatteryDraw); it goes while the
+// link is down.
 // `shown` is the cube the picture is on (or turns toward), `queue` the moves still to turn, and
 // `target` the cube at the end of the queue: the real cube, as far as the page knows.
 // `moves` is every move since the cube connected, merged as they come (cubeTabMerge): R then R is
@@ -53,7 +56,7 @@
 const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,yaw:-32,pitch:28,asked:false,want:false,tipWait:false,spotTimer:0,pos:null,
   q:null,qTo:null,qraf:0,qAt:0,moves:[],hold:null,
   gyro:false,raw:null,basis:null,away:null,awayTimer:0,awayMs:500,awayDeg:55,backDeg:40,warn:false,
-  stage:null,done:0,revealed:0,stale:false,stillTimer:0,revealTimer:0,stillMs:1200,revealMs:1500,since:0,keepMoves:12};
+  stage:null,done:0,revealed:0,stale:false,stillTimer:0,revealTimer:0,stillMs:1200,revealMs:1500,since:0,keepMoves:12,battery:null};
 const CUBE_TAB_SHOWN=10;
 const CUBE_TAB_TIP='Click your smart cube to open the Smart Cube interface!';
 // The six turns of the whole cube, as buttons, with what each one does in the hands.
@@ -72,13 +75,14 @@ function cubeTabRender(){
   if(!cubeTab.name){if(b)b.remove();return;}
   if(!b){
     b=document.createElement('button');b.id='cubeTab';b.className='cubetab';b.setAttribute('aria-controls','cubeWin');
-    b.innerHTML='<span class="dot" aria-hidden="true"></span><span class="nm"></span><span class="brk" aria-hidden="true">⧉</span>';
+    b.innerHTML='<span class="dot" aria-hidden="true"></span><span class="nm"></span><span class="batt" hidden></span><span class="brk" aria-hidden="true">⧉</span>';
     b.onclick=()=>{cubeTabSpotEnd();if($('#cubeWin'))cubeTabClose();else cubeTabOpen();};
     const pop=$('#methodPop');if(pop)pop.after(b);else top.appendChild(b);
   }
   const off=!cubeTab.conn,warn=!off&&cubeTab.warn;
   b.classList.toggle('off',off);b.classList.toggle('warn',warn);
   b.querySelector('.nm').textContent=cubeTab.name;
+  smartBatteryDraw(b.querySelector('.batt'),off?null:cubeTab.battery);
   b.setAttribute('aria-expanded',String(!!$('#cubeWin')));
   b.title=off?`${cubeTab.name} is no longer connected. Open its window to connect again.`:warn?`${cubeTab.name} is held differently from how the moves read. Open its window.`:`Open the window of ${cubeTab.name}: a live view of your smart cube.`;
   b.setAttribute('aria-label',off?`${cubeTab.name}, not connected. Open its window.`:warn?`Your smart cube, ${cubeTab.name}, is held differently from how the moves read. Open its window.`:`Open the window of your smart cube, ${cubeTab.name}`);
@@ -87,7 +91,7 @@ function cubeTabRender(){
 function cubeTabOpen(){
   if($('#cubeWin')||!cubeTab.name)return;
   const w=document.createElement('div');w.className='cubewin panel';w.id='cubeWin';w.setAttribute('role','dialog');w.setAttribute('aria-label',`Smart cube window: ${cubeTab.name}`);
-  w.innerHTML=`<div class="cw-head" title="Drag to move the window"><span class="dot" aria-hidden="true"></span><b class="nm"></b><button class="small ghost" id="cubeWinClose" title="Collapse the window back into the tab (Esc)">Close<span class="hk" aria-hidden="true">Esc</span></button></div>
+  w.innerHTML=`<div class="cw-head" title="Drag to move the window"><span class="dot" aria-hidden="true"></span><b class="nm"></b><span class="batt" id="cubeWinBatt" hidden></span><button class="small ghost" id="cubeWinClose" title="Collapse the window back into the tab (Esc)">Close<span class="hk" aria-hidden="true">Esc</span></button></div>
    <div class="cw-stage" id="cubeWinStage"><div class="st-name" aria-live="polite"></div><div class="st-sub"></div><div class="st-alg" aria-label="The moves of this case"></div></div>
    <svg id="cubeWinSvg" viewBox="0 0 400 360" role="img" aria-label="Your smart cube, live"></svg>
    <div class="cw-warn hidden" id="cubeWinWarn" role="status"><span class="txt"></span><span class="btns"><button class="small" id="cubeWinMatch">Read as held</button><button class="small ghost" id="cubeWinKeep" title="The cube did not turn: line the picture up with the hold again.">Keep this hold</button></span></div>
@@ -160,6 +164,7 @@ function cubeTabWindow(){
   const off=!cubeTab.conn;
   w.classList.toggle('off',off);
   w.querySelector('.nm').textContent=cubeTab.name;
+  smartBatteryDraw($('#cubeWinBatt'),off?null:cubeTab.battery);
   $('#cubeWinNote').textContent=off?'The cube is no longer connected. Turn a face to wake it up, then connect again.':!cubeTab.shown?'Reading the cube.':cubeTab.gyro?'Live. Each turn of your cube turns the layer here, and the picture tilts with the cube. When you turn the whole cube in your hands, press the same turn above, so the moves read as you hold it.':'Live. Each turn of your cube turns the layer here. When you turn the whole cube in your hands, press the same turn above, so the moves read as you hold it.';
   $('#cubeWinAgain').classList.toggle('hidden',!off);
   $$('#cubeWinTurns button').forEach(b=>{b.disabled=off;});
@@ -525,7 +530,7 @@ function cubeTabSpotEnd(){
 // ----- what the Smart cube dialog reports -----
 function cubeTabEvent(ev){
   if(ev.type==='connect'){
-    cubeTab.conn=ev.conn;cubeTab.name=smartNiceName(ev.conn.name);cubeTab.asked=false;cubeTab.want=false;cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;cubeTab.moves=[];cubeTabResetView();cubeTabStageReset();
+    cubeTab.conn=ev.conn;cubeTab.name=smartNiceName(ev.conn.name);cubeTab.battery=ev.conn.battery;cubeTab.asked=false;cubeTab.want=false;cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;cubeTab.moves=[];cubeTabResetView();cubeTabStageReset();
     cubeTabRender();
     if(ev.cube)cubeTabShow(ev.cube);else cubeTabWindow();
     if($('#cubeWin'))cubeTabAsk();
@@ -537,6 +542,7 @@ function cubeTabEvent(ev){
   if(ev.conn!==cubeTab.conn)return;
   if(ev.type==='move')cubeTabAsk(); // the state that answers shows the turn
   if(ev.type==='gyro')cubeTabGyro(ev.q);
+  if(ev.type==='battery'){cubeTab.battery=ev.level;const b=cubeTabBtn();if(b)smartBatteryDraw(b.querySelector('.batt'),ev.level);smartBatteryDraw($('#cubeWinBatt'),ev.level);}
   if(ev.type==='state'){cubeTab.asked=false;if(cubeTab.want){cubeTab.want=false;cubeTabAsk();}cubeTabShow(ev.cube);}
 }
 if(typeof document!=='undefined')document.addEventListener('cw:smart',e=>cubeTabEvent(e.detail));

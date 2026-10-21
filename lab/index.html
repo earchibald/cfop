@@ -28,6 +28,13 @@ input[type=text]{background:var(--panel);border:1px solid var(--line);border-rad
 .bar .mac button.copied,.bar #copyState.copied{color:var(--ok,#3cb371)}.bar .mac button .check{display:none}.bar .mac button.copied .check{display:block}.bar .mac button.copied .pages{display:none}
 .bar label{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
 .bar .hold{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;white-space:nowrap}
+/* The charge of the cube (labBatteryDraw): a small battery filled to the level, and the percent */
+.batt{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--muted);cursor:help}
+.batt[hidden]{display:none}
+.batt-box{position:relative;width:18px;height:9px;border:1px solid currentColor;border-radius:2px;flex:none}
+.batt-box::after{content:"";position:absolute;right:-4px;top:2px;width:2px;height:3px;background:currentColor;border-radius:0 1px 1px 0}
+.batt-fill{position:absolute;left:1px;top:1px;bottom:1px;max-width:calc(100% - 2px);background:var(--ok,#3cb371);border-radius:1px}
+.batt.low{color:var(--warn)}.batt.low .batt-fill{background:var(--warn)}
 .bar select{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 4px;color:var(--text);font:inherit;font-size:13px}
 main{position:relative;min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;overflow:hidden}
 #cube{flex:1;width:100%;min-height:0;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -134,7 +141,7 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
 </head>
 <body>
 <header class="bar">
-  <b>Smart cube lab</b><span class="muted" id="name"></span>
+  <b>Smart cube lab</b><span class="muted" id="name"></span><span class="batt" id="batt" hidden></span>
   <span class="mac" id="macShow" hidden title="The MAC address of the cube. The GAN cipher takes it as its salt."><code id="macText"></code><button class="ghost" id="macCopy" title="Copy the MAC address" aria-label="Copy the MAC address"><svg class="pages" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg><svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></span>
   <button class="primary" id="connect">Connect</button>
   <button id="disconnect" hidden>Disconnect</button>
