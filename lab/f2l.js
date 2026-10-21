@@ -200,6 +200,21 @@ function f2lDone(start,moves,now){
 }
 // A half turn of the hint made as two quarter turns: after the first, the cube is the hint's
 // first n moves and a quarter turn of move n's face (either way). n, or -1.
+// The cube went off the hint, but is on another way to the same end: one of the other shortest
+// solutions `sols`, or the hint (or one of them) with two moves on opposite faces made in the
+// other order, which the canonical lists never hold. {moves, n} to go on with, else null. The hint
+// the user follows should not change under them for a difference that makes none.
+function f2lAlong(start,moves,sols,now){
+  const opp={U:'D',D:'U',R:'L',L:'R',F:'B',B:'F'},seen=new Set([moves.join(' ')]),lists=[moves];
+  for(const s of sols||[]){const c=typeof s==='string'?s.split(' '):s.slice();if(!seen.has(c.join(' '))){seen.add(c.join(' '));lists.push(c);}}
+  const cands=[];
+  for(const c of lists){
+    if(c!==moves)cands.push(c);
+    for(let i=0;i+1<c.length;i++)if(opp[c[i][0]]===c[i+1][0]){const w=c.slice();[w[i],w[i+1]]=[w[i+1],w[i]];if(!seen.has(w.join(' '))){seen.add(w.join(' '));cands.push(w);}}
+  }
+  for(const c of cands){const n=f2lDone(start,c,now);if(n>=0)return {moves:c,n};const h=f2lPart(start,c,now);if(h>=0)return {moves:c,n:h};}
+  return null;
+}
 function f2lPart(start,moves,now){
   if(!start||!now||!moves)return -1;
   let c=start;

@@ -146,6 +146,7 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
   <button class="primary" id="connect">Connect</button>
   <button id="disconnect" hidden>Disconnect</button>
   <span class="hold" id="hold" title="How you hold the cube. The moves read this way, and Reset cube takes the cube as held like this.">I hold it <select id="holdUp" aria-label="The color on top"></select> up, <select id="holdFront" aria-label="The color toward you"></select> toward me</span>
+  <label title="Watch the tilt for a turn of the whole cube in your hands: a turn that rests near another hold goes on the list and moves the hold. Off when you keep one face toward you, so a tip to look at a slot moves nothing."><input type="checkbox" id="turnOn"> Turn with the tilt</label>
   <button id="reset" disabled title="Hold the cube white up, green toward you, then press. The picture takes that as its facing.">Reset cube<kbd>R</kbd></button>
   <label title="Yaw only keeps the tilt gravity gives. Full takes the whole reading as square."><input type="checkbox" id="full"> Full reset</label>
   <label title="Look at the cube from a little to the right and above, so three faces show. Off: straight on, as the cube sits in space."><input type="checkbox" id="iso"> Isometric<kbd>I</kbd></label>
@@ -163,7 +164,7 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
 <main class="side">
   <svg id="cube" viewBox="0 0 400 360" role="img" aria-label="Your smart cube, live. Drag to spin the view, double click to put it back"></svg>
   <section class="movebox" id="movesBox" aria-label="Your moves">
-    <div class="head"><b>Moves</b><span class="count" id="movesCount"></span><span class="grow"></span><button class="ghost" id="movesClear" title="Empty the list of moves" disabled>Clear moves</button></div>
+    <div class="head"><b>Moves</b><span class="count" id="movesCount"></span><span class="grow"></span><button class="ghost" id="movesLast" title="Take the last move off the list. The cube and the rest of the list stay as they are." disabled>Clear last<kbd>⇧C</kbd></button><button class="ghost" id="movesClear" title="Empty the list of moves" disabled>Clear moves</button></div>
     <div class="moves" id="moves" aria-label="Your last moves"></div>
   </section>
   <p class="status" id="status" role="status"></p>
@@ -180,7 +181,7 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
   </section>
   <section>
     <h2>Turn the whole cube</h2>
-    <label class="chk" title="Watch the tilt for a turn of the cube in your hands. The log says when one starts, how it goes on and when it is over."><input type="checkbox" id="turnOn" checked> Detect turns from the tilt</label>
+    <p class="note">Turn with the tilt, in the bar, turns this on. The log says when a turn starts, how it goes on and when it is over.</p>
     <div class="meter"><div>turn<b id="turnNow">–</b></div></div>
     <div class="knob tknob"><label for="tStart">start deg</label><input type="range" id="tStart" data-k="start" min="5" max="45" step="1"><output></output></div>
     <div class="knob tknob"><label for="tSettle">settle deg</label><input type="range" id="tSettle" data-k="settle" min="1" max="15" step="0.5"><output></output></div>

@@ -33,6 +33,8 @@
 // Experiment 1: three smacks on the right face bring the Reset dialog (smackDetector, fed the
 // tilt in the frame of the picture, so "right" is the user's right).
 // Experiment 2: a turn of the cube in the hands, from the tilt (turnDetector, fed the same way).
+// Turn with the tilt, in the bar, turns it on (cw:labTurn; off by default, so a cube kept one way,
+// green toward you, is never re-held by a tip to look at a slot).
 // The log says when a turn starts, how it goes on and when it is over. A turn that comes to rest
 // within `snap` degrees of another of the 24 holds is that whole-cube turn: it goes on the list,
 // dashed, and the hold moves on, so the moves after it read as held. One that comes to rest
@@ -63,9 +65,20 @@
 // combinations adds a hint that makes a second pair too, and the hint that leaves the next pair
 // shortest. The solved pairs are listed with the moves the user made. Each state recomputes after
 // F2L_WAIT_MS of quiet; the combinations run one per turn of the event loop, and a newer state
-// cancels them (lab.f2l.seq). New scramble and My cube is solved start the guide over.
+// cancels them (lab.f2l.seq). New scramble and My cube is solved start the guide over. The guide
+// reads the cube in the hold it saw the cross made in (lab.f2l.hold): a turn the tilt detector
+// finds that puts another color on the bottom does not move it, since the user tipped the cube to
+// look at a slot and the cross is still where it was; a hold picked in the bar, or one with the
+// same color down, is taken. A step, once begun, lives through the cross coming apart: a hint that
+// takes a cross edge out, or a pair the user works on their own way, does not send the window back
+// to the cross line. The hint does not change under the user: while the cube is on it the step
+// stays, whatever else happens; a move off it that is on another shortest solution, or the same
+// moves with two opposite faces in the other order, goes on from there (f2lAlong); a hint is asked
+// for anew only when the cube is off every one of them. A step not yet begun re-picks on a mode
+// or order change.
 // The moves since the connect sit in a box of their own under the picture, as the cube tab's
-// readout: merged as they come, the last ten shown, a triangle for more, and Clear moves.
+// readout: merged as they come, the last ten shown, a triangle for more, Clear moves, and Clear
+// last (Shift+C), which takes the last move off the list alone.
 // The hold: the cube names its moves with its white face up and green in front, however it is
 // held. "I hold it <color> up, <color> toward me" in the bar is the user's word on the pose, one
 // of the 24 (LAB_HOLDS, as CUBE_TAB_HOLDS): the moves read as held (labRelabel), the turn from
@@ -77,7 +90,7 @@
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,patOpen:{},
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,view:{yaw:0,pitch:0},drag:null,
-  battLogged:null,busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,f2l:null,f2lPos:null,winTop:'pat',copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
+  battLogged:null,holdSrc:'load',busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,f2l:null,f2lPos:null,winTop:'pat',copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200,LAB_CROSS_MAX=7,LAB_SOLS_SHOWN=3;
 const LAB_PAT_STEPS={eo:'OLL edges',co:'OLL corners',cp:'PLL corners',ep:'PLL edges'};
 // The cameras: straight on, the cube as it sits in space; and isometric, a little from the right
@@ -202,7 +215,7 @@ function labAdd(m){
 // a triangle after them when there are more, the count in the head, and Clear moves.
 function labMovesDraw(){
   const el=$('#moves'),ms=lab.moves,span=(cls,text)=>{const s=document.createElement('span');s.className=cls;if(text)s.textContent=text;return el.appendChild(s);};
-  $('#movesClear').disabled=!ms.length;
+  $('#movesClear').disabled=!ms.length;$('#movesLast').disabled=!ms.length;
   $('#movesCount').textContent=ms.length?ms.length+(ms.length===1?' move':' moves'):'';
   el.textContent='';
   if(!ms.length){span('none','No moves yet');return;}
@@ -214,9 +227,22 @@ function labMovesDraw(){
   }
 }
 function labMovesClear(){lab.moves=[];if(lab.goal)lab.goal.at=0;labF2LMovesGone();labMovesDraw();}
+// Clear last (Shift+C): the last move comes off the list, and nothing else changes. A goal or a
+// step that began at the end of the list begins at the new end.
+function labMovesLast(){
+  if(!lab.moves.length)return;
+  lab.moves=lab.moves.slice(0,-1);
+  const n=lab.moves.length,f=lab.f2l;
+  if(lab.goal&&lab.goal.at>n)lab.goal.at=n;
+  if(f){if(f.at>n)f.at=n;if(f.step&&f.step.at>n)f.step.at=n;}
+  labMovesDraw();
+}
 // Isometric (I): on, the camera looks from a little to the right and above; off, straight on.
 function labIso(on){lab.iso=!!on;$('#iso').checked=lab.iso;try{localStorage.setItem('cw:labIso',lab.iso?'1':'');}catch(e){}lab.view={yaw:0,pitch:0};labDraw();}
 function labIsoLoad(){try{return !!localStorage.getItem('cw:labIso');}catch(e){return false;}}
+// Turn with the tilt: the turn detector feeds only while the box is on. Kept in cw:labTurn.
+function labTurnOn(on){on=!!on;$('#turnOn').checked=on;try{localStorage.setItem('cw:labTurn',on?'1':'');}catch(e){}labLog('hold',on?'Turn with the tilt: on. A turn of the whole cube that rests near another hold moves the hold.':'Turn with the tilt: off. The hold moves only from the bar.');labBlur();}
+function labTurnLoad(){try{return !!localStorage.getItem('cw:labTurn');}catch(e){return false;}}
 // Drag to spin: half a degree per pixel, as the site's cube. The pointer is captured, so the drag
 // goes on outside the picture. preventDefault and body.cube-drag keep it from selecting page text.
 function labViewDrag(){
@@ -294,7 +320,7 @@ function labBlur(){const a=document.activeElement;if(a&&a!==document.body&&a.blu
 // pose (Reset cube) when there is a tilt reading. From a detected turn: the turn goes on the list
 // and comes back as words; the picture already shows the cube as held, so no Reset cube.
 function labSetHold(h,src){
-  const old=lab.hold;lab.hold=h;
+  const old=lab.hold;lab.hold=h;lab.holdSrc=src;
   try{localStorage.setItem('cw:labHold',JSON.stringify({up:h.cube.center[0],front:h.cube.center[2]}));}catch(e){}
   labHoldFill();
   $('#reset').title=`Hold the cube ${labHoldWords(h)}, then press. The picture takes that as its facing.`;
@@ -435,7 +461,8 @@ function labReset(){
 }
 // ----- patterns: the two-look cases the cube shows -----
 // The cube as held: the hold's turns applied, so U is the top as held (cubeTabHeld).
-function labHeld(cube){return cube&&lab.hold&&lab.hold.moves.length?applyAlg(cube,lab.hold.moves):cube;}
+function labHeld(cube){return labHeldIn(cube,lab.hold);}
+function labHeldIn(cube,h){return cube&&h&&h.moves.length?applyAlg(cube,h.moves):cube;}
 // A state reported: a two-look case goes in the list, once. A solved cube starts the once over.
 // After New scramble the cross on the bottom as held is the first goal: once made, it goes in the
 // list with the moves it took, and the goal is spent.
@@ -562,7 +589,7 @@ function labF2LStart(){
   let order=null;try{order=JSON.parse(get('cw:labF2LOrder','null'));}catch(e){}
   if(!Array.isArray(order)||order.length!==4||F2L_ORDER_DEFAULT.some(n=>!order.includes(n)))order=F2L_ORDER_DEFAULT.slice();
   lab.f2l={open:false,mode:get('cw:labF2LMode','shortest')==='corner'?'corner':'shortest',order,combo:get('cw:labF2LCombo','')==='1',orderOpen:false,
-    target:null,done:[],step:null,log:[],at:lab.moves.length,seq:0,timer:0,X:null,held:null,holdKey:null,working:false,broke:''};
+    target:null,done:[],step:null,log:[],at:lab.moves.length,seq:0,timer:0,X:null,held:null,holdKey:null,hold:null,noted:null,working:false,broke:''};
   $('#f2lCombo').checked=lab.f2l.combo;
   $('#f2lBtn').onclick=()=>labF2LShow($('#f2l').hidden);$('#f2lClose').onclick=()=>labF2LShow(false);
   $('#f2lShortest').onclick=()=>labF2LMode('shortest');$('#f2lCorner').onclick=()=>labF2LMode('corner');
@@ -577,7 +604,7 @@ function labF2LSave(k,v){try{localStorage.setItem(k,v);}catch(e){}}
 function labF2LShow(on){
   const f=lab.f2l;f.open=!!on;$('#f2l').hidden=!on;$('#f2lBtn').setAttribute('aria-pressed',String(!!on));
   if(!on){clearTimeout(f.timer);f.timer=0;f.seq++;f.working=false;return;}
-  labWinFront('f2l');
+  labWinFront('f2l');f.hold=null;f.noted=null; // opened again, the guide reads in the hold from the bar
   if(!f.step)f.at=lab.moves.length;
   const c=lab.target||lab.shown;if(c)labF2LRead(c);else labF2LDraw();
 }
@@ -585,7 +612,7 @@ function labF2LShow(on){
 function labF2LReset(){
   const f=lab.f2l;if(!f)return;
   clearTimeout(f.timer);f.timer=0;f.seq++;
-  Object.assign(f,{target:null,done:[],step:null,log:[],at:lab.moves.length,broke:'',working:false});
+  Object.assign(f,{target:null,done:[],step:null,log:[],at:lab.moves.length,broke:'',working:false,hold:null,noted:null});
   const c=lab.target||lab.shown;if(f.open&&c)labF2LRead(c);else labF2LDraw();
 }
 // The move list was emptied, or the cube jumped to a state with no moves: the step counts from here.
@@ -594,20 +621,35 @@ const labF2LPos=n=>F2L_POS[n];
 const labF2LCap=t=>t[0].toUpperCase()+t.slice(1);
 // The live entry: each state the cube reports, from labShow. On the hint, the moves made walk along
 // it at once. Anything else waits F2L_WAIT_MS for the cube to rest, then asks for a new hint.
+// The hold the guide reads in: the one from the bar, unless the guide has seen the cross made in
+// another and the bar's hold came from the tilt detector with another color on the bottom. Then
+// the user tipped the cube to look, and the guide keeps its own hold until the bar's hold has the
+// cross color down again, or the user picks a hold.
+function labF2LHold(){
+  const f=lab.f2l,h=lab.hold;
+  if(!f.hold||f.hold===h||lab.holdSrc!=='turn'||f.hold.cube.center[3]===h.cube.center[3])return h;
+  return f.hold;
+}
 function labF2LRead(cube){
   const f=lab.f2l;if(!f||!cube||!f.open)return;
-  const held=labHeld(cube),X=reframe(held),hk=held.center.join();
+  const hold=labF2LHold(),held=labHeldIn(cube,hold),X=reframe(held),hk=held.center.join();
   f.held=held;f.X=X;
+  if(hold===lab.hold){if(f.step||crossSolved(X))f.hold=hold;}
+  else if(f.noted!==lab.hold){f.noted=lab.hold;labLog('f2l',`F2L guide: the tilt moved the hold to ${labHoldWords(lab.hold)}. The guide keeps the ${LAB_COLORS[held.center[3]]} cross on the bottom and reads as held ${labHoldWords(hold)}.`);}
   // A new hold renames the places: the pairs solved now are the solved list, and the step starts over.
   if(f.holdKey!==hk){if(f.holdKey!=null){f.done=f2lState(X,[]).solved;f.target=null;f.step=null;f.at=lab.moves.length;f.broke='';}f.holdKey=hk;}
   const s=f.step;
   if(s&&s.moves.length){
     const n=f2lDone(s.base,s.moves,X),half=n<0?f2lPart(s.base,s.moves,X):-1;
     if((n>=0&&n<s.moves.length)||half>=0){s.n=n>=0?n:half;labF2LDraw();return;}
+    // Off the hint, but on another way to the same end: go on with that one.
+    if(n<0){const a=f2lAlong(s.base,s.moves,s.sols,X);
+      if(a){const plain=s.moves.join(' ')===s.plain.join(' ');s.moves=a.moves;if(plain)s.plain=a.moves;s.n=a.n;s.then=null;s.combos=null;s.key=null;s.reveal=0;
+        if(a.n<a.moves.length){labF2LDraw();labF2LThen(f.seq,false);return;}}}
   }
   const st=f2lState(X,f.done);
-  if(!st.cross&&!(s&&s.moves.length)){f.step=null;labF2LIdle();return;} // the cross first: a step with no hint ends here
-  if(st.broken.length){f.done=f.done.filter(n=>!st.broken.includes(n));f.broke=st.broken.map(n=>`The ${labF2LPos(n)} pair came out.`).join(' ');labLog('f2l',f.broke);}
+  if(!st.cross&&!s){labF2LIdle();return;} // the cross first. A step begun lives through the cross coming apart: the hint is asked for again when the cube rests
+  if(st.cross&&st.broken.length){f.done=f.done.filter(n=>!st.broken.includes(n));f.broke=st.broken.map(n=>`The ${labF2LPos(n)} pair came out.`).join(' ');labLog('f2l',f.broke);}
   if(s&&st.cross&&st.solved.includes(s.slot))labF2LStepDone(X);
   if(st.cross&&st.solved.length===4){labF2LIdle();return;}
   labF2LSchedule(F2L_WAIT_MS);
@@ -629,14 +671,14 @@ function labF2LSchedule(ms){
   const f=lab.f2l;clearTimeout(f.timer);const seq=++f.seq;f.working=true;labF2LDraw();
   f.timer=setTimeout(()=>{f.timer=0;if(seq===f.seq)labF2LCompute(seq);},ms);
 }
-// The hint for the cube now. The target is the clicked pair, else the current one once the user has
-// begun it (a move since it began), else the mode's pick. A hint the user still follows stays.
+// The hint for the cube now. The target is the clicked pair, else the current step's, else the
+// mode's pick. A hint the cube is still on stays as it is, with what the user has revealed.
 function labF2LCompute(seq){
   const f=lab.f2l,X=f.X;f.working=false;if(!X)return;
   const st=f2lState(X,f.done);
   if(st.cross&&st.solved.length===4){f.step=null;labF2LDraw();return;}
-  const s=f.step,begun=!!s&&lab.moves.length>s.at;
-  const pin=f.target&&!st.solved.includes(f.target)?f.target:(begun?s.slot:null);
+  const s=f.step;
+  const pin=f.target&&!st.solved.includes(f.target)?f.target:(s?s.slot:null);
   if(!(s&&s.moves.length&&pin===s.slot&&f2lDone(s.base,s.moves,X)>=0)){
     const r=f2lNext(X,{mode:f.mode,order:f.order,done:f.done,target:pin});
     if(!r){f.step=null;labF2LDraw();return;}
@@ -674,17 +716,20 @@ function labF2LPick(n){
   f.target=n;f.step=null;f.at=lab.moves.length;
   labF2LSchedule(0);
 }
+// A step the user has not begun (no move since it began) is dropped, so the mode or the order
+// picks the target anew. One begun stays.
+function labF2LUnbegun(){const f=lab.f2l,s=f.step;if(s&&lab.moves.length<=s.at&&!f.target){f.step=null;f.at=s.at;}}
 // The mode: it counts at the next step, or now when the user has not begun this one.
 function labF2LMode(m){
   const f=lab.f2l;if(f.mode===m)return;f.mode=m;labF2LSave('cw:labF2LMode',m);
-  if(f.step)f.step.combos=null;
+  labF2LUnbegun();if(f.step)f.step.combos=null;
   if(f.X&&(f.step||crossSolved(f.X)))labF2LSchedule(0);else labF2LDraw();
 }
 // Move a pair one place earlier (-1) or later (+1) in the order. The focus stays on the arrow.
 function labF2LOrderMove(n,dir){
   const f=lab.f2l,o=f.order.slice(),i=o.indexOf(n),j=i+dir;if(i<0||j<0||j>3)return;
   [o[i],o[j]]=[o[j],o[i]];f.order=o;labF2LSave('cw:labF2LOrder',JSON.stringify(o));
-  if(f.step)f.step.combos=null;
+  labF2LUnbegun();if(f.step)f.step.combos=null;
   if(f.X&&(f.step||crossSolved(f.X)))labF2LSchedule(0);else labF2LDraw();
 }
 // Use this: a combination's moves become the hint, from the same cube. The plain hint comes back
@@ -728,12 +773,13 @@ function labF2LDrawAll(){
   const cr=$('#f2lCross');cr.textContent='';
   if(!X)cr.appendChild(el('span',null,'No cube yet. Connect your cube to start.'));
   else if(st.cross){const b=el('b',null,`${labF2LCap(color)} cross on the bottom: made.`);cr.appendChild(b);}
-  else if(s&&s.moves.length)cr.appendChild(el('span',null,`The hint takes the ${color} cross apart for a few moves. It makes the cross again before it ends.`));
+  else if(s&&s.moves.length)cr.appendChild(el('span',null,crossSolved(s.base)?`The hint takes the ${color} cross apart for a few moves. It makes the cross again before it ends.`:`The ${color} cross is apart. The hint makes it again.`));
   else{
     const d0=buildCrossTable()[crossIndex(X)],r=crossSolutions(X,d0),sol=f2lSort(r.byLen[d0]||[])[0];
-    cr.appendChild(el('b',null,`Make the ${color} cross first.`));cr.appendChild(document.createTextNode(` Shortest: ${d0} move${d0===1?'':'s'}.`));
+    cr.appendChild(el('b',null,s?`The ${color} cross is apart.`:`Make the ${color} cross first.`));cr.appendChild(document.createTextNode(` ${s?'Make it again. ':''}Shortest: ${d0} move${d0===1?'':'s'}.`));
     if(sol){const c=el('code');c.appendChild(labSpoil(sol,'f2l:cross:'+sol));cr.appendChild(c);}
   }
+  if(X&&f.hold&&labF2LHold()!==lab.hold){const n=el('span','muted');n.textContent=` Read as held ${labHoldWords(f.hold)}: the tilt moved the hold in the bar.`;n.title='A tilt that puts another color on the bottom does not move the guide. Pick a hold in the bar to change it.';cr.appendChild(n);}
   $('#f2lMain').hidden=!main;
   const solvedN=st&&st.cross?st.solved.length:0;
   $('#f2lCount').textContent=main?`${solvedN} of 4 pairs`:'';
@@ -906,10 +952,11 @@ function labKeys(e){
   if(k==='r'){e.preventDefault();labReset();}
   if(k==='s'){e.preventDefault();labSolved();}
   if(k==='l'){e.preventDefault();labSide($('#side').hidden);}
-  if(k==='c'){e.preventDefault();labClear();}
+  if(k==='c'){e.preventDefault();if(e.shiftKey)labMovesLast();else labClear();}
   if(k==='i'){e.preventDefault();labIso(!lab.iso);}
 }
-// Clear all (C): the moves and the log. Clear moves in the box empties the moves alone.
+// Clear all (C): the moves and the log. Clear moves in the box empties the moves alone, and Clear
+// last (Shift+C) takes the last move off.
 function labClear(){labMovesClear();$('#log').textContent='';}
 // ----- the cubes this browser knows -----
 // cw:labCubes, by name: the address, the id the link gave, and when it last connected. A cube in
@@ -1053,8 +1100,9 @@ function labStart(){
   lab.det=smackDetector({});lab.turn=turnDetector({});lab.twist=twistDetector({});
   labSetHold(labHoldLoad(),'load');$('#holdUp').onchange=labHoldPick;$('#holdFront').onchange=labHoldPick;
   lab.iso=labIsoLoad();$('#iso').checked=lab.iso;$('#iso').onchange=e=>labIso(e.target.checked);labViewDrag();
+  $('#turnOn').checked=labTurnLoad();$('#turnOn').onchange=e=>labTurnOn(e.target.checked);
   labKnobs();labMovesDraw();labDraw();labButtons();
-  $('#connect').onclick=labConnect;$('#disconnect').onclick=labDisconnect;$('#reset').onclick=labReset;$('#solved').onclick=labSolved;$('#scan').onclick=labRead;$('#paint').onclick=labPaint;$('#clear').onclick=labClear;$('#movesClear').onclick=labMovesClear;
+  $('#connect').onclick=labConnect;$('#disconnect').onclick=labDisconnect;$('#reset').onclick=labReset;$('#solved').onclick=labSolved;$('#scan').onclick=labRead;$('#paint').onclick=labPaint;$('#clear').onclick=labClear;$('#movesClear').onclick=labMovesClear;$('#movesLast').onclick=labMovesLast;
   $('#macGo').onclick=labMacGo;$('#macCopy').onclick=labCopyMac;$('#copyState').onclick=labCopyState;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();labMacGo();}});
   $('#confirmYes').onclick=()=>labConfirmEnd(true);$('#confirmNo').onclick=()=>labConfirmEnd(false);
   $('#sideBtn').onclick=()=>labSide($('#side').hidden);

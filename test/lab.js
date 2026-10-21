@@ -195,10 +195,17 @@ async function page(){
   assert.strictEqual($$('#moves .mv').length,10,'the last ten show');assert.strictEqual($$('#moves .mv.head').length,1,'one head move');assert.ok($$('#moves .mv')[9].classList.contains('head')&&$$('#moves .mv')[9].title==='Your last move','the newest move is the head');assert.strictEqual($$('#moves .mv')[0].textContent,'U','the first move fell off the readout');
   assert.ok($('#moves .more'),'the triangle says there are more');assert.strictEqual($('#moves .more').getAttribute('aria-label'),'1 more');assert.strictEqual($('#moves .more').title,'11 moves in all');
   assert.strictEqual($('#movesCount').textContent,'11 moves');
-  const logBefore=$('#log').children.length;
+  // Clear last (Shift+C): the last move alone comes off; the button does the same; the log stays
+  const logBefore=$('#log').children.length,tenth=L().moves[9];
+  d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'C',shiftKey:true,bubbles:true,cancelable:true}));
+  assert.strictEqual(L().moves.length,10,'Shift+C takes the last move off: '+L().moves.join(' '));assert.strictEqual(L().moves[9],tenth,'the rest stays');
+  assert.strictEqual($$('#moves .mv').length,10);assert.ok(!$('#moves .more'),'no triangle at ten');assert.strictEqual($('#movesCount').textContent,'10 moves');
+  assert.ok($('#movesLast').textContent.startsWith('Clear last'),'the button: '+$('#movesLast').textContent);assert.ok(!$('#movesLast').disabled);
+  click($('#movesLast'));assert.strictEqual(L().moves.length,9,'the button takes one more off');
+  assert.strictEqual($('#log').children.length,logBefore,'Clear last leaves the log alone');
   click($('#movesClear'));
   assert.strictEqual(L().moves.length,0,'Clear moves empties the list');assert.strictEqual($('#moves .none').textContent,'No moves yet');assert.ok(!$('#moves .more'),'and the triangle');
-  assert.strictEqual($('#movesCount').textContent,'','no count with no moves');assert.ok($('#movesClear').disabled,'Clear moves is off again');
+  assert.strictEqual($('#movesCount').textContent,'','no count with no moves');assert.ok($('#movesClear').disabled,'Clear moves is off again');assert.ok($('#movesLast').disabled,'and Clear last');
   assert.strictEqual($('#log').children.length,logBefore,'Clear moves leaves the log alone');
   cN=w.applyAlg(cN,['R']);set(cN);dev.notify(Uint8Array.from([0x01,...Array(19).fill(0)]));
   assert.ok(await until(()=>L().moves.join()==='R'),'the list fills again after Clear moves');
@@ -391,6 +398,47 @@ async function page(){
     assert.ok(await until(()=>!L().f2l.working),'a new hint');
     assert.ok(!L().f2l.done.includes(slot0),'the pair is open again');assert.strictEqual($('#f2lCard .warn').textContent,`The ${pos[slot0]} pair came out.`,'the card says so');
     assert.ok(!$(`#f2lChips [data-chip="${slot0}"]`).classList.contains('solved'),'its chip has no check');
+    // a turn the tilt detector finds that puts another color on the bottom does not move the guide: the user
+    // tipped the cube to look. The hold back, or one the user picks, is taken.
+    assert.ok(await ready(),'a hint before the tilt');
+    {const hold0=L().hold,line0=$('#f2lCross').textContent,s0=step(),setHold=w.eval('labSetHold');
+      const tipped=w.eval('LAB_HOLDS').find(h=>h.cube.center[3]!==hold0.cube.center[3]&&h.cube.center[0]!==hold0.cube.center[0]);
+      setHold(tipped,'turn');assert.strictEqual(L().hold,tipped,'the bar took the hold');
+      assert.strictEqual(step(),s0,'the guide keeps its step');assert.strictEqual($('#f2lCross').textContent.slice(0,line0.length),line0,'and its cross line: '+$('#f2lCross').textContent);
+      assert.ok(/Read as held/.test($('#f2lCross').textContent),'the line says how the guide reads');
+      assert.strictEqual($$('#log .f2l').filter(x=>/the tilt moved the hold/.test(x.textContent)).length,1,'logged once');
+      setHold(hold0,'turn');assert.strictEqual(step(),s0,'the hold back: the step stays');assert.ok(!/Read as held/.test($('#f2lCross').textContent),'and the line is plain again');
+      setHold(tipped,'user');
+      assert.ok(!/Read as held/.test($('#f2lCross').textContent)&&!/Yellow cross on the bottom/.test($('#f2lCross').textContent),'a hold the user picks is taken: '+$('#f2lCross').textContent);
+      setHold(hold0,'user');assert.ok(await ready(),'a hint again in the hold the user picked back');}
+    // the hint does not change under the user: the step stays while the cube is on it, with what was revealed;
+    // two opposite faces in the other order, or another shortest solution, go on from there with no new hint
+    {let s1=step();const X1=w.reframe(cur);assert.ok(s1.base.equals(X1),'the step starts from here');
+      const hs1=$('#f2lCard .hint .spoil');click(hs1);click($('#f2lCard .hint .spoil'));const open1=$('#f2lCard .hint .spoil').querySelectorAll('.sp-m.on').length;assert.ok(open1>=1,'moves revealed');
+      cur=w.applyAlg(cur,[s1.moves[0]]);await show(cur);assert.strictEqual(step(),s1);assert.strictEqual(step().n,1);
+      click($('#f2lCorner'));click($('#f2lShortest'));await sleep(300);assert.strictEqual(step(),s1,'a mode change keeps a step the user has begun');assert.strictEqual(step().n,1);
+      cur=w.applyAlg(cur,w.parseAlg(w.invertAlg(s1.moves[0])));await show(cur);await sleep(300);assert.strictEqual(step(),s1,'a move made and unmade keeps the step');assert.strictEqual(step().n,0);
+      assert.strictEqual($('#f2lCard .hint .spoil').querySelectorAll('.sp-m.on').length,open1,'and what was revealed');
+      const opp={U:'D',D:'U',R:'L',L:'R',F:'B',B:'F'},i=s1.moves.findIndex((m,k)=>k+1<s1.moves.length&&opp[m[0]]===s1.moves[k+1][0]);
+      if(i>=0){for(const m of s1.moves.slice(0,i)){cur=w.applyAlg(cur,[m]);await show(cur);}cur=w.applyAlg(cur,[s1.moves[i+1]]);await show(cur);await sleep(300);
+        assert.strictEqual(step(),s1,'the other order of two opposite faces keeps the step');assert.strictEqual(step().n,i+1);assert.strictEqual(step().moves[i],s1.moves[i+1],'the hint reads in the order made');
+        for(const m of step().moves.slice(i+1)){cur=w.applyAlg(cur,[m]);await show(cur);}
+        assert.ok(await until(()=>!L().f2l.working&&step()!==s1,4000),'the pair is solved and the next step comes');assert.ok(w.slotSolved(w.reframe(cur),SL.find(x=>x.name===s1.slot)));}
+      else{const alt=(s1.sols||[]).find(x=>x!==s1.moves.join(' '));
+        if(alt){const am=alt.split(' ');cur=w.applyAlg(cur,[am[0]]);await show(cur);await sleep(300);
+          assert.strictEqual(step(),s1,'another shortest solution keeps the step');assert.strictEqual(step().moves.join(' '),alt,'and the hint is now that one');assert.strictEqual(step().n,1);
+          for(const m of am.slice(1)){cur=w.applyAlg(cur,[m]);await show(cur);}assert.ok(await until(()=>!L().f2l.working&&step()!==s1,4000),'solved, and the next step comes');}
+        else{for(const m of s1.moves){cur=w.applyAlg(cur,[m]);await show(cur);}assert.ok(await until(()=>!L().f2l.working&&step()!==s1,4000));}}
+      assert.ok(await ready());}
+    // the cross comes apart off the hint: the step stays, with a hint that makes the cross again
+    {const s1=step(),labHeld=w.eval('labHeld');
+      const brk=['R','L','F','B','U','D'].find(f=>f!==s1.moves[0][0]&&!w.crossSolved(w.reframe(labHeld(w.applyAlg(cur,[f])))));assert.ok(brk,'a move that takes the cross apart');
+      const broken=w.applyAlg(cur,[brk]);await show(broken);
+      assert.ok(await until(()=>!L().f2l.working&&step()&&step().base.equals(w.reframe(broken)),4000),'a hint from the cube with the cross apart');
+      assert.ok(step().moves.length>0&&!$('#f2lMain').hidden,'the chips and the card stay');
+      assert.ok(w.crossSolved(w.applyAlg(step().base,step().moves)),'the hint makes the cross again');
+      assert.strictEqual($('#f2lCross').textContent,'The yellow cross is apart. The hint makes it again.','the cross line: '+$('#f2lCross').textContent);
+      await show(cur);assert.ok(await until(()=>!L().f2l.working&&step()&&(step().base.equals(w.reframe(cur))||step().n>0),4000),'the cross made again: the guide goes on');}
     // Esc closes the window in front, then the other; F closes too
     key('p');assert.ok(!$('#pat').hidden&&$('#pat').style.zIndex==='7','Patterns in front');
     $('#f2l').dispatchEvent(new w.MouseEvent('pointerdown',{bubbles:true}));assert.strictEqual($('#f2l').style.zIndex,'7','a press brings the guide to the front');
@@ -485,7 +533,9 @@ async function page(){
   assert.strictEqual(L().hold,w.eval('LAB_HOLDS')[0],'white up, green in front: the plain hold');
   // experiment 2: a turn of the whole cube from the tilt. The page's frame from the cube's: x the same, cube y = -page z, cube z = page y
   key('c');send(rest);await sleep(30);key('r');
-  assert.ok($('#turnOn').checked,'Detect turns is on');assert.strictEqual($('#turnNow').textContent,'–','the rest pose starts over at Reset cube');
+  assert.ok(!$('#turnOn').checked&&$('#turnOn').closest('.bar'),'Turn with the tilt is in the bar, off by default');
+  $('#turnOn').checked=true;$('#turnOn').dispatchEvent(new w.Event('change',{bubbles:true}));assert.strictEqual(storage.getItem('cw:labTurn'),'1','on, and kept');
+  assert.ok(/Turn with the tilt: on/.test($('#log .hold').textContent),'logged');assert.strictEqual($('#turnNow').textContent,'–','the rest pose starts over at Reset cube');
   const page=q=>({w:q[3],x:q[0],y:-q[2],z:q[1]}),hold0=L().hold;
   const target=w.quatMul([-Math.SQRT1_2,0,0,Math.SQRT1_2],hold0.q),rawFor=q=>w.quatMul(w.quatConj(L().basis),q); // the whole cube turned x, as a reading
   send(rest);await sleep(50);assert.ok(/still, 0\.0° from rest/.test($('#turnNow').textContent),'the live line: '+$('#turnNow').textContent);
@@ -511,6 +561,7 @@ async function page(){
   assert.strictEqual(L().moves.join(' '),'x y',"the second turn, y, is on the list: "+L().moves.join(' '));
   $('#turnOn').checked=false;send(page(rawFor(target)));await sleep(45);send(page(rawFor(target)));await sleep(45);for(let i=0;i<9;i++){send(page(rawFor(target)));await sleep(45);}
   assert.strictEqual(L().moves.join(' '),'x y','off: the tilt makes no turn');$('#turnOn').checked=true;
+  $('#turnOn').checked=false;$('#turnOn').dispatchEvent(new w.Event('change',{bubbles:true}));assert.strictEqual(storage.getItem('cw:labTurn'),'','off is kept too');$('#turnOn').checked=true;
   $('#holdUp').value='0';$('#holdUp').dispatchEvent(new w.Event('change',{bubbles:true}));$('#holdFront').value='2';$('#holdFront').dispatchEvent(new w.Event('change',{bubbles:true}));
   assert.strictEqual(L().hold,w.eval('LAB_HOLDS')[0],'the plain hold again');
   // keys and buttons

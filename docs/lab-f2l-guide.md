@@ -58,7 +58,14 @@ The window, top to bottom:
    before the first covered move, so the hint walks with the user. A move that
    is part of a revealed run keeps the rest of the run revealed. A half turn
    made as two quarter turns stays on the hint (`f2lPart`). A move off the
-   hint recomputes the hint from the cube as it is; the target stays.
+   hint that is on another shortest solution, or on the hint with two moves on
+   opposite faces made in the other order, goes on with that list from where
+   the cube is (`f2lAlong`): the hint reads in the order made and nothing is
+   asked for anew. A move off every one of them recomputes the hint from the
+   cube as it is; the target stays. The hint does not change under the user:
+   while the cube is on it the step stays, with what the user has revealed,
+   whatever else happens (a mode or order change, a move made and unmade). A
+   step the user has not begun re-picks on a mode or order change.
 6. **Combinations** (a box, Look for combinations, kept in `cw:labF2LCombo`,
    off by default). Under the step card, for the target:
    - **Also makes**: a solution that solves the target and one other slot
@@ -109,7 +116,19 @@ no target set by a click, the done list emptied. My cube is solved starts it
 over too. Scan my cube and Paint my cube (a jump with no moves) keep the
 solved pairs; the current step counts its moves from the jump. A new hold
 renames the places, so the pairs solved at that moment become the solved
-list and the step starts over. The window computes only while it is open.
+list and the step starts over. The guide reads in the hold it saw the cross
+made in (`lab.f2l.hold`): a turn the tilt detector finds (Experiment 2, the
+Turn with the tilt box in the bar, `cw:labTurn`, off by default) that puts
+another color on the bottom does not move it, since the
+user tipped the cube to look at a slot and the cross is still where it was.
+The cross line then says "Read as held yellow up, green toward you: the tilt
+moved the hold in the bar." and the log notes it once. A hold with the same
+color down, or one the user picks in the bar, is taken. A step, once begun,
+lives through the cross coming apart: the line says "The yellow cross is
+apart. The hint makes it again." and the chips and the card stay; the step
+ends only when its pair is solved with the cross. Pairs are judged as come
+apart only while the cross is made. The window computes only while it is
+open.
 
 ## The pure part: `lab/f2l.js`
 
@@ -132,6 +151,7 @@ f2lAlso(X, slot, keep, other, {max, nodeLimit}), f2lSetup(X, slot, sols, {mode, 
                               // the parts of f2lCombos, so the window runs each in its own setTimeout
 f2lDone(start, moves, now)    // how many of `moves` the user has done from `start`: the largest n with applyAlg(start, moves.slice(0,n)).equals(now), as cfopStageDone; -1 when none matches (off the hint). A move off the hint and back again counts as on it.
 f2lPart(start, moves, now)    // n when the cube is the first n moves and one quarter of move n, a half turn; else -1
+f2lAlong(start, moves, sols, now) // {moves, n} for another of `sols`, or `moves` or one of them with two opposite faces swapped, that the cube is on; null off every one
 ```
 
 As built: the search runs on the pieces of the goal only (the four cross
@@ -165,6 +185,7 @@ table and both pair tables as the heuristic, as `solveF2LPair` does with
 - `f2lPairSolutions` lists every optimal solution once, each solves, none holds a shorter one, and `optimal` matches `solveF2LPair`.
 - Combinations: an "also" line solves both slots and is within `extra` of the single; the "setup" line solves the target and its `after` is the true optimal of the next slot from there, less than `plain`.
 - `f2lDone` counts a prefix, and a move off the hint gives the longest prefix that still matches.
+- `f2lAlong` finds the other shortest solution, or the other order of two opposite faces, that the cube is on, and null off every one.
 - Slot words as held: with yellow up and green toward you, FR reads front right, green, orange, white.
 
 In `test/lab.js`: the window opens with F and the button, shows the cross line

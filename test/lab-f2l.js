@@ -10,7 +10,7 @@ const g=name=>run(name);
 const J=x=>JSON.parse(JSON.stringify(x)),deq=(a,b,m)=>assert.deepStrictEqual(J(a),J(b),m);
 const Cube=g('Cube'),applyAlg=g('applyAlg'),parseAlg=g('parseAlg'),SLOTS=g('SLOTS'),slotSolved=g('slotSolved'),crossSolved=g('crossSolved'),f2lSolved=g('f2lSolved');
 const solveCross=g('solveCross'),randomMoveScramble=g('randomMoveScramble'),solveF2LPair=g('solveF2LPair'),reframe=g('reframe');
-const f2lSlotWords=g('f2lSlotWords'),f2lState=g('f2lState'),f2lPairSolutions=g('f2lPairSolutions'),f2lNext=g('f2lNext'),f2lThen=g('f2lThen'),f2lCombos=g('f2lCombos'),f2lDone=g('f2lDone'),f2lPart=g('f2lPart');
+const f2lSlotWords=g('f2lSlotWords'),f2lState=g('f2lState'),f2lPairSolutions=g('f2lPairSolutions'),f2lNext=g('f2lNext'),f2lThen=g('f2lThen'),f2lCombos=g('f2lCombos'),f2lDone=g('f2lDone'),f2lPart=g('f2lPart'),f2lAlong=g('f2lAlong');
 const F2L_ORDER_DEFAULT=g('F2L_ORDER_DEFAULT'),F2L_COMBO_EXTRA=g('F2L_COMBO_EXTRA');
 const slot=n=>SLOTS.find(s=>s.name===n),solvedNames=X=>SLOTS.filter(s=>slotSolved(X,s)).map(s=>s.name);
 // The optimal of a slot with the solved slots kept, from the fast search; it is checked against
@@ -137,6 +137,15 @@ lap('lab-f2l combos ok');
   assert.strictEqual(f2lDone(X,h,applyAlg(o,[off+"'"])),1,'and back: the longest prefix that still matches');
   const hh=['R','U2',"R'"],Y=applyAlg(X,['R','U']);assert.strictEqual(f2lDone(X,hh,Y),-1);assert.strictEqual(f2lPart(X,hh,Y),1,'one quarter of the U2');
   assert.strictEqual(f2lPart(X,hh,applyAlg(X,['R',"U'"])),1,'either way');assert.strictEqual(f2lPart(X,hh,applyAlg(X,['R','F'])),-1);}
+// f2lAlong: off the hint but on another shortest solution, or on the hint with two opposite faces in
+// the other order, gives that list and the moves made; off every one gives null.
+{const X=new Cube(),h=['R',"L'",'U','F2'],sols=['R L\' U F2','F U F2 B'],J=x=>JSON.stringify(x); // the vm's arrays are not this realm's: compare as text
+  assert.strictEqual(J(f2lAlong(X,h,sols,applyAlg(X,["L'"]))),J({moves:["L'",'R','U','F2'],n:1}),'the opposite faces in the other order');
+  assert.strictEqual(J(f2lAlong(X,h,sols,applyAlg(X,["L'",'R','U']))),J({moves:["L'",'R','U','F2'],n:3}));
+  assert.strictEqual(J(f2lAlong(X,h,sols,applyAlg(X,['F','U']))),J({moves:['F','U','F2','B'],n:2}),'another shortest solution');
+  assert.strictEqual(J(f2lAlong(X,h,sols,applyAlg(X,['F','U',"F'"]))),J({moves:['F','U','F2','B'],n:2}),'one quarter of its half turn');
+  assert.strictEqual(f2lAlong(X,h,sols,applyAlg(X,['D'])),null,'off every one');
+  assert.strictEqual(f2lAlong(X,h,[],applyAlg(X,['R','U'])),null,'on the hint itself is not its job');}
 
 // The slot words as held: yellow up, green toward you puts orange on the right and white below
 {const held=applyAlg(new Cube(),['z2']);assert.strictEqual(held.center[0],3);assert.strictEqual(held.center[2],2);
