@@ -61,11 +61,19 @@ The window, top to bottom:
    hint that is on another shortest solution, or on the hint with two moves on
    opposite faces made in the other order, goes on with that list from where
    the cube is (`f2lAlong`): the hint reads in the order made and nothing is
-   asked for anew. A move off every one of them recomputes the hint from the
-   cube as it is; the target stays. The hint does not change under the user:
-   while the cube is on it the step stays, with what the user has revealed,
-   whatever else happens (a mode or order change, a move made and unmade). A
-   step the user has not begun re-picks on a mode or order change.
+   asked for anew. A move off every one of them, before the hint is begun,
+   recomputes the hint from the cube as it is; the target stays. A hint is
+   begun once the cube has been one move or more into it (a quarter of its
+   first half turn counts). A move off a begun hint keeps the hint: the card
+   says "Off the hint by 2 moves. Back: F U'" (the user's own moves since the
+   hint was left, undone, plain) with a button, New hint from here, that asks
+   for a new hint for the same pair from the cube as it is. Back on the hint,
+   the line goes. Back at the hint's start (no move of it made), the hint
+   follows the cube again. The hint does not change under the user: while the
+   cube is on it, or away from a begun hint, the step stays, with what the
+   user has revealed, whatever else happens (a mode or order change, a move
+   made and unmade). A step the user has not begun re-picks on a mode or
+   order change.
 6. **Combinations** (a box, Look for combinations, kept in `cw:labF2LCombo`,
    off by default). Under the step card, for the target:
    - **Also makes**: a solution that solves the target and one other slot
@@ -102,8 +110,17 @@ The window is live. Each state the cube reports goes to the guide
 (`labF2LRead(cube)`, called from `labShow` after `labPatRead`), and the window
 redraws. A step is done when the target slot is solved with the cross and the
 done slots kept. A done slot that comes apart is said in the step card ("The
-front left pair came out.") and the guide recomputes: that slot is unsolved
-again, the target stays unless the target is now solved.
+front left pair came out."): that slot is unsolved again, the target stays
+unless the target is now solved, and the guide recomputes unless the hint is
+begun. The first step begins at the move that made the cross (`crossSeen`),
+not at the move the window opened on.
+
+The move list (`labAdd`) does not merge the first move after the start of a
+step into the move before it, so the step's moves stay whole. A move that
+undoes the one before it is the one exception: it comes off with it wherever
+the start is (an F' that solved the pair, then an F, is nothing), and a step
+or a goal that began past the new end begins at the new end, as Clear last
+does (`labAtClamp`).
 
 The solvers take up to a few hundred milliseconds in the worst case. Recompute
 after a short wait (`F2L_WAIT_MS`, 200) from the last state, so a fast sequence
@@ -169,7 +186,7 @@ table and both pair tables as the heuristic, as `solveF2LPair` does with
 
 ## The UI part: `lab/lab.js`
 
-- `lab.f2l`: `{open, mode, order, target, done:[], step:{slot, start, at, moves, optimal, combos}, log:[], seq, timer}`. `step.start` is the cube when the step began, `step.at` the index into `lab.moves` (as `lab.goal.at`), so the moves the user made for the step are `lab.moves.slice(step.at)`. As built, the step keeps `base` (the cube its current hint starts from, which a move off the hint renews) and `best` (the shortest length when the step began) in place of `start`.
+- `lab.f2l`: `{open, mode, order, target, done:[], step:{slot, start, at, moves, optimal, combos, begun, away, off}, log:[], seq, timer}`. `step.start` is the cube when the step began, `step.at` the index into `lab.moves` (as `lab.goal.at`), so the moves the user made for the step are `lab.moves.slice(step.at)`. As built, the step keeps `base` (the cube its current hint starts from, which a move off the hint renews) and `best` (the shortest length when the step began) in place of `start`.
 - `labF2LRead(cube)`: the live entry. `labF2LShow(on)`, `labF2LDraw()`, `labF2LPick(slot)`, `labF2LMode(m)`, `labF2LOrderMove(slot, dir)`, `labF2LUse(moves)`, `labF2LReset()`.
 - Reuse `labSpoil` for every covered line, with keys `f2l:<step index>:<kind>` so a redraw keeps what is open (`lab.patOpen`).
 - Keys: F opens and closes the window. Esc closes the front-most of the Patterns and F2L windows. Add `<kbd>F</kbd>` to the button.

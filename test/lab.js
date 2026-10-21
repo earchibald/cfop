@@ -310,7 +310,7 @@ async function page(){
   click($('#patClear'));assert.strictEqual(L().pats.length,0,'Clear empties the list');assert.ok($('#patList .none'));assert.strictEqual(storage.getItem('cw:labPatterns'),'[]');
   // the F2L guide (F): before the cross, the cross line alone with one shortest cross covered; with the cross, the
   // chips, the step card with the hint covered after its first move, Then, and the solved pairs; a turn along the hint
-  // marks the move made, a turn off it asks for a new hint with the same target; a chip click, the mode and the
+  // marks the move made, a turn off a begun hint keeps it with the way back and New hint from here; a chip click, the mode and the
   // order arrows change the target; combinations; Esc closes the window in front; New scramble starts it over
   {const SL=w.eval('SLOTS'),F=L().f2l,step=()=>L().f2l.step,ready=()=>until(()=>{const s=L().f2l.step;return !L().f2l.working&&!!s&&s.moves.length>0;},4000);
     const spoilMoves=sp=>[sp.firstChild.textContent,...[...sp.querySelectorAll('.sp-m')].map(x=>x.textContent)].join(' ').trim().split(/\s+/);
@@ -324,7 +324,9 @@ async function page(){
     assert.ok($('#f2l').style.zIndex==='7','the window opened last is in front');
     // the cross made, the pairs out: R U R' and its kin keep the cross
     const F0=w.applyAlg(new Cube(),w.parseAlg("R U R' U' L' U2 L B U' B' U2 F' U F"));assert.ok(w.crossSolved(F0));
+    await show(w.applyAlg(sc1,['U']));const lenCross=L().moves.length; // a move while the cross is apart is not the step's
     await show(F0);assert.ok(await ready(),'a hint comes after the wait');
+    assert.strictEqual(step().at,lenCross,'the step begins at the move that made the cross');
     assert.strictEqual($('#f2lCross').textContent,'Yellow cross on the bottom: made.');assert.ok(!$('#f2lMain').hidden,'the rest shows');
     const open0=['FR','FL','BL','BR'].filter(n=>!w.slotSolved(F0,SL.find(s=>s.name===n)));assert.ok(open0.length>=2,'two pairs or more to make: '+open0);
     assert.strictEqual($('#f2lCount').textContent,(4-open0.length)+' of 4 pairs');
@@ -347,10 +349,22 @@ async function page(){
     hs=$('#f2lCard .hint .spoil');assert.strictEqual(hs.firstChild.textContent,s.moves[1],'the next move shows');assert.strictEqual(hs.querySelectorAll('.sp-m.on').length,0,'the move revealed is now the first: no more is open');
     assert.ok(/, 1 made$/.test($('#f2lCard .cnt').textContent),'the count: '+$('#f2lCard .cnt').textContent);
     assert.strictEqual(L().moves[L().moves.length-1],s.moves[0],'the move is on the list');
-    // a turn off the hint: a new hint from the cube as it is, the same target
-    const slot0=s.slot,off=['U','R','F','D','L','B'].find(f=>f!==s.moves[1][0]&&f!==s.moves[0][0]);cur=w.applyAlg(cur,[off]);await show(cur);
+    // a turn off the hint, one move in: the hint stays (no new one under the user), the card says how far off and the
+    // way back, and the move is on the list
+    const slot0=s.slot,s1=step(),len1=L().moves.length,on1=cur,off=['U','R','F','D','L','B'].find(f=>f!==s.moves[1][0]&&f!==s.moves[0][0]);
+    cur=w.applyAlg(cur,[off]);await show(cur);await sleep(300);
+    assert.strictEqual(step(),s1,'the step stays');assert.ok(step().away,'away from the hint');assert.ok(!L().f2l.working,'nothing is computed');assert.strictEqual(step().n,1,'one move made still');
+    assert.deepStrictEqual([...step().off],[off],'the moves since the hint was left');
+    assert.strictEqual($('#f2lCard .off b').textContent,'Off the hint by 1 move.');assert.strictEqual($('#f2lCard .off code').textContent,w.invertAlg([off]),'the way back');
+    assert.strictEqual($('#f2lCard [data-renew]').textContent,'New hint from here');assert.strictEqual(L().moves.length,len1+1,'the move is on the list');
+    assert.strictEqual($('#f2lCross').textContent,w.crossSolved(cur)?'Yellow cross on the bottom: made.':'The yellow cross is apart.','the cross line: '+$('#f2lCross').textContent);
+    // the way back: the undo merges away on the list, and the cube is on the hint again
+    cur=on1;await show(cur);assert.strictEqual(L().moves.length,len1,'the undo merges away');assert.strictEqual(step(),s1);assert.ok(!step().away,'on the hint again');assert.ok(!$('#f2lCard .off'),'no off line');
+    // off again: New hint from here asks for a new hint from the cube as it is, the same target, counted from the same start
+    cur=w.applyAlg(cur,[off]);await show(cur);await sleep(300);assert.ok(step().away);const at1=step().at;
+    click($('#f2lCard [data-renew]'));
     assert.ok(await until(()=>{const t=step();return t&&!L().f2l.working&&t.base.equals(w.reframe(cur));},4000),'a new hint from here');
-    assert.strictEqual(step().slot,slot0,'the target stays');assert.strictEqual(step().n,0);
+    assert.strictEqual(step().slot,slot0,'the target stays');assert.strictEqual(step().n,0);assert.ok(!step().away&&!step().begun,'a fresh step');assert.strictEqual(step().at,at1,'counted from the same start');
     // follow it to the end: the pair goes in the solved list with the moves made
     const at0=step().at;for(const m of step().moves.slice()){cur=w.applyAlg(cur,[m]);await show(cur);}
     assert.ok(w.slotSolved(w.reframe(cur),SL.find(x=>x.name===slot0)),'the pair is solved');
@@ -429,6 +443,15 @@ async function page(){
           assert.strictEqual(step(),s1,'another shortest solution keeps the step');assert.strictEqual(step().moves.join(' '),alt,'and the hint is now that one');assert.strictEqual(step().n,1);
           for(const m of am.slice(1)){cur=w.applyAlg(cur,[m]);await show(cur);}assert.ok(await until(()=>!L().f2l.working&&step()!==s1,4000),'solved, and the next step comes');}
         else{for(const m of s1.moves){cur=w.applyAlg(cur,[m]);await show(cur);}assert.ok(await until(()=>!L().f2l.working&&step()!==s1,4000));}}
+      assert.ok(await ready());
+      // an undo across the step's end: the last move of the hint comes off the list with its undo (not "F' F"), the next
+      // step begins at the new end; made again, the list is as it was
+      const lastM=L().moves[L().moves.length-1],lenS=L().moves.length;assert.strictEqual(L().f2l.at,lenS,'the next step begins at the end');
+      cur=w.applyAlg(cur,w.parseAlg(w.invertAlg([lastM])));await show(cur);
+      assert.strictEqual(L().moves.length,lenS-1,'the undo merges away across the step end: '+L().moves.slice(-3));assert.strictEqual(L().f2l.at,lenS-1,'the next step begins at the new end');
+      assert.ok(!w.slotSolved(w.reframe(cur),SL.find(x=>x.name===s1.slot)),'the pair is out');
+      cur=w.applyAlg(cur,[lastM]);await show(cur);assert.strictEqual(L().moves.length,lenS,'made again: the list is as it was');assert.strictEqual(L().moves[lenS-1],lastM);
+      assert.ok(w.slotSolved(w.reframe(cur),SL.find(x=>x.name===s1.slot)),'the pair is in again');
       assert.ok(await ready());}
     // the cross comes apart off the hint: the step stays, with a hint that makes the cross again
     {const s1=step(),labHeld=w.eval('labHeld');

@@ -199,17 +199,29 @@ function labPath(from,to){
   return best;
 }
 // The same face as the last move merges with it: R then R is R2, R then R' is nothing.
+function labTurns(m){return m.endsWith('2')?2:m.endsWith("'")?3:1;}
 function labMerge(moves,m){
-  const turns=x=>x.endsWith('2')?2:x.endsWith("'")?3:1,last=moves[moves.length-1];
+  const last=moves[moves.length-1];
   if(!last||last[0]!==m[0])return moves.concat(m);
-  const t=(turns(last)+turns(m))%4;
+  const t=(labTurns(last)+labTurns(m))%4;
   return moves.slice(0,-1).concat(t?[m[0]+['','','2',"'"][t]]:[]);
 }
 // A move onto the list. The first move after New scramble, or after the start of an F2L step, is
-// not merged into the one before it, so the moves since then stay whole.
+// not merged into the one before it, so the moves since then stay whole: F then F reads F F across
+// the start. A move that undoes the one before it comes off with it wherever the start is (F' then
+// F is nothing, even when the F' made the cross or solved the pair); a goal or a step that began
+// past the new end begins at the new end, as Clear last does.
 function labAdd(m){
-  const b=Math.max(lab.goal?lab.goal.at:-1,lab.f2l&&lab.f2l.open?lab.f2l.at:-1);
-  lab.moves=lab.moves.length<=b?lab.moves.concat(m):labMerge(lab.moves,m);
+  const b=Math.max(lab.goal?lab.goal.at:-1,lab.f2l&&lab.f2l.open?lab.f2l.at:-1),ms=lab.moves,last=ms[ms.length-1];
+  const undo=!!last&&last[0]===m[0]&&(labTurns(last)+labTurns(m))%4===0;
+  lab.moves=ms.length<=b&&!undo?ms.concat(m):labMerge(ms,m);
+  labAtClamp(lab.moves.length);
+}
+// The list is n moves long now: a goal or a step that began past the end begins at the end.
+function labAtClamp(n){
+  const f=lab.f2l;
+  if(lab.goal&&lab.goal.at>n)lab.goal.at=n;
+  if(f){if(f.at>n)f.at=n;if(f.step&&f.step.at>n)f.step.at=n;}
 }
 // The box under the picture, as the cube tab's readout (cubeTabMovesDraw): the last LAB_SHOWN moves,
 // a triangle after them when there are more, the count in the head, and Clear moves.
@@ -232,9 +244,7 @@ function labMovesClear(){lab.moves=[];if(lab.goal)lab.goal.at=0;labF2LMovesGone(
 function labMovesLast(){
   if(!lab.moves.length)return;
   lab.moves=lab.moves.slice(0,-1);
-  const n=lab.moves.length,f=lab.f2l;
-  if(lab.goal&&lab.goal.at>n)lab.goal.at=n;
-  if(f){if(f.at>n)f.at=n;if(f.step&&f.step.at>n)f.step.at=n;}
+  labAtClamp(lab.moves.length);
   labMovesDraw();
 }
 // Isometric (I): on, the camera looks from a little to the right and above; off, straight on.
@@ -579,9 +589,13 @@ function labPatClear(){lab.pats=[];lab.patLast=null;labPatSave();labPatDraw();}
 // (Look for combinations); target (a pair the user clicked, or null); done (the pairs the guide has
 // seen solved, as they came); step (the current target: slot, at (the index into lab.moves where
 // the step began, as lab.goal.at), best (its shortest length when it began), base (the cube the
-// hint starts from), moves (the hint), n (the moves of the hint made so far), then, combos); log
-// (the solved steps, newest first); at (where the next step begins); seq (a newer state cancels
-// work in flight); X (the cube as held, in the engine's frame), held, holdKey.
+// hint starts from), moves (the hint), n (the moves of the hint made so far), begun (the cube has
+// been on the hint one move or more in), away (the cube is off the hint, and the hint is kept),
+// off (the moves made since the hint was left, as held; null when they could not be followed),
+// then, combos); log (the solved steps, newest first); at (where the next step begins); crossSeen
+// (the cross has been made since it was last apart with no step: the next step begins where it was
+// made); seq (a newer state cancels work in flight); X (the cube as held, in the engine's frame),
+// held, holdKey.
 const F2L_WAIT_MS=200,F2L_PART_NODES=4000000; // the wait after the last state; the budget of each combination part (about 150 ms at worst)
 const F2L_STICKER={white:'W',red:'R',green:'G',yellow:'Y',orange:'O',blue:'B'};
 function labF2LStart(){
@@ -589,7 +603,7 @@ function labF2LStart(){
   let order=null;try{order=JSON.parse(get('cw:labF2LOrder','null'));}catch(e){}
   if(!Array.isArray(order)||order.length!==4||F2L_ORDER_DEFAULT.some(n=>!order.includes(n)))order=F2L_ORDER_DEFAULT.slice();
   lab.f2l={open:false,mode:get('cw:labF2LMode','shortest')==='corner'?'corner':'shortest',order,combo:get('cw:labF2LCombo','')==='1',orderOpen:false,
-    target:null,done:[],step:null,log:[],at:lab.moves.length,seq:0,timer:0,X:null,held:null,holdKey:null,hold:null,noted:null,working:false,broke:''};
+    target:null,done:[],step:null,log:[],at:lab.moves.length,crossSeen:false,seq:0,timer:0,X:null,held:null,holdKey:null,hold:null,noted:null,working:false,broke:''};
   $('#f2lCombo').checked=lab.f2l.combo;
   $('#f2lBtn').onclick=()=>labF2LShow($('#f2l').hidden);$('#f2lClose').onclick=()=>labF2LShow(false);
   $('#f2lShortest').onclick=()=>labF2LMode('shortest');$('#f2lCorner').onclick=()=>labF2LMode('corner');
@@ -605,14 +619,14 @@ function labF2LShow(on){
   const f=lab.f2l;f.open=!!on;$('#f2l').hidden=!on;$('#f2lBtn').setAttribute('aria-pressed',String(!!on));
   if(!on){clearTimeout(f.timer);f.timer=0;f.seq++;f.working=false;return;}
   labWinFront('f2l');f.hold=null;f.noted=null; // opened again, the guide reads in the hold from the bar
-  if(!f.step)f.at=lab.moves.length;
+  if(!f.step){f.at=lab.moves.length;f.crossSeen=false;}
   const c=lab.target||lab.shown;if(c)labF2LRead(c);else labF2LDraw();
 }
 // New scramble, My cube is solved: all pairs open again, no clicked target, the solved list empty.
 function labF2LReset(){
   const f=lab.f2l;if(!f)return;
   clearTimeout(f.timer);f.timer=0;f.seq++;
-  Object.assign(f,{target:null,done:[],step:null,log:[],at:lab.moves.length,broke:'',working:false,hold:null,noted:null});
+  Object.assign(f,{target:null,done:[],step:null,log:[],at:lab.moves.length,crossSeen:false,broke:'',working:false,hold:null,noted:null});
   const c=lab.target||lab.shown;if(f.open&&c)labF2LRead(c);else labF2LDraw();
 }
 // The move list was emptied, or the cube jumped to a state with no moves: the step counts from here.
@@ -620,7 +634,10 @@ function labF2LMovesGone(){const f=lab.f2l;if(!f)return;f.at=lab.moves.length;if
 const labF2LPos=n=>F2L_POS[n];
 const labF2LCap=t=>t[0].toUpperCase()+t.slice(1);
 // The live entry: each state the cube reports, from labShow. On the hint, the moves made walk along
-// it at once. Anything else waits F2L_WAIT_MS for the cube to rest, then asks for a new hint.
+// it at once. Off the hint before it is begun, the guide waits F2L_WAIT_MS for the cube to rest,
+// then asks for a new hint. Off a hint that is begun (the cube has been one move or more into it),
+// the hint stays: the card says how far off the cube is and the way back, and New hint from here
+// asks for a new one.
 // The hold the guide reads in: the one from the bar, unless the guide has seen the cross made in
 // another and the bar's hold came from the tilt detector with another color on the bottom. Then
 // the user tipped the cube to look, and the guide keeps its own hold until the bar's hold has the
@@ -632,28 +649,42 @@ function labF2LHold(){
 }
 function labF2LRead(cube){
   const f=lab.f2l;if(!f||!cube||!f.open)return;
-  const hold=labF2LHold(),held=labHeldIn(cube,hold),X=reframe(held),hk=held.center.join();
+  const hold=labF2LHold(),held=labHeldIn(cube,hold),X=reframe(held),hk=held.center.join(),X0=f.X;
   f.held=held;f.X=X;
   if(hold===lab.hold){if(f.step||crossSolved(X))f.hold=hold;}
   else if(f.noted!==lab.hold){f.noted=lab.hold;labLog('f2l',`F2L guide: the tilt moved the hold to ${labHoldWords(lab.hold)}. The guide keeps the ${LAB_COLORS[held.center[3]]} cross on the bottom and reads as held ${labHoldWords(hold)}.`);}
   // A new hold renames the places: the pairs solved now are the solved list, and the step starts over.
   if(f.holdKey!==hk){if(f.holdKey!=null){f.done=f2lState(X,[]).solved;f.target=null;f.step=null;f.at=lab.moves.length;f.broke='';}f.holdKey=hk;}
-  const s=f.step;
+  const s=f.step;let n=-1;
   if(s&&s.moves.length){
-    const n=f2lDone(s.base,s.moves,X),half=n<0?f2lPart(s.base,s.moves,X):-1;
-    if((n>=0&&n<s.moves.length)||half>=0){s.n=n>=0?n:half;labF2LDraw();return;}
+    n=f2lDone(s.base,s.moves,X);const half=n<0?f2lPart(s.base,s.moves,X):-1;
+    if((n>=0&&n<s.moves.length)||half>=0){s.n=n>=0?n:half;labF2LOn(s,n>0||half>=0);labF2LDraw();return;}
     // Off the hint, but on another way to the same end: go on with that one.
     if(n<0){const a=f2lAlong(s.base,s.moves,s.sols,X);
-      if(a){const plain=s.moves.join(' ')===s.plain.join(' ');s.moves=a.moves;if(plain)s.plain=a.moves;s.n=a.n;s.then=null;s.combos=null;s.key=null;s.reveal=0;
+      if(a){const plain=s.moves.join(' ')===s.plain.join(' ');s.moves=a.moves;if(plain)s.plain=a.moves;s.n=a.n;s.then=null;s.combos=null;s.key=null;s.reveal=0;labF2LOn(s,true);
         if(a.n<a.moves.length){labF2LDraw();labF2LThen(f.seq,false);return;}}}
   }
   const st=f2lState(X,f.done);
-  if(!st.cross&&!s){labF2LIdle();return;} // the cross first. A step begun lives through the cross coming apart: the hint is asked for again when the cube rests
+  if(!st.cross&&!s){f.crossSeen=false;labF2LIdle();return;} // the cross first. A step lives through the cross coming apart
+  if(!s&&!f.crossSeen){f.crossSeen=true;f.at=lab.moves.length;} // the first step begins at the move that made the cross
   if(st.cross&&st.broken.length){f.done=f.done.filter(n=>!st.broken.includes(n));f.broke=st.broken.map(n=>`The ${labF2LPos(n)} pair came out.`).join(' ');labLog('f2l',f.broke);}
   if(s&&st.cross&&st.solved.includes(s.slot))labF2LStepDone(X);
   if(st.cross&&st.solved.length===4){labF2LIdle();return;}
+  if(f.step===s&&s&&s.moves.length&&s.begun&&n<0){labF2LAway(s,X0,X);labF2LIdle();return;} // a step begun keeps its hint
   labF2LSchedule(F2L_WAIT_MS);
 }
+// The cube is on the hint: nothing to come back from. begun: one move or more into it (a quarter
+// of its first half turn counts); back at the start, the hint follows the cube again.
+function labF2LOn(s,begun){s.away=false;s.off=[];s.begun=begun;}
+// The cube is off a hint that is begun: the moves since it left, from the state before to this
+// one, go on the way back (merged as the list is). A jump the path cannot follow leaves it unknown.
+function labF2LAway(s,X0,X){
+  const p=X0?labPath(X0,X):null;
+  if(!s.away){s.away=true;s.off=[];}
+  if(s.off&&p)for(const m of p)s.off=labMerge(s.off,m);else s.off=null;
+}
+// New hint from here: a new hint for the same pair, from the cube as it is.
+function labF2LRenew(){const f=lab.f2l,s=f.step;if(!s||!s.away)return;s.away=false;s.off=[];labF2LSchedule(0);}
 // Nothing to compute: cancel what is in flight and draw.
 function labF2LIdle(){const f=lab.f2l;clearTimeout(f.timer);f.timer=0;f.seq++;f.working=false;labF2LDraw();}
 // The target is solved with the cross and the solved pairs: the step goes in the list with the moves
@@ -672,19 +703,20 @@ function labF2LSchedule(ms){
   f.timer=setTimeout(()=>{f.timer=0;if(seq===f.seq)labF2LCompute(seq);},ms);
 }
 // The hint for the cube now. The target is the clicked pair, else the current step's, else the
-// mode's pick. A hint the cube is still on stays as it is, with what the user has revealed.
+// mode's pick. A hint the cube is still on stays as it is, with what the user has revealed; so does
+// a hint the cube is away from, until New hint from here.
 function labF2LCompute(seq){
   const f=lab.f2l,X=f.X;f.working=false;if(!X)return;
   const st=f2lState(X,f.done);
   if(st.cross&&st.solved.length===4){f.step=null;labF2LDraw();return;}
   const s=f.step;
   const pin=f.target&&!st.solved.includes(f.target)?f.target:(s?s.slot:null);
-  if(!(s&&s.moves.length&&pin===s.slot&&f2lDone(s.base,s.moves,X)>=0)){
+  if(!(s&&s.moves.length&&pin===s.slot&&(s.away||f2lDone(s.base,s.moves,X)>=0))){
     const r=f2lNext(X,{mode:f.mode,order:f.order,done:f.done,target:pin});
     if(!r){f.step=null;labF2LDraw();return;}
     const same=!!s&&s.slot===r.slot;
     f.step={slot:r.slot,at:s?s.at:f.at,best:same&&s.best!=null?s.best:r.optimal,base:X,moves:r.moves||[],plain:r.moves||[],optimal:r.optimal,sols:r.sols,
-      n:0,then:null,combos:null,idx:f.log.length,reveal:0,key:null,keyN:0};
+      n:0,begun:false,away:false,off:[],then:null,combos:null,idx:f.log.length,reveal:0,key:null,keyN:0};
   }
   labF2LDraw();
   labF2LThen(seq,true);
@@ -749,6 +781,7 @@ function labF2LClick(e){
   const sp=t.closest('.spoil');
   if(sp){if(!sp.classList.contains('one')){e.preventDefault();labSpoilStep(sp,!!t.closest('.sp-btn'));}return;}
   const chip=t.closest('[data-chip]');if(chip){if(chip.getAttribute('aria-disabled')!=='true')labF2LPick(chip.dataset.chip);return;}
+  if(t.closest('[data-renew]')){labF2LRenew();return;}
   const ord=t.closest('[data-ord]');if(ord){labF2LOrderMove(ord.dataset.ord,parseInt(ord.dataset.dir,10));return;}
   const use=t.closest('[data-use]');if(use&&lab.f2l.step){const s=lab.f2l.step,c=s.combos,u=use.dataset.use;
     labF2LUse(u==='plain'?s.plain:u==='setup'?c.setup.moves:c.also[parseInt(u,10)].moves);}
@@ -773,6 +806,7 @@ function labF2LDrawAll(){
   const cr=$('#f2lCross');cr.textContent='';
   if(!X)cr.appendChild(el('span',null,'No cube yet. Connect your cube to start.'));
   else if(st.cross){const b=el('b',null,`${labF2LCap(color)} cross on the bottom: made.`);cr.appendChild(b);}
+  else if(s&&s.away)cr.appendChild(el('span',null,`The ${color} cross is apart.`)); // the card says the way back
   else if(s&&s.moves.length)cr.appendChild(el('span',null,crossSolved(s.base)?`The hint takes the ${color} cross apart for a few moves. It makes the cross again before it ends.`:`The ${color} cross is apart. The hint makes it again.`));
   else{
     const d0=buildCrossTable()[crossIndex(X)],r=crossSolutions(X,d0),sol=f2lSort(r.byLen[d0]||[])[0];
@@ -826,13 +860,21 @@ function labF2LDrawAll(){
       s.key=key;s.keyN=s.n;
       code.appendChild(labSpoil(s.moves.slice(s.n).join(' '),key));card.appendChild(code);
       const ln=s.moves.length;card.appendChild(el('span','cnt',`${ln} move${ln===1?'':'s'}`+(s.n?`, ${s.n} made`:'')+(s.moves!==s.plain&&s.moves.join(' ')!==s.plain.join(' ')?' · a combination':'')));
+      // Away from the hint: how far, the way back (the user's own moves, undone, so nothing is covered), and a new hint
+      if(s.away){
+        const p=el('p','off'),k=s.off?s.off.length:0;
+        p.appendChild(el('b',null,s.off?`Off the hint by ${k} move${k===1?'':'s'}.`:'Off the hint.'));
+        if(k){p.appendChild(document.createTextNode(' Back: '));p.appendChild(el('code',null,invertAlg(s.off)));}
+        const b=el('button',null,'New hint from here');b.type='button';b.dataset.renew='1';b.title='A new hint for the same pair, from the cube as it is';p.appendChild(b);
+        card.appendChild(p);
+      }
     }
     if(f.working)card.appendChild(el('p','muted','Working.'));
   }
   if(f.broke)card.appendChild(el('p','warn',f.broke));
   // the combinations
   const cb=$('#f2lCombos');cb.textContent='';const c=s&&s.combos;
-  cb.hidden=!(f.combo&&s&&s.moves.length&&s.n===0&&!(st.cross&&st.solved.length===4));
+  cb.hidden=!(f.combo&&s&&s.moves.length&&s.n===0&&!s.away&&!(st.cross&&st.solved.length===4));
   if(!cb.hidden){
     if(!c)cb.appendChild(el('p',null,'Looking for combinations.'));
     else{
