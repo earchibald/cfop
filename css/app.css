@@ -148,6 +148,10 @@ body.cube-drag,body.cube-drag *{user-select:none!important;-webkit-user-select:n
 .step .alg .m.cur{background:var(--accent);color:var(--accent-ink)}
 .alt{font-family:var(--mono);font-size:14px;padding:4px 8px;border-radius:var(--chip);background:var(--panel2);display:inline-block;margin:2px 4px 2px 0;cursor:pointer}
 .alt.pick{box-shadow:inset 0 0 0 2px var(--accent)}
+/* Cross plans revealed: one plan per line, the moves as a Reference spoiler, a button to put the plan on the cube. */
+.sol-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:max-content max-content;justify-content:start;gap:6px 10px;align-items:center}
+.sol-list .sol{display:contents}
+.sol-list .alg{font-family:var(--mono);font-size:14px;padding:4px 8px;border-radius:var(--chip);background:var(--panel2)}
 .cases{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
 .case{background:var(--panel2);border:1px solid transparent;border-radius:var(--r);padding:8px 6px 6px;text-align:center;cursor:pointer;font-size:13px;position:relative}
 .case svg{width:100%;height:auto;max-width:84px;margin:0 auto;display:block}

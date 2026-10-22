@@ -424,8 +424,9 @@ function renderPlan(){
 const crossState={revealed:false,sol:null};
 function refreshCross(){if(!tablesReady){$('#crossOpt').textContent='…';ensureTables(()=>refreshCross());return;}
   const {cube}=orientedScramble();const sol=solveCross(cube,$('#crossPlus1').checked?1:0,60);crossState.sol=sol;$('#crossOpt').textContent=sol.optimal;$('#crossCount').textContent=`${sol.solutions.length} plan${sol.solutions.length>1?'s':''} found · ${holdText(phys(cube))}`;
-  $('#crossSols').innerHTML=crossState.revealed?sol.solutions.map((s,i)=>`<span class="alt" data-i="${i}">${esc(s)}</span>`).join('')+'<p class="muted" style="margin-top:6px">Click a plan to step through it on the cube.</p>':'<p class="muted">Hidden. Plan it yourself first, then reveal.</p>';
-  $$('#crossSols .alt').forEach(el=>el.onclick=()=>{const {phys:pc}=orientedScramble();setSequence(parseAlg(el.textContent),'cross plan · '+holdText(pc),pc);seqState.idx=0;applySequence();focusPlayer();});
+  // Revealed: one plan per line as a spoiler (spoilAlg): the first move in clear, a bar on each move after it.
+  $('#crossSols').innerHTML=crossState.revealed?`<ol class="sol-list">${sol.solutions.map((s,i)=>`<li class="sol"><code class="alg">${spoilAlg(s)}</code><button type="button" class="small sol-play" data-i="${i}">Step through on cube</button></li>`).join('')}</ol><p class="muted" style="margin-top:6px">Click a line to reveal its next move. Step through puts the plan on the cube.</p>`:'<p class="muted">Hidden. Plan it yourself first, then reveal.</p>';
+  $$('#crossSols .sol-play').forEach(el=>el.onclick=()=>{const {phys:pc}=orientedScramble();setSequence(parseAlg(sol.solutions[+el.dataset.i]),'cross plan · '+holdText(pc),pc);seqState.idx=0;applySequence();focusPlayer();});
   $('#crossTryOut').innerHTML='';}
 $('#crossReveal').onclick=()=>{crossState.revealed=!crossState.revealed;refreshCross();};
 $('#crossPlus1').onchange=refreshCross;$('#crossColor').onchange=()=>{store.set('crossColor',$('#crossColor').value);if(!seqState.drill)showForTab();refreshCross();planState.plan=null;renderLLGroups();renderF2LGrid();if(mobileMQ.matches)renderMobileRef();$('#planOut').innerHTML='<p class="muted">Cross color changed. Press Plan.</p>';};
