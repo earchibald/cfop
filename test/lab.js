@@ -314,13 +314,44 @@ async function page(){
   // order arrows change the target; combinations; Esc closes the window in front; New scramble starts it over
   {const SL=w.eval('SLOTS'),F=L().f2l,step=()=>L().f2l.step,ready=()=>until(()=>{const s=L().f2l.step;return !L().f2l.working&&!!s&&s.moves.length>0;},4000);
     const spoilMoves=sp=>[sp.firstChild.textContent,...[...sp.querySelectorAll('.sp-m')].map(x=>x.textContent)].join(' ').trim().split(/\s+/);
+    // a hint line as a drill: every move in the text, the moves made dim (.f2l-did), the first in clear (.f2l-first) until
+    // it is made, every other move covered (.sp-m) until it is made
+    const hintMoves=h=>h.textContent.trim().split(/\s+/),hintShape=h=>({did:[...h.querySelectorAll('.f2l-did')].map(x=>x.textContent),clear:[...h.querySelectorAll('.f2l-first')].map(x=>x.textContent),covered:h.querySelectorAll('.sp-m').length});
     click($('#patClose'));assert.ok($('#f2l').hidden&&!F.open,'the F2L guide starts closed');assert.strictEqual($('#f2lBtn').textContent,'F2L guideF','the button names its key');
     await show(sc1);
     key('f');assert.ok(!$('#f2l').hidden&&L().f2l.open,'F opens the guide');assert.strictEqual($('#f2lBtn').getAttribute('aria-pressed'),'true');
     assert.ok(/^Make the yellow cross first\. Shortest: \d moves?\./.test($('#f2lCross').textContent),'the cross line: '+$('#f2lCross').textContent);
-    const cs=$('#f2lCross .spoil');assert.ok(cs,'one shortest cross, as a covered line');assert.strictEqual(cs.querySelectorAll('.sp-m.on').length,0,'covered after its first move');
-    assert.ok(w.crossSolved(w.applyAlg(sc1,spoilMoves(cs))),'the line makes the cross');
+    let cs=$('#f2lCross .hint');assert.ok(cs,'one shortest cross, as a drill');const cm=hintMoves(cs);
+    assert.deepStrictEqual(hintShape(cs),{did:[],clear:[cm[0]],covered:cm.length-1},'its first move in clear, the rest covered');
+    assert.ok(w.crossSolved(w.applyAlg(sc1,cm)),'the line makes the cross');assert.strictEqual(cs.querySelector('.sp-btn'),null,'no Reveal');
     assert.ok($('#f2lMain').hidden,'nothing below it before the cross');assert.strictEqual($('#f2lCount').textContent,'');
+    // a click uncovers nothing
+    click(cs);click(cs.querySelector('.sp-m'));assert.deepStrictEqual(hintShape($('#f2lCross .hint')),{did:[],clear:[cm[0]],covered:cm.length-1},'a click uncovers nothing');
+    // the first move made: it turns dim, and the next stays covered; a wrong move: nothing more shows, the line says how far
+    // off and the way back; back on it, and back at its start, the line is as it was
+    {const c0=L().f2l.cross;assert.deepStrictEqual([...c0.moves],cm);let cur=w.applyAlg(sc1,[cm[0]]);await show(cur);
+      assert.strictEqual(L().f2l.cross,c0,'the cross hint stays');assert.strictEqual(c0.n,1);
+      assert.deepStrictEqual(hintShape($('#f2lCross .hint')),{did:[cm[0]],clear:[],covered:cm.length-1},'the move made is dim, the next is still covered');
+      assert.ok(/^Make the yellow cross first\. Shortest: \d moves?, 1 made\./.test($('#f2lCross').textContent),'the count: '+$('#f2lCross').textContent);
+      // a wrong move: one that puts the cube on no shortest cross, by the guide's own tests (a quarter of a half turn, or
+      // another shortest cross, counts as on one)
+      const onHint=c=>{const X=w.reframe(w.eval('labHeld')(c));return w.f2lDone(c0.base,c0.moves,X)>=0||w.f2lPart(c0.base,c0.moves,X)>=0||!!w.f2lAlong(c0.base,c0.moves,c0.sols,X);};
+      const wrong=['U','R','F','D','L','B',"U'","R'","F'","D'","L'","B'"].find(m=>!onHint(w.applyAlg(cur,[m])));assert.ok(wrong,'a move off every shortest cross');
+      cur=w.applyAlg(cur,[wrong]);await show(cur);await sleep(300);
+      assert.strictEqual(L().f2l.cross,c0,'a wrong move keeps the hint');assert.ok(c0.away,'away');assert.strictEqual(c0.n,1);
+      assert.deepStrictEqual(hintShape($('#f2lCross .hint')),{did:[cm[0]],clear:[],covered:cm.length-1},'nothing more shows');
+      assert.strictEqual($('#f2lCross .off b').textContent,'Off the hint by 1 move.');assert.strictEqual($('#f2lCross .off code').textContent,w.invertAlg([wrong]),'the way back');
+      assert.strictEqual($('#f2lCross [data-renew]').textContent,'New hint from here');
+      cur=w.applyAlg(sc1,[cm[0]]);await show(cur);assert.strictEqual(L().f2l.cross,c0);assert.ok(!c0.away,'on the hint again');assert.strictEqual($('#f2lCross .off'),null);
+      // the second move made: it shows too
+      if(cm.length>2){cur=w.applyAlg(cur,[cm[1]]);await show(cur);assert.strictEqual(c0.n,2);assert.deepStrictEqual(hintShape($('#f2lCross .hint')),{did:cm.slice(0,2),clear:[],covered:cm.length-2},'the second move made shows');
+        cur=w.applyAlg(sc1,[cm[0]]);await show(cur);}
+      // off again, New hint from here: a new cross hint from the cube as it is
+      cur=w.applyAlg(cur,[wrong]);await show(cur);await sleep(300);assert.ok(c0.away);click($('#f2lCross [data-renew]'));
+      const c1=L().f2l.cross;assert.notStrictEqual(c1,c0,'a new cross hint');assert.ok(c1.base.equals(w.reframe(w.eval('labHeld')(cur))),'from the cube as it is');assert.strictEqual(c1.n,0);
+      assert.ok(w.crossSolved(w.applyAlg(c1.base,c1.moves)),'it makes the cross');assert.deepStrictEqual(hintShape($('#f2lCross .hint')),{did:[],clear:[c1.moves[0]],covered:c1.moves.length-1});
+      // back at the scramble: a hint not begun follows the cube
+      await show(sc1);assert.strictEqual(L().f2l.cross.n,0);assert.ok(!L().f2l.cross.away);assert.ok(w.crossSolved(w.applyAlg(L().f2l.cross.base,L().f2l.cross.moves)));}
     assert.ok($('#f2l').style.zIndex==='7','the window opened last is in front');
     // the cross made, the pairs out: R U R' and its kin keep the cross
     const F0=w.applyAlg(new Cube(),w.parseAlg("R U R' U' L' U2 L B U' B' U2 F' U F"));assert.ok(w.crossSolved(F0));
@@ -337,16 +368,17 @@ async function page(){
     assert.strictEqual($$('#f2lChips .solved').length,4-open0.length,'the solved chips have the check');
     const pos={FR:'front right',FL:'front left',BL:'back left',BR:'back right'};
     assert.ok($('#f2lCard .tgt').textContent.startsWith('Target: '+pos[s.slot]+' ('),'the step card names the target: '+$('#f2lCard .tgt').textContent);
-    let hs=$('#f2lCard .hint .spoil');assert.deepStrictEqual(spoilMoves(hs),[...s.moves],'the hint is the step\'s moves');assert.strictEqual(hs.firstChild.textContent,s.moves[0],'its first move shows');
-    assert.strictEqual(hs.querySelectorAll('.sp-m.on').length,0,'the rest is covered');assert.strictEqual($('#f2lCard .cnt').textContent,s.moves.length+' moves');
+    let hs=$('#f2lCard .hint');assert.deepStrictEqual(hintMoves(hs),[...s.moves],'the hint is the step\'s moves');
+    assert.deepStrictEqual(hintShape(hs),{did:[],clear:[s.moves[0]],covered:s.moves.length-1},'its first move in clear, the rest covered');assert.strictEqual($('#f2lCard .cnt').textContent,s.moves.length+' moves');
+    assert.strictEqual($('#f2lCard .cross'),null);assert.strictEqual(L().f2l.cross,null,'no cross hint with the cross made');
     const X0=w.reframe(F0),best=w.f2lPairSolutions(X0,s.slot,w.f2lState(X0,[]).solved).optimal;assert.strictEqual(s.moves.length,best,'a shortest hint');
     assert.ok(await until(()=>!$('#f2lThen').hidden),'Then follows');assert.ok(/^Then (front|back) (right|left), \d+ moves?/.test($('#f2lThen').textContent),'Then: '+$('#f2lThen').textContent);
-    // the reveal is as in Patterns: a click shows the next move
-    hs=$('#f2lCard .hint .spoil');click(hs);assert.strictEqual($('#f2lCard .hint .spoil').querySelectorAll('.sp-m.on').length,1,'a click reveals the next move');
-    // a turn along the hint: the move is made, plain and dim, and the next one is first
+    // no click uncovers a move, and there is no Reveal
+    click(hs);click(hs.querySelector('.sp-m'));assert.deepStrictEqual(hintShape($('#f2lCard .hint')),{did:[],clear:[s.moves[0]],covered:s.moves.length-1},'a click uncovers nothing');assert.strictEqual($('#f2lCard .sp-btn'),null,'no Reveal');
+    // a turn along the hint: the move is made, plain and dim; the next one stays covered until it is made
     let cur=w.applyAlg(F0,[s.moves[0]]);await show(cur);
-    assert.strictEqual(step().n,1,'one move made');assert.deepStrictEqual($$('#f2lCard .f2l-did').map(x=>x.textContent),[s.moves[0]],'the move made is plain');
-    hs=$('#f2lCard .hint .spoil');assert.strictEqual(hs.firstChild.textContent,s.moves[1],'the next move shows');assert.strictEqual(hs.querySelectorAll('.sp-m.on').length,0,'the move revealed is now the first: no more is open');
+    assert.strictEqual(step().n,1,'one move made');
+    assert.deepStrictEqual(hintShape($('#f2lCard .hint')),{did:[s.moves[0]],clear:[],covered:s.moves.length-1},'the move made is dim, the next is still covered');
     assert.ok(/, 1 made$/.test($('#f2lCard .cnt').textContent),'the count: '+$('#f2lCard .cnt').textContent);
     assert.strictEqual(L().moves[L().moves.length-1],s.moves[0],'the move is on the list');
     // a turn off the hint, one move in: the hint stays (no new one under the user), the card says how far off and the
@@ -355,6 +387,7 @@ async function page(){
     cur=w.applyAlg(cur,[off]);await show(cur);await sleep(300);
     assert.strictEqual(step(),s1,'the step stays');assert.ok(step().away,'away from the hint');assert.ok(!L().f2l.working,'nothing is computed');assert.strictEqual(step().n,1,'one move made still');
     assert.deepStrictEqual([...step().off],[off],'the moves since the hint was left');
+    assert.deepStrictEqual(hintShape($('#f2lCard .hint')),{did:[s.moves[0]],clear:[],covered:s.moves.length-1},'a wrong move shows nothing more');
     assert.strictEqual($('#f2lCard .off b').textContent,'Off the hint by 1 move.');assert.strictEqual($('#f2lCard .off code').textContent,w.invertAlg([off]),'the way back');
     assert.strictEqual($('#f2lCard [data-renew]').textContent,'New hint from here');assert.strictEqual(L().moves.length,len1+1,'the move is on the list');
     assert.strictEqual($('#f2lCross').textContent,w.crossSolved(cur)?'Yellow cross on the bottom: made.':'The yellow cross is apart.','the cross line: '+$('#f2lCross').textContent);
@@ -425,14 +458,13 @@ async function page(){
       setHold(tipped,'user');
       assert.ok(!/Read as held/.test($('#f2lCross').textContent)&&!/Yellow cross on the bottom/.test($('#f2lCross').textContent),'a hold the user picks is taken: '+$('#f2lCross').textContent);
       setHold(hold0,'user');assert.ok(await ready(),'a hint again in the hold the user picked back');}
-    // the hint does not change under the user: the step stays while the cube is on it, with what was revealed;
+    // the hint does not change under the user: the step stays while the cube is on it;
     // two opposite faces in the other order, or another shortest solution, go on from there with no new hint
     {let s1=step();const X1=w.reframe(cur);assert.ok(s1.base.equals(X1),'the step starts from here');
-      const hs1=$('#f2lCard .hint .spoil');click(hs1);click($('#f2lCard .hint .spoil'));const open1=$('#f2lCard .hint .spoil').querySelectorAll('.sp-m.on').length;assert.ok(open1>=1,'moves revealed');
       cur=w.applyAlg(cur,[s1.moves[0]]);await show(cur);assert.strictEqual(step(),s1);assert.strictEqual(step().n,1);
       click($('#f2lCorner'));click($('#f2lShortest'));await sleep(300);assert.strictEqual(step(),s1,'a mode change keeps a step the user has begun');assert.strictEqual(step().n,1);
       cur=w.applyAlg(cur,w.parseAlg(w.invertAlg(s1.moves[0])));await show(cur);await sleep(300);assert.strictEqual(step(),s1,'a move made and unmade keeps the step');assert.strictEqual(step().n,0);
-      assert.strictEqual($('#f2lCard .hint .spoil').querySelectorAll('.sp-m.on').length,open1,'and what was revealed');
+      assert.deepStrictEqual(hintShape($('#f2lCard .hint')),{did:[],clear:[s1.moves[0]],covered:s1.moves.length-1},'the first move in clear again, the rest covered');
       const opp={U:'D',D:'U',R:'L',L:'R',F:'B',B:'F'},i=s1.moves.findIndex((m,k)=>k+1<s1.moves.length&&opp[m[0]]===s1.moves[k+1][0]);
       if(i>=0){for(const m of s1.moves.slice(0,i)){cur=w.applyAlg(cur,[m]);await show(cur);}cur=w.applyAlg(cur,[s1.moves[i+1]]);await show(cur);await sleep(300);
         assert.strictEqual(step(),s1,'the other order of two opposite faces keeps the step');assert.strictEqual(step().n,i+1);assert.strictEqual(step().moves[i],s1.moves[i+1],'the hint reads in the order made');

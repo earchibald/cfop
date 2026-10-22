@@ -1,8 +1,9 @@
 # The F2L guide in the smart cube lab
 
 A window in the lab (`lab/`) that guides the first two layers on the real cube,
-one pair at a time, with hints: the first move shown, the rest covered until
-the user asks. Three ways in, and the user can change the way at any step.
+one pair at a time, with hints as drills: the first move shown, every other
+move covered until the user makes it. Three ways in, and the user can change
+the way at any step.
 
 | Item | Where |
 |---|---|
@@ -25,9 +26,15 @@ The window, top to bottom:
 
 1. **The cross line.** "White cross on the bottom: made." Or, before the cross:
    "Make the white cross first. Shortest: 5 moves." with one shortest solution
-   as a covered line (`labSpoil`). It uses `crossSolutions(reframe(held), n)`
-   with `n` the shortest length from the cross table, so each state costs
-   little. Nothing below it shows until the cross is made. Most hints take a
+   as a drill line (`labHintLine`, see the step card): the first move in clear,
+   the rest covered until each is made. It uses `crossSolutions(reframe(held),
+   n)` with `n` the shortest length from the cross table, once per hint. The
+   cross hint is kept as a step's hint is (`lab.f2l.cross`: a half turn made as
+   a quarter and another shortest cross the cube is on count as on it; a move
+   off it before it is begun asks a new one from the cube as it is; off a begun
+   one the line says "Off the hint by 1 move. Back: U'" with New hint from
+   here, and the count reads "Shortest: 5 moves, 2 made"). Nothing below it
+   shows until the cross is made. Most hints take a
    cross edge out and put it back; while the user is on a hint, the line says
    "The hint takes the white cross apart for a few moves. It makes the cross
    again before it ends." and the
@@ -50,13 +57,15 @@ The window, top to bottom:
    (the site's first fixed order, `FR,FL,BL,BR`). The names are positions as
    held, so the order is a position order, not a piece order.
 5. **The step card.** "Target: front right (green, orange, white)." Under it
-   the hint: the moves as held, first move shown, the rest covered. A click
-   reveals the next, Reveal the rest, a click on an open line covers it again.
+   the hint: the moves as held, as a drill (`labHintLine`). The first move is
+   in clear. Every other move is covered, and comes out of its cover only when
+   the user makes it, in its place on the hint. No click uncovers a move, and
+   there is no Reveal (Patterns keeps its clicks and its Reveal; the guide has
+   neither). So R U R' U' shows as R · · ·; after R, R is dim and U is still
+   covered; after R U, R U are dim and R' is still covered; after R U', nothing
+   more shows, and the card says the way back.
    The count: "7 moves", then "7 moves, 2 made" as the user goes, and
-   "· a combination" when the hint came from Use this. As the user turns the
-   cube, the moves done so far, if they follow the hint, show as plain and dim
-   before the first covered move, so the hint walks with the user. A move that
-   is part of a revealed run keeps the rest of the run revealed. A half turn
+   "· a combination" when the hint came from Use this. A half turn
    made as two quarter turns stays on the hint (`f2lPart`). A move off the
    hint that is on another shortest solution, or on the hint with two moves on
    opposite faces made in the other order, goes on with that list from where
@@ -70,10 +79,9 @@ The window, top to bottom:
    for a new hint for the same pair from the cube as it is. Back on the hint,
    the line goes. Back at the hint's start (no move of it made), the hint
    follows the cube again. The hint does not change under the user: while the
-   cube is on it, or away from a begun hint, the step stays, with what the
-   user has revealed, whatever else happens (a mode or order change, a move
-   made and unmade). A step the user has not begun re-picks on a mode or
-   order change.
+   cube is on it, or away from a begun hint, the step stays, whatever else
+   happens (a mode or order change, a move made and unmade). A step the user
+   has not begun re-picks on a mode or order change.
 6. **Combinations** (a box, Look for combinations, kept in `cw:labF2LCombo`,
    off by default). Under the step card, for the target:
    - **Also makes**: a solution that solves the target and one other slot
@@ -188,7 +196,7 @@ table and both pair tables as the heuristic, as `solveF2LPair` does with
 
 - `lab.f2l`: `{open, mode, order, target, done:[], step:{slot, start, at, moves, optimal, combos, begun, away, off}, log:[], seq, timer}`. `step.start` is the cube when the step began, `step.at` the index into `lab.moves` (as `lab.goal.at`), so the moves the user made for the step are `lab.moves.slice(step.at)`. As built, the step keeps `base` (the cube its current hint starts from, which a move off the hint renews) and `best` (the shortest length when the step began) in place of `start`.
 - `labF2LRead(cube)`: the live entry. `labF2LShow(on)`, `labF2LDraw()`, `labF2LPick(slot)`, `labF2LMode(m)`, `labF2LOrderMove(slot, dir)`, `labF2LUse(moves)`, `labF2LReset()`.
-- Reuse `labSpoil` for every covered line, with keys `f2l:<step index>:<kind>` so a redraw keeps what is open (`lab.patOpen`).
+- The hint and the cross line are drills (`labHintLine`): nothing is open but the first move and the moves made, so a redraw has nothing to keep. The combinations keep `labSpoil`, with keys `f2l:<step index>:<kind>` so a redraw keeps what is open (`lab.patOpen`).
 - Keys: F opens and closes the window. Esc closes the front-most of the Patterns and F2L windows. Add `<kbd>F</kbd>` to the button.
 - The window drags as Patterns does: factor `labPatDrag` into `labWinDrag(el, key)` and use it for both, with `cw:labF2LWin` for the place. The default place: right of the Patterns window, under the bar.
 
@@ -207,8 +215,10 @@ table and both pair tables as the heuristic, as `solveF2LPair` does with
 
 In `test/lab.js`: the window opens with F and the button, shows the cross line
 before the cross, then the chips and the step card after; the hint is a
-covered line with the first move shown; a turn of the fake cube along the
-hint marks the move done; the target chip click, the mode switch and the
+drill line with the first move in clear, a click uncovers nothing, a turn of
+the fake cube along the hint marks the move done and the next stays covered,
+a wrong move shows nothing more; the cross line is the same drill, with the
+way back and New hint from here; the target chip click, the mode switch and the
 order arrows change the target; New scramble starts it over; the place is kept.
 
 Add `node test/lab-f2l.js` to the `test` script in `package.json`.
