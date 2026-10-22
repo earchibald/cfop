@@ -1,17 +1,18 @@
-// The F2L guide of the lab (lab/f2l.js), without a DOM: on random scrambles with the cross solved,
+// The F2L guide (js/f2l.js, shared by the site and the lab), without a DOM: on random scrambles with the cross solved,
 // every step of both modes solves its target and keeps the cross and the slots before it; a custom
 // order and a click target are followed; f2lPairSolutions lists each shortest solution once (a brute
 // force agrees on short cases) and its optimal is solveF2LPair's; the combinations solve what they
 // say; f2lDone and f2lPart follow a hint; the slot words read as held.
 const assert=require('assert');
-const run=require('./vm-load')('js/engine.js','lab/f2l.js');
+const run=require('./vm-load')('js/engine.js','js/algs.js','js/f2l.js');
 const g=name=>run(name);
 // The arrays come from another realm: compare them as JSON.
 const J=x=>JSON.parse(JSON.stringify(x)),deq=(a,b,m)=>assert.deepStrictEqual(J(a),J(b),m);
 const Cube=g('Cube'),applyAlg=g('applyAlg'),parseAlg=g('parseAlg'),SLOTS=g('SLOTS'),slotSolved=g('slotSolved'),crossSolved=g('crossSolved'),f2lSolved=g('f2lSolved');
 const solveCross=g('solveCross'),randomMoveScramble=g('randomMoveScramble'),solveF2LPair=g('solveF2LPair'),reframe=g('reframe');
-const f2lSlotWords=g('f2lSlotWords'),f2lState=g('f2lState'),f2lPairSolutions=g('f2lPairSolutions'),f2lNext=g('f2lNext'),f2lThen=g('f2lThen'),f2lCombos=g('f2lCombos'),f2lDone=g('f2lDone'),f2lPart=g('f2lPart'),f2lAlong=g('f2lAlong');
+const f2lSlotWords=g('f2lSlotWords'),f2lStatus=g('f2lStatus'),f2lPairSolutions=g('f2lPairSolutions'),f2lNext=g('f2lNext'),f2lThen=g('f2lThen'),f2lCombos=g('f2lCombos'),f2lDone=g('f2lDone'),f2lPart=g('f2lPart'),f2lAlong=g('f2lAlong');
 const F2L_ORDER_DEFAULT=g('F2L_ORDER_DEFAULT'),F2L_COMBO_EXTRA=g('F2L_COMBO_EXTRA');
+const f2lBasic=g('f2lBasic'),f2lArc=g('f2lArc'),f2lJoined=g('f2lJoined'),f2lUnrotate=g('f2lUnrotate'),F2L_CASES=g('F2L_CASES'),AUFS=g('AUFS'),invertAlg=g('invertAlg'),derotate=g('derotate');
 const slot=n=>SLOTS.find(s=>s.name===n),solvedNames=X=>SLOTS.filter(s=>slotSolved(X,s)).map(s=>s.name);
 // The optimal of a slot with the solved slots kept, from the fast search; it is checked against
 // solveF2LPair (js/engine.js) in the solutions section below.
@@ -22,8 +23,8 @@ const T0=Date.now(),lap=n=>console.log(n+' ('+(Date.now()-T0)+' ms)');
 const N=40,cubes=[];for(let i=0;i<N;i++)cubes.push(withCross('f2l-'+i));
 assert.ok(cubes.every(crossSolved),'the cross is solved on each');
 
-// f2lState: the slots solved, and a done slot that came apart
-{const X=applyAlg(new Cube(),parseAlg("R U R'"));const st=f2lState(X,['FR','BL']);
+// f2lStatus: the slots solved, and a done slot that came apart
+{const X=applyAlg(new Cube(),parseAlg("R U R'"));const st=f2lStatus(X,['FR','BL']);
   assert.strictEqual(st.cross,true);deq(st.solved,['FL','BL','BR']);deq(st.broken,['FR'],'FR came apart');}
 
 // Both modes on every scramble: each step solves its target, keeps the cross and the slots solved
@@ -48,7 +49,7 @@ for(const mode of ['shortest','corner']){
     assert.ok(f2lSolved(X),mode+': F2L solved on scramble '+i);
   }
 }
-lap('lab-f2l modes ok');
+lap('f2l modes ok');
 
 // A custom order is followed; a click target is taken next and the order resumes after it.
 {const order=['BR','FL','FR','BL'];
@@ -65,7 +66,7 @@ lap('lab-f2l modes ok');
   assert.ok(f2lSolved(X));
   const sh=f2lNext(X0,{mode:'shortest',target:'BL'});assert.strictEqual(sh.slot,'BL','shortest keeps a click target');
   const sol=f2lNext(applyAlg(X0,r1.moves),{mode:'corner',order,target:'BL'});assert.notStrictEqual(sol.slot,'BL','a solved target is not taken again');}
-lap('lab-f2l order ok');
+lap('f2l order ok');
 
 // f2lPairSolutions: each shortest solution once, each solves and keeps, none holds a shorter one, the
 // optimal is solveF2LPair's. A brute force with the same rules lists the same solutions on short cases.
@@ -94,7 +95,7 @@ lap('lab-f2l order ok');
   }
   // a node limit gives what was found, marked partial
   const p=f2lPairSolutions(cubes[0],F2L_ORDER_DEFAULT.find(n=>!slotSolved(cubes[0],slot(n))),[],{nodeLimit:50});assert.ok(p.partial,'partial past the node limit');}
-lap('lab-f2l solutions ok');
+lap('f2l solutions ok');
 
 // f2lThen: from the cube after the hint, the slots still to do in the mode's order (a slot solved by
 // chance on the way drops out), each count the optimal from the cube before it
@@ -106,7 +107,7 @@ for(let i=0;i<10;i++){
     Z=applyAlg(Z,f2lNext(Z,{mode:'corner'}).moves);}
   assert.ok(f2lSolved(Z),'the list runs to the end of F2L');
 }
-lap('lab-f2l then ok');
+lap('f2l then ok');
 
 // Combinations: an "also" line solves both slots within the extra; a "setup" line solves the target,
 // its after is the true optimal of the next slot from there, and it beats the plain hint.
@@ -127,7 +128,7 @@ lap('lab-f2l then ok');
       assert.strictEqual(s.plain,Math.min(...op.map(n=>opt(P,n,kp))),'plain is the next step after the plain hint');}
   }
   assert.ok(also>0,'some scrambles have an also line: '+also);assert.ok(setups>0,'and a setup line: '+setups);}
-lap('lab-f2l combos ok');
+lap('f2l combos ok');
 
 // f2lDone counts a prefix of the hint; a move off it gives -1, and back on it the prefix again.
 // f2lPart: one quarter of a half turn.
@@ -154,4 +155,71 @@ lap('lab-f2l combos ok');
   // and the engine frame: R as held turns the right face as held, so the FR pair of the reframed cube is the front right as held
   const X=reframe(applyAlg(held,["R","U","R'"]));assert.ok(!slotSolved(X,slot('FR'))&&slotSolved(X,slot('FL')),'R U R\' as held takes the front right pair out');
   const w0=f2lSlotWords(new Cube());deq(w0.FR.colors,['green','red','yellow'],'white up: green, red, yellow');}
-console.log('lab-f2l ok');
+
+// The 41 cases: one per state of the front-right pair (the corner on top or in the slot, the edge
+// on top or in the slot, any top turn), each in its labelled group, and each keeps the other slots.
+{const fr=SLOTS[0],key=c=>{let best=null;for(const u of AUFS){const z=u?applyAlg(c,[u]):c;const cp=z.cp.indexOf(4),ep=z.ep.indexOf(8);const k=[cp,z.co[cp],ep,z.eo[ep]].join(',');if(!best||k<best)best=k;}return best;};
+  const grpOf=k=>{const [cp,,ep]=k.split(',').map(Number);return cp<4&&ep<4?'up':cp===4&&ep<4?'Corner down, edge up':cp<4?'Corner up, edge in slot':'Both in slot';};
+  const seen=new Map();
+  for(const f of F2L_CASES){
+    const X=reframe(applyAlg(new Cube(),invertAlg(f.alg))),k=key(X);
+    assert.ok(!seen.has(k),`cases ${seen.get(k)} and ${f.n} solve the same state`);seen.set(k,f.n);
+    const grp=grpOf(k);assert.ok(grp==='up'?/^(Basic inserts|Corner up, edge up)$/.test(f.grp):grp===f.grp,`case ${f.n} is labelled ${f.grp} but solves a ${grp} state`);
+    assert.ok(['FL','BL','BR'].every(n=>slotSolved(X,slot(n))),`case ${f.n} moves another slot`);
+    assert.ok(derotate(applyAlg(X,f.alg)).isSolved(),`case ${f.n} solves its state`);
+  }
+  const classes=new Set();
+  for(const cp of [0,1,2,3,4])for(let co=0;co<3;co++)for(const ep of [0,1,2,3,8])for(let eo=0;eo<2;eo++){
+    const c=new Cube();const other=c.cp[cp];c.cp[cp]=4;c.cp[4]=other;c.co[4]=(3-co)%3;c.co[cp]=co;const oe=c.ep[ep];c.ep[ep]=8;c.ep[8]=oe;c.eo[ep]=eo;c.eo[8]=eo;
+    if(!slotSolved(c,fr))classes.add(key(c));}
+  assert.strictEqual(classes.size,41);for(const k of classes)assert.ok(seen.has(k),'no case for the state '+k);
+  // f2lJoined: the four basic inserts are joined pairs; a case of another group is not.
+  for(const f of F2L_CASES)assert.strictEqual(f2lJoined(reframe(applyAlg(new Cube(),invertAlg(f.alg))),'FR'),f.n<=4,'joined: case '+f.n);
+}
+lap('f2l cases ok');
+
+// f2lUnrotate: the same cube, held home, from face moves only; wide and slice moves expand.
+{for(const f of F2L_CASES){const ms=parseAlg(f.alg),flat=f2lUnrotate(ms);
+    assert.ok(flat.every(m=>/^[URFDLB][2']?$/.test(m)),'face moves only: '+flat.join(' '));
+    for(let i=0;i<6;i++){const c=cubes[i];assert.ok(derotate(applyAlg(c,ms)).equals(applyAlg(c,flat)),'unrotate keeps the cube: '+f.alg);}}
+  deq(f2lUnrotate(parseAlg("y U' L' U L")),["U'","F'",'U','F']);deq(f2lUnrotate(parseAlg("M2 U M2")),f2lUnrotate(parseAlg("l2 L2 U l2 L2")));
+  deq(f2lUnrotate(['R','U',"R'"]),['R','U',"R'"]);}
+
+// f2lBasic: on every scramble and every open slot, the basic way solves the slot and keeps the
+// cross and the solved slots, names a case (or none when the pair is solved), frees a piece stuck
+// in another slot first, and its flat moves are the book's moves with the turns taken out.
+{let freed=0,cased=0;
+  for(let i=0;i<N;i++){const X=cubes[i],keep=solvedNames(X);
+    for(const n of F2L_ORDER_DEFAULT){if(keep.includes(n))continue;
+      const b=f2lBasic(X,n,keep);assert.ok(b,'a basic way for '+n+' on '+i);
+      const Y=applyAlg(X,b.flat);assert.ok(crossSolved(Y)&&slotSolved(Y,slot(n)),'the basic way solves: '+b.flat.join(' '));
+      for(const k of keep)assert.ok(slotSolved(Y,slot(k)),'the basic way keeps '+k);
+      assert.ok(derotate(applyAlg(X,b.moves)).equals(Y),'flat is the book');
+      assert.strictEqual(b.n,b.flat.length);
+      const cs=b.steps.find(s=>s.kind==='case');assert.ok(cs&&cs.n>=1&&cs.n<=41&&cs.why,'a case is named');cased++;
+      const fr=b.steps.find(s=>s.kind==='free');if(fr){freed++;assert.ok(/Free the (corner|edge)/.test(fr.text)&&fr.moves.length>0);
+        const cp=X.cp.indexOf(slot(n).corner),ep=X.ep.indexOf(slot(n).edge);assert.ok((cp>=4&&cp!==slot(n).corner)||(ep>=4&&ep!==slot(n).edge),'free only for a stuck piece');}
+      assert.strictEqual(b.steps.indexOf(cs),b.steps.length-1,'the case is the last step');
+    }}
+  assert.ok(freed>0&&cased>freed,'both kinds seen');
+  const X=cubes[0],n=F2L_ORDER_DEFAULT.find(s=>!solvedNames(X).includes(s)),short=f2lNext(X,{target:n}),basic=f2lBasic(X,n,solvedNames(X));
+  assert.ok(basic.n>=short.optimal,'the basic way is never shorter than the shortest');}
+lap('f2l basic ok');
+
+// f2lArc: every solution ends with the pair going in; events come in order; a pair that is joined
+// at the start says so; a search solution that breaks the cross says the cross edge comes out and back.
+{for(let i=0;i<N;i++){const X=cubes[i],keep=solvedNames(X);
+    for(const n of F2L_ORDER_DEFAULT){if(keep.includes(n))continue;
+      for(const moves of [f2lNext(X,{target:n}).moves,f2lBasic(X,n,keep).flat]){
+        const arc=f2lArc(X,n,moves);assert.ok(arc.length,'an arc');
+        const last=arc[arc.length-1];assert.ok(arc.some(e=>/pair goes in/.test(e.text))&&last.i<=moves.length&&/pair goes in|cross back/.test(last.text),'the pair goes in, then at most the cross comes back: '+JSON.stringify(arc));
+        for(let k=1;k<arc.length;k++)assert.ok(arc[k].i>arc[k-1].i,'in order');
+        const ins=arc.filter(e=>/pair goes in/.test(e.text)),outs2=arc.filter(e=>/pair comes out/.test(e.text));
+        assert.strictEqual(ins.length,outs2.length+1,'in once more than out');if(outs2.length)assert.ok(outs2[outs2.length-1].i<ins[ins.length-1].i,'in last');
+        const outs=arc.filter(e=>/cross edge out/.test(e.text)).length,backs=arc.filter(e=>/cross (edge )?back/.test(e.text)).length;
+        assert.ok(outs===0?backs===0:backs>0,'a cross edge out comes back');}}}
+  const X=applyAlg(new Cube(),["R","U","R'"]);const arc=f2lArc(X,'FR',["R","U'","R'"]);
+  assert.strictEqual(arc[0].i,0);assert.ok(/pair joined/.test(arc[0].text),'joined at the start: '+arc[0].text);
+  deq(f2lArc(new Cube(),'FR',[]),[{i:0,text:'pair is in'}]);}
+lap('f2l arc ok');
+console.log('f2l ok');

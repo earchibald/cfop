@@ -10,25 +10,16 @@ function badMoveText(e,extra){const m=String(e&&e.message||'').replace(/^bad mov
 function fmtMoves(ms){return (Array.isArray(ms)?ms:parseAlg(ms)).join(' ');}
 
 // ---------- rotation removal (for physical setups) ----------
-const WIDE_EXP={r:['x','L'],l:["x'",'R'],u:['y','D'],d:["y'",'U'],f:['z','B'],b:["z'",'F']};
-function expandToken(m){const b=m[0],sfx=m.slice(1);const flip=t=>sfx===''?t:sfx==='2'?t.replace("'","")+'2':(t.endsWith("'")?t.slice(0,-1):t+"'");
-  if('rludfb'.includes(b)){return WIDE_EXP[b].map(flip);}
-  if(b==='M')return [...expandToken('l'+sfx),...expandToken('L'+(sfx===''?"'":sfx==='2'?'2':''))];
-  if(b==='E')return [...expandToken('d'+sfx),...expandToken('D'+(sfx===''?"'":sfx==='2'?'2':''))];
-  if(b==='S')return [...expandToken('f'+sfx),...expandToken('F'+(sfx===''?"'":sfx==='2'?'2':''))];
-  return [m];}
-function removeRotations(moves){
-  moves=Array.isArray(moves)?moves:parseAlg(moves);
-  const net=applyAlg(new Cube(),moves);
-  if(!moves.some(m=>'xyz'.includes(m[0]))&&net.center.join()==='0,1,2,3,4,5')return moves.slice();
-  let rot=new Cube();const out=[];
-  for(const m0 of moves)for(const m of expandToken(m0)){
-    const b=m[0];
-    if('xyz'.includes(b)){rot=rot.mul(MOVES[m]);continue;}
-    const idx=FACE_NAMES.indexOf(b);out.push(FACE_NAMES[rot.center[idx]]+m.slice(1));
-  }
-  return simplify(out);
-}
+// f2lUnrotate (js/f2l.js): the same moves as face moves only, in the frame the first move was in.
+function removeRotations(moves){return f2lUnrotate(moves);}
+// The state a case algorithm solves, as the cube is held before it: the algorithm's inverse, with
+// the centers back home (reframe). An algorithm that turns the cube (a y first, say) is written
+// for a cube held before the turn, so the picture and the drill show that cube, and the turn is
+// the solver's first move. `pre` is a move made before the algorithm (an AUF), as a list.
+function caseState(alg,pre){return reframe(applyAlg(new Cube(),invertAlg([...(pre||[]),...parseAlg(alg)])));}
+// Face moves from solved, white up, that set that state up: the inverse after the turns the
+// algorithm makes in all (rotationMoves), so a turn at the end of the inverse is not lost.
+function caseSetupMoves(alg,pre){const ms=parseAlg(alg);return removeRotations([...rotationMoves(applyAlg(new Cube(),ms)),...parseAlg(invertAlg([...(pre||[]),...ms]))]);}
 // ---------- SVG cube rendering: js/draw.js ----------
 const view={yaw:-32,pitch:28,mode:'3d'};
 let displayedCube=new Cube();let fadeSet=null;
@@ -303,6 +294,7 @@ document.addEventListener('keydown',e=>{const el=document.activeElement,tag=el?e
   if(e.metaKey||e.ctrlKey||e.altKey)return;
   if(e.code==='Space'){e.preventDefault();if(e.repeat)return;if(timerHidden())toggleAuto();else timerPress();return;}
   if(timer.state==='running')return;
+  if(typeof f2lGuideKey==='function'&&f2lGuideKey(e))return; // the F2L guide: the arrows make and cover moves
   if(e.key>='1'&&e.key<='6'){const b=railButtons()[+e.key-1];if(b)b.click();}
   const jump=e.shiftKey?5:1;
   if(e.key==='ArrowLeft'){e.preventDefault();seqGo(seqState.idx-jump);}if(e.key==='ArrowRight'){e.preventDefault();seqGo(seqState.idx+jump);}
@@ -370,9 +362,9 @@ function homeTab(){return isBeg()?'learn':method==='speed2'?'ssolve':method==='s
 $$('nav.rail button').forEach(b=>b.onclick=()=>{curTab=b.dataset.tab;$$('nav.rail button').forEach(x=>x.classList.toggle('on',x===b));$$('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+curTab));
   document.body.dataset.tab=curTab;$('#mtitle').textContent=b.lastChild.textContent;store.set(tabKey(),curTab);setScope(TAB_SCOPE[curTab]);onEnterTab(curTab);document.dispatchEvent(new CustomEvent('cw:tab',{detail:curTab}));});
 function goTab(name){const b=$(`nav.rail button[data-tab="${name}"]`);if(b)b.click();}
-function onEnterTab(t){if(!seqState.drill)showForTab();else if(t==='f2l'&&f2lState.mode==='live')showF2LState();if(t==='cross')refreshCross();}
-function nextForTab(){({solve:()=>newScramble(),cross:()=>$('#crossNew').click(),f2l:()=>(f2lState.mode==='live'?$('#f2lNew'):$('#f2lRandomCase')).click(),ll:()=>$('#llNext').click(),ssolve:()=>newScramble(),ortega:()=>{const b=$('#twNextOrtega');if(b)b.click();},cll:()=>{const b=$('#twNextCll');if(b)b.click();},fsolve:()=>newScramble(),parity:()=>{const b=$('#fwNext');if(b)b.click();}}[curTab]||(()=>{}))();}
-function hintForTab(){({cross:()=>$('#crossReveal').click(),f2l:()=>(f2lState.mode==='live'?$('#f2lReveal'):$('#f2lCaseReveal')).click(),ll:()=>$('#llHint').click(),ortega:()=>{const b=$('#twRevealOrtega');if(b)b.click();},cll:()=>{const b=$('#twRevealCll');if(b)b.click();},parity:()=>{const b=$('#fwReveal');if(b)b.click();}}[curTab]||(()=>{}))();}
+function onEnterTab(t){if(!seqState.drill)showForTab();else if(t==='f2l'&&f2lState.mode==='live')showF2LState();else if(t==='f2l'&&f2lState.mode==='guide'&&typeof fgShow==='function')fgShow();if(t==='cross')refreshCross();}
+function nextForTab(){({solve:()=>newScramble(),cross:()=>$('#crossNew').click(),f2l:()=>(f2lState.mode==='guide'?$('#fgNew'):f2lState.mode==='live'?$('#f2lNew'):$('#f2lRandomCase')).click(),ll:()=>$('#llNext').click(),ssolve:()=>newScramble(),ortega:()=>{const b=$('#twNextOrtega');if(b)b.click();},cll:()=>{const b=$('#twNextCll');if(b)b.click();},fsolve:()=>newScramble(),parity:()=>{const b=$('#fwNext');if(b)b.click();}}[curTab]||(()=>{}))();}
+function hintForTab(){({cross:()=>$('#crossReveal').click(),f2l:()=>{if(f2lState.mode!=='guide')(f2lState.mode==='live'?$('#f2lReveal'):$('#f2lCaseReveal')).click();},ll:()=>$('#llHint').click(),ortega:()=>{const b=$('#twRevealOrtega');if(b)b.click();},cll:()=>{const b=$('#twRevealCll');if(b)b.click();},parity:()=>{const b=$('#fwReveal');if(b)b.click();}}[curTab]||(()=>{}))();}
 $('#autoNext').checked=store.get('autoNext',false);$('#autoNext').onchange=()=>store.set('autoNext',$('#autoNext').checked);
 $('#inspChk').checked=store.get('insp',false);$('#inspChk').onchange=()=>store.set('insp',$('#inspChk').checked);
 onTimerStop=()=>{if($('#autoNext').checked&&(curTab==='solve'||curTab==='cross'||curTab==='f2l'||curTab==='ll'||curTab==='ssolve'||curTab==='fsolve'))setTimeout(nextForTab,150);};
@@ -447,8 +439,9 @@ $('#crossCheck').onclick=()=>{let ms;try{ms=parseAlg($('#crossTry').value);apply
 $('#crossTips').innerHTML=CROSS_TIPS.map(t=>`<div class="tip"><b>${esc(t.t)}</b>${esc(t.d)}</div>`).join('');
 
 // ---------- F2L tab ----------
-const f2lState={mode:'live',key:null,cube:null,extra:[],plan:null,caseSel:new Set(F2L_CASES.map(c=>c.n)),curCase:null,caseSetup:null,caseAUF:''};
-$$('#f2lMode button').forEach(b=>b.onclick=()=>{f2lState.mode=b.dataset.m;$$('#f2lMode button').forEach(x=>x.classList.toggle('on',x===b));$('#f2lLive').classList.toggle('hidden',f2lState.mode!=='live');['#f2lCases','#f2lCaseOut','#f2lCaseList','#f2lStatsPanel'].forEach(s=>$(s).classList.toggle('hidden',f2lState.mode!=='cases'));if(f2lState.mode==='live')showF2LState();else{renderCaseStats();if(!seqState.drill)showScr();}});
+const f2lState={mode:'guide',key:null,cube:null,extra:[],plan:null,caseSel:new Set(F2L_CASES.map(c=>c.n)),curCase:null,caseSetup:null,caseAUF:''};
+// Three modes: Guide (js/f2l-ui.js), Live (the pair plan behind Reveal) and The 41 cases.
+$$('#f2lMode button').forEach(b=>b.onclick=()=>{f2lState.mode=b.dataset.m;$$('#f2lMode button').forEach(x=>x.classList.toggle('on',x===b));$('#f2lLive').classList.toggle('hidden',f2lState.mode!=='live');$('#f2lGuide').classList.toggle('hidden',f2lState.mode!=='guide');['#f2lCases','#f2lCaseOut','#f2lCaseList','#f2lStatsPanel'].forEach(s=>$(s).classList.toggle('hidden',f2lState.mode!=='cases'));if(f2lState.mode==='guide'){if(typeof fgShow==='function')fgShow();}else if(f2lState.mode==='live')showF2LState();else{renderCaseStats();if(!seqState.drill)showScr();}});
 // The F2L state of the current scramble: rotate, solve the cross, then solve pairs until the chosen number is left.
 function f2lKey(){return [scr.moves.join(' '),crossRotation(),$('#f2lPairs').value].join('|');}
 function ensureF2L(cb){if(f2lState.key===f2lKey()){cb();return;}ensureTables(()=>{let c=toFrame(scr.cube);const r=crossRotation();const extra=r?[r]:[];const csm=parseAlg(solveCross(c,0,1).solutions[0]);c=applyAlg(c,csm);extra.push(...csm);
@@ -467,7 +460,7 @@ const groups=[...new Set(F2L_CASES.map(c=>c.grp))];groups.forEach(g=>{const o=do
 const f2lId=n=>'f2l-'+n;
 f2lState.caseSel=new Set(store.get('f2lSel',F2L_CASES.map(c=>c.n)));
 function saveF2L(){store.set('f2lSel',[...f2lState.caseSel]);}
-function caseSetupCube(f){return phys(derotate(applyAlg(new Cube(),invertAlg(f.alg))));}
+function caseSetupCube(f){return phys(caseState(f.alg));}
 function renderF2LGrid(){const g=$('#f2lGroup').value;$('#f2lCaseGrid').innerHTML=F2L_CASES.filter(c=>g==='all'||c.grp===g).map(c=>`<div class="case ${f2lState.caseSel.has(c.n)?'sel':''}" data-n="${c.n}" tabindex="0" title="Open details. Shift-click to add or remove from training.">${thumb3D(caseSetupCube(c))}<div>#${c.n}</div>${stBtn(f2lId(c.n))}</div>`).join('');
   $$('#f2lCaseGrid .case').forEach(el=>{const n=+el.dataset.n;
     el.onclick=e=>{if(e.target.closest('.stbtn'))return;if(e.shiftKey){if(f2lState.caseSel.has(n))f2lState.caseSel.delete(n);else f2lState.caseSel.add(n);saveF2L();renderF2LGrid();return;}openCaseModal(modalForF2L(F2L_CASES.find(c=>c.n===n)));};
@@ -477,7 +470,7 @@ $('#f2lSelAll').onclick=()=>{F2L_CASES.forEach(c=>f2lState.caseSel.add(c.n));sav
 $('#f2lSelUnlearned').onclick=()=>{f2lState.caseSel=new Set(F2L_CASES.filter(c=>llState.status[f2lId(c.n)]!=='finished').map(c=>c.n));saveF2L();renderF2LGrid();};
 function f2lSetupCube(){return applyAlg(new Cube(),[...(crossRotation()?[crossRotation()]:[]),...f2lState.caseSetup]);}
 function setF2LCase(n){const f=F2L_CASES.find(c=>c.n===n);f2lState.curCase=n;const auf=AUFS[Math.floor(Math.random()*4)];// state = inv(alg) then U^-auf ; solve = auf then alg
-  const setup=removeRotations([...parseAlg(invertAlg(f.alg)),...(auf?[invertAlg(auf)]:[])]);f2lState.caseSetup=setup;f2lState.caseAUF=auf;f2lState.caseRevealed=false;currentLabel=()=>'F2L case #'+n;timer.scope='f2l:'+n;renderTimes();
+  const setup=caseSetupMoves(f.alg,auf?[auf]:[]);f2lState.caseSetup=setup;f2lState.caseAUF=auf;f2lState.caseRevealed=false;currentLabel=()=>'F2L case #'+n;timer.scope='f2l:'+n;renderTimes();
   view.mode='3d';view.yaw=-32;view.pitch=28;const r=crossRotation();setSequence([...(r?[r]:[]),...setup],'setup for case (from solved, white up: rotate, then turn)',undefined,'F2L case');renderF2LCaseOut();}
 function f2lSolution(){const f=F2L_CASES.find(c=>c.n===f2lState.curCase);return removeRotations([...(f2lState.caseAUF?[f2lState.caseAUF]:[]),...parseAlg(f.alg)]);}
 function renderF2LCaseOut(){const n=f2lState.curCase;if(!n)return;const f=F2L_CASES.find(c=>c.n===n);const arr=times['f2l:'+n]||[];const rev=f2lState.caseRevealed;
@@ -645,11 +638,11 @@ function goNext(){const id=modalNext;modalNext=null;if(!id||!mobileMQ.matches)re
 function popClose(){const b=$('#modalBg');if(b){b.remove();document.removeEventListener('keydown',escClose);}window.removeEventListener('popstate',popClose);goNext();}
 function closeModal(){const b=$('#modalBg');if(!b)return;b.remove();document.removeEventListener('keydown',escClose);window.removeEventListener('popstate',popClose);if(window.history.state&&window.history.state.modal){try{window.history.back();}catch(e){}}goNext();}
 function caseWithParts(c,mode){const P=phys(c),parts=caseParts(c,P.toFacelets(),mode);return {parts,pic:mode==='f2l'?thumb3DMarks(P,parts):thumbTop(P,mode,parts)};}
-function modalForLL(a){const c=applyAlg(new Cube(),invertAlg(a.alg));return {title:a.name,statusId:a.id,tab:'ll',group:a.group,alg:a.alg,recog:a.recog,why:a.why,...caseWithParts(c,modeFor(a.group)),setupMoves:removeRotations(parseAlg(invertAlg(a.alg)))};}
-function modalForPLL(p){const c=derotate(applyAlg(new Cube(),invertAlg(p.alg)));const two=LL_ALL.find(x=>x.name.startsWith(p.name+' '));return {title:p.name+' perm',tab:'ll',group:'PLL · '+p.type,alg:p.alg,recog:two?two.recog:'',why:two?two.why:'',...caseWithParts(c,'pll'),setupMoves:removeRotations(parseAlg(invertAlg(p.alg)))};}
-function modalForF2L(f){const c=derotate(applyAlg(new Cube(),invertAlg(f.alg)));const cpos=c.cp.indexOf(4),epos=c.ep.indexOf(8);
+function modalForLL(a){const c=caseState(a.alg);return {title:a.name,statusId:a.id,tab:'ll',group:a.group,alg:a.alg,recog:a.recog,why:a.why,...caseWithParts(c,modeFor(a.group)),setupMoves:caseSetupMoves(a.alg)};}
+function modalForPLL(p){const c=caseState(p.alg);const two=LL_ALL.find(x=>x.name.startsWith(p.name+' '));return {title:p.name+' perm',tab:'ll',group:'PLL · '+p.type,alg:p.alg,recog:two?two.recog:'',why:two?two.why:'',...caseWithParts(c,'pll'),setupMoves:caseSetupMoves(p.alg)};}
+function modalForF2L(f){const c=caseState(f.alg);const cpos=c.cp.indexOf(4),epos=c.ep.indexOf(8);
   const recog=`Pair for the front-right slot. Corner is at ${CORNER_NAMES[cpos]}${cpos<4?` with its ${COLOR_NAMES[phys(c).toFacelets()[cornerFacelet[cpos][0]]]} sticker on top`:''}; edge is at ${EDGE_NAMES[epos]}.`;
-  return {title:'F2L case #'+f.n,statusId:f2lId(f.n),tab:'f2l',group:f.grp,alg:f.alg,recog,why:F2L_WHY[f.grp]||'',...caseWithParts(c,'f2l'),setupMoves:removeRotations(parseAlg(invertAlg(f.alg)))};}
+  return {title:'F2L case #'+f.n,statusId:f2lId(f.n),tab:'f2l',group:f.grp,alg:f.alg,recog,why:F2L_WHY[f.grp]||'',...caseWithParts(c,'f2l'),setupMoves:caseSetupMoves(f.alg)};}
 
 // ---------- REFERENCE ----------
 // Each reference algorithm shows its first move; a spoiler covers each move after it. A click on the line

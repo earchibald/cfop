@@ -333,6 +333,12 @@ const ROTATIONS=(()=>{const out=[];const seen=new Set();let frontier=[new Cube()
 function derotate(c){if(c.center.join()==='0,1,2,3,4,5')return c;for(const r of ROTATIONS){const n=c.mul(r);if(n.center.join()==='0,1,2,3,4,5')return n;}return c;}
 function isSolvedAny(c){return derotate(c).isSolved();}
 function rotationToRestore(c){for(const r of ROTATIONS){const n=c.mul(r);if(n.center.join()==='0,1,2,3,4,5')return r;}return null;}
+// The whole-cube turns (x, y, z, their primes and doubles, the fewest) that put the centers where
+// c has them, from home: [] for home centers. For a move list that must end held as c is.
+const ROTATION_MOVES=(()=>{const m=new Map([['0,1,2,3,4,5',[]]]);let layer=[{c:new Cube(),ms:[]}];
+  while(layer.length){const next=[];for(const h of layer)for(const t of ['x','y','z',"x'","y'","z'",'x2','y2','z2']){const c=h.c.mul(MOVES[t]),k=c.center.join();if(m.has(k))continue;const ms=[...h.ms,t];m.set(k,ms);next.push({c,ms});}layer=next;}
+  return m;})();
+function rotationMoves(c){return (ROTATION_MOVES.get(c.center.join())||[]).slice();}
 Cube.prototype.isSolvedAny=function(){return isSolvedAny(this);};
 
 // ---------- facelets -> cube, with validation ----------

@@ -4,19 +4,21 @@
 // from a cube state when a reader is added back.
 function customName(kind){const d=new Date();const p=n=>String(n).padStart(2,'0');return `${kind}-${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;}
 // Derive a scramble from a solved-relative cube state, then load it like a seed.
-// Kept for the future cube reader. cube: a Cube in the standard (white up, green front) frame.
-function scrambleFromCube(cube,name){
-  if(puzzleN()===4){loadState(name||customName('cube'),cube);goSolveTab();return {ok:true,moves:[]};} // the state itself is the mix-up
+// cube: a Cube in the standard (white up, green front) frame. The page goes to the Solve tab,
+// unless `stay` is set (the F2L guide's Set up from current keeps its tab).
+function scrambleFromCube(cube,name,stay){
+  const go=()=>{if(!stay)goSolveTab();};
+  if(puzzleN()===4){loadState(name||customName('cube'),cube);go();return {ok:true,moves:[]};} // the state itself is the mix-up
   if(puzzleN()===2){ // the corners only: face moves from a solved cube, white up, that give them
     const scr=twoScrambleFor(cube);if(!scr)return {ok:false,errors:['No scramble found.']};
-    loadScramble(name||customName('cube'),scr,true);goSolveTab();return {ok:true,moves:scr};}
+    loadScramble(name||customName('cube'),scr,true);go();return {ok:true,moves:scr};}
   const res=(typeof fromFacelets==='function')?fromFacelets(cube.toFacelets()):{ok:true,cube};
   if(!res.ok)return {ok:false,errors:res.errors};
   const sol=solveTwoPhase(res.cube,{timeMs:1500,target:-1});
   if(!sol)return {ok:false,errors:['No scramble found.']};
   const scr=invertAlg(sol);
   if(!applyAlg(new Cube(),scr).equals(res.cube))return {ok:false,errors:['The scramble does not match the cube.']};
-  loadScramble(name||customName('cube'),scr,true);goSolveTab();return {ok:true,moves:scr};
+  loadScramble(name||customName('cube'),scr,true);go();return {ok:true,moves:scr};
 }
 function goSolveTab(){const t=isBeg()?'bsolve':method==='speed2'?'ssolve':method==='speed4'?'fsolve':'solve';if(curTab!==t)goTab(t);focusPlayer();}
 

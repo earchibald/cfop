@@ -371,7 +371,7 @@ async function page(){
     let hs=$('#f2lCard .hint');assert.deepStrictEqual(hintMoves(hs),[...s.moves],'the hint is the step\'s moves');
     assert.deepStrictEqual(hintShape(hs),{did:[],clear:[s.moves[0]],covered:s.moves.length-1},'its first move in clear, the rest covered');assert.strictEqual($('#f2lCard .cnt').textContent,s.moves.length+' moves');
     assert.strictEqual($('#f2lCard .cross'),null);assert.strictEqual(L().f2l.cross,null,'no cross hint with the cross made');
-    const X0=w.reframe(F0),best=w.f2lPairSolutions(X0,s.slot,w.f2lState(X0,[]).solved).optimal;assert.strictEqual(s.moves.length,best,'a shortest hint');
+    const X0=w.reframe(F0),best=w.f2lPairSolutions(X0,s.slot,w.f2lStatus(X0,[]).solved).optimal;assert.strictEqual(s.moves.length,best,'a shortest hint');
     assert.ok(await until(()=>!$('#f2lThen').hidden),'Then follows');assert.ok(/^Then (front|back) (right|left), \d+ moves?/.test($('#f2lThen').textContent),'Then: '+$('#f2lThen').textContent);
     // no click uncovers a move, and there is no Reveal
     click(hs);click(hs.querySelector('.sp-m'));assert.deepStrictEqual(hintShape($('#f2lCard .hint')),{did:[],clear:[s.moves[0]],covered:s.moves.length-1},'a click uncovers nothing');assert.strictEqual($('#f2lCard .sp-btn'),null,'no Reveal');

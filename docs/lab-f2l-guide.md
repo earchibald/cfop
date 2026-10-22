@@ -1,5 +1,8 @@
 # The F2L guide in the smart cube lab
 
+The solvers moved to `js/f2l.js` and the guide came to the site's F2L tab as
+Guide mode: see `docs/f2l-site.md`. The lab window below is as it was.
+
 A window in the lab (`lab/`) that guides the first two layers on the real cube,
 one pair at a time, with hints as drills: the first move shown, every other
 move covered until the user makes it. Three ways in, and the user can change
@@ -7,9 +10,9 @@ the way at any step.
 
 | Item | Where |
 |---|---|
-| The solver and the steps (pure, no DOM) | `lab/f2l.js` |
+| The solver and the steps (pure, no DOM) | `js/f2l.js` |
 | The window and the live follow | `lab/lab.js` (`labF2L*`), markup and CSS in `lab/index.html` |
-| Tests | `test/lab-f2l.js` (pure, every mode on random scrambles), and a section in `test/lab.js` (the window over the fake bridge) |
+| Tests | `test/f2l.js` (pure, every mode on random scrambles), and a section in `test/lab.js` (the window over the fake bridge) |
 | Storage | `cw:labF2LOrder` (the by-corner order), `cw:labF2LMode`, `cw:labF2LCombo`, `cw:labF2LWin` (the window's place). The list of solved pairs is not kept: it belongs to one solve, and New scramble empties it |
 | Version | `LAB_VERSION` 0.18.0 |
 | Docs | A row in the lab table of `docs/smart-cube.md` |
@@ -155,7 +158,7 @@ ends only when its pair is solved with the cross. Pairs are judged as come
 apart only while the cross is made. The window computes only while it is
 open.
 
-## The pure part: `lab/f2l.js`
+## The pure part: `js/f2l.js`
 
 Load it after `js/engine.js` and before `lab/lab.js`. No DOM. The engine's
 frame is the cube as held after `reframe`: D is the bottom as held, F the
@@ -164,7 +167,7 @@ front as held, and the moves that come out read as held.
 ```js
 F2L_ORDER_DEFAULT = ['FR','FL','BL','BR']
 f2lSlotWords(held)            // {FR:{pos:'front right', colors:['green','orange','white']}, ...}: the position as held and the colors of the slot's corner (F, R, D centers as held, in that order for FR; FL: F, L, D; BL: B, L, D; BR: B, R, D)
-f2lState(X, done)             // {cross:bool, solved:['FR',...], broken:['FL',...]}: which slots are solved, and which of `done` came apart
+f2lStatus(X, done)             // {cross:bool, solved:['FR',...], broken:['FL',...]}: which slots are solved, and which of `done` came apart
 f2lPairSolutions(X, slot, keep, {extra:0, limit:60, nodeLimit})
                               // every solution of `slot` keeping cross and `keep`, at the optimal length and up to `extra` longer: {optimal, byLen}, canonical as crossSolutions (no face twice in a row, commuting pairs in one order). The same IDA* as solveF2LPair, continued past the first find at each bound.
 f2lNext(X, {mode, order, done, target})
@@ -202,7 +205,7 @@ table and both pair tables as the heuristic, as `solveF2LPair` does with
 
 ## Tests
 
-`test/lab-f2l.js` (pure, through `test/vm-load.js` as `test/lab.js` loads
+`test/f2l.js` (pure, through `test/vm-load.js` as `test/lab.js` loads
 `lab/smack.js`), on at least 40 random scrambles after a solved cross:
 
 - Shortest and by-corner: every step's moves solve the target, keep the cross and the done slots, and the four steps end with F2L solved.
@@ -221,7 +224,7 @@ a wrong move shows nothing more; the cross line is the same drill, with the
 way back and New hint from here; the target chip click, the mode switch and the
 order arrows change the target; New scramble starts it over; the place is kept.
 
-Add `node test/lab-f2l.js` to the `test` script in `package.json`.
+Add `node test/f2l.js` to the `test` script in `package.json`.
 
 ## Not in this round
 

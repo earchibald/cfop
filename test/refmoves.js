@@ -28,6 +28,14 @@ w.addEventListener('load',async()=>{try{
     ...PLL.map(p=>texts(`modalForPLL(PLL_FULL.find(p=>p.name==='${p.name}'))`)),...F2L.map(f=>texts(`modalForF2L(F2L_CASES.find(f=>f.n===${f.n}))`))];
   assert.ok(all.every(t=>t.length),'every case has a part');
   assert.ok(all.flat().every(t=>!/\b[UDFBRL]{2,3}\b/.test(t)),'plain words, no piece codes');
+  // Every case window's setup, then its algorithm, gives a solved cube; so does every F2L case drill.
+  // (A case written with a turn first is pictured before the turn.)
+  assert.deepStrictEqual(JSON.parse(w.eval(`JSON.stringify((()=>{const bad=[];const check=(o,name)=>{const c=applyAlg(applyAlg(new Cube(),o.setupMoves),removeRotations(parseAlg(o.alg)));if(!c.isSolvedAny())bad.push(name);};
+    for(const f of F2L_CASES){check(modalForF2L(f),'f2l'+f.n);setF2LCase(f.n);if(!applyAlg(f2lSetupCube(),f2lSolution()).isSolvedAny())bad.push('drill'+f.n);}
+    for(const p of PLL_FULL)check(modalForPLL(p),'pll'+p.name);for(const a of LL_ALL)check(modalForLL(a),a.id);return bad;})())`)),[],'every setup is solved by its algorithm');
+  w.eval('showScr()');
+  // F2L case 2 turns the cube first: its picture shows the front-right slot, not the front-left.
+  assert.deepStrictEqual(texts(`modalForF2L(F2L_CASES[1])`),['Corner goes into the slot: from top front right','Edge goes into the slot: from top front'],'F2L 2 is pictured before its turn');
   // The small cards carry no What it moves marks.
   assert.strictEqual($$('#refDesktop .mv, #refMobileCases .mv').length,0,'clean cards');
   // The details open with a clean picture: the marks are there, one per part, and none shows.

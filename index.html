@@ -177,9 +177,25 @@
     <section class="tab" id="tab-f2l" data-sec="f2l">
       <div class="panel">
         <div class="row" style="justify-content:space-between"><h2>F2L</h2>
-          <div class="status-sel" id="f2lMode"><button data-m="live" class="on">Real cross-solved states</button><button data-m="cases">The 41 cases</button></div></div>
+          <div class="status-sel" id="f2lMode"><button data-m="guide" class="on">Guide</button><button data-m="live">Real cross-solved states</button><button data-m="cases">The 41 cases</button></div></div>
       </div>
-      <div class="panel" id="f2lLive">
+      <div class="panel fg" id="f2lGuide">
+        <p class="muted" style="margin-top:0">One pair at a time. The hint is a drill: the first move shows, and every other move shows when you make it. Pick a pair, a way, or an order. The cube on the left follows.</p>
+        <div class="row"><button class="primary" id="fgNew">New scramble<span class="hk" aria-hidden="true">N</span></button><button id="fgRead" title="Read a real cube with the camera">Read my cube</button><button id="fgReturn" disabled title="The moves that bring your cube back to the scramble">Return to scramble</button><button id="fgSetup" disabled title="Your cube as it is becomes the scramble">Set up from current</button></div>
+        <div class="fg-cube" id="fgCube"></div>
+        <div id="fgDrill" hidden></div>
+        <div class="fg-cross" id="fgCross"></div>
+        <div class="fg-main" id="fgMain" hidden>
+          <div class="fg-chips" id="fgChips" role="group" aria-label="The four pairs, in order"></div>
+          <div class="fg-mode"><span>Target</span><button type="button" id="fgShortest" aria-pressed="true" title="The open pair with the fewest moves from here">Shortest</button><button type="button" id="fgCorner" aria-pressed="false" title="The pairs in the order below">By corner</button><button type="button" id="fgOrderBtn" aria-expanded="false" aria-controls="fgOrder">Order</button><span class="grow"></span><span class="count" id="fgCount"></span></div>
+          <div class="fg-order" id="fgOrder" hidden></div>
+          <div class="fg-card" id="fgCard"></div>
+          <div class="fg-tree" id="fgTree" hidden></div>
+          <div class="fg-then" id="fgThen" hidden></div>
+          <div class="fg-done" id="fgDone" hidden></div>
+        </div>
+      </div>
+      <div class="panel hidden" id="f2lLive">
         <p class="muted">The current scramble is solved through the cross for you. The dashed moves in the player show that part. Solve F2L, then compare with the pair plan. The app finds short inserts for each pair. They often differ from the textbook algorithm. Both are correct, so learn why each one works.</p>
         <div class="row"><button class="primary" id="f2lNew">New scramble<span class="hk" aria-hidden="true">N</span></button><button id="f2lReveal">Reveal<span class="hk" aria-hidden="true">H</span></button><label>Pairs left <select id="f2lPairs"><option>4</option><option>3</option><option>2</option><option>1</option></select></label></div>
         <div id="f2lPlan" style="margin-top:10px"></div>
@@ -289,12 +305,14 @@
 <script src="js/state-text.js"></script>
 <script src="js/draw.js"></script>
 <script src="js/solver.js"></script>
+<script src="js/resync.js"></script>
 <script src="js/beginner.js"></script>
 <script src="js/mini.js"></script>
 <script src="js/master.js"></script>
 <script src="js/algs.js"></script>
 <script src="js/speed2.js"></script>
 <script src="js/speed4.js"></script>
+<script src="js/f2l.js"></script>
 <script src="js/app.js"></script>
 <script src="js/enter.js"></script>
 <script src="js/scan-assemble.js"></script>
@@ -304,6 +322,7 @@
 <script src="js/smart-ui.js"></script>
 <script src="js/stage.js"></script>
 <script src="js/cubetab.js"></script>
+<script src="js/f2l-ui.js"></script>
 <script src="js/beginner-ui.js"></script>
 <script src="js/beghome.js"></script>
 <script src="js/learn.js"></script>

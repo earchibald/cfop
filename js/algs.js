@@ -82,19 +82,23 @@ const PLL_FULL=[
   {name:'Y',alg:"F R U' R' U' R U R' F' R U R' U' R' F R F'",type:'Diagonal corner + edge swap'},
   {name:'Z',alg:"M' U M2 U M2 U M' U2 M2 U'",type:'Edge double swap'},
 ];
-// F2L: the 41 standard cases (front-right slot). Setup = inverse of alg.
+// F2L: the 41 cases for the front-right slot, one per state of the pair (the corner on top or in
+// the slot, the edge on top or in the slot, any top turn), in the groups of the common lists.
+// test/f2l.js checks that they cover every state once and keep the other three slots. A case
+// that starts with y is held with the slot at the front right, then turned: the picture and the
+// drill show the state before the turn (caseSetupMoves in app.js).
 const F2L_CASES=[
   {n:1,alg:"U R U' R'",grp:'Basic inserts'},{n:2,alg:"y U' L' U L",grp:'Basic inserts'},{n:3,alg:"y L' U' L",grp:'Basic inserts'},{n:4,alg:"R U R'",grp:'Basic inserts'},
   {n:5,alg:"U' R U R' U2 R U' R'",grp:'Corner up, edge up'},{n:6,alg:"d R' U' R U2 R' U R",grp:'Corner up, edge up'},{n:7,alg:"U' R U2 R' U2 R U' R'",grp:'Corner up, edge up'},{n:8,alg:"d R' U2 R U2 R' U R",grp:'Corner up, edge up'},
   {n:9,alg:"U' R U' R' U y' R' U' R",grp:'Corner up, edge up'},{n:10,alg:"U' R U R' U R U R'",grp:'Corner up, edge up'},{n:11,alg:"U' R U2 R' U y' R' U' R",grp:'Corner up, edge up'},{n:12,alg:"R' U2 R2 U R2 U R",grp:'Corner up, edge up'},
-  {n:13,alg:"d R' U R U' R' U' R",grp:'Corner up, edge up'},{n:14,alg:"U' R U' R' U R U R'",grp:'Corner up, edge up'},{n:15,alg:"R U R' U' R U R' U' R U R'",grp:'Corner up, edge up'},{n:16,alg:"y L' U L U' L' U L U' L' U L",grp:'Corner up, edge up'},
+  {n:13,alg:"d R' U R U' R' U' R",grp:'Corner up, edge up'},{n:14,alg:"U' R U' R' U R U R'",grp:'Corner up, edge up'},{n:15,alg:"R U' R' U2 R U R'",grp:'Corner up, edge up'},{n:16,alg:"y L' U L U2 L' U' L",grp:'Corner up, edge up'},
   {n:17,alg:"R U2 R' U' R U R'",grp:'Corner up, edge up'},{n:18,alg:"y L' U2 L U L' U' L",grp:'Corner up, edge up'},{n:19,alg:"U R U2 R' U R U' R'",grp:'Corner up, edge up'},{n:20,alg:"y U' L' U2 L U' L' U L",grp:'Corner up, edge up'},
-  {n:21,alg:"R U' R' U2 y L' U' L",grp:'Corner up, edge up'},{n:22,alg:"R U2 R' U2 y L' U' L",grp:'Corner up, edge up'},{n:23,alg:"U R U' R' U' R U' R' U R U' R'",grp:'Corner up, edge up'},{n:24,alg:"U' R U R' U R U R' U R U R'",grp:'Corner up, edge up'},
-  {n:25,alg:"U' R' F R F' R U R'",grp:'Corner down, edge up'},{n:26,alg:"U R U' R' U' y L' U L",grp:'Corner down, edge up'},{n:27,alg:"R U' R' U R U' R'",grp:'Corner down, edge up'},{n:28,alg:"R U R' U' y L' U L",grp:'Corner down, edge up'},
+  {n:21,alg:"R U' R' U2 y L' U' L",grp:'Corner up, edge up'},{n:22,alg:"F' U F U2 R U R'",grp:'Corner up, edge up'},{n:23,alg:"U R U' R' U' R U' R' U R U' R'",grp:'Corner up, edge up'},{n:24,alg:"R U R' U' R U' R' U y L' U' L",grp:'Corner up, edge up'},
+  {n:25,alg:"U' R' F R F' R U R'",grp:'Corner down, edge up'},{n:26,alg:"U R U' R' U' y L' U L",grp:'Corner down, edge up'},{n:27,alg:"R U' R' U R U' R'",grp:'Corner down, edge up'},{n:28,alg:"U R U2 R' F' U2 F",grp:'Corner down, edge up'},
   {n:29,alg:"R' F R F' U R U' R'",grp:'Corner down, edge up'},{n:30,alg:"R U R' U' R U R'",grp:'Corner down, edge up'},
   {n:31,alg:"U' R' F R F' R U' R'",grp:'Corner up, edge in slot'},{n:32,alg:"U R U' R' U R U' R' U R U' R'",grp:'Corner up, edge in slot'},{n:33,alg:"U' R U' R' U2 R U' R'",grp:'Corner up, edge in slot'},{n:34,alg:"U R U R' U2 R U R'",grp:'Corner up, edge in slot'},
-  {n:35,alg:"U' R U R' U y L' U L",grp:'Corner up, edge in slot'},{n:36,alg:"U R U' R' U' y L' U L",grp:'Corner up, edge in slot'},
-  {n:37,alg:"R2 U2 F R2 F' U2 R' U R'",grp:'Both in slot'},{n:38,alg:"R U' R' U' R U R' U2 R U' R'",grp:'Both in slot'},{n:39,alg:"R U' R' U R U2 R' U R U' R'",grp:'Both in slot'},{n:40,alg:"R U' R' U' R U' R' U y L' U L",grp:'Both in slot'},{n:41,alg:"R U R' U' R U' R' U y L' U' L",grp:'Both in slot'},
+  {n:35,alg:"U F' U' F U' R U R'",grp:'Corner up, edge in slot'},{n:36,alg:"R U R' U' y L' U L",grp:'Corner up, edge in slot'},
+  {n:37,alg:"R2 U2 F R2 F' U2 R' U R'",grp:'Both in slot'},{n:38,alg:"R U' R' U' R U R' U2 R U' R'",grp:'Both in slot'},{n:39,alg:"R U' R' U R U2 R' U R U' R'",grp:'Both in slot'},{n:40,alg:"R U' R' U' R U' R' U y' R' U' R",grp:'Both in slot'},{n:41,alg:"R U R' U' R U' R' U2 y L' U' L",grp:'Both in slot'},
 ];
 // Why each F2L group works. One text per group, shown in the case window and after a reveal.
 const F2L_WHY={

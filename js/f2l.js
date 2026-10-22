@@ -1,6 +1,8 @@
-// ================= The F2L guide of the smart cube lab =================
-// The first two layers, one pair at a time, for the F2L guide window in lab/lab.js. Pure: no DOM.
-// It loads after js/engine.js (SLOTS, slotSolved, crossSolved, the cross and pair tables).
+// ================= The F2L guide =================
+// The first two layers, one pair at a time, for the Guide panel of the site (js/f2l-ui.js) and the
+// F2L guide window of the lab (lab/lab.js). Pure: no DOM.
+// It loads after js/engine.js (SLOTS, slotSolved, crossSolved, the cross and pair tables, the
+// rotations) and js/algs.js (F2L_CASES, F2L_WHY: the 41 cases for the basic way).
 // The frame: X is the cube as held after reframe (reframe(labHeld(cube)) in lab.js), so D is the
 // bottom as held, F the front as held, and every move that comes out reads as held. The slot names
 // are positions as held: FR front right, FL front left, BL back left, BR back right.
@@ -14,7 +16,7 @@
 // a sequence stops where the goal is solved, so no solution holds a shorter one.
 //
 // f2lSlotWords(held)             the position and the corner colors of each slot, as held
-// f2lState(X, done)              {cross, solved, broken}: the slots solved, and which of `done` came apart
+// f2lStatus(X, done)              {cross, solved, broken}: the slots solved, and which of `done` came apart
 // f2lPairSolutions(X, slot, keep, {extra, limit, nodeLimit})
 //                                every solution of `slot` that keeps the cross and `keep`, by length
 // f2lNext(X, {mode, order, done, target})
@@ -26,6 +28,10 @@
 //                                shortest hint that leaves the next slot shortest
 // f2lDone(start, moves, now)     how many moves of a hint the user has done; -1 off the hint
 // f2lPart(start, moves, now)     a half turn of the hint made as one quarter turn so far
+// f2lBasic(X, slot, keep)        the textbook way: free a stuck piece, then one of the 41 cases
+// f2lArc(X, slot, moves)         what each move does to the pair, in plain words
+// f2lJoined(X, slot)             the corner and the edge are a pair on top: a basic insert puts them in
+// f2lUnrotate(moves)             the same moves with no whole-cube turns (x, y, z, wide and slice moves)
 const F2L_ORDER_DEFAULT=['FR','FL','BL','BR'];
 const F2L_COMBO_EXTRA=3;       // an "also makes" line is at most this many moves longer than the target alone
 const F2L_NODES=12000000;      // the node budget of one call (about half a second at worst); past it the answer is partial
@@ -43,7 +49,7 @@ function f2lSlotWords(held){
   for(const n of F2L_ORDER_DEFAULT)o[n]={pos:F2L_POS[n],colors:F2L_SLOT_FACES[n].map(f=>COLOR_NAMES_E[c[f]])};
   return o;
 }
-function f2lState(X,done){
+function f2lStatus(X,done){
   const solved=SLOTS.filter(s=>slotSolved(X,s)).map(s=>s.name);
   return {cross:crossSolved(X),solved,broken:(done||[]).filter(n=>!solved.includes(n))};
 }
@@ -64,24 +70,29 @@ function f2lSort(sols){return sols.map((s,i)=>({s,i,c:f2lCost(s)})).sort((a,b)=>
 // Every solution of the goal (the cross and each slot in `goal`) from X, shortest first: {optimal,
 // byLen, partial, capped}. o.first: stop at the first solution. o.extra: lengths past the optimal.
 // o.budget: {left}, a node budget that several searches can share. optimal is null when no
-// solution came within o.maxDepth or the budget.
+// solution came within o.maxDepth or the budget. o.free: the last slot of the goal is not solved
+// but freed: its corner and its edge end on top or at home, with the rest of the goal solved.
 function f2lFind(X,goal,o={}){
   f2lTables();
   const slots=goal.map(f2lSlot),k=slots.length,W=4+2*k,ct=buildCrossTable(),pts=slots.map(s=>buildPairTable(s.corner,s.edge));
+  const kh=o.free?k-1:k,fs=slots[k-1]; // the slots the heuristic counts; the slot to free
+  const freeOk=s=>{const c=(s[4+2*(k-1)]/3)|0,e=(s[5+2*(k-1)]/2)|0;return (c<4||c===fs.corner)&&(e<4||e===fs.edge);};
   const maxDepth=o.maxDepth==null?F2L_MAX_DEPTH:o.maxDepth,limit=o.first?1:(o.limit||F2L_LIMIT),extra=o.first?0:(o.extra||0);
   const bud=o.budget||{left:o.nodeLimit||F2L_NODES};
   const st=[];for(let d=0;d<=maxDepth+1;d++)st.push(new Uint8Array(W));
   for(let e=4;e<8;e++)st[0][e-4]=pieceIndexEdge(X,e);
   slots.forEach((s,j)=>{st[0][4+2*j]=pieceIndexCorner(X,s.corner);st[0][5+2*j]=pieceIndexEdge(X,s.edge);});
-  const h=s=>{let m=ct[((s[0]*24+s[1])*24+s[2])*24+s[3]];for(let j=0;j<k;j++){const v=pts[j][s[4+2*j]*24+s[5+2*j]];if(v>m)m=v;}return m;};
+  const h=s=>{let m=ct[((s[0]*24+s[1])*24+s[2])*24+s[3]];for(let j=0;j<kh;j++){const v=pts[j][s[4+2*j]*24+s[5+2*j]];if(v>m)m=v;}return m;};
+  const done=s=>h(s)===0&&(!o.free||freeOk(s));
   const out={optimal:null,byLen:{},partial:false,capped:false};
-  const h0=h(st[0]);if(h0===0){out.optimal=0;return out;}
+  if(done(st[0])){out.optimal=0;return out;}
+  const h0=h(st[0]);
   const path=[];let sols=null,stop=false;
   const dfs=(d,left,lastF)=>{
     if(--bud.left<0){out.partial=true;stop=true;return;}
     const s=st[d],hv=h(s);
-    if(hv===0){if(left===0){sols.push(path.slice(0,d).map(i=>FACE_MOVES[i]).join(' '));if(sols.length>=limit){out.capped=!o.first;stop=true;}}return;}
-    if(hv>left)return;
+    if(hv===0&&(!o.free||freeOk(s))){if(left===0){sols.push(path.slice(0,d).map(i=>FACE_MOVES[i]).join(' '));if(sols.length>=limit){out.capped=!o.first;stop=true;}}return;}
+    if(hv>left||left===0)return;
     const n=st[d+1];
     for(let i=0;i<18;i++){
       const f=(i/3)|0;if(f===lastF)continue;if(lastF>=0&&f>=3&&f-3===lastF)continue; // D after U, L after R, B after F: taken in the other order
@@ -224,4 +235,115 @@ function f2lPart(start,moves,now){
     c=applyAlg(c,[m]);
   }
   return -1;
+}
+// ----- the basic way: the textbook path for one pair -----
+// The same moves with no whole-cube turn in them: a rotation turns the letters of the moves after
+// it, a wide move is a rotation and a face move, a slice move is a wide move and a face move. The
+// list comes out as face moves as held in the frame the first move was in, cancelled (simplify).
+// (removeRotations in js/app.js is this function.)
+const F2L_WIDE={r:['x','L'],l:["x'",'R'],u:['y','D'],d:["y'",'U'],f:['z','B'],b:["z'",'F']};
+function f2lExpand(m){
+  const b=m[0],sfx=m.slice(1),flip=t=>sfx===''?t:sfx==='2'?t.replace("'",'')+'2':(t.endsWith("'")?t.slice(0,-1):t+"'");
+  if('rludfb'.includes(b))return F2L_WIDE[b].map(flip);
+  const inv=sfx===''?"'":sfx==='2'?'2':'';
+  if(b==='M')return [...f2lExpand('l'+sfx),...f2lExpand('L'+inv)];
+  if(b==='E')return [...f2lExpand('d'+sfx),...f2lExpand('D'+inv)];
+  if(b==='S')return [...f2lExpand('f'+sfx),...f2lExpand('F'+inv)];
+  return [m];
+}
+function f2lUnrotate(moves){
+  moves=Array.isArray(moves)?moves:parseAlg(moves);
+  if(!moves.some(m=>'xyzrludfbMES'.includes(m[0])))return moves.slice();
+  let rot=new Cube();const out=[];
+  for(const m0 of moves)for(const m of f2lExpand(m0)){
+    const b=m[0];
+    if('xyz'.includes(b)){rot=rot.mul(MOVES[m]);continue;}
+    out.push(FACE_NAMES[rot.center[FACE_NAMES.indexOf(b)]]+m.slice(1));
+  }
+  return simplify(out);
+}
+// The corner and the edge of `slot` are a pair on top: one of the four basic inserts (cases 1 to
+// 4), with any top turn first, puts them into the slot. The cross need not be made.
+function f2lJoined(X,slot){
+  const s=f2lSlot(slot);if(X.cp.indexOf(s.corner)>=4||X.ep.indexOf(s.edge)>=4)return false;
+  const Y=afterRotation(X,SLOT_TO_FRONT[s.name]||'');
+  for(const f of F2L_CASES.slice(0,4))for(const u of AUFS){
+    if(slotSolved(derotate(applyAlg(Y,simplify([...(u?[u]:[]),...parseAlg(f.alg)]))),SLOTS[0]))return true;
+  }
+  return false;
+}
+// The textbook way for `slot`, with the cross and `keep` kept: the cube turned so the slot is at the
+// front right, a stuck piece (one in another slot) freed with the fewest moves, then one of the 41
+// cases with the top turn it needs. {rot, steps:[{kind:'free'|'case', moves, text, n, grp, why}],
+// moves (the rotation first, then the steps' moves, as the book writes them), flat (face moves as
+// held in X's frame, f2lUnrotate), n (the count of flat)}. null when no case fits (it always does
+// once the pieces are free).
+function f2lBasic(X,slot,keep,opts={}){
+  const s=f2lSlot(slot),rot=SLOT_TO_FRONT[s.name]||'',g=Y_COUNT[rot];
+  const Y0=afterRotation(X,rot),fr=SLOTS[0],keepF=(keep||[]).map(n=>slotAfterY(typeof n==='string'?n:n.name,g));
+  const steps=[];let Y=Y0;
+  // Free: the pieces of the slot on top or at home, with the cross and the kept slots as they are.
+  const cp=Y.cp.indexOf(fr.corner),ep=Y.ep.indexOf(fr.edge),stuck=[];
+  if(cp>=4&&cp!==fr.corner)stuck.push('corner');if(ep>=4&&ep!==fr.edge)stuck.push('edge');
+  if(stuck.length){
+    const r=f2lFind(Y,[...keepF,'FR'],{free:true,first:false,limit:F2L_LIMIT,maxDepth:opts.freeDepth||6,nodeLimit:opts.nodeLimit});
+    if(r.optimal==null)return null;
+    const moves=r.optimal?r.byLen[r.optimal][0].split(' '):[];
+    // The slot a stuck piece sits in, named in X's frame.
+    const where=p=>F2L_POS[slotAfterY(SLOTS[p].name,-g)];
+    const parts=[];if(cp>=4&&cp!==fr.corner)parts.push(`the corner from the ${where(cp-4)} slot`);if(ep>=4&&ep!==fr.edge)parts.push(`the edge from the ${where(ep-8)} slot`);
+    steps.push({kind:'free',moves,text:`Free ${parts.join(' and ')}: ${moves.length} move${moves.length===1?'':'s'} that keep the cross${keepF.length?' and the solved pairs':''}.`});
+    Y=applyAlg(Y,moves);
+  }
+  // The case: the shortest of the 41 with a top turn that solves the slot and keeps the rest.
+  const goal=c=>{const z=derotate(c);if(!crossSolved(z)||!slotSolved(z,fr))return false;for(const n of keepF)if(!slotSolved(z,f2lSlot(n)))return false;return true;};
+  let best=null;
+  if(goal(Y))best={moves:[],n:0,f:null,u:''};
+  else for(const f of F2L_CASES)for(const u of AUFS){
+    const moves=simplify([...(u?[u]:[]),...parseAlg(f.alg)]),len=moves.filter(m=>!'xyz'.includes(m[0])).length;
+    if(best&&len>=best.n)continue;
+    if(goal(applyAlg(Y,moves)))best={moves,n:len,f,u};
+  }
+  if(!best)return null;
+  if(best.f)steps.push({kind:'case',moves:best.moves,n:best.f.n,grp:best.f.grp,why:F2L_WHY[best.f.grp]||'',auf:best.u,alg:best.f.alg,
+    text:`Case ${best.f.n}, ${best.f.grp.toLowerCase()}${best.u?`: turn the top ${best.u} first, then ${best.f.alg}`:`: ${best.f.alg}`}.`});
+  const moves=[...(rot?[rot]:[]),...steps.flatMap(st=>st.moves)],flat=f2lUnrotate(moves);
+  return {rot,steps,moves,flat,n:flat.length};
+}
+// ----- the arc: what each move does to the pair -----
+// The corner and the edge of `slot` followed through `moves` (face moves, or any moves: the cube
+// is turned home after each). The events, at the count of moves made when each first holds:
+// [{i, text}], several at one count joined with " · ". i is 0 for what holds before the first
+// move. The kept slots are the slots solved at the start, other than the target.
+//   corner comes up / edge comes up      the piece leaves a slot for the top layer
+//   corner over its slot                 the corner sits at the top corner above the slot
+//   pair joins                           a basic insert would put them in (f2lJoined)
+//   pair goes in                         the slot is solved
+//   pair comes out                       the slot was solved a moment ago and is not now
+//   cross edge out / cross edge back     a cross edge leaves the bottom, and comes back
+//   another pair out / another pair back a kept slot comes apart, and goes back
+function f2lArc(X,slot,moves){
+  const s=f2lSlot(slot),ms=Array.isArray(moves)?moves:parseAlg(moves),out=[];
+  const kept=SLOTS.filter(k=>k!==s&&slotSolved(X,k));
+  const look=c=>{const cp=c.cp.indexOf(s.corner),ep=c.ep.indexOf(s.edge);
+    return {cUp:cp<4,eUp:ep<4,over:cp===s.corner-4,joined:f2lJoined(c,s),in:slotSolved(c,s),crossOut:[4,5,6,7].filter(e=>c.ep[e]!==e||c.eo[e]).length,keptOut:kept.filter(k=>!slotSolved(c,k)).length};};
+  let c=derotate(X),was=look(c);
+  const first=[];if(was.in)first.push('pair is in');else if(was.joined)first.push('pair joined');else if(was.over)first.push('corner over its slot');
+  if(first.length)out.push({i:0,text:first.join(' · ')});
+  ms.forEach((m,i)=>{
+    c=derotate(applyAlg(c,[m]));const now=look(c),ev=[];
+    if(now.in&&!was.in)ev.push('pair goes in');
+    else if(was.in&&!now.in)ev.push('pair comes out');
+    else{
+      if(now.cUp&&!was.cUp)ev.push('corner comes up');
+      if(now.eUp&&!was.eUp)ev.push('edge comes up');
+      if(now.joined&&!was.joined)ev.push('pair joins');
+      else if(now.over&&!was.over&&!now.joined)ev.push('corner over its slot');
+    }
+    if(now.crossOut>was.crossOut)ev.push('cross edge out');else if(now.crossOut<was.crossOut)ev.push(now.crossOut?'cross edge back':'cross back');
+    if(now.keptOut>was.keptOut)ev.push('another pair out');else if(now.keptOut<was.keptOut)ev.push('another pair back');
+    if(ev.length)out.push({i:i+1,text:ev.join(' · ')});
+    was=now;
+  });
+  return out;
 }

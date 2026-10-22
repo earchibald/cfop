@@ -55,7 +55,7 @@
 // Reference does (labSpoil). A click on the line uncovers the next move, Reveal uncovers the rest,
 // and a click on an open line covers it again. The moves the user made for the cross stay plain.
 // F2L guide (F): a window beside Patterns that guides the first two layers on the cube in the
-// hands, one pair at a time (lab/f2l.js, pure). It reads the cube as held, as Patterns does: the
+// hands, one pair at a time (js/f2l.js, pure). It reads the cube as held, as Patterns does: the
 // cross is the color on the bottom as held, and the slots are named by their place as held. Until
 // the cross is made it shows the cross and one shortest solution. Then four chips (the pairs, in the
 // order), the target picked by the mode (Shortest, or By corner: the next pair in the order kept in
@@ -669,7 +669,7 @@ function labF2LRead(cube){
   if(hold===lab.hold){if(f.step||crossSolved(X))f.hold=hold;}
   else if(f.noted!==lab.hold){f.noted=lab.hold;labLog('f2l',`F2L guide: the tilt moved the hold to ${labHoldWords(lab.hold)}. The guide keeps the ${LAB_COLORS[held.center[3]]} cross on the bottom and reads as held ${labHoldWords(hold)}.`);}
   // A new hold renames the places: the pairs solved now are the solved list, and the step starts over.
-  if(f.holdKey!==hk){if(f.holdKey!=null){f.done=f2lState(X,[]).solved;f.target=null;f.step=null;f.cross=null;f.at=lab.moves.length;f.broke='';}f.holdKey=hk;}
+  if(f.holdKey!==hk){if(f.holdKey!=null){f.done=f2lStatus(X,[]).solved;f.target=null;f.step=null;f.cross=null;f.at=lab.moves.length;f.broke='';}f.holdKey=hk;}
   const s=f.step;let n=-1;
   if(s&&s.moves.length){
     n=f2lDone(s.base,s.moves,X);const half=n<0?f2lPart(s.base,s.moves,X):-1;
@@ -679,7 +679,7 @@ function labF2LRead(cube){
       if(a){const plain=s.moves.join(' ')===s.plain.join(' ');s.moves=a.moves;if(plain)s.plain=a.moves;s.n=a.n;s.then=null;s.combos=null;labF2LOn(s,true);
         if(a.n<a.moves.length){labF2LDraw();labF2LThen(f.seq,false);return;}}}
   }
-  const st=f2lState(X,f.done);
+  const st=f2lStatus(X,f.done);
   if(!st.cross&&!(s&&s.moves.length))labF2LCrossRead(X,X0);else f.cross=null; // the cross hint, while the cross line shows one
   if(!st.cross&&!s){f.crossSeen=false;labF2LIdle();return;} // the cross first. A step lives through the cross coming apart
   if(!s&&!f.crossSeen){f.crossSeen=true;f.at=lab.moves.length;} // the first step begins at the move that made the cross
@@ -727,7 +727,7 @@ function labF2LIdle(){const f=lab.f2l;clearTimeout(f.timer);f.timer=0;f.seq++;f.
 // The target is solved with the cross and the solved pairs: the step goes in the list with the moves
 // the user made since it began, with any other pair it solved on the way.
 function labF2LStepDone(X){
-  const f=lab.f2l,s=f.step,solved=f2lState(X,[]).solved;
+  const f=lab.f2l,s=f.step,solved=f2lStatus(X,[]).solved;
   const slots=[s.slot,...f.order.filter(n=>n!==s.slot&&solved.includes(n)&&!f.done.includes(n))];
   const moves=lab.moves.slice(s.at);
   f.log.unshift({t:Date.now(),slots,n:moves.length,best:s.best,moves:moves.join(' ')});
@@ -744,7 +744,7 @@ function labF2LSchedule(ms){
 // a hint the cube is away from, until New hint from here.
 function labF2LCompute(seq){
   const f=lab.f2l,X=f.X;f.working=false;if(!X)return;
-  const st=f2lState(X,f.done);
+  const st=f2lStatus(X,f.done);
   if(st.cross&&st.solved.length===4){f.step=null;labF2LDraw();return;}
   const s=f.step;
   const pin=f.target&&!st.solved.includes(f.target)?f.target:(s?s.slot:null);
@@ -771,7 +771,7 @@ function labF2LThen(seq,combos){
 // (Also makes), then the setup. A newer state cancels the rest.
 function labF2LCombos(seq){
   const f=lab.f2l,s=f.step;if(!s||!s.moves.length||s.optimal==null)return;
-  const X=s.base,keep=f2lState(X,[]).solved,others=f.order.filter(n=>n!==s.slot&&!keep.includes(n));
+  const X=s.base,keep=f2lStatus(X,[]).solved,others=f.order.filter(n=>n!==s.slot&&!keep.includes(n));
   s.combos={also:[],setup:null,partial:false,busy:true};labF2LDraw();
   const parts=others.map(o=>()=>{const a=f2lAlso(X,s.slot,keep,o,{max:s.optimal+F2L_COMBO_EXTRA,nodeLimit:F2L_PART_NODES});if(a&&a.partial)s.combos.partial=true;else if(a)s.combos.also.push(a);});
   parts.push(()=>{const b={left:F2L_PART_NODES};s.combos.setup=f2lSetup(X,s.slot,s.sols,{mode:f.mode,order:f.order,budget:b});if(b.left<=0)s.combos.partial=true;});
@@ -781,7 +781,7 @@ function labF2LCombos(seq){
 // A click on a waiting chip: that pair is the target now. The order stays; after this pair the
 // guide goes back to it.
 function labF2LPick(n){
-  const f=lab.f2l,s=f.step;if(!f.X||(s&&s.slot===n)||f2lState(f.X,[]).solved.includes(n))return;
+  const f=lab.f2l,s=f.step;if(!f.X||(s&&s.slot===n)||f2lStatus(f.X,[]).solved.includes(n))return;
   f.target=n;f.step=null;f.at=lab.moves.length;
   labF2LSchedule(0);
 }
@@ -846,7 +846,7 @@ function labF2LDraw(){
 }
 function labF2LDrawAll(){
   const f=lab.f2l;if(!f)return;
-  const X=f.X,el=labF2LEl,st=X?f2lState(X,f.done):null,s=f.step;
+  const X=f.X,el=labF2LEl,st=X?f2lStatus(X,f.done):null,s=f.step;
   const color=f.held?LAB_COLORS[f.held.center[3]]:'',main=!!X&&(!!s||st.cross);
   // the cross line
   const cr=$('#f2lCross');cr.textContent='';
