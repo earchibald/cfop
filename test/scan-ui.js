@@ -48,16 +48,23 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     for(let i=0;i<ev("scanRes").fits.length&&w.canonicalKey(ev("scanRes").facelets,2)!==key;i++)click($('#scanNextFit'));
   }else assert.ok($('#scanNextFit').classList.contains('hidden'));
   assert.strictEqual(w.canonicalKey(ev("scanRes").facelets,2),key,'the fit shown is the scanned cube');
-  // A click on a net tile turns its color and pins it; the fit is checked again.
+  // A click on a net tile paints the chosen color and pins it; the fit is checked again. The
+  // palette keys 1 to 6 pick a color.
+  const keyOf=c=>String(ev("SCAN_PALETTE").findIndex(p=>p.c===c)+1);
+  const keydown=k=>d.dispatchEvent(new w.KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true}));
+  assert.strictEqual($$('#scanPal .pt-swatch').length,6,'six swatches');assert.strictEqual(ev("scanColor"),0,'white is picked at first');
   const tile=$('#scanNet rect[data-pos]'),id=+tile.dataset.id,pos=+tile.dataset.pos,was=ev("scanVoter").faces[id].stickers.slice();
+  const g0=$(`#scanNet g[data-id="${id}"]`),k0=ev(`netSlot(${g0.dataset.slot})`).k,idx=w.rotateFace([0,1,2,3],k0)[pos],other=(was[idx]+1)%6;
+  keydown(keyOf(other));assert.strictEqual(ev("scanColor"),other,'a key picks a color');
+  assert.ok($(`#scanPal .pt-swatch[data-c="${other}"]`).classList.contains('on'),'the swatch shows picked');
   click(tile);
-  assert.ok(ev("scanVoter").faces[id].pinned.some(Boolean),'the tile is pinned');
-  assert.notStrictEqual(ev("scanVoter").faces[id].stickers.join(),was.join());
-  // Put it back by cycling through the six colors. The net may redraw the face turned another
-  // way between clicks, so find the tile by its stored index each time.
-  const idx=ev("scanVoter").faces[id].stickers.findIndex((c,i)=>c!==was[i]);
+  assert.ok(ev("scanVoter").faces[id].pinned[idx],'the tile is pinned');
+  assert.strictEqual(ev("scanVoter").faces[id].stickers[idx],other,'the tile has the painted color');
+  // Put it back: pick its read color and paint it again. The net may redraw the face turned
+  // another way between clicks, so find the tile by its stored index each time.
   const tileOf=()=>{const g=$(`#scanNet g[data-id="${id}"]`),k=ev(`netSlot(${g.dataset.slot})`).k,shown=w.rotateFace([0,1,2,3],k).indexOf(idx);return $(`#scanNet rect[data-id="${id}"][data-pos="${shown}"]`);};
-  for(let i=0;i<5;i++)click(tileOf());
+  click($(`#scanPal .pt-swatch[data-c="${was[idx]}"]`));assert.strictEqual(ev("scanColor"),was[idx],'a click on a swatch picks it');
+  click(tileOf());
   assert.strictEqual(ev("scanVoter").faces[id].stickers.join(),was.join(),'the sticker is back to its read color');
   assert.ok(ev("scanRes")&&ev("scanRes").ok,'the fit holds after the tile is put back: '+$('#scanStatus').textContent);
   while(w.canonicalKey(ev("scanRes").facelets,2)!==key&&!$('#scanNextFit').classList.contains('hidden'))click($('#scanNextFit'));
@@ -85,6 +92,55 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.ok(!$('#scanUse').disabled,'a 4x4 can be used: '+$('#scanStatus').textContent);
   click($('#scanUse'));await sleep(50);assert.ok(!$('#scanBg'));
   assert.ok(w.scr.cube.isFour&&w.scr.cube.s.join()===f4.join(),'the loaded state is the scanned 4x4');
+  // ----- the sticker style chip: Auto by default, a pick is kept -----
+  w.openScan({n:3});await sleep(20);
+  assert.ok($('#scanStyle button[data-s="auto"]').classList.contains('on'),'Auto is the default');
+  click($('#scanStyle button[data-s="stickerless"]'));assert.strictEqual(ev("scanStyle()"),'stickerless');assert.strictEqual(JSON.parse(w.localStorage.getItem('cw:scanStyle')),'stickerless','the style is kept');
+  assert.strictEqual(w.readFace(render([0,1,2,3,4,5,0,1,2],320,240,false,'stickers'),{n:3,style:'stickerless'}).style,'stickerless','a pinned style is read as that style');
+  click($('#scanStyle button[data-s="auto"]'));assert.strictEqual(ev("scanStyle()"),'auto');
+  d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+  // ----- a refresh scan: the net starts as the state the guide expects; the stickers painted that
+  // differ, or a face shown, find the cube near the hint; Set up from current and Return to
+  // scramble hand it back with how it was found -----
+  const Cube=ev("Cube"),reset=w.applyAlg(new Cube(),w.parseAlg("R U F' L2 D B R' U2")),hint=['R','U',"R'",'U',"F'"];
+  const bases=w.resyncBases(reset,hint,0);
+  const feed=(truth,c)=>{const tf=w.rotateFace(truth.toFacelets().slice(9*c,9*c+9),c%4);for(let k=0;k<80&&!(ev("scanVoter").faces[c]&&ev("scanVoter").faces[c].read);k++)w.scanStep(w.readFace(render(tf,320,240,false,'stickers'),{n:3}));};
+  const paintDiff=(truth,c)=>{const tf=truth.toFacelets(),ef=ev("scanResync").bases[0].cube.toFacelets();for(let p=0;p<9;p++){if(p===4||tf[9*c+p]===ef[9*c+p])continue;w.scanPick(tf[9*c+p]);click($(`#scanNet rect[data-id="${c}"][data-pos="${p}"]`));}};
+  const findIt=truth=>{let guard=0;while(!(ev("scanRes")&&ev("scanRes").ok)&&guard++<5){const m=$('#scanStatus').textContent.match(/Show the (\w+) face/);feed(truth,m?ev("COLOR_NAMES_E").indexOf(m[1]):[0,2,1,3,4,5].find(c=>!ev("scanVoter").faces[c].read));}};
+  let got=null;
+  w.openScan({n:3,resync:{bases},onCube:(c,how,info)=>{got={c,how,info};}});await sleep(20);
+  assert.ok(/Read my cube/.test($('.modal.scan h2').textContent)&&/the cube the guide expects/.test($('.modal.scan p').textContent),'the dialog is a refresh scan');
+  assert.strictEqual($$('#scanNet g.expect').length,6,'six faces are expected, dimmed');
+  assert.strictEqual(ev("scanVoter").faces[0].stickers.join(),reset.toFacelets().slice(0,9).join(),'the net starts as the expected state');
+  assert.strictEqual($('#scanUse').textContent,'Set up from current');assert.ok(!$('#scanReturn').classList.contains('hidden')&&$('#scanReturn').disabled,'Return to scramble waits');
+  // Two moves into the hint, then a slip of one move: paint the top face's stickers that differ.
+  const truth=w.applyAlg(reset,['R','U','F']);
+  paintDiff(truth,0);
+  assert.ok($$('#scanNet g.expect').length<6,'a painted face is given');
+  assert.ok(ev("scanRes")&&ev("scanRes").ok||/states fit so far|No state within/.test($('#scanStatus').textContent),'the resync ran: '+$('#scanStatus').textContent);
+  findIt(truth);
+  assert.ok(ev("scanRes")&&ev("scanRes").ok&&ev("scanRes").cube.equals(truth),'the cube is found: '+$('#scanStatus').textContent);
+  assert.ok(/Found it: your cube is 1 move off the hint/.test($('#scanStatus').textContent),'the status says how far off: '+$('#scanStatus').textContent);
+  assert.strictEqual($$('#scanNet g.expect').length,0,'the whole net shows the cube found');
+  assert.ok(!$('#scanUse').disabled&&!$('#scanReturn').disabled);
+  click($('#scanReturn'));await sleep(20);
+  assert.ok(!$('#scanBg')&&got&&got.how==='return'&&got.c.equals(truth)&&got.info.off===1&&!got.info.full,'Return to scramble hands the cube back');
+  // The same cube by the camera alone: the top face, then the face asked for. Set up from current.
+  got=null;w.openScan({n:3,resync:{bases},onCube:(c,how,info)=>{got={c,how,info};}});await sleep(20);
+  feed(truth,0);findIt(truth);
+  assert.ok(ev("scanRes")&&ev("scanRes").ok&&ev("scanRes").cube.equals(truth),'the cube is found from faces shown: '+$('#scanStatus').textContent);
+  click($('#scanUse'));await sleep(20);
+  assert.ok(got&&got.how==='setup'&&got.c.equals(truth),'Set up from current hands the cube back');
+  // Start again puts the expected state back. Far off the hint, six faces go through a full read.
+  got=null;w.openScan({n:3,resync:{bases},onCube:(c,how,info)=>{got={c,how,info};}});await sleep(20);
+  paintDiff(truth,0);click($('#scanReset'));
+  assert.strictEqual($$('#scanNet g.expect').length,6,'Start again shows the expected state again');assert.ok(!ev("scanRes"));
+  const far=w.applyAlg(reset,['L','D','B','L','D2','B']);
+  for(const c of [0,2,1,3,4,5])feed(far,c);
+  assert.ok(/read the whole cube/.test($('#scanStatus').textContent)&&$('#scanUse').textContent==='Use this cube','six faces far off the hint are a full read: '+$('#scanStatus').textContent);
+  assert.ok(ev("scanRes")&&ev("scanRes").ok&&ev("scanRes").cube.equals(far),'the full read gives the cube');
+  click($('#scanUse'));await sleep(20);
+  assert.ok(got&&got.how==='use'&&got.info.full&&got.c.equals(far),'Use this cube hands the full read back');
   // Escape closes the dialog; Start again clears it.
   w.openScan({n:2});await sleep(20);
   click($('#scanReset'));assert.strictEqual(ev("scanVoter").order.length,0);assert.ok(/Show a face/.test($('#scanStatus').textContent));

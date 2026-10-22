@@ -16,7 +16,10 @@
 // from current. Return to scramble says the moves back to it (the moves made, undone, or
 // resyncReturn for a smart cube) and covers the screen cube's moves again. Set up from current
 // loads the cube as it is as the scramble (scrambleFromCube), so the pairs solved so far stay
-// solved and the guide starts over from here. Read my cube opens the scanner.
+// solved and the guide starts over from here. Read my cube opens the scanner as a refresh scan
+// (fgReadCube): the net starts as the state the guide expects, and two or three faces (or the
+// stickers painted that differ) find the real state among the states near the hint (js/resync.js);
+// Set up from current loads it, Return to scramble says the way back (fgReadBack).
 //
 // The tree of ways for the target (fg.step.ways): Shortest (the plain hint), Basic (f2lBasic: free a
 // stuck piece, then one of the 41 cases, with the case group's reason), Also makes (two pairs in one
@@ -26,7 +29,7 @@
 // Storage: cw:f2lMode (shortest or corner), cw:f2lOrder (the four slot names).
 const FG_WAIT_MS=200,FG_PART_NODES=4000000;
 const FG_STICKER={white:'W',red:'R',green:'G',yellow:'Y',orange:'O',blue:'B'};
-var fg={mode:'shortest',order:F2L_ORDER_DEFAULT.slice(),target:null,done:[],step:null,cross:null,log:[],base:null,extra:[],made:[],hist:[],X:null,held:null,src:'screen',seq:0,timer:0,working:false,broke:'',orderOpen:false,key:null,back:null,nMoves:0}; // var: tests read it
+var fg={mode:'shortest',order:F2L_ORDER_DEFAULT.slice(),target:null,done:[],step:null,cross:null,log:[],base:null,extra:[],made:[],hist:[],X:null,held:null,src:'screen',seq:0,timer:0,working:false,broke:'',orderOpen:false,key:null,back:null,read:'',nMoves:0}; // var: tests read it
 const fgPos=n=>F2L_POS[n],fgCap=t=>t?t[0].toUpperCase()+t.slice(1):'';
 function fgEl(tag,cls,text){const x=document.createElement(tag);if(cls)x.className=cls;if(text!=null)x.textContent=text;return x;}
 function fgActive(){return curTab==='f2l'&&f2lState.mode==='guide';}
@@ -40,7 +43,7 @@ function fgInit(){
   fg.mode=store.get('f2lMode','shortest')==='corner'?'corner':'shortest';
   const o=store.get('f2lOrder',null);fg.order=Array.isArray(o)&&o.length===4&&F2L_ORDER_DEFAULT.every(n=>o.includes(n))?o.slice():F2L_ORDER_DEFAULT.slice();
   $('#fgNew').onclick=()=>newScramble();
-  $('#fgRead').onclick=()=>openScan();
+  $('#fgRead').onclick=fgReadCube;
   $('#fgReturn').onclick=fgReturn;$('#fgSetup').onclick=fgSetup;
   $('#fgShortest').onclick=()=>fgMode('shortest');$('#fgCorner').onclick=()=>fgMode('corner');
   $('#fgOrderBtn').onclick=()=>{fg.orderOpen=!fg.orderOpen;fgDraw();};
@@ -70,7 +73,7 @@ function fgPrepare(){
   const cs=parseAlg(solveCross(c,0,1).solutions[0]);c=applyAlg(c,cs);extra.push(...cs);
   fg.base=c;fg.extra=extra;
 }
-function fgReset(){clearTimeout(fg.timer);fg.timer=0;fg.seq++;Object.assign(fg,{target:null,done:[],step:null,cross:null,log:[],made:[],hist:[],X:null,held:null,broke:'',working:false,back:null,nMoves:0});}
+function fgReset(){clearTimeout(fg.timer);fg.timer=0;fg.seq++;Object.assign(fg,{target:null,done:[],step:null,cross:null,log:[],made:[],hist:[],X:null,held:null,broke:'',working:false,back:null,read:'',nMoves:0});}
 // ----- the player -----
 // The scramble, the dashed moves solved for you, then the moves made so far. Loaded afresh here;
 // one move appended or taken off by fgSeqAppend and fgSeqPop, so the layer turns on the player.
@@ -201,7 +204,7 @@ function fgMake(m){
   if(fg.src==='smart'||!fg.X||seqState.drill)return;
   const s=fg.step,c=fg.cross;
   fg.hist.push({step:s&&{...s,off:s.off&&s.off.slice()},cross:c&&{...c},done:fg.done.slice(),log:fg.log.slice(),target:fg.target,broke:fg.broke,X:fg.X,back:fg.back});
-  fg.made.push(m);fg.back=null;fgSeqAppend(m);fgRead(applyAlg(fg.X,[m]));
+  fg.made.push(m);fg.back=null;fg.read='';fgSeqAppend(m);fgRead(applyAlg(fg.X,[m]));
 }
 function fgNext(){const m=fgNextMove();if(m)fgMake(m);}
 // The last move covered again: the player steps back, the guide goes back to before it.
@@ -219,6 +222,37 @@ function f2lGuideKey(e){
   if(e.key==='ArrowLeft'){e.preventDefault();fgBack();return true;}
   return false;
 }
+// ----- Read my cube -----
+// The guide's states are in the solving frame (the cross color down); the scanner reads the cube
+// in the engine frame (white up, green front). fgEngine turns a state to the engine frame; toFrame
+// (app.js) turns it back.
+function fgEngine(X){const r=crossRotation();if(!r)return X;const R=applyAlg(new Cube(),r);return R.mul(X).mul(R.inverse());}
+// The states the guide expects, nearest first: the cube now (the reset point after the moves
+// made), then after each move still to make of the hint in use (the step's, or the cross line's),
+// and back along the moves made; in the engine frame.
+function fgReadBases(){
+  const s=fg.step,c=fg.cross,h=s&&s.moves.length&&!s.away?s:(!s&&c&&c.moves.length&&!c.away?c:null);
+  const hint=h?h.moves.slice(h.n):[];
+  return resyncBases(fg.base,[...fg.made,...hint],fg.made.length).map(b=>({cube:fgEngine(b.cube),at:b.at,off:b.off}));
+}
+function fgReadCube(){
+  if(typeof openScan!=='function')return;
+  const re=fg.src!=='smart'&&fg.X&&fg.base&&!seqState.drill&&puzzleN()===3;
+  if(!re){openScan();return;}
+  openScan({n:3,resync:{bases:fgReadBases()},onCube:fgReadBack});
+}
+// The cube read: 'return' says the way back to the reset point (the screen cube goes back too);
+// 'setup' and 'use' make the cube as read the scramble, so the guide starts over from it.
+function fgReadBack(cube,how,info){
+  if(how==='return'){
+    const X=toFrame(cube),back=resyncReturn(X,fg.base,{timeMs:1500});
+    while(fg.made.length)fgBack();
+    fg.back=back?back.join(' '):null;fg.read=info&&info.off!=null?`Your cube was read ${info.off?`${info.off} move${info.off===1?'':'s'} off the hint`:'on the hint'}.`:'Your cube was read.';
+    fgDraw();return;
+  }
+  const res=scrambleFromCube(cube,customName('scan'),true);
+  if(!res.ok){fg.back=null;fg.broke=res.errors.join(' ');fgDraw();}
+}
 // ----- Return to scramble, Set up from current -----
 // The way back to the reset point: the moves made, undone (the screen cube goes back too), or the
 // shortest way for a smart cube.
@@ -227,7 +261,7 @@ function fgReturn(){
   if(fg.src==='smart'){const back=resyncReturn(fg.X,fg.base,{timeMs:1500});fg.back=back?back.join(' '):null;fgDraw();return;}
   const back=invertAlg(fg.made);
   while(fg.made.length)fgBack();
-  fg.back=back||'';fgDraw();
+  fg.back=back||'';fg.read='';fgDraw();
 }
 // The cube as it is becomes the scramble. The screen cube and a real cube go through the scramble
 // finder (the state turned back to white up); a smart cube keeps its own state and starts over.
@@ -297,7 +331,7 @@ function fgDrawAll(){
   const who=f.src==='smart'?(typeof smartNiceName==='function'?smartNiceName(cubeTab.name):'your smart cube'):f.src==='real'?`your cube, ${/^scan/.test(scr.seed)?'scanned':/^paint/.test(scr.seed)?'painted':'read'} ${(scr.seed.match(/-(\d\d)(\d\d)(\d\d)$/)||[]).slice(1,3).join(':')||'earlier'}`:'the screen cube';
   cl.appendChild(el('b',null,`Your cube: ${who}.`));
   cl.appendChild(el('span','muted',f.src==='smart'?' Make each move on the cube: it uncovers as you turn.':f.src==='real'?' Make each move on your cube too: click the next move, or press the Right arrow. Left covers it again.':' Click the next move, or press the Right arrow. Left covers it again.'));
-  if(f.back!=null){const p=el('p','fg-back');p.appendChild(el('b',null,f.back?'Back to the scramble: ':'The cube is at the scramble.'));if(f.back)p.appendChild(el('code',null,f.back));cl.appendChild(p);}
+  if(f.back!=null){const p=el('p','fg-back');if(f.read)p.appendChild(el('span',null,f.read+' '));p.appendChild(el('b',null,f.back?'Back to the scramble: ':'The cube is at the scramble.'));if(f.back)p.appendChild(el('code',null,f.back));cl.appendChild(p);}
   $('#fgReturn').disabled=!(X&&f.base&&(f.src==='smart'?!X.equals(f.base):f.made.length>0));
   $('#fgSetup').disabled=!X||!!seqState.drill;
   // a drill in the player

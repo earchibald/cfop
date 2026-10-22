@@ -104,6 +104,28 @@ w.addEventListener('load',async()=>{try{
   await until(()=>w.fg.X&&!w.fg.made.length&&w.fg.key&&w.fg.key.endsWith($('#seed').placeholder),'the guide restarts');
   assert.ok(w.toFrame(w.scr.cube).equals(X),'the scramble gives the cube as it was');
   assert.ok(/your cube, read/.test($('#fgCube').textContent),'the cube line says a real cube');
+  // Read my cube: the scanner opens as a refresh scan with the state the guide expects; the
+  // stickers painted that differ find the cube two moves off the hint; Return to scramble says the
+  // way back and covers the moves again; Set up from current makes the cube read the scramble.
+  await settled();key('ArrowRight');
+  const ev=s=>w.eval(s),paintDiff=(truth,c)=>{const tf=truth.toFacelets(),ef=ev("scanResync").bases[0].cube.toFacelets();for(let p=0;p<9;p++){if(p===4||tf[9*c+p]===ef[9*c+p])continue;w.scanPick(tf[9*c+p]);click($(`#scanNet rect[data-id="${c}"][data-pos="${p}"]`));}};
+  click($('#fgRead'));assert.ok($('#scanBg')&&/Read my cube/.test($('.modal.scan h2').textContent),'Read my cube opens a refresh scan');
+  const expected=w.fgEngine(w.fg.X);
+  assert.strictEqual(ev("scanVoter").faces[0].stickers.join(),expected.toFacelets().slice(0,9).join(),'the net starts as the cube the guide expects');
+  assert.ok(ev("scanResync").bases.length>w.fg.made.length+1,'the bases run along the hint');
+  let truth=w.applyAlg(expected,['F',"U'"]);
+  for(const c of [0,2,1,5,4,3]){if(ev("scanRes")&&ev("scanRes").ok)break;paintDiff(truth,c);}
+  assert.ok(ev("scanRes")&&ev("scanRes").ok&&ev("scanRes").cube.equals(truth),'the cube is found: '+$('#scanStatus').textContent);
+  click($('#scanReturn'));await sleep(20);
+  assert.ok(!$('#scanBg')&&w.fg.made.length===0,'the moves are covered again');
+  assert.ok(/off the hint/.test($('#fgCube').textContent)&&$('#fgCube code'),'the cube line says how far off and the way back');
+  assert.ok(w.applyAlg(w.toFrame(truth),w.parseAlg(w.fg.back)).equals(w.fg.base),'the way back reaches the reset point');
+  click($('#fgRead'));await sleep(20);truth=w.applyAlg(w.fgEngine(w.fg.X),['R']);
+  for(const c of [0,2,1,5,4,3]){if(ev("scanRes")&&ev("scanRes").ok)break;paintDiff(truth,c);}
+  assert.ok(ev("scanRes")&&ev("scanRes").ok,'found again');
+  click($('#scanUse'));await until(()=>$('#seed').placeholder.startsWith('scan-'),'a scanned scramble');
+  await until(()=>w.fg.X&&!w.fg.made.length&&w.fg.key&&w.fg.key.endsWith($('#seed').placeholder),'the guide restarts on the cube read');
+  assert.ok(w.scr.cube.equals(truth),'the scramble gives the cube read');assert.ok(/your cube, scanned/.test($('#fgCube').textContent),'the cube line says scanned');
   // N starts a new scramble; the guide follows it.
   key('n');await until(()=>$('#seed').value&&$('#seed').value!==seed,'a new seed');
   await until(()=>w.fg.X&&w.fg.key&&w.fg.key.endsWith($('#seed').value),'the guide reads the new scramble');
@@ -120,5 +142,5 @@ w.addEventListener('load',async()=>{try{
   await settled();assert.ok($('#fgNew .hk')&&$('#fgCard .fg-hk'),'key badges');
   tab('solve');const i0=w.seqState.idx;key('ArrowLeft');assert.strictEqual(w.seqState.idx,i0-1,'the arrows are the player\'s on another tab');
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('f2l-ui: Guide mode, the drill, the arrows, the tree, the solved list, return and set up ok');process.exit(0);
+  console.log('f2l-ui: Guide mode, the drill, the arrows, the tree, the solved list, return and set up, Read my cube ok');process.exit(0);
 }catch(e){console.error('f2l-ui: FAIL',e.message,errs);process.exit(1);}});

@@ -13,8 +13,13 @@ function linToLab(r,g,b){
   return [116*y-16,500*(x-y),200*(y-z)];
 }
 const hexLin=h=>[0,2,4].map(i=>SRGB_LIN[parseInt(h.substr(i,2),16)]);
-// Reference sticker colors in linear RGB, by color index (white red green yellow orange blue).
+// Reference sticker colors in linear RGB, by color index (white red green yellow orange blue):
+// the Rubik's stickers, and stickerless plastic (GAN) from the light-mode palette of css/app.css
+// (docs/design-language.md). classifySamples tries both and keeps the set the face sits nearer,
+// unless opts.style pins one.
 const SCAN_REFS=['F4F4F4','C41E3A','009E60','FFD500','FF5800','0051BA'].map(hexLin);
+const SCAN_REFS_PLASTIC=['FCFCFC','E3262B','25B83C','F8D000','FB8500','1E78E6'].map(hexLin);
+const SCAN_STYLES={stickers:SCAN_REFS,stickerless:SCAN_REFS_PLASTIC};
 
 // ---------- stage 1: sticker candidates ----------
 function findBlobs(img,opts){
@@ -201,10 +206,21 @@ function sampleDiscs(img,points,radius,inner){
 }
 function colorDist(l1,l2){return Math.sqrt(0.35*(l1[0]-l2[0])**2+(l1[1]-l2[1])**2+(l1[2]-l2[2])**2);}
 // Classify linear RGB samples against the references. The light tint is unknown, so fit per-channel
-// gains that pull the samples onto their nearest references, then classify again.
-// Returns {colors, margins, dists, gains}.
+// gains that pull the samples onto their nearest references, then classify again. With no
+// opts.refs and no opts.style (or 'auto'), both reference sets are tried and the one with the
+// lower total distance over the face is kept; the result names it as `style`.
+// Returns {colors, margins, dists, gains, style}.
 function classifySamples(samples,opts){
-  opts=opts||{};const refs=opts.refs||SCAN_REFS,refLab=refs.map(r=>linToLab(...r));
+  opts=opts||{};
+  if(!opts.refs){
+    const style=opts.style&&SCAN_STYLES[opts.style]?opts.style:'';
+    if(style)return Object.assign(classifySamples(samples,Object.assign({},opts,{refs:SCAN_STYLES[style]})),{style});
+    let best=null;
+    for(const s of Object.keys(SCAN_STYLES)){const r=classifySamples(samples,Object.assign({},opts,{refs:SCAN_STYLES[s]})),d=r.dists.reduce((a,x)=>a+x,0);
+      if(!best||d<best.d)best={r,d,s};}
+    return Object.assign(best.r,{style:best.s});
+  }
+  const refs=opts.refs,refLab=refs.map(r=>linToLab(...r));
   let g=opts.gains?opts.gains.slice():[1,1,1];
   // A bright, low-chroma sample is most likely white: use it to start the gains.
   if(!opts.gains){
@@ -247,7 +263,7 @@ function readFace(img,opts){
   const sp=lat.spacing,inner=new Array(n*n).fill(0);if(n===3)inner[4]=sp*0.3;
   const samples=sampleDiscs(img,lat.points,sp*0.3,inner);
   const cl=classifySamples(samples,opts);
-  return {ok:true,n,colors:cl.colors,margins:cl.margins,gains:cl.gains,samples,points:lat.points,lattice:lat,blobs:st1.blobs};
+  return {ok:true,n,colors:cl.colors,margins:cl.margins,gains:cl.gains,style:cl.style,samples,points:lat.points,lattice:lat,blobs:st1.blobs};
 }
 
 // ---------- stage 4: vote across frames ----------
@@ -316,8 +332,10 @@ function voteFrame(v,read,key){
   const t=voteTally(v);
   if(!t.ready)return {event:'reading',center:c,tally:t};
   // Lock. A retake keeps the user's pinned stickers, turned to match the new reading.
+  // A face the dialog filled in before any read (read:false, the state the guide expects) is
+  // replaced by the camera's reading, its painted stickers kept.
   const old=v.faces[c];let stickers=t.colors.slice(),pinned=new Array(cells).fill(false);
-  if(old&&v.n===3){
+  if(old&&v.n===3&&old.read!==false){
     // A retake must look like the face read before. If not, a center was misread (a logo, say),
     // and the new face must not overwrite the old one.
     const k=alignReading(stickers,old.stickers),os=rotateFace(old.stickers,k);
@@ -336,38 +354,59 @@ function voteFrame(v,read,key){
     const k=alignReading(stickers,old.stickers),os=rotateFace(old.stickers,k),op=rotateFace(old.pinned,k);
     for(let i=0;i<cells;i++)if(op[i]){stickers[i]=os[i];pinned[i]=true;}
   }
-  v.faces[c]={stickers,pinned,margins:margin,lab:labs.every(Boolean)?labs:null};v.run=[];v.justLocked=c;v.conflict=-1;
+  v.faces[c]={stickers,pinned,margins:margin,lab:labs.every(Boolean)?labs:null,read:true};v.run=[];v.justLocked=c;v.conflict=-1;
   if(!old)v.order.push(c);
-  return {event:'locked',center:c,retake:!!old,tally:t};
+  return {event:'locked',center:c,retake:!!old&&old.read!==false,tally:t};
 }
 // Forget a locked face: a seventh one that fit nowhere.
 function voteDrop(v,id){delete v.faces[id];v.order=v.order.filter(x=>x!==id);if(v.justLocked===id)v.justLocked=-1;if(v.center===id)v.center=-1;}
 
 // ---------- UI ----------
-// The dialog's markup is built from this module's own fixed strings, the face size and the
-// color names; nothing from outside goes into it.
-let scanStream=null,scanTimer=0,scanVoter=null,scanRes=null,scanWork=null,scanLast=null,scanN=3,scanOnCube=null,scanOnClose=null;
+// The Read my cube dialog: the camera fills the net face by face, and the palette beside the net
+// paints one sticker at a time (a painted sticker is pinned: the camera does not change it). The
+// dialog's markup is built from this module's own fixed strings, the face size and the color
+// names; nothing from outside goes into it.
+//
+// A refresh scan (opts.resync, from the F2L guide): the net starts as the state the guide expects
+// (the first base), dimmed. The user shows a face, or paints the stickers that differ. Each face
+// read or touched goes to resyncFind over the bases; one candidate left is the cube found. Set up
+// from current and Return to scramble hand it to opts.onCube(cube, how, info). With six faces
+// given and no candidate near the bases, the faces go through assembleScan as a full read.
+let scanStream=null,scanTimer=0,scanVoter=null,scanRes=null,scanWork=null,scanLast=null,scanN=3,scanOnCube=null,scanOnClose=null,scanColor=0,scanResync=null;
+// The palette: white, yellow, green, blue, red, orange. Keys 1 to 6 pick these in order (the
+// painter's order, PAINT_PALETTE in js/paint.js).
+const SCAN_PALETTE=[{c:0,label:'white'},{c:3,label:'yellow'},{c:2,label:'green'},{c:5,label:'blue'},{c:1,label:'red'},{c:4,label:'orange'}];
 // The working frame: 320 px wide, 480 for the 4x4 so its small tiles keep their grooves.
 function scanWidth(n){return n===4?480:320;}
+// The sticker style the user pinned: 'auto' (the default), 'stickers' or 'stickerless'. cw:scanStyle.
+function scanStyle(){const s=store.get('scanStyle','auto');return SCAN_STYLES[s]?s:'auto';}
+function scanSetStyle(s){store.set('scanStyle',SCAN_STYLES[s]?s:'auto');$$('#scanStyle button').forEach(b=>b.classList.toggle('on',b.dataset.s===scanStyle()));}
 // Open the scanner for the current puzzle, or for opts.n (2, 3 or 4). With opts.onCube, Use this
 // cube hands the Cube to it and closes, instead of loading a scramble; opts.onClose is called
-// when the dialog closes any other way (the Smart cube dialog, which opens again).
+// when the dialog closes any other way (the Smart cube dialog, which opens again). opts.resync
+// ({bases}, engine-frame cubes as resyncBases gives them) makes it a refresh scan of a 3x3.
 function openScan(opts){
   if($('#scanBg'))return;
-  scanN=opts&&opts.n||(typeof puzzleN==='function'?puzzleN():3);scanOnCube=opts&&opts.onCube||null;scanOnClose=opts&&opts.onClose||null;
-  scanVoter=makeVoter({n:scanN});scanRes=null;scanLast=null;
-  const free=scanN!==3;
+  opts=opts||{};
+  scanN=opts.n||(typeof puzzleN==='function'?puzzleN():3);scanOnCube=opts.onCube||null;scanOnClose=opts.onClose||null;
+  scanResync=scanN===3&&opts.resync&&opts.resync.bases&&opts.resync.bases.length&&typeof resyncFind==='function'?{bases:opts.resync.bases,full:false}:null;
+  scanVoter=makeVoter({n:scanN});scanRes=null;scanLast=null;scanColor=0;
+  const free=scanN!==3,re=!!scanResync;
   const bg=document.createElement('div');bg.className='modal-bg scan-bg';bg.id='scanBg';
-  bg.innerHTML=`<div class="modal scan" role="dialog" aria-label="Scan cube">
+  const swatches=SCAN_PALETTE.map((p,i)=>`<button type="button" class="pt-swatch${p.c===scanColor?' on':''}" data-c="${p.c}" aria-label="${p.label}" title="${cap(p.label)}: key ${i+1}" style="background:${stickerColor(p.c)}"></button>`).join('');
+  bg.innerHTML=`<div class="modal scan" role="dialog" aria-label="Read my cube">
    <button class="close small ghost" id="scanClose" aria-label="Close">✕</button>
-   <h2>Scan cube</h2>
-   <p class="muted" style="margin-top:0">Hold one face of the ${scanN}×${scanN} to the camera and keep it still. When the face is read, turn the cube to show the next face. You can show the faces in any order and at any angle.${free?` A ${scanN}×${scanN} has no fixed centers, so I work out where each face goes once all six are read.`:''} A glossy cube reflects the screen. If the read jumps, tilt the cube a little or dim the screen.</p>
+   <h2>${re?'Read my cube':'Scan cube'}</h2>
+   <p class="muted" style="margin-top:0">${re?'The net shows the cube the guide expects. Show the camera a face that differs, or pick a color and paint the stickers that differ. Two or three faces are usually enough; start with the top.'
+     :`Hold one face of the ${scanN}×${scanN} to the camera and keep it still. When the face is read, turn the cube to show the next face. You can show the faces in any order and at any angle.${free?` A ${scanN}×${scanN} has no fixed centers, so I work out where each face goes once all six are read.`:''}`} A glossy cube reflects the screen. If the read jumps, tilt the cube a little or dim the screen.</p>
    <div class="scan-grid">
     <div><div class="scan-view mirror" id="scanView"><video id="scanVideo" autoplay playsinline muted></video><canvas id="scanOverlay"></canvas></div>
-     <div class="scan-row"><label><input type="checkbox" id="scanMirror" checked> Mirror</label><span class="muted" style="font-size:13px">Mirror flips the preview only.</span></div></div>
+     <div class="scan-row"><label><input type="checkbox" id="scanMirror" checked> Mirror</label><span class="muted" style="font-size:13px">Mirror flips the preview only.</span></div>
+     <div class="scan-row"><span class="muted" style="font-size:13px">Sticker style</span><div class="status-sel" id="scanStyle" role="group" aria-label="Sticker style"><button type="button" data-s="auto" title="Try both sets of colors and keep the nearer">Auto</button><button type="button" data-s="stickers" title="Printed stickers">Stickers</button><button type="button" data-s="stickerless" title="Colored plastic, as on a GAN cube">Stickerless</button></div><span class="muted" style="font-size:13px">Auto keeps the set of colors the face sits nearer.</span></div></div>
     <div><div class="scan-net" id="scanNet"></div>
-     <p class="muted" style="font-size:13px;margin:6px 0">Click a sticker to change its color. A changed sticker stays fixed.</p>
-     <div class="scan-row"><button class="primary" id="scanUse" disabled>Use this cube</button><button class="small ghost hidden" id="scanNextFit">Next fit</button><button class="small ghost" id="scanReset">Start again</button></div></div>
+     <div class="scan-row scan-pal" id="scanPal" role="group" aria-label="Paint colors">${swatches}</div>
+     <p class="muted" style="font-size:13px;margin:6px 0">Pick a color, then click a sticker to paint it. Keys 1 to 6 pick a color. A painted sticker stays fixed.</p>
+     <div class="scan-row"><button class="primary" id="scanUse" disabled>${re?'Set up from current':'Use this cube'}</button><button class="${re?'':'hidden'}" id="scanReturn" disabled title="The moves that bring your cube back to the scramble">Return to scramble</button><button class="small ghost hidden" id="scanNextFit">Next fit</button><button class="small ghost" id="scanReset">Start again</button><button class="small ghost hidden" id="scanSave" title="Save the frames of each face read, for the scanner tests">Save frames</button></div></div>
    </div>
    <div id="scanStatus" class="notice">Asking for camera access.</div>
   </div>`;
@@ -375,16 +414,36 @@ function openScan(opts){
   bg.addEventListener('click',e=>{if(e.target===bg)closeScan();});
   $('#scanClose').onclick=closeScan;
   $('#scanMirror').onchange=e=>$('#scanView').classList.toggle('mirror',e.target.checked);
-  $('#scanUse').onclick=scanUse;
+  $('#scanUse').onclick=()=>scanUse(re&&!scanResync.full?'setup':'use');
+  $('#scanReturn').onclick=()=>scanUse('return');
   $('#scanNextFit').onclick=scanNextFit;
-  $('#scanReset').onclick=()=>{scanVoter=makeVoter({n:scanN});scanRes=null;$('#scanUse').disabled=true;$('#scanNextFit').classList.add('hidden');drawNet();scanStatus('Show a face to the camera.');};
+  $('#scanReset').onclick=scanRestart;
+  $('#scanStyle').addEventListener('click',e=>{const b=e.target.closest('button[data-s]');if(b)scanSetStyle(b.dataset.s);});
+  $('#scanPal').addEventListener('click',e=>{const b=e.target.closest('button[data-c]');if(b)scanPick(+b.dataset.c);});
   $('#scanNet').addEventListener('click',scanNetClick);
   document.addEventListener('keydown',scanKeys,true);
+  scanSetStyle(scanStyle());
+  if(re)scanExpect();
+  if(typeof scanRecOpen==='function')scanRecOpen();
   drawNet();startCamera();
 }
+// Start again: an empty net, or the expected state again on a refresh scan.
+function scanRestart(){
+  scanVoter=makeVoter({n:scanN});scanRes=null;if(scanResync)scanResync.full=false;
+  $('#scanUse').disabled=true;$('#scanReturn').disabled=true;$('#scanNextFit').classList.add('hidden');
+  if(scanResync){scanExpect();$('#scanUse').textContent='Set up from current';scanStatus('The net shows the cube the guide expects again. Show a face, or paint the stickers that differ.');}
+  else scanStatus('Show a face to the camera.');
+  drawNet();
+}
+// The expected state on the net: six faces not read, none pinned.
+function scanExpect(){
+  const f=scanResync.bases[0].cube.toFacelets();
+  for(let c=0;c<6;c++){scanVoter.faces[c]={stickers:f.slice(9*c,9*c+9),pinned:new Array(9).fill(false),margins:null,lab:null,read:false};if(!scanVoter.order.includes(c))scanVoter.order.push(c);}
+}
+function scanPick(c){scanColor=c;$$('#scanPal .pt-swatch').forEach(b=>b.classList.toggle('on',+b.dataset.c===c));}
 function scanStatus(t){const e=$('#scanStatus');if(e)e.textContent=t;}
 async function startCamera(){
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){scanStatus('This browser cannot use the camera on this page. Try another browser, or open Twistwright from its web address.');return;}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){scanStatus('This browser cannot use the camera on this page. Try another browser, or open Twistwright from its web address.'+(scanResync?' You can still paint the stickers that differ.':''));return;}
   try{
     // A phone or tablet points its rear camera at the cube; a computer uses its webcam.
     const rear=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
@@ -395,17 +454,19 @@ async function startCamera(){
     const mir=fm?fm==='user':!rear;
     $('#scanMirror').checked=mir;$('#scanView').classList.toggle('mirror',mir);
     scanStream=s;const v=$('#scanVideo');v.srcObject=s;await v.play().catch(()=>{});
-    scanStatus('Show a face to the camera.');scanLoop();
+    scanStatus(scanResync?'Show a face to the camera, or paint the stickers that differ.':'Show a face to the camera.');scanLoop();
   }catch(e){
     scanStatus(e.name==='NotAllowedError'?'The browser blocked the camera. Allow the camera for this site in the browser settings, then open the scanner again.'
       :e.name==='NotFoundError'?'Twistwright cannot find a camera. Connect one, then open the scanner again.':'The camera did not start. Close other apps that use the camera, then open the scanner again.');
   }
 }
 function stopCamera(){clearTimeout(scanTimer);scanTimer=0;if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null;}}
-function closeScan(){document.removeEventListener('keydown',scanKeys,true);stopCamera();scanOnCube=null;const b=$('#scanBg');if(b)b.remove();const f=scanOnClose;scanOnClose=null;if(f)f();}
+function closeScan(){document.removeEventListener('keydown',scanKeys,true);stopCamera();scanOnCube=null;scanResync=null;const b=$('#scanBg');if(b)b.remove();const f=scanOnClose;scanOnClose=null;if(f)f();}
 function scanKeys(e){
   if(!$('#scanBg'))return;
   if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeScan();return;}
+  const k=+e.key;
+  if(Number.isInteger(k)&&k>=1&&k<=6&&!e.metaKey&&!e.ctrlKey&&!e.altKey){e.preventDefault();e.stopPropagation();scanPick(SCAN_PALETTE[k-1].c);return;}
   e.stopPropagation(); // keep tab/timer keys out while the scanner is open
 }
 // Grab a downscaled frame. The pixels are never mirrored; only the preview is.
@@ -422,36 +483,65 @@ function scanLoop(){
   const v=$('#scanVideo'),t0=performance.now();
   if(v.readyState>=2){
     const img=grabFrame(v);
-    if(img){const r=readFace(img,{n:scanN});scanLast=r;drawOverlay(img,r);scanStep(r);}
+    if(img){const r=readFace(img,{n:scanN,style:scanStyle()});scanLast=r;if(typeof scanRecFrame==='function')scanRecFrame(img,r);drawOverlay(img,r);scanStep(r);}
   }
   scanTimer=setTimeout(scanLoop,Math.max(10,70-(performance.now()-t0)));
 }
-// The locked faces in order: by center color on the 3x3, by the order read otherwise.
-function scanFaceIds(){return scanN===3?[0,1,2,3,4,5].filter(c=>scanVoter.faces[c]):scanVoter.order.slice();}
+// The faces read or painted, in order: by center color on the 3x3, by the order read otherwise.
+// On a refresh scan, a face the user has not shown or touched is only expected and does not count.
+function scanFaceGiven(f){return !!f&&(f.read!==false||f.pinned.some(Boolean));}
+function scanFaceIds(){return (scanN===3?[0,1,2,3,4,5]:scanVoter.order.slice()).filter(c=>scanFaceGiven(scanVoter.faces[c]));}
 // "the white face" on the 3x3; "face 3" on a cube with no centers.
 function scanFaceName(id){return scanN===3?`the ${COLOR_NAMES_E[id]} face`:`face ${scanVoter.order.indexOf(id)+1}`;}
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+// Which set of colors the last frame read as, for the status line.
+function scanStyleNote(r){return r&&r.style&&scanStyle()==='auto'?` Read as ${r.style==='stickerless'?'stickerless plastic':'stickers'}.`:'';}
 function scanStep(r){
   const ev=voteFrame(scanVoter,r),name=scanFaceName;
   const nLocked=scanFaceIds().length;
   if(ev.event==='locked'){
+    if(typeof scanRecLock==='function')scanRecLock(ev.center,scanVoter.faces[ev.center].stickers);
     // Keep at most eight faces: a misread one may sit beside its retake until the fit drops it.
     if(scanN!==3&&scanVoter.order.length>8)voteDrop(scanVoter,scanVoter.order[0]);
     flashNet(ev.center);drawNet();
+    if(scanResync)return scanRefresh(`${cap(name(ev.center))} is read.`);
     const count=scanFaceIds().length;
     if(count>6)return scanAssemble(`Another face is read: that makes ${count}, but a cube has six. One of them was misread, so I use the six that fit together.`);
     if(count===6)return scanAssemble(ev.retake?`${cap(name(ev.center))} is read again.`:'');
-    const left=scanN===3?` Still to scan: ${[0,1,2,3,4,5].filter(c=>!scanVoter.faces[c]).map(c=>COLOR_NAMES_E[c]).join(', ')}.`:` ${count} of 6 faces read.`;
-    scanStatus(`${cap(name(ev.center))} is read${ev.retake?' again':''}. Turn the cube to show the next face.${left}`);
+    const left=scanN===3?` Still to scan: ${[0,1,2,3,4,5].filter(c=>!scanFaceGiven(scanVoter.faces[c])).map(c=>COLOR_NAMES_E[c]).join(', ')}.`:` ${count} of 6 faces read.`;
+    scanStatus(`${cap(name(ev.center))} is read${ev.retake?' again':''}. Turn the cube to show the next face.${left}${scanStyleNote(r)}`);
   }else if(ev.event==='conflict'){
     scanStatus(`This face has a ${COLOR_NAMES_E[ev.center]} center, but its other stickers differ from the ${COLOR_NAMES_E[ev.center]} face you showed before. Show the face again, or press Start again.`);
   }else if(ev.event==='reading'){
-    scanStatus(`Hold still. Reading ${scanN===3?name(ev.center):'a face'}: ${ev.tally.n} of ${scanVoter.opts.window}.`);
+    scanStatus(`Hold still. Reading ${scanN===3?name(ev.center):'a face'}: ${ev.tally.n} of ${scanVoter.opts.window}.${scanStyleNote(r)}`);
   }else if(ev.event==='held'){
-    if(nLocked<6)scanStatus(`${cap(name(ev.center))} is read. Turn the cube to show the next face.`);
-  }else if(!r.ok&&nLocked<6&&!scanVoter.run.length){
-    scanStatus(r.reason==='cover'?'I can see part of a face. Show the whole face, closer to the camera.':'Show a face to the camera. Keep your fingers off the stickers.');
+    if(nLocked<6&&!scanResync)scanStatus(`${cap(name(ev.center))} is read. Turn the cube to show the next face.`);
+  }else if(!r.ok&&nLocked<6&&!scanVoter.run.length&&!(scanResync&&nLocked)){
+    scanStatus(r.reason==='cover'?'I can see part of a face. Show the whole face, closer to the camera.':scanResync?'Show a face to the camera, or paint the stickers that differ. Keep your fingers off the stickers.':'Show a face to the camera. Keep your fingers off the stickers.');
   }
+}
+// A refresh scan: the faces given so far against the states the guide expects. Fills scanRes with
+// {ok, cube, found:{off, at, moves}} when one candidate is left.
+function scanRefresh(prefix){
+  const faces={};let given=0;
+  for(let c=0;c<6;c++){const f=scanVoter.faces[c];if(scanFaceGiven(f)){faces[c]=f.stickers;given++;}}
+  scanRes=null;scanResync.full=false;$('#scanUse').disabled=true;$('#scanReturn').disabled=true;$('#scanNextFit').classList.add('hidden');$('#scanUse').textContent='Set up from current';
+  const pre=prefix?prefix+' ':'';
+  if(!given){drawNet();return scanStatus(pre+'Show a face to the camera, or paint the stickers that differ.');}
+  const r=resyncFind(scanResync.bases,faces);
+  if(r.unique){
+    const c=r.candidates[0],off=c.moves.length;
+    scanRes={ok:true,cube:c.cube,facelets:c.cube.toFacelets(),found:{off,at:c.at,moves:c.moves},fits:[],changes:[],errors:[]};
+    $('#scanUse').disabled=false;$('#scanReturn').disabled=false;drawNet();
+    return scanStatus(pre+`Found it: your cube is ${off?`${off} move${off===1?'':'s'} off the hint`:'on the hint'}. Press Set up from current to go on from here, or Return to scramble for the way back.`);
+  }
+  drawNet();
+  if(r.candidates.length){
+    const k=r.candidates.length;
+    return scanStatus(pre+`${k} states fit so far. ${r.ask!=null?`Show the ${COLOR_NAMES_E[r.ask]} face.`:'Show another face.'}`);
+  }
+  if(given===6){scanResync.full=true;$('#scanUse').textContent='Use this cube';return scanAssemble(pre+'No state near the hint fits these faces, so I read the whole cube.');}
+  scanStatus(pre+`No state within ${r.depth} moves of the hint fits these faces. Show another face; with all six, I read the whole cube.`);
 }
 // Stage 5 on the locked faces. Fills scanRes: {ok, cube, facelets, slots:[{id,k}] per side,
 // fits:[{cube, facelets, slots}], pick, changes, errors, ambiguous}.
@@ -472,7 +562,7 @@ function scanAssemble(prefix){
     }
   }
   $('#scanNextFit').classList.toggle('hidden',scanRes.fits.length<2);
-  $('#scanUse').disabled=!(scanRes.ok&&scanRes.cube);drawNet();
+  $('#scanUse').disabled=!(scanRes.ok&&scanRes.cube);$('#scanReturn').disabled=!(scanRes.ok&&scanRes.cube);drawNet();
   const pre=prefix?prefix+' ':'';
   if(!scanRes.ok)return scanStatus(pre+scanRes.errors.join(' ')+(faces.length===6?' Click a sticker on the net to fix it, or show a face again to rescan it.':''));
   let t=pre+'All six faces are read and the cube fits together. '+(scanRes.changes.length?scanRes.changes.join(' ')+' Check the net. ':'');
@@ -487,29 +577,33 @@ function scanNextFit(){
   $('#scanUse').disabled=!scanRes.cube;drawNet();
   scanStatus(`Fit ${scanRes.pick+1} of ${scanRes.fits.length}. Check the net against your cube.${scanRes.cube?' If it is your cube, press Use this cube.':''}`);
 }
-function scanUse(){
+// how: 'use' (a full read), 'setup' or 'return' (a refresh scan). opts.onCube gets (cube, how, info):
+// info.off is the moves off the hint when the resync found the cube, info.full says a full read.
+function scanUse(how){
   if(!scanRes||!scanRes.ok||!scanRes.cube)return;
-  if(scanOnCube){const f=scanOnCube,c=scanRes.cube;scanOnClose=null;closeScan();f(c);return;}
+  if(scanOnCube){const f=scanOnCube,c=scanRes.cube,info={off:scanRes.found?scanRes.found.off:null,full:!scanRes.found};scanOnClose=null;closeScan();f(c,how,info);return;}
   const r=scrambleFromCube(scanRes.cube,customName('scan'));
   if(r.ok)closeScan();else scanStatus(r.errors.join(' '));
 }
 // The net: U on top, L F R B across, D below. Before all six faces fit, each face shows as read:
-// at its center's side on the 3x3, in the order read otherwise.
+// at its center's side on the 3x3, in the order read otherwise. Once the cube fits (or is found),
+// the net shows the cube itself, so a repaired sticker shows repaired.
 const NET_POS=[[1,0],[2,1],[1,1],[1,2],[0,1],[3,1]];
 function netSlot(slot){
   let id,k=0;
-  if(scanRes&&scanRes.ok){const s=scanRes.slots[slot];if(!s)return null;id=s.id;k=s.k;}
+  if(scanRes&&scanRes.ok){const s=scanRes.slots?scanRes.slots[slot]:{id:slot,k:0};if(!s)return null;id=s.id;k=s.k;}
   else id=scanN===3?slot:scanVoter.order[slot];
   const f=id==null?null:scanVoter.faces[id];if(!f)return null;
-  return {id,stickers:rotateFace(f.stickers,k),pinned:rotateFace(f.pinned,k),k};
+  const cells=scanN*scanN,shown=scanRes&&scanRes.ok&&scanRes.facelets?scanRes.facelets.slice(cells*slot,cells*slot+cells):rotateFace(f.stickers,k);
+  return {id,stickers:shown,pinned:rotateFace(f.pinned,k),k,given:scanFaceGiven(f)||!!(scanRes&&scanRes.ok)};
 }
 function drawNet(){
   const el=$('#scanNet');if(!el)return;
   const n=scanN,s=Math.round((70-(n-1)*2)/n),g=2,fw=n*s+(n-1)*g+6;
-  let out=`<svg viewBox="0 0 ${4*fw} ${3*fw}" role="img" aria-label="Scanned faces">`;
+  let out=`<svg viewBox="0 0 ${4*fw} ${3*fw}" role="img" aria-label="${scanResync?'The cube the guide expects, and the faces read':'Scanned faces'}">`;
   for(let slot=0;slot<6;slot++){
     const [fx,fy]=NET_POS[slot],nf=netSlot(slot),ox=fx*fw+3,oy=fy*fw+3;
-    out+=`<g data-slot="${slot}"${nf?` data-id="${nf.id}"`:''}>`;
+    out+=`<g data-slot="${slot}"${nf?` data-id="${nf.id}"`:''}${nf&&!nf.given?' class="expect"':''}>`;
     for(let p=0;p<n*n;p++){
       const x=ox+(p%n)*(s+g),y=oy+Math.floor(p/n)*(s+g),center=n===3&&p===4;
       const col=nf?stickerColor(nf.stickers[p]):center?stickerColor(slot):'var(--panel2)';
@@ -520,13 +614,14 @@ function drawNet(){
   el.innerHTML=out+'</svg>';
 }
 function flashNet(id){setTimeout(()=>{const h=$(`#scanNet g[data-id="${id}"]`);if(h){h.classList.add('flash');setTimeout(()=>h.classList.remove('flash'),600);}},0);}
+// A click paints the chosen color on the sticker and pins it.
 function scanNetClick(e){
   const r=e.target.closest('rect[data-pos]');if(!r)return;
   const id=+r.dataset.id,p=+r.dataset.pos,f=scanVoter.faces[id];if(!f||(scanN===3&&p===4))return;
   // Map the shown position back to the stored reading, which may be turned.
   const slot=+r.closest('g').dataset.slot,nf=netSlot(slot),k=nf?nf.k:0,idx=rotateFace([...Array(scanN*scanN).keys()],k)[p];
-  f.stickers[idx]=(f.stickers[idx]+1)%6;f.pinned[idx]=true;
-  if(scanFaceIds().length>=6)scanAssemble('');else drawNet();
+  f.stickers[idx]=scanColor;f.pinned[idx]=true;
+  if(scanResync)scanRefresh('');else if(scanFaceIds().length>=6)scanAssemble('');else drawNet();
 }
 // Overlay: the fitted lattice and the color read at each cell. Drawn in frame pixels.
 function drawOverlay(img,r){

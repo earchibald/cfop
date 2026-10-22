@@ -111,18 +111,19 @@ function assembleScan(faces){
     const s=sols[0];
     return {ok:true,facelets:s.facelets,cube:s.cube,rotations:s.rotations,changes,errors:[],ambiguous:sols.length>1};
   };
-  let sols=legalRotations(byFace);
-  if(sols.length)return done(sols,[]);
-
-  // Repair 0: read all stickers again against this cube's own center colors, nine per color.
-  // This settles red/orange and white/yellow when the light shifts the colors.
+  // The count read, on every read: all stickers again against this cube's own center colors,
+  // nine per color. This settles red/orange and white/yellow when the light leans warm, before
+  // the plain read is trusted. A joint read that differs and makes a legal cube wins; else the
+  // plain read stands, and the repairs below follow it.
   const joint=jointColors(faces.map(fc=>fc));
   if(joint){
     const trial=new Array(6);for(const fc of faces)trial[fc.stickers[4]]=joint.get(fc);
     let n=0;for(let c=0;c<6;c++)for(let p=0;p<9;p++)if(trial[c][p]!==byFace[c][p])n++;
-    sols=legalRotations(trial);
-    if(sols.length){const r=done(sols,[`I read ${n} sticker${n===1?'':'s'} again against the center colors.`]);r.joint=true;return r;}
+    if(n){const js=legalRotations(trial);
+      if(js.length){const r=done(js,[`I read ${n} sticker${n===1?'':'s'} again against the center colors.`]);r.joint=true;return r;}}
   }
+  let sols=legalRotations(byFace);
+  if(sols.length)return done(sols,[]);
 
   // Repair 1: one face read with red/orange or white/yellow swapped throughout.
   for(let face=0;face<6;face++)for(const [a,b] of SCAN_CONFUSE){
@@ -253,6 +254,17 @@ function assembleFree(faces,n){
   };
   const done=(fits,changes)=>Object.assign({ok:true,fits,ambiguous:fits.length>1,changes,errors:[]},fits[0]);
   // Any six of the faces that fit together. With exactly six, the repairs below may follow.
+  const six=[0,1,2,3,4,5],fitsOf=(sols,rs)=>sols.map(s=>fitOf(s,six,rs));
+  // The count read, on every read of exactly six faces: all stickers again as six groups of n*n
+  // by their colors (as assembleScan does against the centers). A joint read that differs and
+  // makes a legal cube wins; else the plain read stands.
+  const joint=faces.length===6?jointColors(faces,n):null;
+  if(joint){
+    const trial=faces.map(fc=>joint.get(fc));
+    let m=0;for(let i=0;i<6;i++)for(let p=0;p<cells;p++)if(trial[i][p]!==reads[i][p])m++;
+    if(m){const sols=freeSolutions(trial,n,64);
+      if(sols.length){const r=done(fitsOf(sols,trial),[`I read ${m} sticker${m===1?'':'s'} again by their colors.`]);r.joint=true;return r;}}
+  }
   const subsets=[];
   (function pick(start,cur){if(cur.length===6){subsets.push(cur.slice());return;}for(let i=start;i<faces.length;i++){cur.push(i);pick(i+1,cur);cur.pop();}})(0,[]);
   const fits=[],seen=new Set();
@@ -261,15 +273,6 @@ function assembleFree(faces,n){
   }
   if(fits.length)return done(fits,[]);
   if(faces.length!==6)return {ok:false,errors:[`${faces.length} faces are read, but no six of them fit together as one cube. Press Start again.`],changes:[]};
-  const six=[0,1,2,3,4,5],fitsOf=(sols,rs)=>sols.map(s=>fitOf(s,six,rs));
-  // Repair 0: read all stickers again as six groups of n*n by their colors.
-  const joint=jointColors(faces,n);
-  if(joint){
-    const trial=faces.map(fc=>joint.get(fc));
-    let m=0;for(let i=0;i<6;i++)for(let p=0;p<cells;p++)if(trial[i][p]!==reads[i][p])m++;
-    const sols=freeSolutions(trial,n);
-    if(sols.length){const r=done(fitsOf(sols,trial),[`I read ${m} sticker${m===1?'':'s'} again by their colors.`]);r.joint=true;return r;}
-  }
   // Repair 1: one face read with red/orange or white/yellow swapped throughout.
   for(let i=0;i<6;i++)for(const [a,b] of SCAN_CONFUSE){
     const s=reads[i];if(!s.some(x=>x===a||x===b))continue;
