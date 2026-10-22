@@ -94,12 +94,12 @@ function cubeTabOpen(){
   w.innerHTML=`<div class="cw-head" title="Drag to move the window"><span class="dot" aria-hidden="true"></span><b class="nm"></b><span class="batt" id="cubeWinBatt" hidden></span><button class="small ghost" id="cubeWinClose" title="Collapse the window back into the tab (Esc)">Close<span class="hk" aria-hidden="true">Esc</span></button></div>
    <div class="cw-stage" id="cubeWinStage"><div class="st-name" aria-live="polite"></div><div class="st-sub"></div><div class="st-alg" aria-label="The moves of this case"></div></div>
    <svg id="cubeWinSvg" viewBox="0 0 400 360" role="img" aria-label="Your smart cube, live"></svg>
-   <div class="cw-warn hidden" id="cubeWinWarn" role="status"><span class="txt"></span><span class="btns"><button class="small" id="cubeWinMatch">Read as held</button><button class="small ghost" id="cubeWinKeep" title="The cube did not turn: line the picture up with the hold again.">Keep this hold</button></span></div>
+   <div class="cw-warn hidden" id="cubeWinWarn" role="status"><span class="txt"></span><span class="btns"><button class="small" id="cubeWinMatch" title="Turn the hold to match the cube. The turn goes on the list">Read as held</button><button class="small ghost" id="cubeWinKeep" title="The cube did not turn: line the picture up with the hold again.">Keep this hold</button></span></div>
    <div class="cw-turns" id="cubeWinTurns" role="group" aria-label="Turn the whole cube"><span class="lbl" title="Turned the cube in your hands? Press the same turn here, so the picture, the moves and the stage read as you hold it.">Turn the cube</span></div>
    <div class="cw-moves" id="cubeWinMoves" aria-label="Your last moves"></div>
-   <div class="cw-row" id="cubeWinView"><div class="cw-side"><button class="small ghost hidden" id="cubeWinReset">Reset view</button><button class="small ghost" id="cubeWinClear" title="Empty the list of moves under the picture">Clear moves</button></div></div>
+   <div class="cw-row" id="cubeWinView"><div class="cw-side"><button class="small ghost hidden" id="cubeWinReset" title="Line the picture up with the cube in your hands">Reset view</button><button class="small ghost" id="cubeWinClear" title="Empty the list of moves under the picture">Clear moves</button></div></div>
    <p class="muted cw-note" id="cubeWinNote"></p>
-   <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect">Connect again</button></div>`;
+   <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect" title="Open the Smart cube window and connect the cube again">Connect again</button></div>`;
   document.body.appendChild(w);
   const turns=$('#cubeWinTurns');
   CUBE_TAB_TURNS.forEach((t,i)=>{

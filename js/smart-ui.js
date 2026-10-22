@@ -58,25 +58,25 @@ function openSmart(note){
   if(smartMode()==='download'){openSmartDownload();return;}
   const bg=document.createElement('div');bg.className='modal-bg';bg.id='smartBg';
   bg.innerHTML=`<div class="modal smart" role="dialog" aria-label="Smart cube">
-   <button class="close small ghost" id="smartClose" aria-label="Close">✕</button>
+   <button class="close small ghost" id="smartClose" aria-label="Close" title="Close this window (Esc)">✕</button>
    <h2>Smart cube</h2>
    <p class="muted" style="margin-top:0">Connect a GAN smart cube, such as the GAN 12 ui, with Bluetooth. Twistwright reads the cube, then loads a scramble that gives the same cube. Turn the cube once to wake it up before you connect.</p>
    <div class="smart-grid">
     <div class="scan-net" id="smartNet"><svg viewBox="0 0 400 300" role="img" aria-label="The cube as the smart cube reads it"></svg></div>
     <div>
-     <div class="scan-row"><button class="primary" id="smartConnect">Connect</button><button class="small ghost hidden" id="smartDisconnect">Disconnect</button><span class="muted" id="smartInfo" style="font-size:13px"></span><span class="batt" id="smartBatt" hidden></span></div>
+     <div class="scan-row"><button class="primary" id="smartConnect" title="Look for a GAN cube over Bluetooth">Connect</button><button class="small ghost hidden" id="smartDisconnect" title="Drop the link to the cube">Disconnect</button><span class="muted" id="smartInfo" style="font-size:13px"></span><span class="batt" id="smartBatt" hidden></span></div>
      <div id="smartList" class="hidden">
       <p class="muted" id="smartListNote" style="font-size:13px;margin:6px 0"></p>
       <div class="scan-row" id="smartListItems"></div>
-      <div class="scan-row"><button class="small ghost" id="smartListCancel">Cancel</button></div>
+      <div class="scan-row"><button class="small ghost" id="smartListCancel" title="Stop the search and choose no cube">Cancel</button></div>
      </div>
      <div id="smartMacRow" class="hidden">
       <p class="muted" style="font-size:13px;margin:6px 0">The cube needs its MAC address to talk, and this browser cannot read it. Type it here. Or turn on <span class="kbd">chrome://flags/#enable-experimental-web-platform-features</span> in Chrome and connect again: then Twistwright reads the address itself.</p>
-      <div class="scan-row"><input id="smartMac" placeholder="AB:12:34:56:78:9A" spellcheck="false" autocomplete="off" style="flex:1;min-width:180px"><button class="primary" id="smartMacGo">Use this address</button></div>
+      <div class="scan-row"><input id="smartMac" placeholder="AB:12:34:56:78:9A" spellcheck="false" autocomplete="off" style="flex:1;min-width:180px" title="The MAC address of the cube: six pairs of letters and digits"><button class="primary" id="smartMacGo" title="Connect with this address">Use this address</button></div>
      </div>
-     <div class="scan-row"><button class="primary" id="smartUse" disabled>Use this cube</button><button class="small" id="smartRead" disabled>Read again</button></div>
+     <div class="scan-row"><button class="primary" id="smartUse" disabled title="Load a scramble that gives the cube as the net shows it">Use this cube</button><button class="small" id="smartRead" disabled title="Ask the cube for its state again">Read again</button></div>
      <p class="muted" style="font-size:13px;margin:6px 0">The cube counts its own turns. It cannot see its colors. If the net does not match your cube, solve your cube, then press My cube is solved. Or read the colors of your cube as it is, with the camera or by hand: the net then follows your cube from that state.</p>
-     <div class="scan-row"><button class="small ghost" id="smartSolved" disabled>My cube is solved</button><button class="small ghost" id="smartScan" disabled>Scan my cube</button><button class="small ghost" id="smartPaint" disabled>Paint my cube</button></div>
+     <div class="scan-row"><button class="small ghost" id="smartSolved" disabled title="Tell the cube its state is solved, so the net starts from there">My cube is solved</button><button class="small ghost" id="smartScan" disabled title="Read the colors of the cube with the camera, so the net matches it">Scan my cube</button><button class="small ghost" id="smartPaint" disabled title="Tap the colors of the cube onto a map, so the net matches it">Paint my cube</button></div>
      <p class="muted hidden" id="smartFixNote" style="font-size:13px;margin:6px 0"></p>
     </div>
    </div>
@@ -106,10 +106,10 @@ function openSmart(note){
 function openSmartDownload(){
   const bg=document.createElement('div');bg.className='modal-bg';bg.id='smartBg';
   bg.innerHTML=`<div class="modal smart dl" role="dialog" aria-label="Smart cube on a Mac">
-   <button class="close small ghost" id="smartClose" aria-label="Close">✕</button>
+   <button class="close small ghost" id="smartClose" aria-label="Close" title="Close this window (Esc)">✕</button>
    <h2>Smart cube on a Mac</h2>
    <p class="muted" style="margin-top:0">Safari cannot use Bluetooth. The Twistwright app for macOS can. It connects to your GAN cube and opens Twistwright in your browser at an address where the page can reach the cube.</p>
-   <div class="scan-row"><button class="primary" id="smartDl">Download for macOS</button><button class="small" id="smartOpenApp">Open the app</button></div>
+   <div class="scan-row"><button class="primary" id="smartDl" title="Get the Twistwright app for macOS from GitHub">Download for macOS</button><button class="small" id="smartOpenApp" title="Open the Twistwright app if it is installed">Open the app</button></div>
    <ol class="muted" style="font-size:14px;padding-left:20px">
     <li>Unzip the download and move Twistwright to Applications.</li>
     <li>Open Twistwright. If macOS says it cannot check the app, open System Settings › Privacy &amp; Security and press Open Anyway.</li>
@@ -230,7 +230,7 @@ function smartList(link){
     const stop=link.scan(d=>{
       let b=seen.get(d.id);
       if(!b){b=document.createElement('button');b.className='small';items.appendChild(b);seen.set(d.id,b);}
-      b.textContent=d.name;b.dataset.mac=d.mac||'';
+      b.textContent=d.name;b.dataset.mac=d.mac||'';b.title='Connect to '+d.name;
       b.onclick=()=>end(bridgeDevice(link,{id:d.id,name:d.name,mac:b.dataset.mac||null}));
       note.textContent='Choose your cube.';
     });

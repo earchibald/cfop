@@ -312,7 +312,7 @@ function fgOffLine(h){
   const el=fgEl,p=el('p','off'),k=h.off?h.off.length:0;
   p.appendChild(el('b',null,h.off?`Off the hint by ${k} move${k===1?'':'s'}.`:'Off the hint.'));
   if(k){p.appendChild(document.createTextNode(' Back: '));p.appendChild(el('code',null,invertAlg(h.off)));}
-  const b=el('button','small',"New hint from here");b.type='button';b.dataset.renew='1';p.appendChild(b);
+  const b=el('button','small',"New hint from here");b.type='button';b.dataset.renew='1';b.title='Drop this hint and find the shortest way from where the cube is now';p.appendChild(b);
   return p;
 }
 function fgWords(){const c=fg.src==='smart'?fg.held:fg.X?phys(fg.X):null;return c?f2lSlotWords(c):f2lSlotWords(new Cube());}
@@ -392,7 +392,7 @@ function fgDrawAll(){
       if(way&&way.basic){const b=way.basic,bk=el('p','fg-book');
         bk.appendChild(el('b',null,'As the book writes it: '));bk.appendChild(el('code',null,b.moves.join(' ')));
         for(const stp of b.steps){bk.appendChild(el('span',null,' '+stp.text));
-          if(stp.kind==='case'){const lk=el('button','small ghost','Case details');lk.type='button';lk.dataset.case=String(stp.n);bk.appendChild(lk);bk.appendChild(el('span','muted',' '+stp.why));}}
+          if(stp.kind==='case'){const lk=el('button','small ghost','Case details');lk.type='button';lk.dataset.case=String(stp.n);lk.title=`Open F2L case ${stp.n}: its picture, recognition and algorithm`;bk.appendChild(lk);bk.appendChild(el('span','muted',' '+stp.why));}}
         card.appendChild(bk);}
     }
     if(f.working)card.appendChild(el('p','muted','Working.'));

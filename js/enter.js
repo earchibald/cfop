@@ -26,10 +26,10 @@ function openEnter(){
   if($('#enterBg'))return;
   const bg=document.createElement('div');bg.className='modal-bg';bg.id='enterBg';
   bg.innerHTML=`<div class="modal enter" role="dialog" aria-label="Enter a scramble">
-   <button class="close small ghost" id="enterClose" aria-label="Close">✕</button>
+   <button class="close small ghost" id="enterClose" aria-label="Close" title="Close (Esc)">✕</button>
    <h2>Enter a scramble</h2>
    <p class="muted" style="margin-top:0">Type a scramble in standard notation, or paste the letters of a cube state. Twistwright loads it like a seed, so Plan, Cross, auto-step and the timer all work.</p>
-   <div class="scan-row"><input id="enterType" placeholder="e.g. R U R' U' F2 D L2 B'" style="flex:1;min-width:260px"><button class="primary" id="enterGo">Load scramble</button></div>
+   <div class="scan-row"><input id="enterType" placeholder="e.g. R U R' U' F2 D L2 B'" style="flex:1;min-width:260px" title="A scramble in move letters, or the letters of a cube state"><button class="primary" id="enterGo" title="Put this scramble on the cube (Enter)">Load scramble</button></div>
    <div id="enterStatus" class="notice" style="margin-top:10px">Use face turns only: U R F D L B, each with an optional <span class="kbd">'</span> or <span class="kbd">2</span>. A state is one letter per sticker, W R G Y O B, face by face: top, right, front, bottom, left, back. The lab's Copy state writes one.</div>
   </div>`;
   document.body.appendChild(bg);

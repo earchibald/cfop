@@ -93,13 +93,13 @@ function gdPlanList(){
   const g=guideState;
   return g.plan.stages.map(st=>`<h3 class="gd-ph">Stage ${st.n} · ${esc(st.name)}</h3>`+(st.parts.length?st.parts.map(p=>{
     const i=g.parts.findIndex(e=>e.part===p);const on=i===g.i&&g.view==='guide';const done=i<g.i||g.view==='done';
-    return `<button class="gd-prow${on?' cur':''}${done&&!on?' done':''}" data-i="${i}"><span class="mono muted">${i+1}</span><span>${esc(p.title)}</span><span class="muted">${gdFaceMoves(p.moves)} moves</span></button>`;}).join(''):'<p class="muted gd-pnone">Already done on this cube.</p>')).join('');
+    return `<button class="gd-prow${on?' cur':''}${done&&!on?' done':''}" data-i="${i}" title="Go to part ${i+1} of the solve"><span class="mono muted">${i+1}</span><span>${esc(p.title)}</span><span class="muted">${gdFaceMoves(p.moves)} moves</span></button>`;}).join(''):'<p class="muted gd-pnone">Already done on this cube.</p>')).join('');
 }
 function gdEntryHTML(){
   const g=guideState;
   return `<div class="panel"><h2>Solve my cube</h2><p class="muted">Show the app your cube. It then tells you each move, part by part.</p>${g.msg?`<div class="notice gd-msg">${esc(g.msg)}</div>`:''}</div>
   <div class="panel beg-ask">${typeof begYourCubeHTML==='function'?begYourCubeHTML():''}</div>
-  <div class="panel gd-now"><div><b>Loaded a mix-up as letters?</b><div class="muted">Mix-up <span class="mono" id="gdSeed">${esc(scr.seed)}</span> is loaded now.</div></div><button id="gdStart">Start with this scramble</button></div>`;
+  <div class="panel gd-now"><div><b>Loaded a mix-up as letters?</b><div class="muted">Mix-up <span class="mono" id="gdSeed">${esc(scr.seed)}</span> is loaded now.</div></div><button id="gdStart" title="Start the guided solve on the mix-up that is loaded">Start with this scramble</button></div>`;
 }
 function gdGuideHTML(){
   const g=guideState,pk=begPack();const e=g.parts[g.i];const p=e.part;const st=e.stage;
@@ -110,12 +110,12 @@ function gdGuideHTML(){
     :`<li><b>Hold the cube</b> with ${esc(p.up)} up and <b>${esc(col)} in front</b>.${p.pre?` Turn the whole cube so the ${esc(col)} center faces you (${esc(p.pre)}). The dashed move is this turn.`:' The 3D cube shows this view.'}</li>`;
   const why=gdWhy(e);
   const next=g.parts[g.i+1];
-  const lesson=typeof openLesson==='function'?`<button class="small ghost" id="gdLesson">Open the lesson</button>`:'';
-  const plan=g.showPlan?'Hide the whole plan':'Show the whole plan';
+  const lesson=typeof openLesson==='function'?`<button class="small ghost" id="gdLesson" title="Open the lesson for this stage">Open the lesson</button>`:'';
+  const plan=g.showPlan?'Hide the whole plan':'Show the whole plan';const planTip=g.showPlan?'Hide the list of every part':'List every part of the solve. A click goes to that part';
   return `<div class="panel">${gdStageBar()}</div>
   <div class="panel gd-solve">
     <div class="gd-line"><div><b id="gdWhere">Stage ${st.n} of ${pk.count} · ${esc(st.name)} · part ${e.k+1} of ${e.m}</b><div class="muted" id="gdCount">${e.done} moves done, about ${g.total-e.done} to go.</div></div>
-      <div class="row"><button class="small ghost" id="gdPlanBtn" aria-expanded="${g.showPlan}">${plan}</button><button class="small ghost" id="gdDiff">My cube looks different</button></div></div>
+      <div class="row"><button class="small ghost" id="gdPlanBtn" aria-expanded="${g.showPlan}" title="${planTip}">${plan}</button><button class="small ghost" id="gdDiff" title="Start over: scan or paint your cube again">My cube looks different</button></div></div>
     ${g.showPlan?`<div class="gd-plan" id="gdPlan">${gdPlanList()}</div>`:''}
   </div>
   <div class="panel gd-part">
@@ -127,16 +127,16 @@ function gdGuideHTML(){
         ${why?`<div class="note"><b>${esc(why.h)}</b> ${esc(why.t)}</div>`:''}
       </div>
     </div>
-    <div class="gd-actions"><button class="big primary" id="gdDone">${next?'Done, next part →':'Done, last part →'}</button><button class="big" id="gdShow">▷ Show me on the cube</button><button class="ghost" id="gdPrev"${g.i?'':' disabled'}>← Previous part</button>
+    <div class="gd-actions"><button class="big primary" id="gdDone" title="${next?'The moves are made: go to the next part':'The moves are made: the cube is solved'}">${next?'Done, next part →':'Done, last part →'}</button><button class="big" id="gdShow" title="Play the moves of this part on the screen cube">▷ Show me on the cube</button><button class="ghost" id="gdPrev"${g.i?'':' disabled'} title="Go back one part">← Previous part</button>
       <span class="muted gd-lost">Lost? Press <b>My cube looks different</b> and scan or paint it again.</span></div>
   </div>
   <div class="panel gd-next" id="gdNext">${next?`<div><b>Coming up:</b> ${esc(next.part.title)}.</div>${next.stage!==st?`<div class="muted">Stage ${next.stage.n} next: ${esc(next.stage.name.replace(/^The /,'the '))}.</div>`:''}`:'<div><b>Coming up:</b> nothing. This is the last part. After it, the cube is solved.</div>'}</div>`;
 }
 function gdDoneHTML(){
-  const g=guideState;const plan=g.showPlan?'Hide the whole plan':'Show the whole plan';
+  const g=guideState;const plan=g.showPlan?'Hide the whole plan':'Show the whole plan';const planTip=g.showPlan?'Hide the list of every part':'List every part of the solve';
   return `<div class="panel">${gdStageBar()}</div>
   <div class="panel gd-win" id="gdWin"><h2>You did it</h2><p>Your cube is solved.</p><p class="muted">${g.total} moves in ${g.parts.length} parts.</p>
-    <div class="row"><button class="big primary" id="gdAgain">Solve again</button><button class="big" id="gdCfop">Try ${esc(begPack().next.name)}</button><button class="ghost" id="gdPlanBtn">${plan}</button></div>
+    <div class="row"><button class="big primary" id="gdAgain" title="Back to the start: show the app a new cube">Solve again</button><button class="big" id="gdCfop" title="Switch the method to ${esc(begPack().next.name)}">Try ${esc(begPack().next.name)}</button><button class="ghost" id="gdPlanBtn" title="${planTip}">${plan}</button></div>
     ${g.showPlan?`<div class="gd-plan" id="gdPlan">${gdPlanList()}</div>`:''}</div>`;
 }
 function gdRender(){

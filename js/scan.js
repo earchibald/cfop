@@ -395,18 +395,18 @@ function openScan(opts){
   const bg=document.createElement('div');bg.className='modal-bg scan-bg';bg.id='scanBg';
   const swatches=SCAN_PALETTE.map((p,i)=>`<button type="button" class="pt-swatch${p.c===scanColor?' on':''}" data-c="${p.c}" aria-label="${p.label}" title="${cap(p.label)}: key ${i+1}" style="background:${stickerColor(p.c)}"></button>`).join('');
   bg.innerHTML=`<div class="modal scan" role="dialog" aria-label="Read my cube">
-   <button class="close small ghost" id="scanClose" aria-label="Close">✕</button>
+   <button class="close small ghost" id="scanClose" aria-label="Close" title="Close this window (Esc)">✕</button>
    <h2>${re?'Read my cube':'Scan cube'}</h2>
    <p class="muted" style="margin-top:0">${re?'The net shows the cube the guide expects. Show the camera a face that differs, or pick a color and paint the stickers that differ. Two or three faces are usually enough; start with the top.'
      :`Hold one face of the ${scanN}×${scanN} to the camera and keep it still. When the face is read, turn the cube to show the next face. You can show the faces in any order and at any angle.${free?` A ${scanN}×${scanN} has no fixed centers, so I work out where each face goes once all six are read.`:''}`} A glossy cube reflects the screen. If the read jumps, tilt the cube a little or dim the screen.</p>
    <div class="scan-grid">
     <div><div class="scan-view mirror" id="scanView"><video id="scanVideo" autoplay playsinline muted></video><canvas id="scanOverlay"></canvas></div>
-     <div class="scan-row"><label><input type="checkbox" id="scanMirror" checked> Mirror</label><span class="muted" style="font-size:13px">Mirror flips the preview only.</span></div>
+     <div class="scan-row"><label title="Flip the camera preview left to right, as a mirror does"><input type="checkbox" id="scanMirror" checked> Mirror</label><span class="muted" style="font-size:13px">Mirror flips the preview only.</span></div>
      <div class="scan-row"><span class="muted" style="font-size:13px">Sticker style</span><div class="status-sel" id="scanStyle" role="group" aria-label="Sticker style"><button type="button" data-s="auto" title="Try both sets of colors and keep the nearer">Auto</button><button type="button" data-s="stickers" title="Printed stickers">Stickers</button><button type="button" data-s="stickerless" title="Colored plastic, as on a GAN cube">Stickerless</button></div><span class="muted" style="font-size:13px">Auto keeps the set of colors the face sits nearer.</span></div></div>
     <div><div class="scan-net" id="scanNet"></div>
      <div class="scan-row scan-pal" id="scanPal" role="group" aria-label="Paint colors">${swatches}</div>
      <p class="muted" style="font-size:13px;margin:6px 0">Pick a color, then click a sticker to paint it. Keys 1 to 6 pick a color. A painted sticker stays fixed.</p>
-     <div class="scan-row"><button class="primary" id="scanUse" disabled>${re?'Set up from current':'Use this cube'}</button><button class="${re?'':'hidden'}" id="scanReturn" disabled title="The moves that bring your cube back to the scramble">Return to scramble</button><button class="small ghost hidden" id="scanNextFit">Next fit</button><button class="small ghost" id="scanReset">Start again</button><button class="small ghost hidden" id="scanSave" title="Save the frames of each face read, for the scanner tests">Save frames</button></div></div>
+     <div class="scan-row"><button class="primary" id="scanUse" disabled title="${re?'Your cube as it is becomes the scramble':'Load a scramble that gives the cube as the net shows it'}">${re?'Set up from current':'Use this cube'}</button><button class="${re?'':'hidden'}" id="scanReturn" disabled title="The moves that bring your cube back to the scramble">Return to scramble</button><button class="small ghost hidden" id="scanNextFit" title="The faces fit together another way: show the next one">Next fit</button><button class="small ghost" id="scanReset" title="Forget every face read and scan from the start">Start again</button><button class="small ghost hidden" id="scanSave" title="Save the frames of each face read, for the scanner tests">Save frames</button></div></div>
    </div>
    <div id="scanStatus" class="notice">Asking for camera access.</div>
   </div>`;
@@ -607,7 +607,7 @@ function drawNet(){
     for(let p=0;p<n*n;p++){
       const x=ox+(p%n)*(s+g),y=oy+Math.floor(p/n)*(s+g),center=n===3&&p===4;
       const col=nf?stickerColor(nf.stickers[p]):center?stickerColor(slot):'var(--panel2)';
-      out+=`<rect${nf?` data-id="${nf.id}" data-pos="${p}"`:''} x="${x}" y="${y}" width="${s}" height="${s}" rx="3" fill="${col}" stroke="${nf&&nf.pinned[p]?'var(--accent)':'var(--sticker-line,#111)'}" stroke-width="${nf&&nf.pinned[p]?2.5:1}" style="${nf&&!center?'cursor:pointer':''}"/>`;
+      out+=`<rect${nf?` data-id="${nf.id}" data-pos="${p}"`:''} x="${x}" y="${y}" width="${s}" height="${s}" rx="3" fill="${col}" stroke="${nf&&nf.pinned[p]?'var(--accent)':'var(--sticker-line,#111)'}" stroke-width="${nf&&nf.pinned[p]?2.5:1}" style="${nf&&!center?'cursor:pointer':''}"${nf?(center?' title="The center: fixed"':` title="Click to paint this sticker ${SCAN_PALETTE.find(q=>q.c===scanColor).label}"`):''}/>`;
     }
     out+='</g>';
   }

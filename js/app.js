@@ -178,7 +178,7 @@ function applySequence(){const i=seqState.idx,was=seqState.shown;seqState.shown=
 // In beginner mode every tile carries a caption in words (beghome.js: moveCaption), wrapped so the
 // tile itself keeps its text and its classes.
 function renderSequence(){$('#seqLabel').textContent=seqState.label||'';const cap=isBeg()&&typeof moveCaption==='function';
-  $('#scramble').innerHTML=seqState.moves.map((m,i)=>{const t=`<span class="m${/^[xyz]/.test(m)?' rot':''}" data-i="${i}">${fmtMove(m)}</span>`;return cap?`<span class="mt">${t}<small>${esc(moveCaption(m))}</small></span>`:t;}).join('');
+  $('#scramble').innerHTML=seqState.moves.map((m,i)=>{const t=`<span class="m${/^[xyz]/.test(m)?' rot':''}" data-i="${i}" title="Show the cube after this move">${fmtMove(m)}</span>`;return cap?`<span class="mt">${t}<small>${esc(moveCaption(m))}</small></span>`:t;}).join('');
   $$('#scramble .m').forEach(el=>el.onclick=()=>{stopAuto();seqState.idx=+el.dataset.i+1;applySequence();});}
 $('#scrub').oninput=e=>{stopAuto();seqState.idx=+e.target.value;applySequence();};
 function focusPlayer(){const p=$('#player');window.scrollTo({top:0,behavior:'smooth'});p.classList.remove('flash');void p.offsetWidth;p.classList.add('flash');}
@@ -238,7 +238,7 @@ function loadState(name,cube){
   scr.seed=name;$('#seed').value='';$('#seed').placeholder=name;scr.moves=[];scr.cube=cube;
   showForTab();document.dispatchEvent(new CustomEvent('cw:scramble'));
 }
-function renderHistory(){$('#history').innerHTML=history.length?'<div class="muted">Recent seeds (click to reload):</div>'+history.map(h=>`<span class="alt" data-s="${esc(h.seed)}"${h.moves?` title="${esc(h.moves)}"`:''}>${esc(h.seed)}</span>`).join(''):'<span class="muted">No history yet.</span>';
+function renderHistory(){$('#history').innerHTML=history.length?'<div class="muted">Recent seeds (click to reload):</div>'+history.map(h=>`<span class="alt" data-s="${esc(h.seed)}" title="Load this scramble again${h.moves?': '+esc(h.moves):''}">${esc(h.seed)}</span>`).join(''):'<span class="muted">No history yet.</span>';
   $$('#history .alt').forEach(el=>el.onclick=()=>{const h=history.find(x=>x.seed===el.dataset.s);if(h&&h.moves){loadScramble(h.seed,parseAlg(h.moves),true);return;}$('#seed').value=el.dataset.s;newScramble(el.dataset.s);});}
 // One scramble per puzzle: a 3×3 mix-up is not a 2×2 one. setMethod swaps them when the puzzle changes.
 const puzzleScr={};
@@ -264,7 +264,7 @@ function fmt(ms){if(ms==null)return '—';const s=ms/1000;return s>=60?`${Math.f
 function scopeTimes(){return times[timer.scope]||[];}
 function avg(arr,n){if(arr.length<n)return null;const a=arr.slice(-n).map(x=>x.ms).sort((x,y)=>x-y);const trim=n>=12?Math.ceil(n*0.05):1;const mid=a.slice(trim,a.length-trim);return mid.reduce((x,y)=>x+y,0)/mid.length;}
 function renderTimes(){const arr=scopeTimes();$('#stLast').textContent=fmt(arr.length?arr[arr.length-1].ms:null);$('#stAo5').textContent=fmt(avg(arr,5));$('#stAo12').textContent=fmt(avg(arr,12));const best=arr.length?Math.min(...arr.map(x=>x.ms)):null;$('#stBest').textContent=fmt(best);$('#stN').textContent=arr.length;
-  $('#times').innerHTML=arr.slice(-40).map((x,i)=>`<span class="${x.ms===best?'best':''}" title="${esc(x.label||'')} · ${new Date(x.t).toLocaleString()}">${fmt(x.ms)}</span>`).reverse().join('');$('#timesScope').textContent='Times: '+scopeName();}
+  $('#times').innerHTML=arr.slice(-40).map((x,i)=>`<span class="${x.ms===best?'best':''}" title="${esc(x.label||'')} · ${new Date(x.t).toLocaleString()}. Click to delete this time">${fmt(x.ms)}</span>`).reverse().join('');$('#timesScope').textContent='Times: '+scopeName();}
 // The timer scope as words: a tab name, or the case name for a case drill.
 function scopeName(){const s=timer.scope;if(s.startsWith('ll:')){const a=LL_ALL.find(x=>x.id===s.slice(3));return a?a.name:s.slice(3);}if(s.startsWith('f2l:'))return 'F2L case #'+s.slice(4);if(s.startsWith('two:')&&typeof twoCaseName==='function')return twoCaseName(s);if(s.startsWith('four:')&&typeof fourCaseName==='function')return fourCaseName(s);return {solve:'Solve',cross:'Cross',f2l:'F2L',ll:'OLL · PLL',lab:'Lab',ref:'Reference',two:'2×2 solve',four:'4×4 solve'}[s]||s;}
 function setScope(s){timer.scope=s;renderTimes();}
@@ -317,7 +317,7 @@ function askConfirm(title,text,yesLabel,onYes){
   bg.innerHTML=`<div class="modal ask" role="alertdialog" aria-modal="true" aria-labelledby="askTitle" aria-describedby="askText">
    <h2 id="askTitle">${esc(title)}</h2>
    <p id="askText" class="muted">${esc(text)}</p>
-   <div class="row" style="justify-content:flex-end;margin-top:14px"><button id="askNo">Cancel<span class="hk">Esc</span></button><button class="primary" id="askYes">${esc(yesLabel)}<span class="hk">Enter</span></button></div>
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button id="askNo" title="Close and change nothing">Cancel<span class="hk">Esc</span></button><button class="primary" id="askYes" title="${esc(text)}">${esc(yesLabel)}<span class="hk">Enter</span></button></div>
   </div>`;
   const close=()=>{document.removeEventListener('keydown',keys,true);document.removeEventListener('keyup',keys,true);bg.remove();};
   const yes=()=>{close();onYes();};
@@ -381,7 +381,7 @@ function orientedScramble(){const r=crossRotation();return {cube:toFrame(scr.cub
 function holdText(c){const f=c.center;return `Hold ${COLOR_NAMES[f[3]]} down, ${COLOR_NAMES[f[2]]} in front.`;}
 
 // ---------- step rendering helpers ----------
-function stepHTML(name,sub,moves,key,extra){return `<div class="step"><div class="nm">${esc(name)}<small>${esc(sub||'')}</small></div><div class="alg" data-key="${key}">${moves.length?moves.map((m,i)=>`<span class="m" data-i="${i}">${fmtMove(m)}</span>`).join(' '):'<i>already done</i>'}</div><div class="muted" style="font-size:13px;white-space:nowrap">${extra||''}</div></div>`;}
+function stepHTML(name,sub,moves,key,extra){return `<div class="step"><div class="nm">${esc(name)}<small>${esc(sub||'')}</small></div><div class="alg" data-key="${key}">${moves.length?moves.map((m,i)=>`<span class="m" data-i="${i}" title="Show the cube after this move">${fmtMove(m)}</span>`).join(' '):'<i>already done</i>'}</div><div class="muted" style="font-size:13px;white-space:nowrap">${extra||''}</div></div>`;}
 function wireSteps(container,getPrefixCube){ // click a move: show cube after prefix + moves[0..i]
   container.querySelectorAll('.alg').forEach(algEl=>{const key=algEl.dataset.key;algEl.querySelectorAll('.m').forEach(mEl=>{mEl.style.cursor='pointer';mEl.onclick=()=>{const {cube,moves}=getPrefixCube(key);const i=+mEl.dataset.i;showCube(applyAlg(cube,moves.slice(0,i+1)));container.querySelectorAll('.m').forEach(x=>x.classList.remove('cur'));mEl.classList.add('cur');};});});
 }
@@ -408,11 +408,11 @@ function renderPlan(){
   let cur=p.c0;const P=x=>phys(x);
   steps.push(stepHTML('Cross',`optimal ${p.cross.optimal} moves`,p.crossMoves,'cross',`${p.cross.solutions.length} optimal plan${p.cross.solutions.length>1?'s':''}`));seqFor.push(['cross',cur,p.crossMoves]);cur=applyAlg(cur,p.crossMoves);total+=p.crossMoves.length;
   // With rotations in the plan, cur carries turned centers. derotate turns it home so slot names apply.
-  p.f2l.steps.forEach((s,i)=>{const notes=[`${s.moves.length} moves`];if(s.rot)notes.push(`rotate ${esc(s.rot)} first`);if(s.ref)notes.push(`<a href="#" class="case-link" data-n="${s.ref}">F2L case ${s.ref}</a>`);
+  p.f2l.steps.forEach((s,i)=>{const notes=[`${s.moves.length} moves`];if(s.rot)notes.push(`rotate ${esc(s.rot)} first`);if(s.ref)notes.push(`<a href="#" class="case-link" data-n="${s.ref}" title="Open the details of this case">F2L case ${s.ref}</a>`);
     steps.push(stepHTML(`Pair ${i+1}: ${s.slot}`,describePair(derotate(cur),s.slot),s.moves,'f2l'+i,notes.join(' · ')));seqFor.push(['f2l'+i,cur,s.moves]);cur=applyAlg(cur,s.moves);total+=s.moves.length;});
   if(p.ll){for(const s of p.ll.steps){const moves=[...(s.pre?[s.pre]:[]),...parseAlg(s.alg),...(s.post?[s.post]:[])];steps.push(stepHTML(s.stage,s.name,moves,'ll'+s.stage,s.pre?(s.pre[0]==='y'?`rotate ${esc(s.pre)} first`:`AUF ${s.pre} first`):''));seqFor.push(['ll'+s.stage,cur,moves]);cur=applyAlg(cur,moves);total+=moves.length;}}
-  const alts=p.cross.solutions.map((s,i)=>`<span class="alt ${i===planState.crossChoice?'pick':''}" data-i="${i}">${esc(s)}</span>`).join('');
-  $('#planOut').innerHTML=`<div class="row" style="justify-content:space-between;margin-bottom:6px"><div>${p.rot?`<span class="tag">rotate ${esc(p.rot)} first</span>`:''}${esc(holdText(p.p0))} <span class="muted">${p.ref?'The cube turns before some steps. ':''}Total ${total} moves. ${cur.isSolvedAny()?'It ends solved.':'This plan does not end solved. Try another cross.'}</span></div><button class="small" id="planSeq">Load the whole plan into the player</button></div>
+  const alts=p.cross.solutions.map((s,i)=>`<span class="alt ${i===planState.crossChoice?'pick':''}" data-i="${i}" title="Plan again with this cross">${esc(s)}</span>`).join('');
+  $('#planOut').innerHTML=`<div class="row" style="justify-content:space-between;margin-bottom:6px"><div>${p.rot?`<span class="tag">rotate ${esc(p.rot)} first</span>`:''}${esc(holdText(p.p0))} <span class="muted">${p.ref?'The cube turns before some steps. ':''}Total ${total} moves. ${cur.isSolvedAny()?'It ends solved.':'This plan does not end solved. Try another cross.'}</span></div><button class="small" id="planSeq" title="Put every step of the plan in the player, to step through">Load the whole plan into the player</button></div>
     <div>${steps.join('')}</div>
     <h3 style="margin-top:12px">Cross alternatives</h3><p class="muted">Pick another optimal cross; the F2L plan recomputes. Compare which one leaves pairs easy.</p><div>${alts}</div>`;
   wireSteps($('#planOut'),key=>{const e=seqFor.find(x=>x[0]===key);return {cube:P(e[1]),moves:e[2]};});
@@ -425,7 +425,7 @@ const crossState={revealed:false,sol:null};
 function refreshCross(){if(!tablesReady){$('#crossOpt').textContent='…';ensureTables(()=>refreshCross());return;}
   const {cube}=orientedScramble();const sol=solveCross(cube,$('#crossPlus1').checked?1:0,60);crossState.sol=sol;$('#crossOpt').textContent=sol.optimal;$('#crossCount').textContent=`${sol.solutions.length} plan${sol.solutions.length>1?'s':''} found · ${holdText(phys(cube))}`;
   // Revealed: one plan per line as a spoiler (spoilAlg): the first move in clear, a bar on each move after it.
-  $('#crossSols').innerHTML=crossState.revealed?`<ol class="sol-list">${sol.solutions.map((s,i)=>`<li class="sol"><code class="alg">${spoilAlg(s)}</code><button type="button" class="small sol-play" data-i="${i}">Step through on cube</button></li>`).join('')}</ol><p class="muted" style="margin-top:6px">Click a line to reveal its next move. Step through puts the plan on the cube.</p>`:'<p class="muted">Hidden. Plan it yourself first, then reveal.</p>';
+  $('#crossSols').innerHTML=crossState.revealed?`<ol class="sol-list">${sol.solutions.map((s,i)=>`<li class="sol"><code class="alg">${spoilAlg(s)}</code><button type="button" class="small sol-play" data-i="${i}" title="Put this plan in the player and step through it on the cube">Step through on cube</button></li>`).join('')}</ol><p class="muted" style="margin-top:6px">Click a line to reveal its next move. Step through puts the plan on the cube.</p>`:'<p class="muted">Hidden. Plan it yourself first, then reveal.</p>';
   $$('#crossSols .sol-play').forEach(el=>el.onclick=()=>{const {phys:pc}=orientedScramble();setSequence(parseAlg(sol.solutions[+el.dataset.i]),'cross plan · '+holdText(pc),pc);seqState.idx=0;applySequence();focusPlayer();});
   $('#crossTryOut').innerHTML='';}
 $('#crossReveal').onclick=()=>{crossState.revealed=!crossState.revealed;refreshCross();};
@@ -475,8 +475,8 @@ function setF2LCase(n){const f=F2L_CASES.find(c=>c.n===n);f2lState.curCase=n;con
   view.mode='3d';view.yaw=-32;view.pitch=28;const r=crossRotation();setSequence([...(r?[r]:[]),...setup],'setup for case (from solved, white up: rotate, then turn)',undefined,'F2L case');renderF2LCaseOut();}
 function f2lSolution(){const f=F2L_CASES.find(c=>c.n===f2lState.curCase);return removeRotations([...(f2lState.caseAUF?[f2lState.caseAUF]:[]),...parseAlg(f.alg)]);}
 function renderF2LCaseOut(){const n=f2lState.curCase;if(!n)return;const f=F2L_CASES.find(c=>c.n===n);const arr=times['f2l:'+n]||[];const rev=f2lState.caseRevealed;
-  $('#f2lCaseOut').innerHTML=`<div class="row" style="justify-content:space-between"><div><span class="tag">${esc(f.grp)}</span><b ${rev?'id="f2lNameBtn" style="cursor:pointer;text-decoration:underline dotted" title="Open case details"':''}>${rev?'F2L case #'+n:'?'}</b> <span class="muted" style="font-size:14px">${arr.length?`mean ${fmt(arr.reduce((x,y)=>x+y.ms,0)/arr.length)} over ${arr.length}`:'no times yet'}</span></div><div style="width:90px">${thumb3D(f2lSetupCube())}</div></div>
-  <div style="margin-top:8px">${rev?`<div class="big">${esc(f2lSolution().join(' '))}</div><div class="muted">${f2lState.caseAUF?'Turn the top '+f2lState.caseAUF+' first, then the case algorithm '+esc(f.alg)+'. ':''}${esc(F2L_WHY[f.grp]||'')}</div><div class="row" style="margin-top:6px"><button class="small" id="f2lCaseLab">Why does it work? (Lab)</button><button class="small" id="f2lCasePlay">Step through on cube</button></div>`:'<span class="muted">Answer hidden. Press H or Reveal.</span>'}</div>`;
+  $('#f2lCaseOut').innerHTML=`<div class="row" style="justify-content:space-between"><div><span class="tag">${esc(f.grp)}</span><b ${rev?'id="f2lNameBtn" style="cursor:pointer;text-decoration:underline dotted" title="Open the details of this case"':''}>${rev?'F2L case #'+n:'?'}</b> <span class="muted" style="font-size:14px">${arr.length?`mean ${fmt(arr.reduce((x,y)=>x+y.ms,0)/arr.length)} over ${arr.length}`:'no times yet'}</span></div><div style="width:90px">${thumb3D(f2lSetupCube())}</div></div>
+  <div style="margin-top:8px">${rev?`<div class="big">${esc(f2lSolution().join(' '))}</div><div class="muted">${f2lState.caseAUF?'Turn the top '+f2lState.caseAUF+' first, then the case algorithm '+esc(f.alg)+'. ':''}${esc(F2L_WHY[f.grp]||'')}</div><div class="row" style="margin-top:6px"><button class="small" id="f2lCaseLab" title="Open this algorithm in the Lab to see what each move does">Why does it work? (Lab)</button><button class="small" id="f2lCasePlay" title="Put the solution in the player and step through it on the cube">Step through on cube</button></div>`:'<span class="muted">Answer hidden. Press H or Reveal.</span>'}</div>`;
   const nb=$('#f2lNameBtn');if(nb)nb.onclick=()=>openCaseModal(modalForF2L(f));
   const b=$('#f2lCaseLab');if(b)b.onclick=()=>loadLab(f.alg,'F2L case #'+n);
   const p=$('#f2lCasePlay');if(p)p.onclick=()=>{setSequence(f2lSolution(),'solution for this case — press ▶ to step',f2lSetupCube(),'F2L case');seqState.idx=0;applySequence();focusPlayer();};}
@@ -497,7 +497,7 @@ renderLLGroups();renderF2LGrid();
 // Case status: unlearned -> learning -> finished. A status button shows on each case card and in the case window.
 // Ids: an OLL/PLL case id, or f2l-N for an F2L case.
 const LL_ORDER=['','learning','finished'];
-function stBtn(id){const s=llState.status[id]||'',nm=s||'unlearned';return `<button class="stbtn ${s}" data-st-id="${esc(id)}" title="Status: ${nm}. Click to change." aria-label="Status: ${nm}. Click to change."><i></i>${nm}</button>`;}
+function stBtn(id){const s=llState.status[id]||'',nm=s||'unlearned';return `<button class="stbtn ${s}" data-st-id="${esc(id)}" title="Status: ${nm}. Click to change it: unlearned, learning, finished" aria-label="Status: ${nm}. Click to change."><i></i>${nm}</button>`;}
 function cycleStatus(id){const cur=llState.status[id]||'';llState.status[id]=LL_ORDER[(LL_ORDER.indexOf(cur)+1)%3];
   if(id.startsWith('f2l-')){f2lState.caseSel.add(+id.slice(4));saveF2L();store.set('llStatus',llState.status);renderF2LGrid();}else if(/^(beg-|mini-|two:)/.test(id)){store.set('llStatus',llState.status);}else{llState.sel.add(id);saveLL();renderLLGroups();}
   renderCaseStats();$$('.modal .stbtn').forEach(b=>{if(b.dataset.stId===id)b.outerHTML=stBtn(id);});document.dispatchEvent(new CustomEvent('cw:status',{detail:id}));}
@@ -526,8 +526,8 @@ function llHintHTML(a){const tests={'OLL edges':eoSolved,'OLL corners':ollSolved
   const list={'OLL edges':ALG_DB.eo,'OLL corners':ALG_DB.co,'PLL corners':ALG_DB.cp,'PLL edges':ALG_DB.ep}[a.group];const r=findLLStep(llState.cube,list,tests[a.group]);
   const s=r?`<div class="big">${esc((r.pre?r.pre+' · ':'')+r.alg)}</div><div class="muted">${r.pre?'AUF '+r.pre+' first. ':''}${esc(a.recog)}</div>`:`<div class="big">${esc(a.alg)}</div>`;return s;}
 function renderLLCurrent(){const a=llState.cur;const arr=times['ll:'+a.id]||[];
-  $('#llCurrent').innerHTML=`<div class="row" style="justify-content:space-between"><div><span class="tag">${esc(a.group)}</span><b ${llState.hint?'id="llNameBtn" style="cursor:pointer;text-decoration:underline dotted" title="Open case details"':''}>${llState.hint?esc(a.name):'?'}</b> <span class="muted" style="font-size:14px">${arr.length?`mean ${fmt(arr.reduce((x,y)=>x+y.ms,0)/arr.length)} over ${arr.length}`:'no times yet'}</span></div><div style="width:90px">${thumbTop(phys(llState.cube),modeFor(a.group))}</div></div>
-  <div style="margin-top:8px">${llState.hint?llHintHTML(a)+`<div class="row" style="margin-top:6px"><button class="small" id="llLab">Why does it work? (Lab)</button><button class="small" id="llPlay">Step through on cube</button></div>`:'<span class="muted">Answer hidden. Press H or Reveal.</span>'}</div>`;
+  $('#llCurrent').innerHTML=`<div class="row" style="justify-content:space-between"><div><span class="tag">${esc(a.group)}</span><b ${llState.hint?'id="llNameBtn" style="cursor:pointer;text-decoration:underline dotted" title="Open the details of this case"':''}>${llState.hint?esc(a.name):'?'}</b> <span class="muted" style="font-size:14px">${arr.length?`mean ${fmt(arr.reduce((x,y)=>x+y.ms,0)/arr.length)} over ${arr.length}`:'no times yet'}</span></div><div style="width:90px">${thumbTop(phys(llState.cube),modeFor(a.group))}</div></div>
+  <div style="margin-top:8px">${llState.hint?llHintHTML(a)+`<div class="row" style="margin-top:6px"><button class="small" id="llLab" title="Open this algorithm in the Lab to see what each move does">Why does it work? (Lab)</button><button class="small" id="llPlay" title="Put the solution in the player and step through it on the cube">Step through on cube</button></div>`:'<span class="muted">Answer hidden. Press H or Reveal.</span>'}</div>`;
   const nb=$('#llNameBtn');if(nb)nb.onclick=()=>openCaseModal(modalForLL(a));
   const b=$('#llLab');if(b)b.onclick=()=>loadLab(a.alg,a.name);const p=$('#llPlay');if(p)p.onclick=()=>{const list={'OLL edges':ALG_DB.eo,'OLL corners':ALG_DB.co,'PLL corners':ALG_DB.cp,'PLL edges':ALG_DB.ep}[a.group];const tests={'OLL edges':eoSolved,'OLL corners':ollSolved,'PLL corners':cpSolvedLL,'PLL edges':c=>AUFS.some(u=>applyAlg(c,u).isSolved())};const r=findLLStep(llState.cube,list,tests[a.group]);const moves=[...(r&&r.pre?[r.pre]:[]),...parseAlg(r?r.alg:a.alg)];setSequence(moves,'solution for this case — press ▶ to step',phys(llState.cube),'OLL · PLL case');seqState.idx=0;applySequence();focusPlayer();};}
 $('#llHint').onclick=()=>{if(!llState.cur)return;llState.hint=!llState.hint;renderLLCurrent();};
@@ -554,7 +554,7 @@ function runLab(name){
   const base=$('#labFromSolved').checked?rotCube():displayedCube;labState.moves=moves;labState.base=base;labState.idx=0;
   const c=an.cube;const movedC=new Set(),movedE=new Set();for(let i=0;i<8;i++)if(c.cp[i]!==i||c.co[i])movedC.add(c.cp[i]);for(let i=0;i<12;i++)if(c.ep[i]!==i||c.eo[i])movedE.add(c.ep[i]);labState.movedCubies={c:movedC,e:movedE};
   // moves display with trigger borders
-  $('#labMoves').innerHTML=moves.map((m,i)=>{const t=trig.findIndex(x=>i>=x.start&&i<x.end);return `<span class="m ${t>=0?'trig'+(t%4+1):''}" data-i="${i}" title="${t>=0?esc(trig[t].name):''}">${fmtMove(m)}</span>`;}).join('');
+  $('#labMoves').innerHTML=moves.map((m,i)=>{const t=trig.findIndex(x=>i>=x.start&&i<x.end);return `<span class="m ${t>=0?'trig'+(t%4+1):''}" data-i="${i}" title="${t>=0?'Part of the trigger '+esc(trig[t].name)+'. ':''}Show the cube after this move">${fmtMove(m)}</span>`;}).join('');
   $$('#labMoves .m').forEach(el=>el.onclick=()=>{labState.idx=+el.dataset.i+1;labShow();});
   const cyc=an.cornerCycles.map(x=>`<span class="cycle">${x.cyc.map(i=>CORNER_NAMES[i]).join('<span class="arrow"> → </span>')}<span class="arrow"> → </span>${CORNER_NAMES[x.cyc[0]]}${x.twist?` <span class="muted">+twist ${x.twist}</span>`:''}</span>`).join('')+an.edgeCycles.map(x=>`<span class="cycle">${x.cyc.map(i=>EDGE_NAMES[i]).join('<span class="arrow"> → </span>')}<span class="arrow"> → </span>${EDGE_NAMES[x.cyc[0]]}${x.flip?' <span class="muted">+flip</span>':''}</span>`).join('')+an.twisted.map(t=>`<span class="cycle">${CORNER_NAMES[t.piece]} twists ${t.twist===1?'clockwise':'counterclockwise'}</span>`).join('')+an.flipped.map(e=>`<span class="cycle">${EDGE_NAMES[e]} flips in place</span>`).join('');
   const inv=invariants(c);
@@ -565,7 +565,7 @@ function runLab(name){
    <div style="margin-top:8px"><b>Rules no move can break</b> <span class="muted" style="font-size:14px">(This is why one twisted corner or one flipped edge cannot be solved.)</span><div class="pieces" style="margin-top:4px"><div>corner twists add up to whole turns: ${inv.tw?'no':'yes'}</div><div>edge flips come in pairs: ${inv.fl?'no':'yes'}</div><div>corner swaps: ${inv.cpar?'odd':'even'}, edge swaps: ${inv.epar?'odd':'even'} (always both the same)</div></div></div>
    <div class="muted" style="font-size:14px;margin-top:8px">A sequence that cycles exactly 3 pieces of one kind, or twists 2 corners, or flips 2 edges, is the building block of every algorithm. Look for which pieces both halves of an alg share.</div>`;
   const db=LL_ALL.find(a=>parseAlg(a.alg).join(' ')===moves.join(' '));
-  $('#labWhy').innerHTML=db?`<h3>Why ${esc(db.name)} works</h3><p>${esc(db.why)}</p><p class="muted"><b>Recognise:</b> ${esc(db.recog)}</p>`:`<h3>How to read this</h3><p>Step through with the arrows. Watch the highlighted pieces: everything that is faded ends up exactly where it started, even if it moves in the middle. The faded stickers are the "working space" the algorithm borrows and returns.</p><p>Try the inverse (reverse the moves, flip every prime) and the mirror (swap R↔L, F↔B, and flip primes) in the box above and compare the cycles.</p><div class="row"><button class="small" id="labInv">Load inverse</button><button class="small" id="labMir">Load mirror</button></div>`;
+  $('#labWhy').innerHTML=db?`<h3>Why ${esc(db.name)} works</h3><p>${esc(db.why)}</p><p class="muted"><b>Recognise:</b> ${esc(db.recog)}</p>`:`<h3>How to read this</h3><p>Step through with the arrows. Watch the highlighted pieces: everything that is faded ends up exactly where it started, even if it moves in the middle. The faded stickers are the "working space" the algorithm borrows and returns.</p><p>Try the inverse (reverse the moves, flip every prime) and the mirror (swap R↔L, F↔B, and flip primes) in the box above and compare the cycles.</p><div class="row"><button class="small" id="labInv" title="Analyze the inverse: the moves backward, each one undone">Load inverse</button><button class="small" id="labMir" title="Analyze the mirror: left and right swapped">Load mirror</button></div>`;
   const bi=$('#labInv');if(bi)bi.onclick=()=>{$('#labAlg').value=invertAlg(moves);runLab(name?name+' inverse':null);};
   const bm=$('#labMir');if(bm)bm.onclick=()=>{$('#labAlg').value=moves.map(m=>{const map={R:'L',L:'R',F:'B',B:'F',U:'U',D:'D',r:'l',l:'r',f:'b',b:'f',u:'u',d:'d',M:'M',E:'E',S:'S',x:'x',y:'y',z:'z'};const b=map[m[0]];const s=m.slice(1);const ns=s==="'"?'':s==='2'?'2':"'";return b+ns;}).join(' ');runLab(name?name+' mirror':null);};
   labShow();
@@ -576,7 +576,7 @@ $('#labPrev').onclick=()=>{labState.idx=Math.max(0,labState.idx-1);labShow();};$
 $('#labPlay').onclick=()=>{if(labState.playing){clearInterval(labState.playing);labState.playing=0;$('#labPlay').textContent='▶ play';return;}labState.idx=0;labShow();$('#labPlay').textContent='⏸ stop';labState.playing=setInterval(()=>{if(labState.idx>=labState.moves.length){clearInterval(labState.playing);labState.playing=0;$('#labPlay').textContent='▶ play';return;}labState.idx++;labShow();},550);};
 $('#labFade').onchange=labShow;
 function buildAndShow(alg,title){const an=analyzeAlg(alg);const c=an.cube;let nC=0,nE=0;for(let i=0;i<8;i++)if(c.cp[i]!==i||c.co[i])nC++;for(let i=0;i<12;i++)if(c.ep[i]!==i||c.eo[i])nE++;
-  $('#comOut').innerHTML=`<div><b>${esc(title)}</b> = <span class="mono">${esc(alg)}</span></div><div class="muted" style="font-size:14px;margin:4px 0">Moves ${nC} corner${nC===1?'':'s'} and ${nE} edge${nE===1?'':'s'}. ${nC+nE===0?'Identity: A and B share no pieces, so nothing happens.':nC+nE===3?'A clean 3-cycle: A and B overlap on exactly one piece.':nC+nE===2?'Two pieces: a twist or flip pair.':'Overlap on more than one piece, so the result is messier. Shrink A or B until they share one piece.'}</div><button class="small" id="comLoad">Load into Lab</button>`;
+  $('#comOut').innerHTML=`<div><b>${esc(title)}</b> = <span class="mono">${esc(alg)}</span></div><div class="muted" style="font-size:14px;margin:4px 0">Moves ${nC} corner${nC===1?'':'s'} and ${nE} edge${nE===1?'':'s'}. ${nC+nE===0?'Identity: A and B share no pieces, so nothing happens.':nC+nE===3?'A clean 3-cycle: A and B overlap on exactly one piece.':nC+nE===2?'Two pieces: a twist or flip pair.':'Overlap on more than one piece, so the result is messier. Shrink A or B until they share one piece.'}</div><button class="small" id="comLoad" title="Analyze this sequence in the Lab above">Load into Lab</button>`;
   $('#comLoad').onclick=()=>{$('#labAlg').value=alg;runLab(title);};}
 $('#comBuild').onclick=()=>{const A=$('#comA').value,B=$('#comB').value;try{buildAndShow(`${A} ${B} ${invertAlg(A)} ${invertAlg(B)}`,'[A, B]');}catch(e){$('#comOut').textContent=badMoveText(e,'Wide moves, slices and rotations also work.');}};
 $('#comSwap').onclick=()=>{const a=$('#comA').value;$('#comA').value=$('#comB').value;$('#comB').value=a;};
@@ -592,7 +592,7 @@ $('#concepts').innerHTML=[
 
 
 // ---------- case modal ----------
-function trigSpans(alg){const ms=parseAlg(alg);const trig=findTriggers(ms.join(' '));return ms.map((m,i)=>{const t=trig.findIndex(x=>i>=x.start&&i<x.end);return `<span class="m ${t>=0?'trig'+(t%4+1):''}" title="${t>=0?esc(trig[t].name):''}">${fmtMove(m)}</span>`;}).join('')+(trig.length?`<div class="muted" style="font-size:13px;width:100%;font-family:var(--sans)">Boxed: ${[...new Set(trig.map(t=>t.name))].join(', ')}</div>`:'');}
+function trigSpans(alg){const ms=parseAlg(alg);const trig=findTriggers(ms.join(' '));return ms.map((m,i)=>{const t=trig.findIndex(x=>i>=x.start&&i<x.end);return `<span class="m ${t>=0?'trig'+(t%4+1):''}"${t>=0?` title="Part of the trigger ${esc(trig[t].name)}"`:''}>${fmtMove(m)}</span>`;}).join('')+(trig.length?`<div class="muted" style="font-size:13px;width:100%;font-family:var(--sans)">Boxed: ${[...new Set(trig.map(t=>t.name))].join(', ')}</div>`:'');}
 function cycleText(alg){const an=analyzeAlg(alg);const parts=[];
   an.cornerCycles.forEach(x=>parts.push(`corners ${x.cyc.map(i=>CORNER_NAMES[i]).join(' → ')} → ${CORNER_NAMES[x.cyc[0]]}${x.twist?' (with twist)':''}`));
   an.edgeCycles.forEach(x=>parts.push(`edges ${x.cyc.map(i=>EDGE_NAMES[i]).join(' → ')} → ${EDGE_NAMES[x.cyc[0]]}${x.flip?' (with flip)':''}`));
@@ -601,7 +601,7 @@ function cycleText(alg){const an=analyzeAlg(alg);const parts=[];
 function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why, setupMoves (engine frame, from solved), kind:'ll'|'f2l'|'pll'}
   closeModal();const {an,text}=cycleText(o.alg);
   const bg=document.createElement('div');bg.className='modal-bg';bg.id='modalBg';
-  bg.innerHTML=`<div class="modal" role="dialog" aria-label="${esc(o.title)}"><button class="close small ghost" id="modalClose" aria-label="Close">✕</button>
+  bg.innerHTML=`<div class="modal" role="dialog" aria-label="${esc(o.title)}"><button class="close small ghost" id="modalClose" aria-label="Close" title="Close the details (Esc)">✕</button>
     <div class="pic">${o.pic}</div>
     <div>
       <div class="row"><span class="tag">${esc(o.group)}</span><span class="tag">${an.moveCount} moves</span><span class="tag">repeat ${an.order}× to return</span></div>
@@ -610,10 +610,10 @@ function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why,
       ${o.recog?`<div class="sec"><b>Recognise</b>${esc(o.recog)}</div>`:''}
       ${o.why?`<div class="sec"><b>Why it works</b>${esc(o.why)}</div>`:''}
       ${o.statusId?`<div class="sec"><b>Status</b>${stBtn(o.statusId)}</div>`:''}
-      <div class="sec"><b>What it moves</b>${o.parts&&o.parts.length?`<div class="mvparts">${o.parts.map((p,i)=>`<button type="button" class="mvpart" data-mv="${i}" aria-pressed="false">${esc(p.text)}</button>`).join('')}</div><div class="muted mvhint">Choose a part to show it on the picture.</div>`:`<span class="mono" style="font-size:14px">${esc(text)}</span>`}</div>
+      <div class="sec"><b>What it moves</b>${o.parts&&o.parts.length?`<div class="mvparts">${o.parts.map((p,i)=>`<button type="button" class="mvpart" data-mv="${i}" aria-pressed="false" title="Show this part on the picture">${esc(p.text)}</button>`).join('')}</div><div class="muted mvhint">Choose a part to show it on the picture.</div>`:`<span class="mono" style="font-size:14px">${esc(text)}</span>`}</div>
       <div class="sec"><b>Set up from solved (white up)</b><span class="mono" style="font-size:14px">${esc([...(crossRotation()?[crossRotation()]:[]),...o.setupMoves].join(' '))}</span></div>
-      <div class="row" style="margin-top:14px"><button class="primary" id="modalSetup">Show on cube</button><button id="modalStep">Step through solution</button>${o.noLab?'':'<button id="modalLab">Open in Lab</button>'}</div>
-      <button class="closebar" id="modalCloseBar">Close</button>
+      <div class="row" style="margin-top:14px"><button class="primary" id="modalSetup" title="Set this case up on the cube in the player">Show on cube</button><button id="modalStep" title="Put the algorithm in the player and step through it on the cube">Step through solution</button>${o.noLab?'':'<button id="modalLab" title="Open this algorithm in the Lab to see what each move does">Open in Lab</button>'}</div>
+      <button class="closebar" id="modalCloseBar" title="Close the details (Esc)">Close</button>
     </div></div>`;
   document.body.appendChild(bg);
   const pic=bg.querySelector('.pic svg'),hint=bg.querySelector('.mvhint');
@@ -653,14 +653,14 @@ const isRot=m=>/^[xyz]/.test(m);
 function spoilAlg(alg){const t=alg.trim().split(/\s+/);let k=0;while(k<t.length-1&&isRot(t[k]))k++; // a lead rotation is a hold: show the turn after it too
   const units=[];let rot=[];for(const m of t.slice(k+1)){rot.push(m);if(!isRot(m)){units.push(rot.join(' '));rot=[];}} // a rotation goes with the turn after it
   if(!units.length)return esc(alg);if(rot.length)units[units.length-1]+=' '+rot.join(' ');
-  return `<span class="spoil" title="Click to reveal the next move">${esc(t.slice(0,k+1).join(' '))} <span class="sp-rest">${units.map(u=>`<span class="sp-m">${esc(u)}</span>`).join(' ')}</span> <button type="button" class="small sp-btn">${spoilLeft(units.length)}</button></span>`;}
+  return `<span class="spoil" title="Click to reveal the next move">${esc(t.slice(0,k+1).join(' '))} <span class="sp-rest">${units.map(u=>`<span class="sp-m">${esc(u)}</span>`).join(' ')}</span> <button type="button" class="small sp-btn" title="Show the next move">${spoilLeft(units.length)}</button></span>`;}
 function spoilLeft(n){return `Reveal ${n} more move${n>1?'s':''}`;}
 function spoilSync(s){const left=s.querySelectorAll('.sp-m:not(.on)').length;s.classList.toggle('open',!left);
   if(left)s.querySelector('.sp-btn').textContent=spoilLeft(left);s.title=left?'Click to reveal the next move':'Click to cover the moves again';}
 function spoilReset(s){s.querySelectorAll('.sp-m.on').forEach(m=>m.classList.remove('on'));spoilSync(s);}
 function spoilStep(s,all){const hid=[...s.querySelectorAll('.sp-m:not(.on)')];if(!hid.length)return spoilReset(s);
   (all?hid:hid.slice(0,1)).forEach(m=>m.classList.add('on'));spoilSync(s);}
-function refAllBox(){return `<label class="refall-box"><input type="checkbox" class="refAll"${store.get('refAll',false)?' checked':''}> Show all moves</label>`;}
+function refAllBox(){return `<label class="refall-box" title="Show every algorithm in full, with no moves covered"><input type="checkbox" class="refAll"${store.get('refAll',false)?' checked':''}> Show all moves</label>`;}
 function setRefAll(on){store.set('refAll',on);document.body.classList.toggle('refall',on);$$('.refAll').forEach(b=>b.checked=on);
   $$('.spoil').forEach(spoilReset);}
 document.body.classList.toggle('refall',store.get('refAll',false));
@@ -669,7 +669,7 @@ document.addEventListener('change',e=>{if(e.target.classList&&e.target.classList
 document.addEventListener('click',e=>{const s=e.target.closest&&e.target.closest('.spoil');if(!s||document.body.classList.contains('refall'))return;
   e.stopPropagation();e.preventDefault();spoilStep(s,!!e.target.closest('.sp-btn'));},true);
 $('#refDesktop .panel').insertAdjacentHTML('beforeend',refAllBox());
-function refRow(a,g){return `<div class="rcard ref-row" data-kind="ll" data-id="${a.id}" title="Open details">${thumbTop(caseCube(a),modeFor(a.group))}<div><div class="nm">${esc(a.name)}</div><div class="rec">${esc(a.recog)}</div><div class="alg">${spoilAlg(a.alg)}</div></div></div>`;}
+function refRow(a,g){return `<div class="rcard ref-row" data-kind="ll" data-id="${a.id}" title="Open the details of this case">${thumbTop(caseCube(a),modeFor(a.group))}<div><div class="nm">${esc(a.name)}</div><div class="rec">${esc(a.recog)}</div><div class="alg">${spoilAlg(a.alg)}</div></div></div>`;}
 $('#refOLLe').innerHTML=ALG_DB.eo.map(a=>refRow(a,'OLL')).join('');
 $('#refOLLc').innerHTML=ALG_DB.co.map(a=>refRow(a,'OLL')).join('');
 $('#refPLLc').innerHTML=ALG_DB.cp.map(a=>refRow(a,'PLL')).join('');
@@ -680,7 +680,7 @@ $$('.ref-row').forEach(el=>el.onclick=()=>{const k=el.dataset.kind,id=el.dataset
 
 
 // ---------- mobile reference ----------
-function renderMobileRef(){const tile=(pic,label,kind,id)=>`<div class="case" data-kind="${kind}" data-id="${id}">${pic}<div>${esc(label)}</div></div>`;
+function renderMobileRef(){const tile=(pic,label,kind,id)=>`<div class="case" data-kind="${kind}" data-id="${id}" title="Open the details of this case">${pic}<div>${esc(label)}</div></div>`;
   const ids=['mg-ollE','mg-ollC','mg-pllC','mg-pllE','mg-pll','mg-f2l'];
   const groups=[['Two-look OLL · 1. Edges',ALG_DB.eo.map(a=>tile(thumbTop(caseCube(a),'eo'),a.name,'ll',a.id))],['Two-look OLL · 2. Corners',ALG_DB.co.map(a=>tile(thumbTop(caseCube(a),'oll'),a.name,'ll',a.id))],
     ['Two-look PLL · 1. Corners',ALG_DB.cp.map(a=>tile(thumbTop(caseCube(a),'pllc'),a.name,'ll',a.id))],['Two-look PLL · 2. Edges',ALG_DB.ep.map(a=>tile(thumbTop(caseCube(a),'plle'),a.name,'ll',a.id))],
@@ -698,7 +698,7 @@ window.addEventListener('resize',setTopH);
 // On a phone the Reference section is the home screen. The menu opens the other sections.
 function applyMobile(){setTopH();if(mobileMQ.matches)renderMobileRef();goTab(store.get(tabKey(),homeTab()));}
 if(mobileMQ.addEventListener)mobileMQ.addEventListener('change',applyMobile);else if(mobileMQ.addListener)mobileMQ.addListener(applyMobile);
-function renderMenu(){$('#menu').innerHTML=railButtons().map(b=>`<button data-tab="${b.dataset.tab}" data-sec="${b.dataset.tab}" class="${b.dataset.tab===curTab?'on':''}"><i class="sec-sq"></i>${esc(b.lastChild.textContent)}</button>`).join('');
+function renderMenu(){$('#menu').innerHTML=railButtons().map(b=>`<button data-tab="${b.dataset.tab}" data-sec="${b.dataset.tab}" class="${b.dataset.tab===curTab?'on':''}"${b.title?` title="${esc(b.title)}"`:''}><i class="sec-sq"></i>${esc(b.lastChild.textContent)}</button>`).join('');
   $$('#menu button').forEach(m=>m.onclick=()=>{closeMenu();goTab(m.dataset.tab);window.scrollTo({top:0});});}
 function openMenu(){renderMenu();$('#menuBg').classList.remove('hidden');$('#menuBtn').setAttribute('aria-expanded','true');}
 function closeMenu(){$('#menuBg').classList.add('hidden');$('#menuBtn').setAttribute('aria-expanded','false');}
@@ -723,7 +723,7 @@ function openSettings(){if($('#setBg'))return;
   bg.innerHTML=`<div class="modal ask settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
    <h2 id="setTitle">Settings</h2>
    <div class="setarea" id="setArea"><p class="muted">There are no settings yet. They will show here.</p></div>
-   <div class="row" style="justify-content:flex-end;margin-top:14px"><button id="setCancel">Cancel<span class="hk">Esc</span></button><button class="primary" id="setSave">Save<span class="hk">Enter</span></button></div>
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button id="setCancel" title="Close and keep the settings as they were">Cancel<span class="hk">Esc</span></button><button class="primary" id="setSave" title="Keep these settings and close">Save<span class="hk">Enter</span></button></div>
    <div class="appver" id="appVer">Twistwright ${esc(APP_VERSION)}</div>
   </div>`;
   const close=()=>{document.removeEventListener('keydown',keys,true);document.removeEventListener('keyup',keys,true);bg.remove();$('#settingsBtn').focus();};

@@ -65,7 +65,7 @@ function paintReset(){
 function paintTileHTML(i){
   const v=paintH[i];const isCenter=paintN()===9&&i%9===4;
   const bg=v>=0?stickerColor(v):'var(--sticker-X)';
-  return `<button type="button" class="pt-tile${isCenter?' pt-center':''}" data-i="${i}" style="background:${bg}"${isCenter?' disabled aria-label="center, fixed"':''}></button>`;
+  return `<button type="button" class="pt-tile${isCenter?' pt-center':''}" data-i="${i}" style="background:${bg}"${isCenter?' disabled aria-label="center, fixed" title="The center: fixed"':' title="Tap to paint this tile with the chosen color"'}></button>`;
 }
 function paintFaceHTML(face){
   const n=paintN();let out=`<div class="pt-face${n===4?' pt-face2':n===16?' pt-face4':''}" data-face="${face}">`;
@@ -82,7 +82,7 @@ function paintNetHTML(){
   '</div>';
 }
 function paintPaletteHTML(){
-  return PAINT_PALETTE.map(p=>`<button type="button" class="pt-swatch${p.c===paintColor?' on':''}" data-c="${p.c}" aria-label="${esc(p.label)}" style="background:${stickerColor(p.c)}"></button>`).join('');
+  return PAINT_PALETTE.map((p,i)=>`<button type="button" class="pt-swatch${p.c===paintColor?' on':''}" data-c="${p.c}" aria-label="${esc(p.label)}" title="${esc(p.label.charAt(0).toUpperCase()+p.label.slice(1))}: key ${i+1}" style="background:${stickerColor(p.c)}"></button>`).join('');
 }
 function paintCountText(){return `${paintH.filter(v=>v>=0).length} of ${paintH.length} tiles painted.`;}
 function paintUpdate(){
@@ -144,7 +144,7 @@ function openPaint(opts){
   paintH=paintReset();paintColor=0;paintOnCube=opts.onCube||null;paintOnClose=opts.onClose||null;
   const bg=document.createElement('div');bg.className='modal-bg';bg.id='paintBg';
   bg.innerHTML=`<div class="modal paint" role="dialog" aria-label="Paint my cube">
-   <button class="close small ghost" id="paintClose" aria-label="Close">✕</button>
+   <button class="close small ghost" id="paintClose" aria-label="Close" title="Close this window (Esc)">✕</button>
    <h2>Paint my cube</h2>
    <p class="muted" style="margin-top:0">${paintN()===4?'Hold your cube the way the 3D cube shows: the face on top in the picture is the one on top in your hand. Pick a color, then tap the tiles. Every color is on four tiles.':paintN()===16?'Hold your cube the way the 3D cube shows: the face on top in the picture is the one on top in your hand. Pick a color, then tap the tiles. Every color is on sixteen tiles.':'Hold your cube with yellow up and green in front, like the 3D cube. Pick a color, then tap the tiles. The centers are fixed.'}</p>
    <div class="pt-body">
@@ -154,9 +154,9 @@ function openPaint(opts){
      <div class="pt-count" id="paintCount"></div>
      <div id="paintNotice" class="notice hidden"></div>
      <div class="row">
-      <button type="button" class="primary" id="paintGo" disabled>${esc(opts.go||'Start the solve')}</button>
-      <button type="button" class="ghost" id="paintClear">Clear</button>
-      <button type="button" class="ghost" id="paintCancel">Cancel</button>
+      <button type="button" class="primary" id="paintGo" disabled title="Use the painted cube. Every tile must have a color first">${esc(opts.go||'Start the solve')}</button>
+      <button type="button" class="ghost" id="paintClear" title="Take the color off every tile">Clear</button>
+      <button type="button" class="ghost" id="paintCancel" title="Close this window and keep the cube as it was">Cancel</button>
      </div>
     </div>
    </div>

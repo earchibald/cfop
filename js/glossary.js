@@ -148,7 +148,7 @@ function glEl(tag,props,...kids){
   for(const c of kids)if(c!=null)e.append(c);
   return e;
 }
-function glLinkEl(id,text){return glEl('span',{className:'gl',tabIndex:0,role:'button',title:GLOSSARY_BY_ID[id].term,data:{gl:id}},text);}
+function glLinkEl(id,text){return glEl('span',{className:'gl',tabIndex:0,role:'button',title:'What is '+GLOSSARY_BY_ID[id].term+'? Click for the meaning',data:{gl:id}},text);}
 
 // ---------- link the description text ----------
 // Never link inside these: moves, controls, labels (a click would toggle them), headings, case names.

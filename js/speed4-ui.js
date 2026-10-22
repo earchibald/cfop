@@ -15,10 +15,10 @@ function fourRenderPlan(){
   if(!p){out.innerHTML='<p class="muted">No plan found for this cube. Check the colors, then try again.</p>';return;}
   const seqFor=[];let cur=scr.cube;
   const html=p.steps.map((st,i)=>{const k='s'+i;seqFor.push([k,cur,st.moves]);cur=applyAlg(cur,st.moves);
-    const extra=st.caseId?`<a href="#" class="case-link" data-id="${esc(st.caseId)}">details</a>`:'';
+    const extra=st.caseId?`<a href="#" class="case-link" data-id="${esc(st.caseId)}" title="Open this parity case on the Parity tab">details</a>`:'';
     return stepHTML(st.stage,st.name,st.moves,k,extra);}).join('');
   const face=p.moves.filter(m=>!/^[xyz]/.test(m)).length;
-  out.innerHTML=`<div class="panel"><div class="row" style="justify-content:space-between"><div><span class="muted">${face} moves in ${p.steps.length} steps. The centers and the edges follow the guide; the rest is CFOP, with the parity fixes where they fall.${p.solved?'':' This plan does not end solved.'}</span></div><button class="small" id="fwLoad">Load the whole plan into the player</button></div><div>${html}</div></div>`;
+  out.innerHTML=`<div class="panel"><div class="row" style="justify-content:space-between"><div><span class="muted">${face} moves in ${p.steps.length} steps. The centers and the edges follow the guide; the rest is CFOP, with the parity fixes where they fall.${p.solved?'':' This plan does not end solved.'}</span></div><button class="small" id="fwLoad" title="Put every step of the plan in the player, from the scramble">Load the whole plan into the player</button></div><div>${html}</div></div>`;
   out.querySelectorAll('.alg .m').forEach(el=>{if(/^[xyz]/.test(el.textContent))el.classList.add('rot');});
   wireSteps(out,key=>{const e=seqFor.find(x=>x[0]===key);return {cube:e[1],moves:e[2]};});
   $$('#fwPlanOut .case-link').forEach(el=>el.onclick=e=>{e.preventDefault();goTab('parity');fourShowCase(el.dataset.id);});
@@ -28,7 +28,7 @@ function fourPlan(){$('#fwPlanOut').innerHTML='<p class="muted">Planning…</p>'
 function fourMountSolve(){
   $('#tab-fsolve').innerHTML=`<div class="panel"><div class="row" style="justify-content:space-between">
       <div><h2>Guided solve</h2><p class="muted" style="margin:0">Scramble white up, green in front, as the player above shows. Press Plan. The plan reduces the cube (centers, then edges) and solves it with CFOP: cross, four pairs, two-look OLL and PLL. OLL parity shows up after F2L, PLL parity after OLL. Click a move to step through it.</p></div>
-      <div class="row"><button class="primary" id="fwPlan">Plan</button></div></div></div>
+      <div class="row"><button class="primary" id="fwPlan" title="Plan the solve: centers, edges, then CFOP with the parity fixes">Plan</button></div></div></div>
     <div id="fwPlanOut"><p class="muted">No plan yet. Scramble, then press Plan.</p></div>`;
   $('#fwPlan').onclick=fourPlan;
 }
@@ -50,7 +50,7 @@ function fourRenderCurrent(){
   const arr=times[a.id]||[];const ans=fourState.hint?fourAnswer(a,fourState.cube):null;
   const notes=ans?[ans.pre?'Top '+ans.pre+' first.':'',a.recog,ans.post?'Then top '+ans.post+'.':''].filter(Boolean).join(' '):'';
   out.innerHTML=`<div class="row" style="justify-content:space-between"><div><span class="tag">4×4 parity</span><b>${fourState.hint?esc(a.name):'?'}</b> <span class="muted" style="font-size:14px">${arr.length?`mean ${fmt(arr.reduce((x,y)=>x+y.ms,0)/arr.length)} over ${arr.length}`:'no times yet'}</span></div><div style="width:110px">${fourThumb(fourState.cube)}</div></div>
-  <div style="margin-top:8px">${fourState.hint?`<div class="big">${esc(ans.moves.join(' '))}</div><div class="muted">${esc(notes)}</div><div class="sec" style="margin-top:6px"><b>Why it works</b> ${esc(a.why)}</div><div class="row" style="margin-top:6px"><button class="small" id="fwPlay">Step through on cube</button>${stBtn(a.id)}</div>`:'<span class="muted">Answer hidden. Press H or Reveal.</span>'}</div>`;
+  <div style="margin-top:8px">${fourState.hint?`<div class="big">${esc(ans.moves.join(' '))}</div><div class="muted">${esc(notes)}</div><div class="sec" style="margin-top:6px"><b>Why it works</b> ${esc(a.why)}</div><div class="row" style="margin-top:6px"><button class="small" id="fwPlay" title="Put the solution in the player, from the case on the cube">Step through on cube</button>${stBtn(a.id)}</div>`:'<span class="muted">Answer hidden. Press H or Reveal.</span>'}</div>`;
   const p=$('#fwPlay');if(p)p.onclick=()=>{setSequence(ans.moves,'solution for this case — press ▶ to step',fourState.cube,'4×4 case');seqState.idx=0;applySequence();focusPlayer();};
 }
 function fourRenderGrid(){const el=$('#fwGrid');if(!el)return;
@@ -61,7 +61,7 @@ function fourRenderStats(){const t=$('#fwStats');if(!t)return;const rows=statsRo
 function fourMountParity(){
   $('#tab-parity').innerHTML=`<div class="panel"><div class="row" style="justify-content:space-between">
       <div><h2>Parity</h2><p class="muted" style="margin:0">The two things a 4×4 does that a 3×3 cannot: one edge pair turned over (OLL parity) and two edge pairs swapped (PLL parity). Learn to see them and to fix them without breaking stride. The button under each case changes its status. Click a case to open it.</p></div>
-      <div class="row"><button class="primary" id="fwNext">Next case<span class="hk" aria-hidden="true">N</span></button><button id="fwReveal">Reveal<span class="hk" aria-hidden="true">H</span></button></div></div></div>
+      <div class="row"><button class="primary" id="fwNext" title="Put one of the three parity cases on the cube">Next case<span class="hk" aria-hidden="true">N</span></button><button id="fwReveal" title="Show the algorithm for the case on the cube">Reveal<span class="hk" aria-hidden="true">H</span></button></div></div></div>
     <div class="panel" id="fwCur"></div>
     <div class="panel"><h3>Cases</h3><div id="fwGrid"></div></div>
     <div class="panel"><h3>Per-case times</h3><div class="wide"><table id="fwStats"></table></div></div>`;

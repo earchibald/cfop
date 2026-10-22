@@ -106,7 +106,7 @@ function lnDemoDraw(c,move,t){const svg=$('#lnGoalSvg');if(!svg)return;const v=l
   svg.innerHTML=renderCube3D(c.toFacelets(),{...v,...LN_PIC,move,t,fade:lnDemoFade(c)})+lnFrontMark(v);}
 function lnDemoCap(text){const cap=$('#lnGoalCap');if(cap)cap.textContent=text;}
 function lnDemoMark(k){$$('#lnDemoMoves .m').forEach((e,i)=>{e.classList.toggle('cur',i===k);const li=e.closest('li');if(li)li.classList.toggle('cur',i===k);});}
-function lnDemoBtn(text){const b=$('#tab-learn [data-ln="demo"]');if(b)b.textContent=text;}
+function lnDemoBtn(text){const b=$('#tab-learn [data-ln="demo"]');if(b){b.textContent=text;b.title=text==='Skip'?'Stop the demo and show the goal':'Play the moves of this step on the goal picture';}}
 // Stop the demo. With `done`, the picture shows the goal and the caption says so.
 function lnDemoStop(done){
   const was=lnDemo.on;clearTimeout(lnDemo.t);if(lnDemo.raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(lnDemo.raf);
@@ -167,10 +167,10 @@ const lnView={n:null,why:new Set(),hlT:0,turnT:0}; // n: the open lesson, or nul
 function lnHomeHTML(){
   const pk=begPack();const nx=begProgress.next();
   const cards=pk.steps.map(s=>{const st=lnStatus(s.n),cur=nx&&nx.n===s.n,uses=lnUses(s);
-    return `<button class="bstep${cur?' cur':''}" data-ln="open" data-n="${s.n}">${lnFace(s.id)}<span class="body"><span class="n">${esc(lnStepNo(s))}${cur?' · up next':''}</span><br><b>${esc(s.name)}</b>${uses?` <span class="muted ln-uses">· ${esc(uses)}</span>`:''}<br><span class="desc">${esc(s.goal)}</span></span>${lnTag(st)}</button>`;}).join('');
+    return `<button class="bstep${cur?' cur':''}" data-ln="open" data-n="${s.n}" title="Open the lesson: ${esc(lnStepNo(s))}, ${esc(s.name)}">${lnFace(s.id)}<span class="body"><span class="n">${esc(lnStepNo(s))}${cur?' · up next':''}</span><br><b>${esc(s.name)}</b>${uses?` <span class="muted ln-uses">· ${esc(uses)}</span>`:''}<br><span class="desc">${esc(s.goal)}</span></span>${lnTag(st)}</button>`;}).join('');
   return `<div class="panel ln-intro"><div><h2>Learn: the ${pk.word} steps</h2><p class="muted">Do them in order, or tap any step. Each lesson shows the goal, the moves, and the cases you will meet. Mark a step finished when you can do it without the app.</p></div></div>
   <div class="panel ln-steps"><div class="ln-mob ln-listhead"><b>Learn</b><span class="muted">tap a step</span></div>${cards}</div>
-  <div class="panel ln-foot"><div><b>Finished all ${pk.word}?</b> <span class="muted">${esc(pk.next.foot)}</span></div><button class="small" data-ln="next">${esc(pk.next.btn)}</button></div>`;
+  <div class="panel ln-foot"><div><b>Finished all ${pk.word}?</b> <span class="muted">${esc(pk.next.foot)}</span></div><button class="small" data-ln="next" title="Switch the method to ${esc(pk.next.name)}">${esc(pk.next.btn)}</button></div>`;
 }
 
 // ---------- a lesson ----------
@@ -190,30 +190,30 @@ function lnSixMoves(){
   const tile=m=>`<button class="m ln-mv" data-ln="face" data-m="${esc(m)}" title="Show ${esc(m)} on the goal cube">${fmtMove(m)}</button>`;
   return `<div class="ln-panel ln-six"><h3>The six moves</h3><p>Each letter turns one face a quarter turn, clockwise as you look at that face. A letter with a mark, such as <span class="ms"><span class="m">${fmtMove("R'")}</span></span>, turns the other way. Tap a letter to see the turn on the goal cube.</p>
     <ul class="ln-faces">${LN_FACE_WORDS.map(([m,w])=>`<li><span class="ms">${tile(m)}${tile(m+"'")}</span><span>${esc(w)}</span></li>`).join('')}</ul>
-    <div class="row"><button class="small" data-ln="moves">Show the six moves on the cube at the top of the page</button></div></div>`;
+    <div class="row"><button class="small" data-ln="moves" title="Load the six moves into the player as a drill">Show the six moves on the cube at the top of the page</button></div></div>`;
 }
 function lnLessonHTML(n){
   const pk=begPack();const s=pk.steps[n];const st=lnStatus(n);const prev=pk.steps[n-1],next=pk.steps[n+1];
-  const head=`<div class="panel ln-head"><div class="ln-title"><button class="ln-link" data-ln="list">← All steps</button><div class="mono muted ln-of">${n===0?'Basics':`Step ${n} of ${pk.count}`}</div><h2>${esc(s.name)}</h2></div>
-    <div class="row ln-nav"><span class="ln-st">${stBtn(begStatusId(n))}<span class="muted ln-hint">tap to change</span></span>${prev?`<button class="small" data-ln="open" data-n="${prev.n}">← ${esc(lnStepNo(prev))}</button>`:''}${next?`<button class="small primary" data-ln="open" data-n="${next.n}">${esc(lnStepNo(next))} →</button>`:''}</div></div>`;
+  const head=`<div class="panel ln-head"><div class="ln-title"><button class="ln-link" data-ln="list" title="Back to the list of steps">← All steps</button><div class="mono muted ln-of">${n===0?'Basics':`Step ${n} of ${pk.count}`}</div><h2>${esc(s.name)}</h2></div>
+    <div class="row ln-nav"><span class="ln-st">${stBtn(begStatusId(n))}<span class="muted ln-hint">tap to change</span></span>${prev?`<button class="small" data-ln="open" data-n="${prev.n}" title="Open ${esc(lnStepNo(prev))}: ${esc(prev.name)}">← ${esc(lnStepNo(prev))}</button>`:''}${next?`<button class="small primary" data-ln="open" data-n="${next.n}" title="Open ${esc(lnStepNo(next))}: ${esc(next.name)}">${esc(lnStepNo(next))} →</button>`:''}</div></div>`;
   const goal=s.goals?`<ul class="ln-goals">${s.goals.map(g=>`<li>${esc(g)}</li>`).join('')}</ul>`:`<p class="muted">${esc(s.goal)}</p>`;
   const used=new Set(),marked=!!(s.kinds||s.marks);
   const tapNote=marked?`<p class="muted ln-small">${n===0?'Tap a kind of piece to see it on the goal cube.':'Tap an underlined word to see those pieces on the goal cube.'}</p>`:'';
   // Watch sits on the picture, top right. While the demo plays it says Skip, which jumps to the goal.
-  const demo=s.demo?lnDemoMoves(s.demo):'',watch=s.demo?'<button class="small ln-watch" data-ln="demo">Watch</button>':'';
+  const demo=s.demo?lnDemoMoves(s.demo):'',watch=s.demo?'<button class="small ln-watch" data-ln="demo" title="Play the moves of this step on the goal picture">Watch</button>':'';
   let moves='';
   if(s.algs)moves+=`<div class="${s.algsInText?'':'panel '}ln-panel"><h3>The algorithm${s.algs.length>1?'s':''}</h3><div class="ln-algs">${s.algs.map(id=>{const a=pk.algs[id];const open=lnView.why.has(id);
-    return `<div class="ln-box"><b>${esc(a.name)}</b>${a.when?`<div class="ln-when">${esc(a.when)}</div>`:''}${lnTiles(a.alg,true)}<div class="ln-say">Say it as: <b>${esc(a.say)}</b></div><div class="row"><button class="small" data-ln="alg" data-id="${esc(id)}">Show on the cube</button>${a.why?`<button class="small ghost" data-ln="why" data-id="${esc(id)}" aria-expanded="${open}">Why it works</button>`:''}</div>${open?`<p class="ln-why">${esc(a.why)}</p>`:''}</div>`;}).join('')}</div></div>`;
+    return `<div class="ln-box"><b>${esc(a.name)}</b>${a.when?`<div class="ln-when">${esc(a.when)}</div>`:''}${lnTiles(a.alg,true)}<div class="ln-say">Say it as: <b>${esc(a.say)}</b></div><div class="row"><button class="small" data-ln="alg" data-id="${esc(id)}" title="Load this algorithm into the player as a drill">Show on the cube</button>${a.why?`<button class="small ghost" data-ln="why" data-id="${esc(id)}" aria-expanded="${open}" title="${open?'Hide':'Show'} why the algorithm works">Why it works</button>`:''}</div>${open?`<p class="ln-why">${esc(a.why)}</p>`:''}</div>`;}).join('')}</div></div>`;
   const what=`<div class="panel ln-what"><div class="ln-text"><div><h3>What you do</h3><p>${lnMarked(s.what,s,used)}</p>${tapNote}</div><div><h3>How</h3><p>${lnMarked(s.how,s,used)}</p></div><div class="note">${lnMarked(s.note,s,used)}</div>${n===0?lnSixMoves():''}${s.algsInText?moves:''}</div>
     <div class="ln-goal"><h3>Goal for this step</h3>${goal}<div class="ln-pic"><svg id="lnGoalSvg" viewBox="${lnGoalBox(n)}" aria-hidden="true">${lnGoalSVG(n)}</svg>${watch}</div><div class="muted ln-cap" id="lnGoalCap" aria-live="polite">${esc(lnGoalCap(n))}</div>${demo}</div></div>`;
   const cases=s.cases?`<div class="panel ln-panel"><div class="row ln-ch"><h3>${esc(pk.caseTitles[n]||'Where you find the piece, and what to do')}</h3><span class="muted ln-small">Show puts the case on the cube</span></div>
     ${s.cases.map((c,i)=>{const ms=parseAlg(c.moves||'');
-      return `<div class="ln-case"><div class="ln-cpic">${ms.length?lnPic(lnCaseStart(n,c),false):''}</div><div class="ln-cbody"><b>${esc(c.name)}</b><div class="muted">${esc(c.text)}</div>${ms.length?`<div class="ln-cmoves">${lnTiles(ms)}</div>`:''}</div>${ms.length?`<button class="small" data-ln="case" data-i="${i}">Show</button>`:''}</div>`;}).join('')}</div>`:'';
+      return `<div class="ln-case"><div class="ln-cpic">${ms.length?lnPic(lnCaseStart(n,c),false):''}</div><div class="ln-cbody"><b>${esc(c.name)}</b><div class="muted">${esc(c.text)}</div>${ms.length?`<div class="ln-cmoves">${lnTiles(ms)}</div>`:''}</div>${ms.length?`<button class="small" data-ln="case" data-i="${i}" title="Put this case on the cube in the player">Show</button>`:''}</div>`;}).join('')}</div>`:'';
   const done=st==='finished';
-  const nextBtn=next?`<button class="primary" data-ln="open" data-n="${next.n}">Next: ${esc(lnStepNo(next))}, ${esc(next.name)} →</button>`:'';
+  const nextBtn=next?`<button class="primary" data-ln="open" data-n="${next.n}" title="Open ${esc(lnStepNo(next))}: ${esc(next.name)}">Next: ${esc(lnStepNo(next))}, ${esc(next.name)} →</button>`:'';
   const ask=n===0?'<b>Mark finished if this makes sense to you.</b> <span class="muted">You can always come back!</span>':'<b>Can you do this step on your own cube?</b> <span class="muted">Mark it finished. You can always come back.</span>';
   const end=`<div class="panel ln-foot"><div>${ask}</div>
-    <div class="row"><button data-ln="mark" id="lnMark"${done?' disabled':''}>${done?'Finished':'Mark finished'}</button>${nextBtn}</div></div>`;
+    <div class="row"><button data-ln="mark" id="lnMark"${done?' disabled':''} title="${done?'This step is finished':'Mark this step finished. The status button above changes it back'}">${done?'Finished':'Mark finished'}</button>${nextBtn}</div></div>`;
   return head+what+(s.algsInText?'':moves)+(s.hideCases?'':cases)+end;
 }
 
@@ -253,7 +253,7 @@ document.addEventListener('cw:status',e=>{if(!/^(beg-|mini-|master-)/.test(Strin
 
 // ---------- the Cheat sheet (the rules per step come from the pack) ----------
 function lnCheatHTML(){
-  const pk=begPack();const show=(kind,id)=>`<button class="small" data-cs="${kind}" data-id="${esc(id)}">Show</button>`;
+  const pk=begPack();const show=(kind,id)=>`<button class="small" data-cs="${kind}" data-id="${esc(id)}" title="Load this algorithm into the player as a drill">Show</button>`;
   const panels=pk.steps.filter(s=>s.n>0).map(s=>{const c=pk.cheat[s.n]||{};let body='';
     if(c.list)body+=`<ul class="ln-cs-list">${c.list.map(([t,m])=>`<li><span>${esc(t)}</span><span class="ln-cs-mv">${lnTiles(m)}</span></li>`).join('')}</ul>`;
     if(s.algs)body+=s.algs.map(id=>{const a=pk.algs[id];return `<div class="ln-cs-alg"><div class="ln-cs-an"><b>${esc(a.name)}</b><span class="muted"> · ${esc(a.when||a.say)}</span></div>${lnTiles(a.alg)}${show('alg',id)}</div>`;}).join('');

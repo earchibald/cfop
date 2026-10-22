@@ -64,7 +64,7 @@ function prRowHTML(p,i){
 function prStepSelHTML(){
   const pk=begPack();return Array.from({length:pk.count},(_,i)=>i+1).map(n=>{
     const label=n+' '+pk.steps[n].name.replace(/^The /,'');
-    return `<button type="button" class="${n===practiceState.step?'on':''}" data-n="${n}">${esc(label)}</button>`;
+    return `<button type="button" class="${n===practiceState.step?'on':''}" data-n="${n}" title="Practice step ${n}: ${esc(pk.steps[n].name)}">${esc(label)}</button>`;
   }).join('');
 }
 function prRenderStepSel(){
@@ -101,9 +101,9 @@ function prMountPractice(){
     <p class="muted" style="margin:4px 0 0">Pick a step. The app scrambles a cube and solves every step before it for you. You do the step on your cube. Reveal shows the moves.</p></div>
   <div class="panel"><div class="status-sel" id="prSteps"></div></div>
   <div class="panel row" style="gap:8px">
-    <button class="primary" id="prNew">New cube</button>
-    <button id="prReveal">Reveal</button>
-    <button id="prSolved">Solved it</button>
+    <button class="primary" id="prNew" title="A new mixed-up cube, with every step before this one solved for you">New cube</button>
+    <button id="prReveal" title="Show or hide the moves of this step, part by part">Reveal</button>
+    <button id="prSolved" title="Count this round as practiced and give a new cube">Solved it</button>
   </div>
   <div class="panel" id="prGoal"></div>`;
   prRenderStepSel();prRenderPanel();
@@ -128,7 +128,7 @@ document.addEventListener('cw:scramble',()=>{
 function prProgressTableHTML(){
   const data=begProgress.data();
   return begPack().steps.map(s=>{const n=s.n,times=data.steps[n]||0;
-    return `<tr><td class="mono">${n===0?'Basics':n}</td><td><a href="#" class="pr-stepname" data-n="${n}">${esc(s.name)}</a></td><td>${stBtn(begStatusId(n))}</td><td class="mono">${times}</td></tr>`;}).join('');
+    return `<tr><td class="mono">${n===0?'Basics':n}</td><td><a href="#" class="pr-stepname" data-n="${n}" title="Open the lesson">${esc(s.name)}</a></td><td>${stBtn(begStatusId(n))}</td><td class="mono">${times}</td></tr>`;}).join('');
 }
 function prRenderProgress(){
   const sq=$('#prSq');if(!sq)return;const pk=begPack();
@@ -165,13 +165,13 @@ function prMountProgress(){
   <div class="panel">
     <h3>Timer</h3>
     <p>Ready to go faster? Time your solves. The timer shows in the player. Times save like in CFOP.</p>
-    <button id="prTimer">Time my solves</button>
+    <button id="prTimer" title="Show the timer in the player instead of your progress">Time my solves</button>
     <p class="muted" style="font-size:13px">Hold space, then release, to start the timer. On a phone, tap the time.</p>
   </div>
   <div class="panel">
     <h3>Start over</h3>
     <p class="muted" style="margin:0 0 8px">Reset every step to unlearned and the counts to zero.</p>
-    <button id="prReset">Reset beginner progress</button>
+    <button id="prReset" title="Set every step to unlearned and the counts to zero. Asks first">Reset beginner progress</button>
   </div>`;
   prRenderProgress();
   $('#prTimer').onclick=()=>showBegTimer(true);

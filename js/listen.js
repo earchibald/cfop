@@ -74,7 +74,7 @@ function listenUnits(alg){const t=alg.trim().split(/\s+/),units=[];let rot=[];
   if(rot.length){if(units.length)units[units.length-1]+=' '+rot.join(' ');else units.push(rot.join(' '));}
   return units;}
 // The card's markup. Names and moves come from the algorithm database, through esc.
-function listenCardHTML(e){return `<button type="button" class="listen-nm" title="Open details">${esc(e.name)}</button><div class="listen-alg" title="Tap to show the next move">${listenUnits(e.alg).map(u=>`<span class="sp-m">${esc(u)}</span>`).join(' ')}</div>`;}
+function listenCardHTML(e){return `<button type="button" class="listen-nm" title="Open the details of this case">${esc(e.name)}</button><div class="listen-alg" title="Tap to show the next move now">${listenUnits(e.alg).map(u=>`<span class="sp-m">${esc(u)}</span>`).join(' ')}</div>`;}
 // Show the case: every move covered, then one more each second.
 function listenShow(e){LISTEN.entry=e;clearTimeout(LISTEN.timer);
   const card=$('#listenCard');card.innerHTML=listenCardHTML(e);card.classList.remove('hidden');$('#listenPanel').classList.add('pinned');
