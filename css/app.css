@@ -323,7 +323,6 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
   .case-bg .dismiss{flex:0 0 auto;min-height:84px;padding:calc(env(safe-area-inset-top,0px) + 14px) 72px 8px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:7px;background:rgba(0,0,0,.45);color:#fff;font-size:13px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
   .case-bg .dismiss::before{content:"";display:block;width:36px;height:4px;border-radius:2px;background:#fff;opacity:.6}
   .case-bg .modal{flex:1 1 auto;min-height:0;border-radius:calc(var(--r) + 4px) calc(var(--r) + 4px) 0 0}
-  .modal .sec .sp-prose .sp-m{display:inline-block;padding:1px 2px;margin:1px 0} /* a fatter tap target in the text */
   .modal .sp-hint{font-size:12.5px;margin:0 0 6px}
   .refall .modal .sp-hint{display:none}
   .modal .close{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);right:12px;z-index:22;width:42px;height:42px;font-size:20px;background:var(--panel2);border:1px solid var(--line);border-radius:50%;padding:0}
