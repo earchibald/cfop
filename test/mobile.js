@@ -6,7 +6,9 @@ const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
 const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
 const dom=new JSDOM(html,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,url:'file://'+path.join(__dirname,'..','index.html'),virtualConsole:vc,
-  beforeParse(w){w.matchMedia=q=>({matches:/760/.test(q),addEventListener(){},addListener(){}});w.scrollTo=()=>{};}});
+  beforeParse(w){w.matchMedia=q=>({matches:/760/.test(q),addEventListener(){},addListener(){}});w.scrollTo=()=>{};
+    // A fake localStorage (jsdom has none for file: pages), so the Settings window can save.
+    const m=new Map();Object.defineProperty(w,'localStorage',{value:{getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear()}});}});
 const w=dom.window;const d=w.document;w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=function(){};
 const $=s=>d.querySelector(s),$$=s=>[...d.querySelectorAll(s)];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -48,6 +50,16 @@ w.addEventListener('load',async()=>{try{
   click($('#modalBg h2'));click($('#modalBg .sec'));assert.ok($('#modalBg'),'a tap on the sheet keeps the window open');
   assert.ok($('#modalBg .dismiss'),'the phone window has a strip to close it');click($('#modalBg .dismiss'));assert.ok(!$('#modalBg'),'a tap on the strip closes it');
   click(card);assert.ok($('#modalBg'),'opens again');$('#modalCloseBar').click();assert.ok(!$('#modalBg'),'the Close bar closes it');
+  // A closed case goes on to the next stage, unless the setting is off.
+  {const seen=[];w.HTMLElement.prototype.scrollIntoView=function(){seen.push(this.id);};
+   const g=card.closest('.mgroup').id,next=w.eval('MOBILE_NEXT')[g];
+   click(card);$('#modalCloseBar').click();await sleep(100);assert.ok(seen.includes(next),'closing a case goes to the next stage');
+   click($('#settingsBtn'));assert.ok($('#setRefNext').checked,'the setting is on by default');
+   $('#setRefNext').checked=false;$('#setSave').click();assert.strictEqual(w.eval("store.get('refNext',true)"),false,'Save keeps the setting');
+   seen.length=0;click(card);$('#modalCloseBar').click();await sleep(100);assert.ok(!seen.includes(next),'with the setting off, the page stays');
+   click($('#settingsBtn'));assert.ok(!$('#setRefNext').checked,'the window shows the saved setting');
+   $('#setRefNext').checked=true;$('#setCancel').click();assert.strictEqual(w.eval("store.get('refNext',true)"),false,'Cancel keeps the old setting');
+   w.eval("store.set('refNext',true)");w.HTMLElement.prototype.scrollIntoView=function(){};}
   click(card);assert.ok($('#modalBg'));
   // Show all moves on the phone Reference page: one box, the setting shared with the desktop boxes, the window uncovered.
   const box=$('#refMobile .refAll');assert.ok(box&&!box.checked,'the phone Reference page has the box, off by default');

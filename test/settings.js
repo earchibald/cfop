@@ -1,4 +1,4 @@
-// The Settings window: a button left of Theme, an empty settings area, Cancel (Esc) and Save
+// The Settings window: a button left of Theme, the settings area, Cancel (Esc) and Save
 // (Enter), and the version at the bottom right. The version matches package.json.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
