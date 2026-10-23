@@ -280,15 +280,16 @@ details.fold>summary:hover h3{color:var(--text)}
   .listen-heard{font-size:12.5px;min-height:0}.listen-heard:empty{display:none}
   #listenCard{padding-top:4px}
   #listenBtn{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;touch-action:manipulation} /* a hold listens once; no callout, no selection */
-  .listen-head{display:flex;align-items:center;gap:8px;padding-bottom:6px}
-  .listen-nm{flex:1 1 auto;min-width:0;text-align:left;background:transparent;border:0;padding:0;font-weight:600;font-size:17px;color:var(--text)}
-  .listen-not{flex:none;font-size:12px}
+  .listen-not{flex:none;font-size:12px;margin-left:auto}
+  .listen-strip{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:13px;color:var(--muted);padding:0 0 10px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+  .listen-dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--muted);opacity:.5}
+  .listen-strip.on .listen-dot{background:var(--accent);opacity:1;animation:listenPulse 1.4s ease-in-out infinite}
+  @keyframes listenPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.55}}
+  .listen-strip .listen-ask{flex:1 0 100%}.listen-strip .listen-ask:empty{display:none}
   .listen-ask{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:14px;padding:2px 0}
   .listen-ask button{font-size:13.5px}
-  .mrow .nm .say{display:none;font-weight:400;font-size:11.5px;color:var(--muted);margin-left:6px;white-space:nowrap}
+  .mrow .nm .say{display:none;font-weight:400;font-size:11.5px;color:var(--muted);margin-left:6px;white-space:nowrap;text-transform:none;letter-spacing:0}
   .can-listen .mrow .nm .say{display:inline}
-  .listen-alg{font-family:var(--mono);font-size:20px;line-height:1.7;cursor:pointer;word-spacing:2px}
-  .refall #listenCard .sp-m:not(.on){background:var(--muted);box-shadow:0 0 0 2px var(--muted);color:transparent;user-select:none} /* Show all moves does not skip the reveal */
   .top{gap:8px;padding:8px 10px;position:fixed;top:0;left:0;right:0;padding-top:calc(env(safe-area-inset-top,0px) + 8px);z-index:15}
   .page{padding-top:calc(var(--toph,58px) - env(safe-area-inset-top,0px) + 10px)}
   .top h1,.top .spacer{display:none}

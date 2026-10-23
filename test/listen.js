@@ -1,70 +1,153 @@
-// Listen: the phone hears a case name and shows its algorithm one move per second. The matcher takes
-// what a recognizer gives ("tea perm", "anti soon", "you be perm", "F two L twelve"); the longest name
-// wins. The card shows every move covered, uncovers one at once and one more each tick, a tap uncovers
-// the next at once, an early guess only shows what was heard, the card stays until the next name, the
-// same name again plays it again, the name
-// opens the details, and Stop ends it. A browser with no recognizer gets a message.
+// Listen: the phone hears a case name and shows its algorithm one move per second. The matcher reads
+// what a recognizer gives ("tea perm", "anti soon", "you be perm", "F two L twelve") as an anchor, name
+// words and talk; scores every case by sound; a sure winner shows, close scores ask with chips that a tap
+// or the next word picks; the section in view breaks a tie; Not this offers the runners-up. A name opens
+// the case window with a strip at the top: its covered moves uncover one each tick, a tap on the line
+// uncovers the next at once, an early guess only shows what was heard, the window stays until the next
+// name, which takes its place, the same name again plays it again, and Stop ends the listening. A hold on
+// the button listens once; the window it opens keeps listening until it closes. Each row
+// carries its shortest name. What was heard goes to a log the Settings window copies. Chrome with
+// on-device recognition takes the names as phrases. A browser with no recognizer gets a message.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
 const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
 const recs=[];
-class FakeRec{constructor(){this.started=0;this.stopped=0;recs.push(this);}start(){this.started++;}stop(){this.stopped++;}
-  say(i,text,isFinal){const r=[{transcript:text,confidence:.9}];r.isFinal=!!isFinal;const results=[];results[i]=r;results.length=i+1;this.onresult({resultIndex:i,results});}}
+class FakeRec{constructor(){this.started=0;this.stopped=0;this.phrases=[];recs.push(this);}start(){this.started++;}stop(){this.stopped++;}
+  say(i,text,isFinal){const r=(Array.isArray(text)?text:[text]).map(t=>({transcript:t,confidence:.9}));r.isFinal=!!isFinal;const results=[];results[i]=r;results.length=i+1;this.onresult({resultIndex:i,results});}}
 const dom=new JSDOM(html,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,url:'file://'+path.join(__dirname,'..','index.html'),virtualConsole:vc,
-  beforeParse(w){w.matchMedia=q=>({matches:/760/.test(q),addEventListener(){},addListener(){}});w.scrollTo=()=>{};}});
+  beforeParse(w){w.matchMedia=q=>({matches:/760/.test(q),addEventListener(){},addListener(){}});w.scrollTo=()=>{};
+    // A fake localStorage (jsdom has none for file: pages), so the log can be kept.
+    const m=new Map();Object.defineProperty(w,'localStorage',{value:{getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear()}});}});
 const w=dom.window;const d=w.document;w.HTMLElement.prototype.scrollIntoView=function(){};
 const $=s=>d.querySelector(s),$$=s=>[...d.querySelectorAll(s)];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const click=el=>el.dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true}));
-const on=()=>$$('#listenCard .sp-m.on').length,all=()=>$$('#listenCard .sp-m').length;
+const ptr=(el,type)=>el.dispatchEvent(new w.MouseEvent(type,{bubbles:true,cancelable:true,button:0}));
+// The window a name opens: its title, its covered moves (the first move is in clear), the strip's text and chips.
+const win=()=>$('#modalBg'),title=()=>{const m=$('#modalBg .modal');return m&&m.getAttribute('aria-label');};
+const sp=()=>$('#modalBg .algbig .spoil'),on=()=>$$('#modalBg .spoil .sp-m.on').length,all=()=>$$('#modalBg .spoil .sp-m').length;
+const mst=()=>{const e=$('#listenModalState');return e&&e.textContent;};
+const chips=()=>$$('#listenModalAsk button, #listenCard .listen-ask button').map(b=>b.textContent);
+const log=()=>JSON.parse(w.localStorage.getItem('cw:listenLog')||'[]');
 
 w.addEventListener('load',async()=>{try{
   await sleep(100);const L=w.eval('LISTEN');
-  // The matcher, on what a recognizer gives.
-  const cat=w.listenCatalog(),m=t=>{const e=w.listenMatch(t,cat);return e&&e.id;};
-  assert.strictEqual(w.listenNormalize('F two L twelve'),'f2l 12');assert.strictEqual(w.listenNormalize('Case twenty-one!'),'case 21');
-  for(const [say,id] of [['T perm','pll-T'],['tea perm','pll-T'],['show me the T-Perm','pll-T'],['T','co-T'],['chameleon','co-T'],['Sune','co-sune'],['soon','co-sune'],['anti sune','co-antisune'],['anti soon','co-antisune'],['antisune','co-antisune'],
-    ['you a perm','pll-Ua'],['U perm B','pll-Ub'],['u perm','pll-Ua'],['why perm','pll-Y'],['H','co-H'],['H perm','pll-H'],['double sune','co-H'],['pie','co-pi'],['headlights','co-U'],['bow tie','co-L'],['L shape','eo-L'],['dot','eo-dot'],['line','eo-line'],
-    ['G a perm','Ga'],['J perm','Ja'],['jay be perm','Jb'],['e perm','E'],['are a perm','Ra'],['F2L 12',12],['F two L twelve',12],['case 41',41],['f 2 l 7',7],['can you show me nothing',null],['hello',null]]){
+  // The words: numbers as digits, letters apart from "perm", the two-letter cases apart, "oh l l" as oll.
+  assert.strictEqual(w.listenNormalize('F two L twelve'),'f2l 12');assert.strictEqual(w.listenNormalize('Case twenty-one!'),'case 21');assert.strictEqual(w.listenNormalize('twenty two'),'22');
+  assert.strictEqual(w.listenNormalize('Jperm'),'j perm');assert.strictEqual(w.listenNormalize('GA perm'),'g a perm');assert.strictEqual(w.listenNormalize('Gaperm'),'g a perm');
+  assert.strictEqual(w.listenNormalize('oh l l T'),'oll t');assert.strictEqual(w.listenNormalize('anti soon'),'antisune');assert.strictEqual(w.listenNormalize("what's the T-Perm"),'whats the t perm');
+  assert.ok(w.listenKey('sune')===w.listenKey('soon')&&w.listenKey('soon')===w.listenKey('sunny'),'sune, soon and sunny sound the same');
+  assert.notStrictEqual(w.listenKey('bruno'),w.listenKey('pi'));
+  const parse=t=>JSON.parse(JSON.stringify(w.listenParse(t)));
+  assert.deepStrictEqual(parse('show me the G a perm'),{set:'pll',num:null,name:['g','a']});
+  assert.deepStrictEqual(parse('can you show me nothing'),{set:null,num:null,name:['nothing']});
+  assert.deepStrictEqual(parse('a T perm'),{set:'pll',num:null,name:['t']},'a leading "a" is the article');
+  assert.deepStrictEqual(parse('a b perm'),{set:'pll',num:null,name:['a','b']},'but not before a suffix');
+  // The matcher, on what a recognizer gives. A letter in both OLL and PLL is sure only with a section or an anchor.
+  const cat=w.listenCatalog(),m=(t,s)=>{const e=w.listenMatch(t,cat,s);return e&&e.id;},pll=x=>'pll-'+x;
+  for(const [say,id] of [['T perm','pll-T'],['tea perm','pll-T'],['tango perm','pll-T'],['show me the T-Perm','pll-T'],['go to the T perm','pll-T'],['Jperm','Ja'],['T',null],['H',null],['chameleon','co-T'],['T all','co-T'],['tee oll','co-T'],
+    ['Sune','co-sune'],['soon','co-sune'],['sooner','co-sune'],['anti sune','co-antisune'],['anti soon','co-antisune'],['antisune','co-antisune'],['anti','co-antisune'],
+    ['you a perm','pll-Ua'],['U perm B','pll-Ub'],['u perm','pll-Ua'],['why perm','pll-Y'],['H perm','pll-H'],['double sune','co-H'],['pie','co-pi'],['bruno','co-pi'],['headlights','co-U'],['bow tie','co-L'],['L shape','eo-L'],['dot','eo-dot'],['line','eo-line'],
+    ['G a perm','Ga'],['GA perm','Ga'],['golf b perm','Gb'],['J perm','Ja'],['jay be perm','Jb'],['l perm','Jb'],['e perm','E'],['are a perm','Ra'],['a perm','Aa'],['the a perm','Aa'],['a b perm','Ab'],
+    ['F2L 12',12],['F two L twelve',12],['case 41',41],['f 2 l 7',7],['twelve',12],['d perm',null],['can you show me nothing',null],['hello',null],
+    ['U',null],['UA',pll('Ua')],['UB',pll('Ub')],['UAE',pll('Ua')],['Ewa',pll('Ua')],['Ubi',pll('Ub')],['YouTube',pll('Ub')],['you be',pll('Ub')],['Hugh perm',pll('Ua')],['ooh perm',pll('Ua')]]){
     assert.strictEqual(m(say),id,`"${say}" is ${id}`);}
-  assert.ok(cat.every(c=>c.say.length&&c.alg&&c.name),'every case has names');
+  assert.strictEqual(m('U','pll'),'pll-Ua','U in the PLL section');assert.strictEqual(m('U','oll'),'co-U','U in the OLL section');assert.strictEqual(m('Ooh','pll'),'pll-Ua','"Ooh" is U');
+  assert.deepStrictEqual([...w.listenDecide(w.listenRank('You',cat,null)).choices.map(c=>c.id)].sort(),['co-U','pll-Ua'],'U alone, no section: both');
+  assert.strictEqual(m('T','oll'),'co-T','T in the OLL section');assert.strictEqual(m('T','pll'),'pll-T','T in the PLL section');assert.strictEqual(m('H','oll'),'co-H');
+  assert.ok(cat.every(c=>c.say.length&&c.alg&&c.name&&c.hint&&c.set),'every case has names, a set and a hint');
+  // Close scores are choices: "d perm" is one of the E-set perms. The next word picks one.
+  const dd=w.listenDecide(w.listenRank('d perm',cat));assert.ok(!dd.hit&&dd.choices.length===5,'d perm: five choices');
+  assert.ok(dd.choices.every(c=>c.set==='pll'),'all perms');
+  assert.strictEqual(w.listenPick('second',dd.choices),dd.choices[1]);assert.strictEqual(w.listenPick('two',dd.choices),dd.choices[1]);assert.strictEqual(w.listenPick('tango',dd.choices).id,'pll-T');
+  assert.strictEqual(w.listenPick('G a',dd.choices).id,'Ga');assert.strictEqual(w.listenPick('nothing',dd.choices),null);
+  const tt=w.listenDecide(w.listenRank('T',cat,null));assert.strictEqual(tt.choices.length,2,'T alone: the perm and the OLL');
+  assert.strictEqual(w.listenPick('the perm',tt.choices).id,'pll-T');assert.strictEqual(w.listenPick('oll',tt.choices).id,'co-T');
+  // Each phone row carries its shortest name.
+  const say=id=>{const s=$(`#refMobileCases .mrow[data-id="${id}"] .nm .say`);return s&&s.textContent;};
+  assert.strictEqual(say('pll-T'),'Say "T perm"');assert.strictEqual(say('Ga'),'Say "G a perm"');assert.strictEqual(say('12'),'Say "12"');assert.strictEqual(say('co-pi'),'Say "Pi or Bruno"');assert.strictEqual(say('co-antisune'),'Say "Anti"');
+  w.renderMobileRef();assert.strictEqual(say('pll-T'),'Say "T perm"','the labels come back after a redraw');assert.strictEqual($$('#refMobileCases .mrow[data-id="pll-T"] .say').length,1,'once');
   // Listen: the button starts a recognizer, the state says so.
-  assert.strictEqual(L.ms,1000,'one move per second');L.ms=200;
+  assert.strictEqual(L.ms,1000,'one move per second');L.ms=200;L.section=null;
   const st=()=>$('#listenState').textContent;
   assert.ok($('#listenCard').classList.contains('hidden'),'no card at first');
   click($('#listenBtn'));assert.strictEqual(st(),'This browser cannot listen. Use Safari or Chrome.','no recognizer: a message');assert.ok(!L.on);
   w.webkitSpeechRecognition=FakeRec;click($('#listenBtn'));
   assert.ok(L.on&&recs.length===1&&recs[0].started===1,'the recognizer starts');assert.strictEqual($('#listenBtn').textContent,'Stop');
-  assert.ok(recs[0].continuous&&recs[0].interimResults,'it listens on and reports early');
-  // An early guess only shows what was heard. The final guess shows the card: every move covered but the
-  // first, then one more each tick.
-  const rec=recs[0];rec.say(0,'tea',false);assert.ok($('#listenCard').classList.contains('hidden'),'an early guess shows no card');assert.strictEqual($('#listenHeard').textContent,'Heard: tea');
-  rec.say(0,'T perm',false);assert.ok($('#listenCard').classList.contains('hidden'),'still no card');assert.strictEqual($('#listenHeard').textContent,'Heard: T perm');
-  rec.say(0,'T perm',true);assert.ok(!$('#listenCard').classList.contains('hidden'),'the final guess shows the card');assert.ok($('#listenPanel').classList.contains('pinned'),'the panel pins');
+  assert.ok(recs[0].continuous&&recs[0].interimResults,'it listens on and reports early');assert.strictEqual(recs[0].maxAlternatives,5);
+  assert.strictEqual(recs[0].phrases.length,0,'no phrases without on-device recognition');
+  // An early guess only shows what was heard. The final guess opens the case window: the first move in clear,
+  // every other move covered, then one more each tick.
+  const rec=recs[0];rec.say(0,'tea',false);assert.ok(!win(),'an early guess opens no window');assert.strictEqual($('#listenHeard').textContent,'Heard: tea');
+  rec.say(0,'T perm',false);assert.ok(!win(),'still no window');assert.strictEqual($('#listenHeard').textContent,'Heard: T perm');
+  rec.say(0,'T perm',true);assert.strictEqual(title(),'T perm','the final guess opens the window');assert.ok($('#listenStrip'),'with the strip');
+  assert.ok($('#listenStrip').classList.contains('on'),'the strip shows it listens');assert.ok(!L.card,'the button began the listening, not the window');
   const tAlg=w.eval('ALG_DB').cp.find(a=>a.id==='pll-T').alg.split(' ');
-  assert.strictEqual(all(),tAlg.length,'one bar per move');assert.strictEqual(on(),1,'the first move shows at once');assert.strictEqual($('#listenCard .sp-m.on').textContent,tAlg[0]);
-  assert.strictEqual($('.listen-nm').textContent,'T perm');assert.strictEqual(st(),'Listening. Heard T perm.');assert.strictEqual($('#listenHeard').textContent,'');
-  await sleep(300);assert.strictEqual(on(),2,'one more after a tick');
-  click($('.listen-alg'));assert.strictEqual(on(),3,'a tap uncovers the next move at once');
-  await sleep(300);assert.strictEqual(on(),4,'and the timer goes on');
-  await sleep(200*tAlg.length);assert.strictEqual(on(),all(),'every move shows in the end');
-  // The card stays through other talk; the next name replaces it; the same name again plays again.
-  rec.say(1,'hello there',true);assert.strictEqual($('.listen-nm').textContent,'T perm','the card stays');assert.strictEqual(st(),'Listening. No case is called that.');
-  rec.say(2,'you a perm',false);assert.strictEqual($('.listen-nm').textContent,'T perm','an early guess changes nothing');
-  rec.say(2,'you be perm',true);assert.strictEqual($('.listen-nm').textContent,'Ub perm','the next name replaces it');assert.strictEqual(on(),1);
-  await sleep(300);assert.strictEqual(on(),2);
-  rec.say(3,'U B perm',true);assert.strictEqual($('.listen-nm').textContent,'Ub perm');assert.strictEqual(on(),1,'the same name again plays it again');
-  rec.say(4,'F2L 12',true);assert.strictEqual($('.listen-nm').textContent,'F2L case #12');assert.strictEqual(all(),w.listenUnits(w.eval('F2L_CASES')[11].alg).length);
-  rec.say(5,'J perm',true);assert.strictEqual($('.listen-nm').textContent,'Ja perm');assert.strictEqual($('#listenCard .sp-m').textContent,'x R2','a lead rotation goes with the first turn');
-  // The name opens the details.
-  click($('.listen-nm'));assert.ok($('#modalBg'),'the details open');assert.strictEqual($('#modalBg .modal').getAttribute('aria-label'),'Ja perm');$('#modalClose').click();
-  // The phone stops on its own: the page starts it again. Stop ends it and keeps the card.
+  assert.strictEqual(sp().firstChild.textContent.trim(),tAlg[0],'the first move in clear');assert.strictEqual(all(),tAlg.length-1,'one bar per move after it');assert.strictEqual(on(),0,'all covered at first');
+  assert.strictEqual(mst(),'Listening. Heard T perm.','the strip says what was heard');assert.strictEqual(st(),'Listening. Heard T perm.');assert.strictEqual($('#listenHeard').textContent,'');
+  assert.deepStrictEqual([...log().map(o=>o.hit)],['pll-T'],'the log has the hit');
+  await sleep(300);assert.strictEqual(on(),1,'one move after a tick');
+  click(sp().querySelector('.sp-rest'));assert.strictEqual(on(),2,'a tap on the line uncovers the next move at once');assert.ok(win(),'and the window stays');
+  await sleep(150);assert.strictEqual(on(),3,'and the timer goes on');
+  await sleep(200*tAlg.length);assert.strictEqual(on(),all(),'every move shows in the end');assert.ok(sp().classList.contains('open'),'the reveal button goes');
+  // The window stays through other talk; the next name takes its place; the same name again plays again.
+  rec.say(1,'hello there',true);assert.strictEqual(title(),'T perm','the window stays');assert.strictEqual(mst(),'Listening. No case is called that. Heard: hello there');assert.strictEqual(log().pop().hit,null,'the miss is logged');
+  rec.say(2,'you a perm',false);assert.strictEqual(title(),'T perm','an early guess changes nothing');
+  rec.say(2,'you be perm',true);assert.strictEqual(title(),'Ub perm','the next name takes its place');assert.strictEqual(on(),0);assert.strictEqual($$('#modalBg').length,1,'one window');
+  assert.ok(w.history.state&&w.history.state.modal,'one step in the history');
+  await sleep(300);assert.strictEqual(on(),1);
+  rec.say(3,'U B perm',true);assert.strictEqual(title(),'Ub perm');assert.strictEqual(on(),0,'the same name again plays it again');
+  rec.say(4,'F2L 12',true);assert.strictEqual(title(),'F2L case #12');assert.strictEqual(all(),$$('#refMobileCases .mrow[data-kind="f2l"][data-id="12"] .spoil .sp-m').length,'covered as the row covers it');
+  rec.say(5,'J perm',true);assert.strictEqual(title(),'Ja perm');assert.strictEqual(sp().firstChild.textContent.trim(),'x R2','a lead rotation goes with the first turn, in clear');
+  // The recognizer's alternatives all count: the second one names the case.
+  rec.say(6,['she perm','G a perm'],true);assert.strictEqual(title(),'Ga perm','an alternative names the case');
+  // Close scores ask, in the strip. The next word picks; so does a tap on a chip.
+  rec.say(7,'d perm',true);assert.strictEqual(chips().length,5,'d perm: five chips');assert.strictEqual(title(),'Ga perm','the window stays while it asks');
+  assert.strictEqual(mst(),'Listening. Which one? Heard: d perm');assert.strictEqual($('#listenHeard').textContent,'Heard: d perm');
+  assert.deepStrictEqual(log().pop().choices.length,5,'the question is logged');
+  rec.say(8,'hello',true);assert.strictEqual(chips().length,5,'talk keeps the chips');assert.ok(/Which one\? Say the name again/.test(st()));
+  rec.say(9,'second',true);assert.strictEqual(title(),'Z perm','"second" picks the second chip');assert.strictEqual(log().pop().picked,'pll-Z');assert.strictEqual(chips().length,0,'the chips go');
+  rec.say(10,'d perm',true);click($$('#listenModalAsk button')[2]);assert.strictEqual(title(),'E perm','a tap picks');assert.strictEqual(log().pop().picked,'E');assert.strictEqual(mst(),'Listening. Showing E perm.');
+  rec.say(11,'T',true);assert.deepStrictEqual([...chips()],['T (chameleon)','T perm'],'T alone, no section: both');
+  rec.say(12,'the perm',true);assert.strictEqual(title(),'T perm','"the perm" picks the perm');
+  L.section='oll';rec.say(13,'T',true);assert.strictEqual(title(),'T (chameleon)','T with the OLL section in view');L.section=null;
+  // Not this: the runners-up as chips, and the miss marked in the log. With no runners-up, a word.
+  rec.say(14,'tea perm',true);assert.strictEqual(title(),'T perm');click($('#listenStrip .listen-not'));
+  assert.ok(chips().length>=2&&chips().length<=4&&!chips().includes('T perm'),'Not this: the runners-up');assert.strictEqual(log().pop().wrong,true,'the miss is marked');
+  rec.say(15,'sune',true);assert.strictEqual(title(),'Sune');click($('#listenStrip .listen-not'));assert.strictEqual(mst(),'Listening. Say it again, or tap the case in the list.');assert.strictEqual(title(),'Sune','the window stays');
+  // Close the window: the listening the button began goes on. With no window, the chips go in the panel.
+  $('#modalClose').click();await sleep(20);assert.ok(!win()&&L.on,'closed, still listening');
+  rec.say(16,'d perm',true);assert.strictEqual($$('#listenCard .listen-ask button').length,5,'the chips in the panel');assert.ok($('#listenPanel').classList.contains('pinned'));
+  rec.say(17,'second',true);assert.strictEqual(title(),'Z perm');assert.ok($('#listenCard').classList.contains('hidden'),'the panel card goes');$('#modalClose').click();await sleep(20);
+  // The phone stops on its own: the page starts it again. Stop ends it.
   rec.onend();await sleep(300);assert.strictEqual(rec.started,2,'started again after it ended');
-  click($('#listenBtn'));assert.ok(!L.on&&rec.stopped===1,'Stop stops it');assert.strictEqual($('#listenBtn').textContent,'Listen');
+  click($('#listenBtn'));assert.ok(!L.on&&rec.stopped===1,'Stop stops it');assert.strictEqual($('#listenBtn').textContent,'Listen');assert.ok(/^Tap to listen, or hold/.test(st()));
   rec.onend&&rec.onend();await sleep(300);assert.strictEqual(rec.started,2,'not started again after Stop');
-  assert.ok(!$('#listenCard').classList.contains('hidden'),'the card stays after Stop');
+  // A hold on the button listens once: the recognizer runs until the button is let go; the click after the hold does nothing.
+  // The window a hold opens keeps listening, until it closes.
+  const btn=$('#listenBtn');ptr(btn,'pointerdown');await sleep(400);
+  assert.strictEqual(recs.length,2,'a hold starts a recognizer');const h=recs[1];assert.strictEqual(h.continuous,false,'once');assert.ok(L.hold&&!L.on);
+  assert.strictEqual(btn.textContent,'Let go when done');assert.strictEqual(st(),'Say the case name, then let go.');
+  ptr(btn,'pointerup');assert.strictEqual(h.stopped,1,'let go: the recognizer stops');click(btn);assert.ok(!L.on&&recs.length===2,'the click after a hold does nothing');
+  h.say(0,'why perm',true);assert.strictEqual(title(),'Y perm');assert.strictEqual(mst(),'Heard Y perm.','no "Listening." while the hold is still on');assert.ok(!$('#listenStrip').classList.contains('on'));
+  h.onend();assert.ok(!L.hold,'the hold is over when its recognizer ends');
+  assert.ok(recs.length===3&&L.on&&L.card&&recs[2].continuous,'the window listens on');assert.strictEqual(mst(),'Listening. Say another case to change the card.');
+  assert.ok($('#listenStrip').classList.contains('on'));assert.strictEqual(btn.textContent,'Stop');
+  recs[2].say(0,'T perm',true);assert.strictEqual(title(),'T perm','the next name changes the card');assert.ok(L.on&&L.card,'and it listens on');
+  $('#modalClose').click();await sleep(20);assert.ok(!win()&&!L.on&&!L.card&&recs[2].stopped===1,'Close ends the listening the window began');assert.strictEqual(btn.textContent,'Listen');
+  ptr(btn,'pointerdown');await sleep(400);ptr(btn,'pointerup');recs[3].onend();assert.strictEqual(st(),'Nothing heard. Hold the button and say a case name.','a hold with nothing said');assert.strictEqual(recs.length,4,'no window, no listening on');
+  ptr(btn,'pointerdown');await sleep(50);ptr(btn,'pointerup');click(btn);assert.ok(L.on&&recs.length===5&&recs[4].continuous,'a short tap toggles');click(btn);assert.ok(!L.on);
+  // Chrome with on-device recognition: every name goes in as a phrase.
+  w.SpeechRecognitionPhrase=class{constructor(p,b){this.phrase=p;this.boost=b;}};L.local=true;click(btn);
+  const pr=recs[5];assert.ok(pr.processLocally&&pr.phrases.length>50,'the phrases');assert.ok(pr.phrases.some(p=>p.phrase==='t perm')&&pr.phrases.some(p=>p.phrase==='bruno'));click(btn);
+  // The Settings window copies the log, or clears it.
+  let copied=null;w.navigator.clipboard={writeText:t=>{copied=t;return Promise.resolve();}};
+  click($('#settingsBtn'));assert.ok($('#setListenLog'),'the copy button, with a log');click($('#setListenLog'));await sleep(20);
+  assert.ok(copied&&/shown pll-T/.test(copied)&&/WRONG/.test(copied)&&/picked pll-Z/.test(copied),'the log is copied');assert.strictEqual($('#setListenLog').textContent,'Copied');
+  click($('#setListenClear'));assert.ok(!$('#setListenLog')&&w.listenLogText()==='','cleared');click($('#setCancel'));
+  click($('#settingsBtn'));assert.ok(!$('#setListenLog'),'no button without a log');click($('#setCancel'));
   // A blocked microphone: a message, and it is off.
-  click($('#listenBtn'));recs[1].onerror({error:'not-allowed'});assert.ok(!L.on);assert.ok(/blocked/.test(st()),'blocked: a message');
+  click(btn);recs[6].onerror({error:'not-allowed'});assert.ok(!L.on);assert.ok(/blocked/.test(st()),'blocked: a message');
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('listen: names matched, one move per second, tap, stays, again, details, stop ok');process.exit(0);
+  console.log('listen: names matched, chips, pick, section, Not this, hold, labels, phrases, log, the window one move per second, tap, stays, swaps, listens on, stop ok');process.exit(0);
 }catch(e){console.error('listen: FAIL',e.message,errs);process.exit(1);}});

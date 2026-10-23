@@ -629,7 +629,7 @@ function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why,
     bg.querySelectorAll('.mvpart').forEach(x=>{x.classList.toggle('on',on&&x===b);x.setAttribute('aria-pressed',String(on&&x===b));});
     mvShow(pic,on?b.dataset.mv:null);hint.textContent=on?'Choose it again to clear the picture.':'Choose a part to show it on the picture.';});
   const close=()=>closeModal();bg.addEventListener('click',e=>{if(e.target===bg||e.target.classList.contains('dismiss'))close();});$('#modalClose').onclick=close;$('#modalCloseBar').onclick=close;
-  try{window.history.pushState({modal:1},'');}catch(e){}window.addEventListener('popstate',popClose);
+  try{if(window.history.state&&window.history.state.modal)window.history.replaceState({modal:1},'');else window.history.pushState({modal:1},'');}catch(e){}window.addEventListener('popstate',popClose); // one step back closes a window that took another's place
   const r=crossRotation();
   // On a phone the Reference section has no player, so these buttons first open the section that trains this case.
   const toPlayer=()=>{if(mobileMQ.matches&&curTab==='ref')goTab(o.tab||'ll');focusPlayer();};
@@ -732,7 +732,7 @@ function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHi
   return `<h3>Keys</h3><table>${rows.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table><p class="muted" style="margin-top:8px;font-size:13px">${beg?'Your progress and seed history are':'Times, case statuses and seed history are'} saved in this browser.</p>`;}
 // ---------- settings ----------
 // The Settings window. One setting so far: the phone Reference section goes on to the next stage
-// when a case's details close (cw:refNext). It shows the version, under the buttons, so a report
+// when a case's details close (cw:refNext). With a Listen log, a button copies it for a report. It shows the version, under the buttons, so a report
 // can name it. While it is open, keys go to the window only: Esc cancels and Enter saves.
 function openSettings(){if($('#setBg'))return;
   const bg=document.createElement('div');bg.className='modal-bg ask-bg';bg.id='setBg';
@@ -741,6 +741,7 @@ function openSettings(){if($('#setBg'))return;
    <div class="setarea" id="setArea">
     <label class="setrow" title="On a phone, in the Reference section: close a case's details, and the page goes on to the next stage"><input type="checkbox" id="setRefNext"${store.get('refNext',true)?' checked':''}> Go to the next stage after a case closes</label>
     <p class="muted">Phone only, in the Reference section.</p>
+    ${typeof listenLogText==='function'&&listenLogText()?`<div class="row" style="gap:8px;margin-top:10px"><button type="button" class="small" id="setListenLog" title="Copy what Listen heard and what it showed, for a report">Copy what Listen heard</button><button type="button" class="small ghost" id="setListenClear" title="Forget what Listen heard">Clear it</button></div>`:''}
    </div>
    <div class="row" style="justify-content:flex-end;margin-top:14px"><button id="setCancel" title="Close and keep the settings as they were">Cancel<span class="hk">Esc</span></button><button class="primary" id="setSave" title="Keep these settings and close">Save<span class="hk">Enter</span></button></div>
    <div class="appver" id="appVer">Twistwright ${esc(APP_VERSION)}</div>
@@ -752,6 +753,10 @@ function openSettings(){if($('#setBg'))return;
   document.body.appendChild(bg);
   bg.addEventListener('click',e=>{if(e.target===bg)close();});
   $('#setCancel').onclick=close;$('#setSave').onclick=save;
+  // The Listen log: to the clipboard, or shown in the window where the clipboard is not allowed.
+  const lb=$('#setListenLog');if(lb)lb.onclick=()=>{const t=listenLogText();const show=()=>{let ta=$('#setListenText');if(!ta){ta=document.createElement('textarea');ta.id='setListenText';ta.readOnly=true;ta.rows=6;ta.style.width='100%';lb.parentNode.after(ta);}ta.value=t;ta.select();};
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>{lb.textContent='Copied';},show);else show();};
+  const lc=$('#setListenClear');if(lc)lc.onclick=()=>{listenLogClear();lc.parentNode.remove();const ta=$('#setListenText');if(ta)ta.remove();};
   document.addEventListener('keydown',keys,true);document.addEventListener('keyup',keys,true);
   setTimeout(()=>{const b=$('#setSave');if(b)b.focus();},20);}
 $('#settingsBtn').onclick=openSettings;

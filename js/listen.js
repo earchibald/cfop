@@ -1,116 +1,291 @@
 // Listen: the phone hears a case name and shows its algorithm, one move per second.
 //
-// The Listen button on the phone Reference section turns the microphone on (the browser asks once).
-// The page listens through the browser's speech recognition. When it hears a case name ("T perm",
-// "Sune", "G a perm", "F2L 12"), the card at the top of the section shows that case with every move
-// covered, then uncovers one move per second. A tap on the card uncovers the next move at once. The
-// card stays until the next name; the same name again plays the reveal again.
+// The Listen button on the phone Reference section turns the microphone on (the browser asks once). A
+// hold on the button listens once, while it is held: a short sentence is what the phone's recognizer
+// is built for. The page listens through the browser's speech recognition. When it hears a case name
+// ("T perm", "Sune", "G a perm", "F2L 12", "twelve"), the case window opens, as a tap on the row's picture
+// opens it, and its covered moves uncover one per second. A tap on the line uncovers the next move at
+// once. The window keeps listening: the next name swaps it for that case; the same name again plays the
+// reveal again; Close ends the listening a hold began. A strip at the top of the window says what was
+// heard, asks between close cases and carries Not this.
 //
-// listenCatalog(), listenNormalize(text) and listenMatch(text, catalog) are pure (no DOM).
+// The recognizer is a dictation model: it cannot be told the case names, so it hears "tea perm",
+// "soon", "you be perm" and "all" for OLL. The matcher reads a sentence in three parts: an anchor word
+// ("perm", "OLL", "F2L", a number), the name words, and talk around them ("show me the"). It then
+// scores every case against the name words: the same word costs 0, a letter the recognizer swaps for
+// another (T for D, E, G) costs a little, a word that sounds alike ("soon" for Sune, by listenKey)
+// costs a little, an extra word costs more, a missing word more still. The anchor rules out the other
+// sets; without one, the section in view breaks a tie ("T" in the OLL part is the T OLL). A sure
+// winner shows at once. Close scores show the choices as chips: a tap or the next word ("second", "the
+// perm", "G a") picks one. Not this, on the window, marks a miss and offers the runners-up. What the
+// phone heard, what was shown and the misses go to cw:listenLog; the Settings window copies it.
+// Each row of the phone Reference carries the shortest name that works ("Say: T perm"). Chrome with
+// on-device recognition is told every name as a phrase to favor (SpeechRecognitionPhrase).
+//
+// Pure (no DOM): listenCatalog, listenNormalize, listenKey, listenParse, listenRank, listenDecide,
+// listenMatch, listenPick.
 
-// The words a recognizer gives for a letter said alone, and the words it gives for "perm".
-const LISTEN_WORDS={tea:'t',tee:'t',you:'u',yu:'u',why:'y',jay:'j',are:'r',ar:'r',zed:'z',zee:'z',bee:'b',be:'b',eh:'a',ay:'a',see:'c',sea:'c',gee:'g',jee:'g',
-  ef:'f',eff:'f',em:'m',en:'n',vee:'v',aitch:'h',age:'h',oh:'o',ell:'l',el:'l',pee:'p',
-  perms:'perm',permutation:'perm',permutations:'perm',pll:'perm',pie:'pi',pies:'pi',two:'2',to:'2',too:'2'};
+// The words a recognizer gives for a letter said alone (the spelling alphabet counts too), and the
+// words it gives for "perm" and "OLL".
+const LISTEN_WORDS={tea:'t',tee:'t',tango:'t',you:'u',yu:'u',uniform:'u',why:'y',yankee:'y',jay:'j',juliet:'j',juliett:'j',are:'r',ar:'r',our:'r',romeo:'r',
+  zed:'z',zee:'z',zulu:'z',bee:'b',be:'b',bravo:'b',eh:'a',ay:'a',alpha:'a',see:'c',sea:'c',charlie:'c',gee:'g',jee:'g',golf:'g',dee:'d',de:'d',delta:'d',echo:'e',
+  ef:'f',eff:'f',foxtrot:'f',em:'m',en:'n',november:'n',vee:'v',victor:'v',aitch:'h',age:'h',hotel:'h',oh:'o',ell:'l',el:'l',lima:'l',pee:'p',papa:'p',
+  cue:'q',queue:'q',eye:'i',kay:'k',ex:'x',ooh:'u',oo:'u',ew:'u',eww:'u',ewe:'u',yew:'u',hugh:'u',hue:'u',who:'u',
+  ua:'u a',uae:'u a',ewa:'u a',yua:'u a',ub:'u b',ube:'u b',ubi:'u b',ubee:'u b',yubi:'u b',uv:'u b',youtube:'u b',
+  perms:'perm',permutation:'perm',permutations:'perm',pll:'perm',pill:'perm',peel:'perm',purm:'perm',term:'perm',firm:'perm',berm:'perm',burm:'perm',palm:'perm',
+  all:'oll',awl:'oll',olly:'oll',orientation:'oll',pie:'pi',pies:'pi',ftl:'f2l',ftol:'f2l'};
 // A number said in words, 1 to 41, for the F2L cases.
 const LISTEN_ONES=['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
 const LISTEN_TENS={twenty:20,thirty:30,forty:40};
-// Lower case, letters and digits only, each spoken letter as its letter, "f 2 l" as "f2l", numbers as digits.
+// Talk around a name. "Can you" and friends go as a pair, so "you" is not the letter U.
+const LISTEN_FILLER=new Set(['show','me','the','an','please','what','whats','is','it','its','how','do','does','give','open','play','let','lets','see','want','i','my',
+  'that','this','next','now','hey','ok','okay','um','uh','cube','twistwright','algorithm','alg','moves','for','of','to','too','go','and','then','again','one']);
+// Lower case, letters and digits only, each spoken letter as its letter, "f 2 l" as "f2l", numbers as
+// digits, a letter and "perm" run together apart ("jperm", "gaperm"), a two-letter case apart ("ga").
 function listenNormalize(text){
-  let t=String(text).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  let t=String(text).toLowerCase().replace(/[’']/g,'').replace(/[^a-z0-9]+/g,' ').trim();
   if(!t)return '';
-  const out=[];let tens=0;
+  const out=[];let tens=0;let m;
   for(const w0 of t.split(' ')){
-    const w=LISTEN_WORDS[w0]||w0;
-    const one=LISTEN_ONES.indexOf(w);
-    if(LISTEN_TENS[w]){tens=LISTEN_TENS[w];continue;}
+    if((m=w0.match(/^([a-z])([abcd])?perm$/))){out.push(m[1]);if(m[2])out.push(m[2]);out.push('perm');continue;}
+    if((m=w0.match(/^([aegjnru])([abcd])$/))&&!LISTEN_WORDS[w0]){out.push(m[1],m[2]);continue;}
+    const one=LISTEN_ONES.indexOf(w0);
+    if(LISTEN_TENS[w0]){if(tens)out.push(String(tens));tens=LISTEN_TENS[w0];continue;}
     if(tens){if(one>0&&one<10){out.push(String(tens+one));tens=0;continue;}out.push(String(tens));tens=0;}
     if(one>=0){out.push(String(one));continue;}
-    out.push(w);}
+    out.push(LISTEN_WORDS[w0]||w0);}
   if(tens)out.push(String(tens));
-  return (' '+out.join(' ')+' ').replace(/ f ?2 ?l /g,' f2l ').replace(/ anti ?(sune|soon|sooner|sunny|sunni|suna|sun) /g,' antisune ').replace(/ bow tie /g,' bowtie ')
-    .replace(/ head lights /g,' headlights ').replace(/ sue (nay|ney|knee|nee) /g,' sune ').replace(/\s+/g,' ').trim();}
+  return (' '+out.join(' ')+' ').replace(/ f ?(2|to|too) ?l /g,' f2l ').replace(/ o (double )?l l? /g,' oll ').replace(/ p l l /g,' perm ')
+    .replace(/ (anti|auntie|aunty|ante|and he|anty) ?(sune|soon|sooner|sunny|sunni|suna|sun|sooney|sunday) /g,' antisune ').replace(/ bow tie /g,' bowtie ')
+    .replace(/ head lights? /g,' headlights ').replace(/ sue (nay|ney|knee|nee) /g,' sune ').replace(/\s+/g,' ').trim();}
+// A word as it sounds: the first letter, then the consonants, with the letters that sound the same
+// made one. "sune", "soon" and "sunny" are all SN. A single letter is itself.
+function listenKey(w){let s=String(w).toLowerCase().replace(/[^a-z]/g,'');if(s.length<2)return s.toUpperCase();
+  s=s.replace(/x/g,'ks').replace(/ph/g,'f').replace(/ck/g,'k').replace(/gh/g,'').replace(/^wh/,'w').replace(/^kn/,'n').replace(/(ch|sh)/g,'X').replace(/th/g,'0')
+    .replace(/c(?=[eiy])/g,'s').replace(/c/g,'k').replace(/q/g,'k').replace(/z/g,'s').replace(/dg/g,'j');
+  s=s[0]+s.slice(1).replace(/[aeiouyhw]/g,'');
+  return s.replace(/(.)\1+/g,'$1').toUpperCase();}
+function listenEdit(a,b){const D=[];for(let i=0;i<=a.length;i++){D[i]=[i];}for(let j=1;j<=b.length;j++)D[0][j]=j;
+  for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)D[i][j]=Math.min(D[i-1][j]+1,D[i][j-1]+1,D[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  return D[a.length][b.length];}
+// A sentence in three parts: the set an anchor word names ("perm" is pll, "oll", a number is f2l),
+// the number, and the name words with the talk taken out. A leading "a" before a name is the article.
+function listenParse(text){
+  const toks=listenNormalize(text).split(' ').filter(Boolean),kept=[];
+  for(let i=0;i<toks.length;i++){if(/^(can|could|would|will|do)$/.test(toks[i])&&toks[i+1]==='u'){i++;continue;}if(!LISTEN_FILLER.has(toks[i]))kept.push(toks[i]);}
+  let set=null,num=null;const name=[];
+  for(const w of kept){
+    if(w==='perm'){set=set||'pll';continue;}
+    if(w==='oll'){set=set||'oll';continue;}
+    if(w==='f2l'||w==='case'||w==='pair'||w==='number')continue;
+    if(/^\d+$/.test(w)){if(num==null)num=+w;continue;}
+    name.push(w);}
+  if(num!=null&&!set)set='f2l';
+  while(name.length>1&&name[0]==='a'&&!/^[ab]$/.test(name[1]))name.shift();
+  return {set,num,name};}
 
-// The names of the OLL and PLL cases as people say them, by case id, in normalized form. A letter alone
-// names an OLL case only where the letter is not a word a recognizer hears often ("you" is u, so Headlights).
+// The names of the OLL and PLL cases as people say them, by case id, in normalized form, and the
+// shortest name that works, for the row. A letter alone names an OLL case only with the OLL section
+// in view, or as a choice.
 const LISTEN_SAY={
-  'eo-dot':['dot','dot oll','no edges','oll dot'],
-  'eo-L':['l shape','small l','l oll edges'],
-  'eo-line':['line','bar','line oll','oll line'],
-  'co-sune':['sune','soon','sooner','sunny','sunni','suna','sune oll'],
-  'co-antisune':['antisune','antisune oll'],
-  'co-H':['h','h oll','oll h','double sune','double soon'],
-  'co-pi':['pi','pi oll','oll pi','bruno'],
-  'co-L':['l','l oll','oll l','bowtie'],
-  'co-T':['t','t oll','oll t','chameleon'],
-  'co-U':['u oll','oll u','headlights','head lights'],
-  'pll-T':['t perm','perm t'],'pll-Y':['y perm','perm y'],
-  'pll-Ua':['u a perm','u perm a','ua perm','u perm','perm u a'],'pll-Ub':['u b perm','u perm b','ub perm','perm u b'],
-  'pll-H':['h perm','perm h'],'pll-Z':['z perm','perm z'],
+  'eo-dot':{say:['dot','dots','no edges','dot case'],hint:'Dot'},
+  'eo-L':{say:['l shape','small l','l edges','hook'],hint:'L shape'},
+  'eo-line':{say:['line','bar','line edges'],hint:'Line'},
+  'co-sune':{say:['sune','soon','sooner','sunny','sunni','suna','sun','sooney'],hint:'Sune'},
+  'co-antisune':{say:['antisune','anti','auntie','aunty','anti sune'],hint:'Anti'},
+  'co-H':{say:['h','double sune','double soon','flip'],hint:'H OLL'},
+  'co-pi':{say:['pi','bruno'],hint:'Pi or Bruno'},
+  'co-L':{say:['l','bowtie','bow'],hint:'Bowtie'},
+  'co-T':{say:['t','chameleon','chamelion','camelion','cameleon','camel'],hint:'Chameleon'},
+  'co-U':{say:['u','headlights','headlight'],hint:'Headlights'},
+  'pll-T':{say:['t'],hint:'T perm'},'pll-Y':{say:['y'],hint:'Y perm'},
+  'pll-Ua':{say:['u a','u'],hint:'U a perm'},'pll-Ub':{say:['u b'],hint:'U b perm'},
+  'pll-H':{say:['h'],hint:'H perm'},'pll-Z':{say:['z'],hint:'Z perm'},
 };
 // Every case a phone can ask for: the two-look cases, the rest of the full PLL, the F2L cases by number.
-// Each entry: {kind, id, name, alg, say}, with kind and id as the Reference tiles carry them.
+// Each entry: {kind, id, name, alg, set, say, hint}, with kind and id as the Reference tiles carry them,
+// set as the anchor names it (oll, pll, f2l).
 function listenCatalog(){
   const out=[];
-  for(const a of [...ALG_DB.eo,...ALG_DB.co,...ALG_DB.cp,...ALG_DB.ep])out.push({kind:'ll',id:a.id,name:a.name,alg:a.alg,say:LISTEN_SAY[a.id]||[]});
+  for(const a of [...ALG_DB.eo,...ALG_DB.co])out.push({kind:'ll',id:a.id,name:a.name,alg:a.alg,set:'oll',...LISTEN_SAY[a.id]});
+  for(const a of [...ALG_DB.cp,...ALG_DB.ep])out.push({kind:'ll',id:a.id,name:a.name,alg:a.alg,set:'pll',...LISTEN_SAY[a.id]});
   for(const p of PLL_FULL){if(out.some(o=>o.id==='pll-'+p.name))continue;
     const x=p.name[0].toLowerCase(),s=p.name[1]||'';
-    const say=s?[`${x} ${s} perm`,`${x} perm ${s}`,`${x}${s} perm`,`perm ${x} ${s}`]:[`${x} perm`,`perm ${x}`];
-    if(s==='a')say.push(`${x} perm`); // "J perm" alone is the a case
-    out.push({kind:'pll',id:p.name,name:p.name+' perm',alg:p.alg,say});}
-  for(const f of F2L_CASES)out.push({kind:'f2l',id:f.n,name:'F2L case #'+f.n,alg:f.alg,say:[`f2l ${f.n}`,`f2l case ${f.n}`,`case ${f.n}`,`f2l number ${f.n}`]});
+    const say=s?[`${x} ${s}`]:[x];
+    if(s==='a')say.push(x); // "J perm" alone is the a case
+    if(p.name==='Jb')say.push('l'); // some call it the L perm
+    out.push({kind:'pll',id:p.name,name:p.name+' perm',alg:p.alg,set:'pll',say,hint:`${p.name[0]}${s?' '+s:''} perm`});}
+  for(const f of F2L_CASES)out.push({kind:'f2l',id:f.n,name:'F2L case #'+f.n,alg:f.alg,set:'f2l',say:[String(f.n)],hint:String(f.n)});
   return out;}
-// The catalog entry a sentence names, or null. The longest name wins ("anti sune" over "sune", "t perm" over "t").
-function listenMatch(text,catalog){
-  const t=' '+listenNormalize(text)+' ';let best=null,len=0;
-  for(const c of catalog)for(const s of c.say){if(s.length<=len)continue;if(t.indexOf(' '+s+' ')>=0){best=c;len=s.length;}}
-  return best;}
+// Letters a recognizer swaps for one another: the E set (B C D E G P T V Z), A J K H, F S X, M N, U Q W, I Y.
+const LISTEN_SOUNDS=['bcdegptvz','ajkh','fsx','mn','uqw','iy'];
+const LISTEN_OK=0.75,LISTEN_GAP=0.3;
+// The cost of a heard word in the place of a name word: 0 the same, a little for a letter from the
+// same sound set or a word that sounds alike, 1 for a different word.
+function listenTokenCost(h,x){if(h===x)return 0;
+  const hl=h.length===1,xl=x.length===1;
+  if(hl&&xl)return LISTEN_SOUNDS.some(g=>g.includes(h)&&g.includes(x))?0.45:1;
+  if(hl||xl)return 1;
+  const kh=listenKey(h),kx=listenKey(x);
+  if(kh===kx)return 0.25;
+  if(kh.length>=3&&kx.length>=3&&listenEdit(kh,kx)<=1)return 0.5;
+  if(listenEdit(h,x)/Math.max(h.length,x.length)<=0.34)return 0.5;
+  return 1;}
+// The cost of heard words against a name: words swapped by sound, an extra heard word 0.6, a missing name word 1.
+function listenCost(heard,say){const n=heard.length,m=say.length;const D=[];for(let i=0;i<=n;i++){D[i]=[i*0.6];}for(let j=1;j<=m;j++)D[0][j]=j;
+  for(let i=1;i<=n;i++)for(let j=1;j<=m;j++)D[i][j]=Math.min(D[i-1][j]+0.6,D[i][j-1]+1,D[i-1][j-1]+listenTokenCost(heard[i-1],say[j-1]));
+  return D[n][m];}
+// Every case a sentence may name, with its cost, the best first. An anchor rules the other sets out; with
+// none, the section in view (oll, pll, f2l) costs the other sets a little. Nothing costs more than LISTEN_OK.
+function listenRank(text,catalog,section){
+  const p=listenParse(text);const out=[];
+  for(const c of catalog){let cost;
+    if(p.num!=null){if(c.set!=='f2l'||p.name.length)continue;cost=p.num===+c.id?0:9;}
+    else{if(!p.name.length||c.set==='f2l')continue;
+      cost=Math.min(...c.say.map(s=>listenCost(p.name,s.split(' '))));
+      if(p.set&&p.set!==c.set)cost+=1.5;else if(!p.set&&section&&section!==c.set)cost+=0.35;}
+    if(cost<=LISTEN_OK)out.push({entry:c,cost});}
+  return out.sort((a,b)=>a.cost-b.cost);}
+// The ranks of several sentences (the recognizer's alternatives) as one list: each case at its best cost.
+function listenRankAll(texts,catalog,section){const best=new Map();
+  for(const t of texts)for(const r of listenRank(t,catalog,section)){const k=r.entry.kind+':'+r.entry.id;if(!best.has(k)||best.get(k).cost>r.cost)best.set(k,r);}
+  return [...best.values()].sort((a,b)=>a.cost-b.cost);}
+// A sure winner, or the choices that lie within LISTEN_GAP of the best: {hit, choices, ranked}, or null for none.
+function listenDecide(ranked){if(!ranked.length)return null;
+  const near=ranked.filter(r=>r.cost-ranked[0].cost<LISTEN_GAP);
+  if(near.length===1)return {hit:ranked[0].entry,choices:null,ranked};
+  return {hit:null,choices:near.slice(0,5).map(r=>r.entry),ranked};}
+// The catalog entry a sentence names for sure, or null.
+function listenMatch(text,catalog,section){const d=listenDecide(listenRank(text,catalog,section));return d&&d.hit||null;}
+// One of the choices on the screen, from the next sentence: "second", "two", "the perm", or the name again. Null for none.
+function listenPick(text,choices){const p=listenParse(text);
+  const ord={first:0,second:1,third:2,fourth:3,fifth:4};
+  if(p.name.length===1&&ord[p.name[0]]!=null)return choices[ord[p.name[0]]]||null;
+  if(p.set&&!p.name.length&&p.set!=='f2l'){const s=choices.filter(c=>c.set===p.set);return s.length===1?s[0]:null;}
+  if(p.num!=null&&!p.name.length)return choices[p.num-1]||null;
+  if(!p.name.length)return null;
+  const d=listenDecide(listenRank(text,choices,null));return d&&d.hit||null;}
 
 // ----- the microphone and the card -----
-const LISTEN={on:false,rec:null,entry:null,timer:null,ms:1000,wake:null,catalog:null};
+// card: the listening began for the window and ends with it. wantCard: a hold found a case; listen on when it ends.
+const LISTEN={on:false,hold:false,card:false,wantCard:false,rec:null,entry:null,timer:null,ms:1000,wake:null,catalog:null,choices:null,last:null,local:false,section:undefined};
 function listenSupported(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition);}
-function listenUnits(alg){const t=alg.trim().split(/\s+/),units=[];let rot=[];
-  for(const m of t){rot.push(m);if(!isRot(m)){units.push(rot.join(' '));rot=[];}} // a rotation goes with the turn after it
-  if(rot.length){if(units.length)units[units.length-1]+=' '+rot.join(' ');else units.push(rot.join(' '));}
-  return units;}
-// The card's markup. Names and moves come from the algorithm database, through esc.
-function listenCardHTML(e){return `<button type="button" class="listen-nm" title="Open the details of this case">${esc(e.name)}</button><div class="listen-alg" title="Tap to show the next move now">${listenUnits(e.alg).map(u=>`<span class="sp-m">${esc(u)}</span>`).join(' ')}</div>`;}
-// Show the case: every move covered, then one more each second.
-function listenShow(e){LISTEN.entry=e;clearTimeout(LISTEN.timer);
-  const card=$('#listenCard');card.innerHTML=listenCardHTML(e);card.classList.remove('hidden');$('#listenPanel').classList.add('pinned');
-  card.querySelector('.listen-nm').onclick=()=>listenOpen(e);
-  card.querySelector('.listen-alg').onclick=()=>listenReveal();
+// The section of the phone Reference in view: oll, pll, f2l, or null above the first. A test sets LISTEN.section.
+function listenSection(){if(LISTEN.section!==undefined)return LISTEN.section;
+  const top=$('.top');const off=(top?top.getBoundingClientRect().height:0)+20;let cur=null;
+  for(const [id,set] of [['mg-ollE','oll'],['mg-ollC','oll'],['mg-pllC','pll'],['mg-pllE','pll'],['mg-pll','pll'],['mg-f2l','f2l']]){const el=document.getElementById(id);if(el&&el.getBoundingClientRect().top-off<=0)cur=set;}
+  return cur;}
+// The strip at the top of the case window: what was heard, the choices and Not this.
+function listenStrip(){return document.getElementById('listenStrip');}
+// Show the case: the case window opens, the strip goes in, every covered move uncovers one per second.
+// A window a hold opened keeps listening once the hold's recognizer ends.
+function listenShow(e){LISTEN.entry=e;LISTEN.choices=null;clearTimeout(LISTEN.timer);$('#listenCard').classList.add('hidden');
+  listenSwapOut();modalNext=null;listenOpen(e);
+  const col=document.querySelector('#modalBg .modal > div:not(.pic)');if(!col)return;
+  const strip=document.createElement('div');strip.className='listen-strip';strip.id='listenStrip';
+  strip.innerHTML=`<span class="listen-dot"></span><span id="listenModalState"></span><button type="button" class="small ghost listen-not" title="This is not the case I said: show the other cases it could be">Not this</button><span id="listenModalAsk" class="listen-ask"></span>`;
+  strip.querySelector('.listen-not').onclick=()=>listenNotThis(e);
+  col.insertBefore(strip,col.firstChild);strip.classList.toggle('on',LISTEN.on);
+  listenState($('#listenState').textContent,$('#listenHeard').textContent);
+  if(!LISTEN.on){if(LISTEN.hold)LISTEN.wantCard=true;else listenStart(false,true);}
   listenReveal();}
-// Uncover the next move. The timer uncovers one per second; a tap uncovers one at once and the timer goes on.
-function listenReveal(){clearTimeout(LISTEN.timer);const next=$('#listenCard .sp-m:not(.on)');if(!next)return;next.classList.add('on');
-  if($('#listenCard .sp-m:not(.on)'))LISTEN.timer=setTimeout(listenReveal,LISTEN.ms);}
+// An open window goes away for the next one with no step back in the history: the next window takes its place there.
+function listenSwapOut(){const b=document.getElementById('modalBg');if(!b)return;b.remove();document.removeEventListener('keydown',escClose);window.removeEventListener('popstate',popClose);}
+// Uncover the next covered move of the window each second. A tap on the line uncovers one at once (app.js) and the timer goes on.
+function listenReveal(){clearTimeout(LISTEN.timer);const s=document.querySelector('#modalBg .algbig .spoil');
+  if(!s||document.body.classList.contains('refall')||!s.querySelector('.sp-m:not(.on)'))return;
+  LISTEN.timer=setTimeout(()=>{const t=document.querySelector('#modalBg .algbig .spoil');if(t===s&&s.querySelector('.sp-m:not(.on)'))spoilStep(s);listenReveal();},LISTEN.ms);}
 function listenOpen(e){if(e.kind==='ll')openCaseModal(modalForLL(LL_ALL.find(a=>a.id===e.id)));else if(e.kind==='pll')openCaseModal(modalForPLL(PLL_FULL.find(p=>p.name===e.id)));else openCaseModal(modalForF2L(F2L_CASES.find(f=>f.n===+e.id)));}
-function listenState(msg,heard){$('#listenState').textContent=msg;$('#listenHeard').textContent=heard||'';}
+// The choices as chips, in the window's strip while a window is open, else in the panel. A tap picks one; so does the next sentence, through listenPick.
+function listenAsk(choices){LISTEN.choices=choices;
+  const html=choices.map((c,i)=>`<button type="button" class="small" data-i="${i}" title="Show this case">${esc(c.name)}</button>`).join('');
+  let box=document.getElementById('listenModalAsk');
+  if(box)box.innerHTML=html; // the strip's text asks
+  else{clearTimeout(LISTEN.timer);const card=$('#listenCard');card.innerHTML=`<div class="listen-ask"><span class="muted">Which one?</span>${html}</div>`;card.classList.remove('hidden');$('#listenPanel').classList.add('pinned');box=card;}
+  box.querySelectorAll('button').forEach(b=>b.onclick=()=>{const c=choices[+b.dataset.i];listenLogAdd({picked:c.id});listenShow(c);listenState(listenPre()+'Showing '+c.name+'.');});}
+// Not this: the shown case was a miss. Log it; offer the runners-up, if the last match had any.
+function listenNotThis(e){listenLogMark();
+  const others=((LISTEN.last&&LISTEN.last.ranked)||[]).map(r=>r.entry).filter(c=>c!==e).slice(0,4);
+  if(others.length){listenAsk(others);listenState(listenPre()+'Which one?');}
+  else listenState(listenPre()+'Say it again, or tap the case in the list.');}
+function listenPre(){return LISTEN.on?'Listening. ':'';}
+// The state goes under the button, and to the strip of an open window.
+function listenState(msg,heard){$('#listenState').textContent=msg;$('#listenHeard').textContent=heard||'';
+  const ms=document.getElementById('listenModalState');if(ms)ms.textContent=msg+(heard?' '+heard:'');}
+// What the phone heard and what came of it, kept for tuning: cw:listenLog, the last 200.
+function listenLogAdd(o){const log=store.get('listenLog',[]);log.push({t:Date.now(),...o});while(log.length>200)log.shift();store.set('listenLog',log);}
+function listenLogMark(){const log=store.get('listenLog',[]);if(!log.length)return;log[log.length-1].wrong=true;store.set('listenLog',log);}
+function listenLogText(){return store.get('listenLog',[]).map(o=>`${new Date(o.t).toISOString()}\t${(o.heard||[]).join(' | ')}\t${o.hit?'shown '+o.hit:o.picked?'picked '+o.picked:o.choices?'asked '+o.choices.join(', '):'none'}${o.wrong?'\tWRONG':''}`).join('\n');}
+function listenLogClear(){store.set('listenLog',[]);}
+// A final sentence, with the recognizer's alternatives. With choices on the screen, the sentence may
+// pick one. Otherwise every alternative is ranked; a sure winner shows, close scores ask.
+function listenHeard(alts){LISTEN.catalog=LISTEN.catalog||listenCatalog();const pre=listenPre(); // listenShow may start the listening: the word comes after it
+  if(LISTEN.choices){for(const a of alts){const c=listenPick(a,LISTEN.choices);if(c){listenLogAdd({heard:alts,picked:c.id});listenShow(c);listenState(listenPre()+'Heard '+c.name+'.');return;}}}
+  const ranked=listenRankAll(alts,LISTEN.catalog,listenSection());const d=listenDecide(ranked);
+  if(d&&d.hit){LISTEN.last={heard:alts,ranked};listenLogAdd({heard:alts,hit:d.hit.id});listenShow(d.hit);listenState(listenPre()+'Heard '+d.hit.name+'.');}
+  else if(d){LISTEN.last={heard:alts,ranked};listenLogAdd({heard:alts,choices:d.choices.map(c=>c.id)});listenAsk(d.choices);listenState(pre+'Which one?','Heard: '+alts[0]);}
+  else if(LISTEN.choices)listenState(pre+'Which one? Say the name again, or tap one.','Heard: '+alts[0]);
+  else{listenLogAdd({heard:alts,hit:null});listenState(pre+'No case is called that.','Heard: '+alts[0]);}}
 // A result from the recognizer. An early guess only shows what was heard: "tea" would name the OLL T
 // before "T perm" arrives. The final guess for a sentence acts; the same name said again plays it again.
-function listenResult(ev){LISTEN.catalog=LISTEN.catalog||listenCatalog();
-  for(let i=ev.resultIndex||0;i<ev.results.length;i++){const r=ev.results[i];let hit=null,heard='';
-    for(let j=0;j<r.length;j++){heard=heard||(r[j].transcript||'').trim();hit=hit||listenMatch(r[j].transcript||'',LISTEN.catalog);}
-    if(!r.isFinal){if(heard)listenState('Listening.','Heard: '+heard);}
-    else if(hit){listenShow(hit);listenState('Listening. Heard '+hit.name+'.');}
-    else if(heard)listenState('Listening. No case is called that.','Heard: '+heard);}}
-function listenStart(){
+function listenResult(ev){
+  for(let i=ev.resultIndex||0;i<ev.results.length;i++){const r=ev.results[i];const alts=[];
+    for(let j=0;j<r.length;j++){const t=(r[j].transcript||'').trim();if(t)alts.push(t);}
+    if(!alts.length)continue;
+    if(!r.isFinal)listenState(listenPre()+'Heard so far.','Heard: '+alts[0]);
+    else listenHeard(alts);}}
+// Chrome with on-device recognition takes the names as phrases to favor. Safari and Android take none.
+function listenBias(rec){if(!LISTEN.local||typeof window.SpeechRecognitionPhrase!=='function'||!('phrases' in rec))return;
+  try{LISTEN.catalog=LISTEN.catalog||listenCatalog();const ph=[];
+    for(const c of LISTEN.catalog){if(c.set==='f2l')continue;for(const s of c.say)ph.push(new SpeechRecognitionPhrase(c.set==='pll'?s+' perm':s,3));}
+    rec.processLocally=true;rec.phrases=ph;}catch(e){}}
+function listenButton(){const b=$('#listenBtn');b.textContent=LISTEN.on?'Stop':LISTEN.hold?'Let go when done':'Listen';b.classList.toggle('on',LISTEN.on||LISTEN.hold);b.setAttribute('aria-pressed',LISTEN.on?'true':'false');
+  const s=listenStrip();if(s)s.classList.toggle('on',LISTEN.on);}
+// Start the recognizer: on until Stop, or once, for one sentence while the button is held. With card, it
+// listens for the open case window and ends when the window closes.
+function listenStart(once,card){
   if(!listenSupported()){listenState('This browser cannot listen. Use Safari or Chrome.');return;}
-  const R=window.SpeechRecognition||window.webkitSpeechRecognition;const rec=new R();LISTEN.rec=rec;LISTEN.on=true;
-  rec.lang='en-US';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=3;
+  const R=window.SpeechRecognition||window.webkitSpeechRecognition;const rec=new R();LISTEN.rec=rec;LISTEN.on=!once;LISTEN.hold=!!once;LISTEN.card=!once&&!!card;
+  rec.lang='en-US';rec.continuous=!once;rec.interimResults=true;rec.maxAlternatives=5;
+  listenBias(rec);
   rec.onresult=listenResult;
   rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){listenStop();listenState('The microphone is blocked. Allow it for this site in the browser settings.');}};
-  rec.onend=()=>{if(LISTEN.on&&LISTEN.rec===rec){setTimeout(()=>{if(LISTEN.on&&LISTEN.rec===rec)try{rec.start();}catch(e){}},250);}}; // the phone stops on its own after a quiet spell
-  try{rec.start();}catch(e){LISTEN.on=false;LISTEN.rec=null;listenState('The microphone did not start. Try again.');return;}
-  $('#listenBtn').textContent='Stop';$('#listenBtn').classList.add('on');$('#listenBtn').setAttribute('aria-pressed','true');
-  listenState('Listening. Say a case name.');
-  if(navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{LISTEN.wake=l;}).catch(()=>{}); // keep the screen on while it listens
+  rec.onend=()=>{if(LISTEN.rec!==rec)return;
+    if(once){LISTEN.rec=null;LISTEN.hold=false;listenButton();if(/^Say the case name/.test($('#listenState').textContent))listenState('Nothing heard. Hold the button and say a case name.');
+      if(LISTEN.wantCard){LISTEN.wantCard=false;if(listenStrip())listenStart(false,true);}return;}
+    if(LISTEN.on)setTimeout(()=>{if(LISTEN.on&&LISTEN.rec===rec)try{rec.start();}catch(e){}},250);}; // the phone stops on its own after a quiet spell
+  try{rec.start();}catch(e){LISTEN.on=false;LISTEN.hold=false;LISTEN.card=false;LISTEN.rec=null;listenButton();listenState('The microphone did not start. Try again.');return;}
+  listenButton();
+  listenState(once?'Say the case name, then let go.':card?'Listening. Say another case to change the card.':'Listening. Say a case name.');
+  if(!once&&navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{LISTEN.wake=l;}).catch(()=>{}); // keep the screen on while it listens
 }
-function listenStop(){LISTEN.on=false;const rec=LISTEN.rec;LISTEN.rec=null;if(rec)try{rec.onend=null;rec.stop();}catch(e){}
+function listenStop(){LISTEN.on=false;LISTEN.hold=false;LISTEN.card=false;LISTEN.wantCard=false;const rec=LISTEN.rec;LISTEN.rec=null;if(rec)try{rec.onend=null;rec.stop();}catch(e){}
   if(LISTEN.wake){LISTEN.wake.release().catch(()=>{});LISTEN.wake=null;}
-  $('#listenBtn').textContent='Listen';$('#listenBtn').classList.remove('on');$('#listenBtn').setAttribute('aria-pressed','false');
-  listenState('Say a case name, such as "T perm" or "Sune".');}
-function listenToggle(){if(LISTEN.on)listenStop();else listenStart();}
-$('#listenBtn').onclick=listenToggle;
+  listenButton();
+  listenState('Tap to listen, or hold and say a case name, such as "T perm" or "Sune".');}
+function listenToggle(){if(LISTEN.on)listenStop();else listenStart(false);}
+// The button let go after a hold: the recognizer stops and gives its final sentence.
+function listenRelease(){const rec=LISTEN.rec;if(LISTEN.hold&&rec)try{rec.stop();}catch(e){}}
+// A tap toggles. A hold of 300 ms listens once, until the button is let go; the click after it does nothing.
+(function(){const b=$('#listenBtn');let t=null,held=false;
+  b.addEventListener('pointerdown',e=>{if(e.button)return;held=false;clearTimeout(t);if(LISTEN.on||LISTEN.hold)return;t=setTimeout(()=>{held=true;listenStart(true);},300);});
+  const up=()=>{clearTimeout(t);t=null;if(held)listenRelease();};
+  b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('pointerleave',up);
+  b.addEventListener('click',()=>{if(held){held=false;return;}listenToggle();});
+  b.addEventListener('contextmenu',e=>e.preventDefault());})();
+// The case window closes: the reveal stops, and so does the listening that began for the window.
+new MutationObserver(()=>{if(document.getElementById('modalBg'))return;clearTimeout(LISTEN.timer);LISTEN.wantCard=false;if(LISTEN.card)listenStop();}).observe(document.body,{childList:true});
+// Each row of the phone Reference carries the shortest name that works. The rows are drawn again when the
+// cross color changes, so the labels go on after every draw.
+function listenLabelRows(){LISTEN.catalog=LISTEN.catalog||listenCatalog();
+  for(const row of document.querySelectorAll('#refMobileCases .mrow')){const nm=row.querySelector('.nm');if(!nm||nm.querySelector('.say'))continue;
+    const c=LISTEN.catalog.find(c=>c.kind===row.dataset.kind&&String(c.id)===row.dataset.id);if(!c)continue;
+    const s=document.createElement('span');s.className='say';s.title='Say this to Listen';s.textContent='Say "'+c.hint+'"';nm.appendChild(s);}}
+if(typeof renderMobileRef==='function'){const draw=renderMobileRef;renderMobileRef=function(){draw.apply(this,arguments);listenLabelRows();};}
+listenLabelRows();
+document.body.classList.toggle('can-listen',listenSupported());
+// Is on-device recognition there, for the phrases? Asked once; Chrome on a desktop says yes, phones say no.
+(function(){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R||typeof R.available!=='function')return;
+  try{R.available({langs:['en-US'],processLocally:true}).then(v=>{LISTEN.local=v==='available';}).catch(()=>{});}catch(e){}})();
 // The screen lock lapses when the page is hidden; take it again when the page comes back.
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&LISTEN.on&&navigator.wakeLock&&!LISTEN.wake)navigator.wakeLock.request('screen').then(l=>{LISTEN.wake=l;}).catch(()=>{});});
