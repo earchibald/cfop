@@ -600,7 +600,8 @@ function cycleText(alg){const an=analyzeAlg(alg);const parts=[];
   return {an,text:parts.length?parts.join('; '):'nothing moves'};}
 // On a phone the Reference page shows no algorithm, so the details window is where the moves appear: there the
 // algorithm follows the Reference spoiler rule (spoilAlg): the first move in clear, a bar on each move after it, a tap
-// on the line reveals the next move, the button the rest, and Show all moves uncovers it. On the desktop the window
+// on the line reveals the next move, the button the rest, and Show all moves uncovers it. The "Why it works" text
+// names runs of moves too, so on the phone those runs are covered as well (spoilProse). On the desktop the window
 // shows the whole algorithm with its triggers boxed, as the Reference list behind it already covers the moves.
 function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why, setupMoves (engine frame, from solved), kind:'ll'|'f2l'|'pll'}
   closeModal();const {an,text}=cycleText(o.alg);
@@ -612,9 +613,9 @@ function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why,
     <div>
       <div class="row"><span class="tag">${esc(o.group)}</span><span class="tag">${an.moveCount} moves</span><span class="tag">repeat ${an.order}× to return</span></div>
       <h2 style="margin-top:6px">${esc(o.title)}</h2>
-      ${mobileMQ.matches?`<div class="algbig spoiled">${spoilAlg(o.alg)}</div><div class="muted sp-hint">Tap the line for the next move. Show all moves on the Reference page uncovers every algorithm.</div>`:`<div class="algbig">${trigSpans(o.alg)}</div>`}
+      ${mobileMQ.matches?`<div class="algbig spoiled">${spoilAlg(o.alg)}</div><div class="muted sp-hint">Tap a covered line for its next move. Show all moves on the Reference page uncovers every algorithm.</div>`:`<div class="algbig">${trigSpans(o.alg)}</div>`}
       ${o.recog?`<div class="sec"><b>Recognize</b>${esc(o.recog)}</div>`:''}
-      ${o.why?`<div class="sec"><b>Why it works</b>${esc(o.why)}</div>`:''}
+      ${o.why?`<div class="sec"><b>Why it works</b>${mobileMQ.matches?spoilProse(o.why):esc(o.why)}</div>`:''}
       ${o.statusId?`<div class="sec"><b>Status</b>${stBtn(o.statusId)}</div>`:''}
       <div class="sec"><b>What it moves</b>${o.parts&&o.parts.length?`<div class="mvparts">${o.parts.map((p,i)=>`<button type="button" class="mvpart" data-mv="${i}" aria-pressed="false" title="Show this part on the picture">${esc(p.text)}</button>`).join('')}</div><div class="muted mvhint">Choose a part to show it on the picture.</div>`:`<span class="mono" style="font-size:14px">${esc(text)}</span>`}</div>
       <div class="sec"><b>Set up from solved (white up)</b><span class="mono" style="font-size:14px">${esc([...(crossRotation()?[crossRotation()]:[]),...o.setupMoves].join(' '))}</span></div>
@@ -662,8 +663,15 @@ function spoilAlg(alg){const t=alg.trim().split(/\s+/);let k=0;while(k<t.length-
   if(!units.length)return esc(alg);if(rot.length)units[units.length-1]+=' '+rot.join(' ');
   return `<span class="spoil" title="Click to reveal the next move">${esc(t.slice(0,k+1).join(' '))} <span class="sp-rest">${units.map(u=>`<span class="sp-m">${esc(u)}</span>`).join(' ')}</span> <button type="button" class="small sp-btn" title="Show the next move">${spoilLeft(units.length)}</button></span>`;}
 function spoilLeft(n){return `Reveal ${n} more move${n>1?'s':''}`;}
-function spoilSync(s){const left=s.querySelectorAll('.sp-m:not(.on)').length;s.classList.toggle('open',!left);
-  if(left)s.querySelector('.sp-btn').textContent=spoilLeft(left);s.title=left?'Click to reveal the next move':'Click to cover the moves again';}
+// A run of two or more moves inside prose ("Read it as (R U R' U) (R U2 R')") is covered too: every move of the run a
+// bar, a click reveals the next one, a click on a full run covers it again. A lone letter is a face name and stays.
+const PROSE_MOVE=String.raw`(?<![A-Za-z0-9'])(?:[RLUDFBMES]w?|[rludfb]|[xyz])[2']?(?![A-Za-z0-9'])`;
+const PROSE_RUN=new RegExp(`${PROSE_MOVE}(?: ${PROSE_MOVE})+`,'g');
+function spoilProse(text){let out='',last=0;for(const m of text.matchAll(PROSE_RUN)){out+=esc(text.slice(last,m.index));
+    out+=`<span class="spoil sp-prose" title="Click to reveal the next move">${m[0].split(' ').map(u=>`<span class="sp-m">${esc(u)}</span>`).join(' ')}</span>`;last=m.index+m[0].length;}
+  return out+esc(text.slice(last));}
+function spoilSync(s){const left=s.querySelectorAll('.sp-m:not(.on)').length,btn=s.querySelector('.sp-btn');s.classList.toggle('open',!left);
+  if(left&&btn)btn.textContent=spoilLeft(left);s.title=left?'Click to reveal the next move':'Click to cover the moves again';}
 function spoilReset(s){s.querySelectorAll('.sp-m.on').forEach(m=>m.classList.remove('on'));spoilSync(s);}
 function spoilStep(s,all){const hid=[...s.querySelectorAll('.sp-m:not(.on)')];if(!hid.length)return spoilReset(s);
   (all?hid:hid.slice(0,1)).forEach(m=>m.classList.add('on'));spoilSync(s);}
