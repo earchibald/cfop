@@ -229,6 +229,13 @@ svg .fc.lit{stroke:var(--text);stroke-width:2.5px;vector-effect:non-scaling-stro
 
 .refcols{align-items:start}
 h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
+/* A folded list (the full PLL, the 41 F2L cases): the heading is the summary, a triangle before it turns when open. */
+details.fold>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;user-select:none}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::before{content:"";width:0;height:0;border:5px solid transparent;border-left:7px solid var(--muted);margin-left:3px;transition:transform .15s}
+details.fold[open]>summary::before{transform:rotate(90deg)}
+details.fold>summary h3{margin:0;display:inline}
+details.fold>summary:hover h3{color:var(--text)}
 .rcards{display:flex;flex-direction:column;gap:6px}
 .rcard{display:grid;grid-template-columns:84px 1fr;gap:12px;align-items:start;padding:10px;border-radius:var(--r);background:var(--panel2);cursor:pointer;border:1px solid transparent}
 .rcard:hover{border-color:var(--muted)}
@@ -302,10 +309,22 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
   select,input{max-width:100%}
   #labAlg,#crossTry{min-width:0!important}
   .mgroup{scroll-margin-top:calc(var(--toph,58px) + 8px)}
-  .mcases{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-  .mcases .case{padding:8px 6px 6px;font-size:13px}
+  /* The phone Reference: one row per case, the picture at three quarters of a desktop card's, the name, the covered line with its short button. */
+  .mrows{display:flex;flex-direction:column;gap:6px}
+  .mrow{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:var(--r);background:var(--panel2);cursor:pointer;border:1px solid transparent}
+  .mrow .mpic{flex:0 0 63px}
+  .mrow .mpic svg{width:63px;height:63px;display:block}
+  .mrow .mbody{flex:1 1 auto;min-width:0}
+  .mrow .nm{font-weight:600;font-size:14px}
+  .mrow .nm .muted{font-weight:400;font-size:12.5px}
+  .mrow .alg{font-family:var(--mono);font-size:13.5px;line-height:1.9;word-spacing:2px;margin-top:2px}
+  .mrow .sp-m{display:inline-block;padding:1px 2px;margin:1px 0}
+  .mrow .sp-btn{padding:2px 8px;font-size:12px;margin-left:4px;vertical-align:0}
   .mgroup{margin-top:14px}
   .mgroup h3{font-size:14px;color:var(--muted);margin:0 0 8px}
+  details.mgroup>summary{padding:12px 0;margin:-4px 0 0} /* a tap target as tall as a button */
+  details.mgroup>summary h3{margin:0}
+  details.mgroup[open]>summary{padding-bottom:8px}
   .modal-bg{padding:0;align-items:stretch}
   .modal{max-width:none;max-height:none;border-radius:0;border:0;padding:16px;gap:14px;grid-template-columns:1fr;overflow:auto;box-shadow:none}
   .modal .pic{padding:18px 28px}
@@ -317,6 +336,7 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
   .modal .algbig.spoiled .spoil{display:block;padding:12px 12px 10px;margin:0 -8px;border-radius:var(--r);background:var(--panel2);line-height:2.1}
   .modal .algbig.spoiled .sp-m{display:inline-block;padding:2px 2px;margin:2px 0}
   .modal .algbig.spoiled .sp-btn{display:inline-block;margin:8px 0 0;vertical-align:0;min-height:40px;padding:8px 14px;font-size:14px}
+  .modal .algbig.spoiled .spoil.open .sp-btn,.refall .modal .algbig.spoiled .sp-btn{display:none} /* the rule above outranks the plain ones that hide the button */
   .refall .modal .algbig.spoiled .spoil{background:none;padding:0;margin:0;line-height:1.8}
   /* The details as a sheet under a strip of scrim; the strip is the dead space that closes it. */
   .modal-bg.case-bg{flex-direction:column}

@@ -657,13 +657,14 @@ function modalForF2L(f){const c=caseState(f.alg);const cpos=c.cp.indexOf(4),epos
 // reveals the next move; the button reveals the rest; a click on a fully shown line covers it again.
 // "Show all moves" uncovers every Reference tab (cw:refAll).
 const isRot=m=>/^[xyz]/.test(m);
-function spoilAlg(alg){const t=alg.trim().split(/\s+/);let k=0;while(k<t.length-1&&isRot(t[k]))k++; // a lead rotation is a hold: show the turn after it too
+// short: the button reads "5 more" instead of "Reveal 5 more moves", for a line that must fit a row on the phone.
+function spoilAlg(alg,short){const t=alg.trim().split(/\s+/);let k=0;while(k<t.length-1&&isRot(t[k]))k++; // a lead rotation is a hold: show the turn after it too
   const units=[];let rot=[];for(const m of t.slice(k+1)){rot.push(m);if(!isRot(m)){units.push(rot.join(' '));rot=[];}} // a rotation goes with the turn after it
   if(!units.length)return esc(alg);if(rot.length)units[units.length-1]+=' '+rot.join(' ');
-  return `<span class="spoil" title="Click to reveal the next move">${esc(t.slice(0,k+1).join(' '))} <span class="sp-rest">${units.map(u=>`<span class="sp-m">${esc(u)}</span>`).join(' ')}</span> <button type="button" class="small sp-btn" title="Show the next move">${spoilLeft(units.length)}</button></span>`;}
-function spoilLeft(n){return `Reveal ${n} more move${n>1?'s':''}`;}
-function spoilSync(s){const left=s.querySelectorAll('.sp-m:not(.on)').length;s.classList.toggle('open',!left);
-  if(left)s.querySelector('.sp-btn').textContent=spoilLeft(left);s.title=left?'Click to reveal the next move':'Click to cover the moves again';}
+  return `<span class="spoil" title="Click to reveal the next move">${esc(t.slice(0,k+1).join(' '))} <span class="sp-rest">${units.map(u=>`<span class="sp-m">${esc(u)}</span>`).join(' ')}</span> <button type="button" class="small sp-btn${short?' sp-short':''}" title="Show the rest of the moves">${spoilLeft(units.length,short)}</button></span>`;}
+function spoilLeft(n,short){return short?`${n} more`:`Reveal ${n} more move${n>1?'s':''}`;}
+function spoilSync(s){const left=s.querySelectorAll('.sp-m:not(.on)').length,btn=s.querySelector('.sp-btn');s.classList.toggle('open',!left);
+  if(left&&btn)btn.textContent=spoilLeft(left,btn.classList.contains('sp-short'));s.title=left?'Click to reveal the next move':'Click to cover the moves again';}
 function spoilReset(s){s.querySelectorAll('.sp-m.on').forEach(m=>m.classList.remove('on'));spoilSync(s);}
 function spoilStep(s,all){const hid=[...s.querySelectorAll('.sp-m:not(.on)')];if(!hid.length)return spoilReset(s);
   (all?hid:hid.slice(0,1)).forEach(m=>m.classList.add('on'));spoilSync(s);}
@@ -687,14 +688,18 @@ $$('.ref-row').forEach(el=>el.onclick=()=>{const k=el.dataset.kind,id=el.dataset
 
 
 // ---------- mobile reference ----------
-function renderMobileRef(){const tile=(pic,label,kind,id)=>`<div class="case" data-kind="${kind}" data-id="${id}" title="Open the details of this case">${pic}<div>${esc(label)}</div></div>`;
+// One row per case: the picture at three quarters of a desktop card's, the name, and the algorithm under the spoiler
+// rule with the short button. A tap on the line reveals a move; a tap anywhere else on the row opens the details.
+function renderMobileRef(){const row=(pic,label,sub,kind,id,alg)=>`<div class="mrow" data-kind="${kind}" data-id="${id}" title="Open the details of this case"><div class="mpic">${pic}</div><div class="mbody"><div class="nm">${esc(label)}${sub?` <span class="muted">${esc(sub)}</span>`:''}</div><div class="alg">${spoilAlg(alg,true)}</div></div></div>`;
   const ids=['mg-ollE','mg-ollC','mg-pllC','mg-pllE','mg-pll','mg-f2l'];
-  const groups=[['Two-look OLL · 1. Edges',ALG_DB.eo.map(a=>tile(thumbTop(caseCube(a),'eo'),a.name,'ll',a.id))],['Two-look OLL · 2. Corners',ALG_DB.co.map(a=>tile(thumbTop(caseCube(a),'oll'),a.name,'ll',a.id))],
-    ['Two-look PLL · 1. Corners',ALG_DB.cp.map(a=>tile(thumbTop(caseCube(a),'pllc'),a.name,'ll',a.id))],['Two-look PLL · 2. Edges',ALG_DB.ep.map(a=>tile(thumbTop(caseCube(a),'plle'),a.name,'ll',a.id))],
-    ['Full PLL',PLL_FULL.map(p=>tile(thumbTop(phys(derotate(applyAlg(new Cube(),invertAlg(p.alg)))),'pll'),p.name+' perm','pll',p.name))],
-    ['F2L (front-right slot)',F2L_CASES.map(f=>tile(thumb3D(caseSetupCube(f)),'#'+f.n,'f2l',f.n))]];
-  $('#refMobileCases').innerHTML=groups.map(([g,tiles],i)=>`<div class="mgroup" id="${ids[i]}"><h3>${g}</h3><div class="mcases">${tiles.join('')}</div></div>`).join('');
-  $$('#refMobileCases .case').forEach(el=>el.onclick=()=>{const g=el.closest('.mgroup');modalNext=g?MOBILE_NEXT[g.id]||null:null;const k=el.dataset.kind,id=el.dataset.id;if(k==='ll')openCaseModal(modalForLL(LL_ALL.find(a=>a.id===id)));else if(k==='pll')openCaseModal(modalForPLL(PLL_FULL.find(p=>p.name===id)));else openCaseModal(modalForF2L(F2L_CASES.find(f=>f.n===+id)));});}
+  const groups=[['Two-look OLL · 1. Edges',ALG_DB.eo.map(a=>row(thumbTop(caseCube(a),'eo'),a.name,'','ll',a.id,a.alg))],['Two-look OLL · 2. Corners',ALG_DB.co.map(a=>row(thumbTop(caseCube(a),'oll'),a.name,'','ll',a.id,a.alg))],
+    ['Two-look PLL · 1. Corners',ALG_DB.cp.map(a=>row(thumbTop(caseCube(a),'pllc'),a.name,'','ll',a.id,a.alg))],['Two-look PLL · 2. Edges',ALG_DB.ep.map(a=>row(thumbTop(caseCube(a),'plle'),a.name,'','ll',a.id,a.alg))],
+    ['Full PLL',PLL_FULL.map(p=>row(thumbTop(phys(derotate(applyAlg(new Cube(),invertAlg(p.alg)))),'pll'),p.name+' perm',p.type,'pll',p.name,p.alg))],
+    ['F2L (front-right slot)',F2L_CASES.map(f=>row(thumb3D(caseSetupCube(f)),'#'+f.n,f.grp,'f2l',f.n,f.alg))]];
+  // The full PLL and the 41 F2L cases are for later: those two groups start folded, the heading opens them.
+  $('#refMobileCases').innerHTML=groups.map(([g,rows],i)=>i<4?`<div class="mgroup" id="${ids[i]}"><h3>${g}</h3><div class="mrows">${rows.join('')}</div></div>`
+    :`<details class="mgroup fold" id="${ids[i]}"><summary title="Open or close this list"><h3>${g}</h3></summary><div class="mrows">${rows.join('')}</div></details>`).join('');
+  $$('#refMobileCases .mrow').forEach(el=>el.onclick=()=>{const g=el.closest('.mgroup');modalNext=g?MOBILE_NEXT[g.id]||null:null;const k=el.dataset.kind,id=el.dataset.id;if(k==='ll')openCaseModal(modalForLL(LL_ALL.find(a=>a.id===id)));else if(k==='pll')openCaseModal(modalForPLL(PLL_FULL.find(p=>p.name===id)));else openCaseModal(modalForF2L(F2L_CASES.find(f=>f.n===+id)));});}
 $$('#mnav button').forEach(b=>b.onclick=()=>{const t=document.getElementById(b.dataset.go);if(t)t.scrollIntoView({behavior:'smooth',block:'start'});});
 function updateMnav(){if(curTab!=='ref'||!$('#mg-ollE'))return;const off=$('.top').getBoundingClientRect().height+20;let cur=null;for(const b of $$('#mnav button')){const t=document.getElementById(b.dataset.go);if(t&&t.getBoundingClientRect().top-off<=0)cur=b;}
   const end=document.getElementById('mg-pll');if(end&&end.getBoundingClientRect().top-off<=0)cur=null;$$('#mnav button').forEach(b=>b.classList.toggle('on',b===cur));}

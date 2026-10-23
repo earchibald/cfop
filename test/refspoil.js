@@ -33,6 +33,10 @@ w.addEventListener('load',async()=>{try{
   for(let i=0;i<n;i++)click(sp);assert.ok(sp.classList.contains('open'),'one click per move reveals the line');click(sp);
   click(card.querySelector('.nm'));assert.ok($('#modalBg'),'the rest of the card opens the details');
   assert.ok(!$('#modalBg .algbig .spoil')&&$('#modalBg .algbig .m'),'on the desktop the details show the whole algorithm');$('#modalClose').click();
+  // The full PLL and the F2L lists start folded; the heading opens them.
+  {const pll=$('#foldPLL'),f2l=$('#foldF2L');assert.ok(pll&&f2l&&!pll.open&&!f2l.open,'both lists start folded');
+   assert.ok(pll.contains($('#refPLL'))&&f2l.contains($('#refF2L')),'the tables are inside the folds');
+   pll.querySelector('summary').click();assert.ok(pll.open,'the heading opens the list');}
   // A lead rotation is a hold: the turn after it shows too. A rotation inside goes with the turn after it.
   const f=w.eval('F2L_CASES').find(c=>/^y /.test(c.alg)),row=$(`#refF2L tr[data-id="${f.n}"] .spoil`);
   assert.strictEqual(shown(row),f.alg.split(' ').slice(0,2).join(' '),'y and the first turn show');

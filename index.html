@@ -264,7 +264,7 @@
     </section>
     <!-- REFERENCE -->
     <section class="tab" id="tab-ref" data-sec="ref">
-      <div id="refMobile"><div class="panel"><h2>CFOP reference</h2><p class="muted" style="margin:0">Tap a case to open its details: algorithm, how to recognize it, and how it works. The algorithm shows its first move; tap the line for the next one. Scrambles are white up, green front; cases are shown yellow up.</p></div>
+      <div id="refMobile"><div class="panel"><h2>CFOP reference</h2><p class="muted" style="margin:0">Each row is a case with its first move. Tap the line for the next move, or the button for the rest. Tap the picture or the name for the details: how to recognize the case and how it works. Scrambles are white up, green front; cases are shown yellow up.</p></div>
       <div class="panel listen" id="listenPanel"><div class="listen-row"><button type="button" class="small" id="listenBtn" aria-pressed="false" title="Hear a case name and show its moves">Listen</button><span class="muted" id="listenState">Say a case name, such as "T perm" or "Sune".</span></div><div class="muted listen-heard" id="listenHeard"></div><div id="listenCard" class="hidden"></div></div>
       <div id="refMobileCases"></div></div>
       <div id="refDesktop" style="display:contents">
@@ -277,8 +277,8 @@
           <h3 class="sub">1. Corners</h3><div class="rcards" id="refPLLc"></div>
           <h3 class="sub">2. Edges</h3><div class="rcards" id="refPLLe"></div></div>
       </div>
-      <div class="panel"><h3>Full PLL (21)</h3><p class="muted">For later. The app checks that each one moves only the top layer.</p><div class="wide"><table id="refPLL"></table></div></div>
-      <div class="panel"><h3>F2L (41 cases, front-right slot)</h3><div class="wide"><table id="refF2L"></table></div></div>
+      <div class="panel"><details class="fold" id="foldPLL"><summary title="Open or close the full PLL list"><h3>Full PLL (21)</h3></summary><p class="muted">For later. The app checks that each one moves only the top layer.</p><div class="wide"><table id="refPLL"></table></div></details></div>
+      <div class="panel"><details class="fold" id="foldF2L"><summary title="Open or close the F2L list"><h3>F2L (41 cases, front-right slot)</h3></summary><div class="wide"><table id="refF2L"></table></div></details></div>
       <div class="panel"><h3>Notation</h3><p>Face turns: <span class="mono">U R F D L B</span> clockwise when you look at that face. <span class="mono">'</span> is counterclockwise. <span class="mono">2</span> is a half turn. Lower-case <span class="mono">r u f</span> turn two layers. <span class="mono">M E S</span> are the middle slices (M follows L, E follows D, S follows F). <span class="mono">x y z</span> rotate the whole cube like R, U, F.</p><p>Scrambles are applied with white up and green in front, the WCA rule. Solving plans start with one rotation (<span class="mono">z2</span> for a white cross) and then contain only face turns: hold the cube still, cross color down, and turn faces.</p></div>
     </div>
     </section>
