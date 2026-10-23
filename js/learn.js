@@ -32,10 +32,11 @@ function lnDrill(moves,label,start,drill){
   const ms=Array.isArray(moves)?moves:parseAlg(moves);
   setSequence(ms,label,start,drill);seqState.idx=0;applySequence();focusPlayer();
 }
-// A picture from above (the top, front and right faces) or from below.
+// A picture from above (the top, front and right faces) or from below. `fade`, when given, keeps
+// only those facelets bright and dims the rest (js/draw.js cubePolys).
 const LN_PIC={scale:48,cx:200,cy:185};
-function lnPic(cube,below){const f=cube.toFacelets();
-  return `<svg viewBox="40 30 320 300" aria-hidden="true">${renderCube3D(f,{yaw:-32,pitch:below?-34:28,...LN_PIC})}</svg>`;}
+function lnPic(cube,below,fade){const f=cube.toFacelets();
+  return `<svg viewBox="40 30 320 300" aria-hidden="true">${renderCube3D(f,{yaw:-32,pitch:below?-34:28,...LN_PIC,fade})}</svg>`;}
 const lnGoalBelow=n=>!!begPack().goalBelow[n]; // the white face is below: look from below
 // The goal picture: every sticker carries its kind of piece, and a small figure stands in front
 // of the cube at the end of a dashed line from the front face, so the front is clear when the
@@ -53,17 +54,47 @@ function lnGoalCap(n){return lnGoalBelow(n)?'Seen from below: the white face.':n
 function lnCubiePos(idx,n){const nn=n*n,g=FACE_GEOM[Math.floor(idx/nn)],p=idx%nn,hs=1.5/n;
   const cu=(p%n-(n-1)/2)*2*hs,cv=(Math.floor(p/n)-(n-1)/2)*2*hs;
   return [0,1,2].map(t=>+(g.n[t]*(1.5-hs)+g.r[t]*cu+g.d[t]*cv).toFixed(3));}
+// The stickers at one cubie's 3D position, grouped: a center's one tile, an edge's two, a
+// corner's three, whatever the puzzle size.
+function lnCubieGroups(n){const cubies={};for(let i=0;i<6*n*n;i++){const k=lnCubiePos(i,n).join();(cubies[k]=cubies[k]||[]).push(i);}return cubies;}
 // The stickers a lesson word lights, on `cube`: whole cubies, so an edge lights both its tiles.
 // ycenter: the yellow center. wedges: the edges with white. top, middle, bottom: a layer.
 function lnMarkSet(key,cube){
   const n=drawN();let f=cube.toFacelets();const to54=n===2?i=>TWO_FACELET[i]:i=>i;if(n===2&&f.length===54)f=TWO_FACELET.map(i=>f[i]);
-  const top=1.5-1.5/n,cubies={};for(let i=0;i<6*n*n;i++){const k=lnCubiePos(i,n).join();(cubies[k]=cubies[k]||[]).push(i);}
+  const top=1.5-1.5/n,cubies=lnCubieGroups(n);
   const out=new Set();
   for(const k in cubies){const ids=cubies[k],y=+k.split(',')[1];
     const on=key==='top'?y>top-1e-6:key==='bottom'?y<-top+1e-6:key==='middle'?Math.abs(y)<top-1e-6:
       key==='ycenter'?ids.length===1&&f[ids[0]]===3:key==='wedges'?ids.length===2&&ids.some(i=>f[i]===0):false;
     if(on)ids.forEach(i=>out.add(to54(i)));}
   return out;
+}
+// Cheat sheet thumbnails: which pieces a step's own move picks out, by the step's id. Centers
+// (the master pack's first step) and edge pairing (its second) have no white or yellow to go by,
+// so every cubie the moves touch stays bright; every other step keeps only the white or yellow
+// ones, so a piece of another color that the moves also disturb stays dim.
+function lnCaseMode(s){return s.id==='centers'?'center':s.id==='edges'?'any':undefined;}
+// The cubies `moves` changes on `cube`, as facelet ids for cubePolys' `fade`: every cubie whose
+// color differs before and after, kept to those with white or yellow unless `mode` says otherwise.
+// null moves, or nothing to pick out, means the picture shows plain, with nothing dimmed.
+function lnCaseLit(cube,moves,mode){
+  const ms=Array.isArray(moves)?moves:parseAlg(moves||'');if(!ms.length)return null;
+  const n=drawN(),after=applyAlg(cube,ms);const to54=n===2?i=>TWO_FACELET[i]:i=>i;
+  let f0=cube.toFacelets(),f1=after.toFacelets();
+  if(n===2&&f0.length===54){f0=TWO_FACELET.map(i=>f0[i]);f1=TWO_FACELET.map(i=>f1[i]);}
+  const cubies=lnCubieGroups(n),changed=[],target=[];
+  for(const k in cubies){const ids=cubies[k];
+    if(mode==='center'?ids.length!==1:ids.length<2)continue;
+    if(ids.some(i=>f0[i]!==f1[i])){changed.push(ids);if(mode!=='any'&&ids.some(i=>f0[i]===0||f0[i]===3))target.push(ids);}}
+  const use=mode==='any'||mode==='center'?changed:(target.length?target:changed);
+  if(!use.length)return null;
+  const out=new Set();use.forEach(ids=>ids.forEach(i=>out.add(to54(i))));
+  return out;
+}
+// A cheat sheet row's thumbnail: `cube` before the move, the piece or pieces it picks out kept
+// bright. A fixed, small picture: the mobile Reference rows size it down with CSS.
+function lnCsPic(cube,moves,mode){
+  return `<span class="ln-cs-pic">${lnPic(cube,false,lnCaseLit(cube,moves,mode))}</span>`;
 }
 // Tap a word in the lesson text: those pieces stay bright, the rest dim for a moment. A kind of
 // piece (center, edge, corner) lights by its class; any other word lights the set lnMarkSet gives.
@@ -153,6 +184,12 @@ function lnTiles(moves,big){
     else out+=`<span class="m">${fmtMove(ms[i])}</span>`;
   }
   return `<span class="ms${big?' big':''}">${out}</span>`;
+}
+// Move tiles with no chunk boxes: for a row that already names its own algorithm once, as its
+// own heading, so the tiles need not repeat the name in a dashed box.
+function lnPlainTiles(moves,big){
+  const ms=Array.isArray(moves)?moves:parseAlg(moves);
+  return `<span class="ms${big?' big':''}">${ms.map(m=>`<span class="m">${fmtMove(m)}</span>`).join('')}</span>`;
 }
 // The face thumb on a step card: the step's goal, as seen from above. '.' is a gray tile.
 function lnFace(id){const p=begPack().faces[id]||'.'.repeat(puzzleN()*puzzleN());
@@ -254,9 +291,11 @@ document.addEventListener('cw:status',e=>{if(!/^(beg-|mini-|master-)/.test(Strin
 // ---------- the Cheat sheet (the rules per step come from the pack) ----------
 function lnCheatHTML(){
   const pk=begPack();const show=(kind,id)=>`<button class="small" data-cs="${kind}" data-id="${esc(id)}" title="Load this algorithm into the player as a drill">Show</button>`;
-  const panels=pk.steps.filter(s=>s.n>0).map(s=>{const c=pk.cheat[s.n]||{};let body='';
-    if(c.list)body+=`<ul class="ln-cs-list">${c.list.map(([t,m])=>`<li><span>${esc(t)}</span><span class="ln-cs-mv">${lnTiles(m)}</span></li>`).join('')}</ul>`;
-    if(s.algs)body+=s.algs.map(id=>{const a=pk.algs[id];return `<div class="ln-cs-alg"><div class="ln-cs-an"><b>${esc(a.name)}</b><span class="muted"> · ${esc(a.when||a.say)}</span></div>${lnTiles(a.alg)}${show('alg',id)}</div>`;}).join('');
+  const panels=pk.steps.filter(s=>s.n>0).map(s=>{const c=pk.cheat[s.n]||{};const mode=lnCaseMode(s);let body='';
+    if(c.list)body+=`<ul class="ln-cs-list">${c.list.map(([t,m])=>{const start=lnSetup(lnCaseBase(s.n),parseAlg(m));
+      return `<li class="ln-cs-row"><span class="ln-cs-pic">${lnPic(start,false,lnCaseLit(start,m,mode))}</span><span class="ln-cs-body"><span>${esc(t)}</span><span class="ln-cs-mv">${lnPlainTiles(m)}</span></span></li>`;}).join('')}</ul>`;
+    if(s.algs)body+=s.algs.map(id=>{const a=pk.algs[id];const start=lnAlgStart(a);
+      return `<div class="ln-cs-alg"><span class="ln-cs-pic">${lnPic(start,false,lnCaseLit(start,a.alg,mode))}</span><span class="ln-cs-body"><b>${esc(a.name)}</b><span class="muted">${esc(a.when||a.say)}</span><span class="ln-cs-mv">${lnPlainTiles(a.alg)}</span></span>${show('alg',id)}</div>`;}).join('');
     return `<div class="panel ln-cs-step" data-n="${s.n}"><h3><span class="mono muted">Step ${s.n}</span> · ${esc(s.name)}</h3><p class="ln-cs-goal">${esc(s.goal)}</p>${body}<p class="ln-cs-rule">${esc(c.rule||s.how)}</p></div>`;}).join('');
   return `<div class="panel"><h2>Cheat sheet</h2><p class="muted">${esc(pk.cheatIntro)}</p></div><div class="ln-cs-grid">${panels}</div>`;
 }

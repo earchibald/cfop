@@ -620,11 +620,14 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
 .ln-cs-step h3 .mono{font-size:13px;font-weight:500}
 .ln-cs-step p{margin:0;font-size:14px}
 .ln-cs-goal{color:var(--muted)}
-.ln-cs-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:14px}
-.ln-cs-list li{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.ln-cs-mv{display:inline-flex;gap:8px;align-items:center}
-.ln-cs-alg{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
-.ln-cs-an{width:100%;font-size:14px}
+.ln-cs-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ln-cs-row,.ln-cs-alg{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;padding:6px 8px;border-radius:10px;background:var(--panel2);font-size:14px}
+.ln-cs-alg{grid-template-columns:44px minmax(0,1fr) auto}
+.ln-cs-pic{display:block}
+.ln-cs-pic svg{display:block;width:44px;height:auto}
+.ln-cs-body{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ln-cs-body b{font-size:14px}
+.ln-cs-mv{margin-top:1px}
 @media (max-width:760px){
   .ln-mob{display:flex}
   .ln-intro{display:none}
@@ -635,6 +638,10 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
   .ln-cpic svg{width:64px}
   .ln-case>button{grid-column:2;justify-self:start}
   .ln-foot .row button{flex:1 1 auto}
+  .ln-cs-row,.ln-cs-alg{grid-template-columns:36px minmax(0,1fr)}
+  .ln-cs-pic svg{width:36px}
+  .ln-cs-alg>button{grid-column:2;justify-self:start}
+  .ln-cs-alg .ln-cs-pic svg{width:52px}
 }
 
 /* ---------- beginner: paint the colors ---------- */
