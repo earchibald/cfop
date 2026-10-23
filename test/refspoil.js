@@ -31,7 +31,8 @@ w.addEventListener('load',async()=>{try{
   click(btn);assert.ok(sp.classList.contains('open')&&on()===n,'the button reveals the rest');assert.ok(!$('#modalBg'),'still no details');
   click(sp);assert.ok(!sp.classList.contains('open')&&on()===0,'a click on a full line covers it');
   for(let i=0;i<n;i++)click(sp);assert.ok(sp.classList.contains('open'),'one click per move reveals the line');click(sp);
-  click(card.querySelector('.nm'));assert.ok($('#modalBg'),'the rest of the card opens the details');$('#modalClose').click();
+  click(card.querySelector('.nm'));assert.ok($('#modalBg'),'the rest of the card opens the details');
+  assert.ok(!$('#modalBg .algbig .spoil')&&$('#modalBg .algbig .m'),'on the desktop the details show the whole algorithm');$('#modalClose').click();
   // A lead rotation is a hold: the turn after it shows too. A rotation inside goes with the turn after it.
   const f=w.eval('F2L_CASES').find(c=>/^y /.test(c.alg)),row=$(`#refF2L tr[data-id="${f.n}"] .spoil`);
   assert.strictEqual(shown(row),f.alg.split(' ').slice(0,2).join(' '),'y and the first turn show');

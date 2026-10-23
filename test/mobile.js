@@ -1,5 +1,7 @@
 // On a phone the page boots on the Reference section, the menu opens the other sections,
-// and a case window button can take you to the section that trains the case.
+// and a case window button can take you to the section that trains the case. The case window shows the
+// algorithm under the Reference spoiler rule: the first move, one more per tap, the button for the rest,
+// and the Show all moves box on the Reference page uncovers it.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
 const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
@@ -32,6 +34,21 @@ w.addEventListener('load',async()=>{try{
   // From the Reference section, Show on cube opens the section that trains the case.
   $('#menuBtn').click();$$('#menu button').find(b=>b.dataset.tab==='ref').click();assert.strictEqual(d.body.dataset.tab,'ref');
   const card=$$('#refMobileCases .case').find(c=>c.dataset.kind==='ll');click(card);assert.ok($('#modalBg'),'case window opens');
+  // The algorithm is a spoiler: the first move shows, a bar covers each move after it, a tap on the line reveals one
+  // move and does not close the window, the button reveals the rest, a tap on the full line covers it again.
+  const alg=w.eval('LL_ALL').find(a=>a.id===card.dataset.id).alg.split(' '),sp=$('#modalBg .algbig .spoil');
+  assert.ok(sp,'the window covers the algorithm');assert.strictEqual(sp.firstChild.textContent.trim(),alg[0],'the first move shows');
+  assert.strictEqual(sp.querySelectorAll('.sp-m').length,alg.length-1,'one bar per move after it');
+  const on=()=>sp.querySelectorAll('.sp-m.on').length,spClick=el=>el.dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true}));
+  spClick(sp.querySelector('.sp-rest'));assert.strictEqual(on(),1,'a tap reveals one move');assert.ok($('#modalBg'),'the window stays open');
+  assert.strictEqual(sp.querySelector('.sp-m.on').textContent,alg[1],'the next move shows');
+  spClick(sp.querySelector('.sp-btn'));assert.ok(sp.classList.contains('open')&&on()===alg.length-1,'the button reveals the rest');assert.ok($('#modalBg'),'still open');
+  spClick(sp);assert.strictEqual(on(),0,'a tap on the full line covers it again');
+  // Show all moves on the phone Reference page: one box, the setting shared with the desktop boxes, the window uncovered.
+  const box=$('#refMobile .refAll');assert.ok(box&&!box.checked,'the phone Reference page has the box, off by default');
+  box.checked=true;box.dispatchEvent(new w.Event('change',{bubbles:true}));
+  assert.ok(d.body.classList.contains('refall'),'all moves show');assert.ok($('#refDesktop .refAll').checked,'the desktop box follows');
+  box.checked=false;box.dispatchEvent(new w.Event('change',{bubbles:true}));assert.ok(!d.body.classList.contains('refall'));
   $('#modalSetup').click();assert.ok(!$('#modalBg'),'window closes');assert.strictEqual(d.body.dataset.tab,'ll','Show on cube goes to OLL · PLL');
   assert.ok(!$('#drillNote').classList.contains('hidden'),'the player shows the case as a drill');
 

@@ -311,6 +311,11 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
   .modal .pic{padding:18px 28px}
   .modal .pic svg{max-width:360px;margin:0 auto}
   .modal .algbig{font-size:18px}
+  /* The algorithm under the spoiler rule: one line that wraps, the bars as on the Reference page, the button on its own line. */
+  .modal .algbig.spoiled{display:block;line-height:1.8;word-spacing:2px;margin-bottom:4px}
+  .modal .algbig.spoiled .sp-btn{display:inline-block;margin:6px 0 0;vertical-align:0}
+  .modal .sp-hint{font-size:12.5px;margin:0 0 6px}
+  .refall .modal .sp-hint{display:none}
   .modal .close{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);right:12px;z-index:22;width:42px;height:42px;font-size:20px;background:var(--panel2);border:1px solid var(--line);border-radius:50%;padding:0}
   .modal .closebar{display:block;width:100%;margin-top:18px;padding:14px;font-size:16px}
   .modal{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}

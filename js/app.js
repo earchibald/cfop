@@ -565,7 +565,7 @@ function runLab(name){
    <div style="margin-top:8px"><b>Rules no move can break</b> <span class="muted" style="font-size:14px">(This is why one twisted corner or one flipped edge cannot be solved.)</span><div class="pieces" style="margin-top:4px"><div>corner twists add up to whole turns: ${inv.tw?'no':'yes'}</div><div>edge flips come in pairs: ${inv.fl?'no':'yes'}</div><div>corner swaps: ${inv.cpar?'odd':'even'}, edge swaps: ${inv.epar?'odd':'even'} (always both the same)</div></div></div>
    <div class="muted" style="font-size:14px;margin-top:8px">A sequence that cycles exactly 3 pieces of one kind, or twists 2 corners, or flips 2 edges, is the building block of every algorithm. Look for which pieces both halves of an alg share.</div>`;
   const db=LL_ALL.find(a=>parseAlg(a.alg).join(' ')===moves.join(' '));
-  $('#labWhy').innerHTML=db?`<h3>Why ${esc(db.name)} works</h3><p>${esc(db.why)}</p><p class="muted"><b>Recognise:</b> ${esc(db.recog)}</p>`:`<h3>How to read this</h3><p>Step through with the arrows. Watch the highlighted pieces: everything that is faded ends up exactly where it started, even if it moves in the middle. The faded stickers are the "working space" the algorithm borrows and returns.</p><p>Try the inverse (reverse the moves, flip every prime) and the mirror (swap R↔L, F↔B, and flip primes) in the box above and compare the cycles.</p><div class="row"><button class="small" id="labInv" title="Analyze the inverse: the moves backward, each one undone">Load inverse</button><button class="small" id="labMir" title="Analyze the mirror: left and right swapped">Load mirror</button></div>`;
+  $('#labWhy').innerHTML=db?`<h3>Why ${esc(db.name)} works</h3><p>${esc(db.why)}</p><p class="muted"><b>Recognize:</b> ${esc(db.recog)}</p>`:`<h3>How to read this</h3><p>Step through with the arrows. Watch the highlighted pieces: everything that is faded ends up exactly where it started, even if it moves in the middle. The faded stickers are the "working space" the algorithm borrows and returns.</p><p>Try the inverse (reverse the moves, flip every prime) and the mirror (swap R↔L, F↔B, and flip primes) in the box above and compare the cycles.</p><div class="row"><button class="small" id="labInv" title="Analyze the inverse: the moves backward, each one undone">Load inverse</button><button class="small" id="labMir" title="Analyze the mirror: left and right swapped">Load mirror</button></div>`;
   const bi=$('#labInv');if(bi)bi.onclick=()=>{$('#labAlg').value=invertAlg(moves);runLab(name?name+' inverse':null);};
   const bm=$('#labMir');if(bm)bm.onclick=()=>{$('#labAlg').value=moves.map(m=>{const map={R:'L',L:'R',F:'B',B:'F',U:'U',D:'D',r:'l',l:'r',f:'b',b:'f',u:'u',d:'d',M:'M',E:'E',S:'S',x:'x',y:'y',z:'z'};const b=map[m[0]];const s=m.slice(1);const ns=s==="'"?'':s==='2'?'2':"'";return b+ns;}).join(' ');runLab(name?name+' mirror':null);};
   labShow();
@@ -598,6 +598,10 @@ function cycleText(alg){const an=analyzeAlg(alg);const parts=[];
   an.edgeCycles.forEach(x=>parts.push(`edges ${x.cyc.map(i=>EDGE_NAMES[i]).join(' → ')} → ${EDGE_NAMES[x.cyc[0]]}${x.flip?' (with flip)':''}`));
   an.twisted.forEach(t=>parts.push(`${CORNER_NAMES[t.piece]} twists in place`));an.flipped.forEach(e=>parts.push(`${EDGE_NAMES[e]} flips in place`));
   return {an,text:parts.length?parts.join('; '):'nothing moves'};}
+// On a phone the Reference page shows no algorithm, so the details window is where the moves appear: there the
+// algorithm follows the Reference spoiler rule (spoilAlg): the first move in clear, a bar on each move after it, a tap
+// on the line reveals the next move, the button the rest, and Show all moves uncovers it. On the desktop the window
+// shows the whole algorithm with its triggers boxed, as the Reference list behind it already covers the moves.
 function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why, setupMoves (engine frame, from solved), kind:'ll'|'f2l'|'pll'}
   closeModal();const {an,text}=cycleText(o.alg);
   const bg=document.createElement('div');bg.className='modal-bg';bg.id='modalBg';
@@ -606,8 +610,8 @@ function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why,
     <div>
       <div class="row"><span class="tag">${esc(o.group)}</span><span class="tag">${an.moveCount} moves</span><span class="tag">repeat ${an.order}× to return</span></div>
       <h2 style="margin-top:6px">${esc(o.title)}</h2>
-      <div class="algbig">${trigSpans(o.alg)}</div>
-      ${o.recog?`<div class="sec"><b>Recognise</b>${esc(o.recog)}</div>`:''}
+      ${mobileMQ.matches?`<div class="algbig spoiled">${spoilAlg(o.alg)}</div><div class="muted sp-hint">Tap the line for the next move. Show all moves on the Reference page uncovers every algorithm.</div>`:`<div class="algbig">${trigSpans(o.alg)}</div>`}
+      ${o.recog?`<div class="sec"><b>Recognize</b>${esc(o.recog)}</div>`:''}
       ${o.why?`<div class="sec"><b>Why it works</b>${esc(o.why)}</div>`:''}
       ${o.statusId?`<div class="sec"><b>Status</b>${stBtn(o.statusId)}</div>`:''}
       <div class="sec"><b>What it moves</b>${o.parts&&o.parts.length?`<div class="mvparts">${o.parts.map((p,i)=>`<button type="button" class="mvpart" data-mv="${i}" aria-pressed="false" title="Show this part on the picture">${esc(p.text)}</button>`).join('')}</div><div class="muted mvhint">Choose a part to show it on the picture.</div>`:`<span class="mono" style="font-size:14px">${esc(text)}</span>`}</div>
@@ -668,7 +672,7 @@ document.addEventListener('change',e=>{if(e.target.classList&&e.target.classList
 // Capture phase: a click on a covered line must not also open the case details under it.
 document.addEventListener('click',e=>{const s=e.target.closest&&e.target.closest('.spoil');if(!s||document.body.classList.contains('refall'))return;
   e.stopPropagation();e.preventDefault();spoilStep(s,!!e.target.closest('.sp-btn'));},true);
-$('#refDesktop .panel').insertAdjacentHTML('beforeend',refAllBox());
+$('#refDesktop .panel').insertAdjacentHTML('beforeend',refAllBox());$('#refMobile .panel').insertAdjacentHTML('beforeend',refAllBox()); // one box per layout, one setting
 function refRow(a,g){return `<div class="rcard ref-row" data-kind="ll" data-id="${a.id}" title="Open the details of this case">${thumbTop(caseCube(a),modeFor(a.group))}<div><div class="nm">${esc(a.name)}</div><div class="rec">${esc(a.recog)}</div><div class="alg">${spoilAlg(a.alg)}</div></div></div>`;}
 $('#refOLLe').innerHTML=ALG_DB.eo.map(a=>refRow(a,'OLL')).join('');
 $('#refOLLc').innerHTML=ALG_DB.co.map(a=>refRow(a,'OLL')).join('');
