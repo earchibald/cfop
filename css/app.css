@@ -313,7 +313,16 @@ h3.sub{font-size:15px;color:var(--muted);margin:12px 0 6px}
   .modal .algbig{font-size:18px}
   /* The algorithm under the spoiler rule: one line that wraps, the bars as on the Reference page, the button on its own line. */
   .modal .algbig.spoiled{display:block;line-height:1.8;word-spacing:2px;margin-bottom:4px}
-  .modal .algbig.spoiled .sp-btn{display:inline-block;margin:6px 0 0;vertical-align:0}
+  /* A finger, not a pointer: the whole covered line is one padded block, each bar is taller, the button is a full tap target. */
+  .modal .algbig.spoiled .spoil{display:block;padding:12px 12px 10px;margin:0 -8px;border-radius:var(--r);background:var(--panel2);line-height:2.1}
+  .modal .algbig.spoiled .sp-m{display:inline-block;padding:2px 2px;margin:2px 0}
+  .modal .algbig.spoiled .sp-btn{display:inline-block;margin:8px 0 0;vertical-align:0;min-height:40px;padding:8px 14px;font-size:14px}
+  .refall .modal .algbig.spoiled .spoil{background:none;padding:0;margin:0;line-height:1.8}
+  /* The details as a sheet under a strip of scrim; the strip is the dead space that closes it. */
+  .modal-bg.case-bg{flex-direction:column}
+  .case-bg .dismiss{flex:0 0 auto;min-height:84px;padding:calc(env(safe-area-inset-top,0px) + 14px) 72px 8px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:7px;background:rgba(0,0,0,.45);color:#fff;font-size:13px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+  .case-bg .dismiss::before{content:"";display:block;width:36px;height:4px;border-radius:2px;background:#fff;opacity:.6}
+  .case-bg .modal{flex:1 1 auto;min-height:0;border-radius:calc(var(--r) + 4px) calc(var(--r) + 4px) 0 0}
   .modal .sp-hint{font-size:12.5px;margin:0 0 6px}
   .refall .modal .sp-hint{display:none}
   .modal .close{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);right:12px;z-index:22;width:42px;height:42px;font-size:20px;background:var(--panel2);border:1px solid var(--line);border-radius:50%;padding:0}

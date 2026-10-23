@@ -44,6 +44,11 @@ w.addEventListener('load',async()=>{try{
   assert.strictEqual(sp.querySelector('.sp-m.on').textContent,alg[1],'the next move shows');
   spClick(sp.querySelector('.sp-btn'));assert.ok(sp.classList.contains('open')&&on()===alg.length-1,'the button reveals the rest');assert.ok($('#modalBg'),'still open');
   spClick(sp);assert.strictEqual(on(),0,'a tap on the full line covers it again');
+  // A tap on the sheet does nothing; the strip of scrim above it, the X and the Close bar close it.
+  click($('#modalBg h2'));click($('#modalBg .sec'));assert.ok($('#modalBg'),'a tap on the sheet keeps the window open');
+  assert.ok($('#modalBg .dismiss'),'the phone window has a strip to close it');click($('#modalBg .dismiss'));assert.ok(!$('#modalBg'),'a tap on the strip closes it');
+  click(card);assert.ok($('#modalBg'),'opens again');$('#modalCloseBar').click();assert.ok(!$('#modalBg'),'the Close bar closes it');
+  click(card);assert.ok($('#modalBg'));
   // Show all moves on the phone Reference page: one box, the setting shared with the desktop boxes, the window uncovered.
   const box=$('#refMobile .refAll');assert.ok(box&&!box.checked,'the phone Reference page has the box, off by default');
   box.checked=true;box.dispatchEvent(new w.Event('change',{bubbles:true}));

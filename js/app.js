@@ -604,8 +604,10 @@ function cycleText(alg){const an=analyzeAlg(alg);const parts=[];
 // shows the whole algorithm with its triggers boxed, as the Reference list behind it already covers the moves.
 function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why, setupMoves (engine frame, from solved), kind:'ll'|'f2l'|'pll'}
   closeModal();const {an,text}=cycleText(o.alg);
-  const bg=document.createElement('div');bg.className='modal-bg';bg.id='modalBg';
-  bg.innerHTML=`<div class="modal" role="dialog" aria-label="${esc(o.title)}"><button class="close small ghost" id="modalClose" aria-label="Close" title="Close the details (Esc)">✕</button>
+  const bg=document.createElement('div');bg.className='modal-bg case-bg';bg.id='modalBg';
+  // On a phone the window is a sheet under a strip of scrim. The strip, the X and the Close bar close it; a tap on the
+  // sheet itself does nothing, so a finger near the covered moves cannot close the window by mistake.
+  bg.innerHTML=`${mobileMQ.matches?'<div class="dismiss" title="Close the details">Tap here to close</div>':''}<div class="modal" role="dialog" aria-label="${esc(o.title)}"><button class="close small ghost" id="modalClose" aria-label="Close" title="Close the details (Esc)">✕</button>
     <div class="pic">${o.pic}</div>
     <div>
       <div class="row"><span class="tag">${esc(o.group)}</span><span class="tag">${an.moveCount} moves</span><span class="tag">repeat ${an.order}× to return</span></div>
@@ -624,8 +626,7 @@ function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why,
   bg.querySelectorAll('.mvpart').forEach(b=>b.onclick=()=>{const on=b.getAttribute('aria-pressed')!=='true';
     bg.querySelectorAll('.mvpart').forEach(x=>{x.classList.toggle('on',on&&x===b);x.setAttribute('aria-pressed',String(on&&x===b));});
     mvShow(pic,on?b.dataset.mv:null);hint.textContent=on?'Choose it again to clear the picture.':'Choose a part to show it on the picture.';});
-  const close=()=>closeModal();bg.addEventListener('click',e=>{if(e.target===bg)close();});$('#modalClose').onclick=close;$('#modalCloseBar').onclick=close;
-  if(mobileMQ.matches){bg.querySelector('.modal').addEventListener('click',e=>{if(e.target.closest('button, a, input, select, textarea'))return;close();});}
+  const close=()=>closeModal();bg.addEventListener('click',e=>{if(e.target===bg||e.target.classList.contains('dismiss'))close();});$('#modalClose').onclick=close;$('#modalCloseBar').onclick=close;
   try{window.history.pushState({modal:1},'');}catch(e){}window.addEventListener('popstate',popClose);
   const r=crossRotation();
   // On a phone the Reference section has no player, so these buttons first open the section that trains this case.
