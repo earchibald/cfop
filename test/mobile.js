@@ -26,7 +26,7 @@ w.addEventListener('load',async()=>{try{
   // line covers it again. The picture is three quarters of a desktop card's.
   {const row=$('#refMobileCases .mrow'),a=w.eval('LL_ALL').find(x=>x.id===row.dataset.id),alg=a.alg.split(' '),sp=row.querySelector('.alg .spoil');
    const on=()=>sp.querySelectorAll('.sp-m.on').length,tap=el=>el.dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true}));
-   assert.strictEqual(row.querySelector('.nm').textContent.trim(),a.name,'the row names the case');assert.ok(row.querySelector('.mpic svg'),'the row has a picture');
+   assert.strictEqual([...row.querySelector('.nm').childNodes].filter(n=>!(n.classList&&n.classList.contains('say'))).map(n=>n.textContent).join('').trim(),a.name,'the row names the case'); // the Say label is Listen'sassert.ok(row.querySelector('.mpic svg'),'the row has a picture');
    assert.strictEqual(sp.firstChild.textContent.trim(),alg[0],'the first move shows');assert.strictEqual(sp.querySelectorAll('.sp-m').length,alg.length-1,'one bar per move after it');
    const btn=sp.querySelector('.sp-btn');assert.ok(btn.classList.contains('sp-short'),'the short button');assert.strictEqual(btn.textContent,`${alg.length-1} more`,'the button counts the covered moves, in few words');
    tap(sp.querySelector('.sp-rest'));assert.strictEqual(on(),1,'a tap on the line reveals one move');assert.ok(!$('#modalBg'),'and does not open the details');
@@ -54,7 +54,7 @@ w.addEventListener('load',async()=>{try{
 
   // From the Reference section, Show on cube opens the section that trains the case.
   $('#menuBtn').click();$$('#menu button').find(b=>b.dataset.tab==='ref').click();assert.strictEqual(d.body.dataset.tab,'ref');
-  const card=$$('#refMobileCases .mrow').find(c=>c.dataset.kind==='ll');click(card.querySelector('.nm'));assert.ok($('#modalBg'),'a tap on the name opens the case window');
+  const card=$$('#refMobileCases .mrow').find(c=>c.dataset.kind==='ll');click(card.querySelector('.nm'));assert.ok(!$('#modalBg'),'a tap on the name does not open the case window');click(card.querySelector('.mpic'));assert.ok($('#modalBg'),'a tap on the picture opens the case window');
   // The algorithm is a spoiler: the first move shows, a bar covers each move after it, a tap on the line reveals one
   // move and does not close the window, the button reveals the rest, a tap on the full line covers it again.
   const alg=w.eval('LL_ALL').find(a=>a.id===card.dataset.id).alg.split(' '),sp=$('#modalBg .algbig .spoil');
@@ -69,18 +69,18 @@ w.addEventListener('load',async()=>{try{
   // A tap on the sheet does nothing; the strip of scrim above it, the X and the Close bar close it.
   click($('#modalBg h2'));click($('#modalBg .sec'));assert.ok($('#modalBg'),'a tap on the sheet keeps the window open');
   assert.ok($('#modalBg .dismiss'),'the phone window has a strip to close it');click($('#modalBg .dismiss'));assert.ok(!$('#modalBg'),'a tap on the strip closes it');
-  click(card);assert.ok($('#modalBg'),'opens again');$('#modalCloseBar').click();assert.ok(!$('#modalBg'),'the Close bar closes it');
+  click(card.querySelector('.mpic'));assert.ok($('#modalBg'),'opens again');$('#modalCloseBar').click();assert.ok(!$('#modalBg'),'the Close bar closes it');
   // A closed case goes on to the next stage, unless the setting is off.
   {const seen=[];w.HTMLElement.prototype.scrollIntoView=function(){seen.push(this.id);};
    const g=card.closest('.mgroup').id,next=w.eval('MOBILE_NEXT')[g];
-   click(card);$('#modalCloseBar').click();await sleep(100);assert.ok(seen.includes(next),'closing a case goes to the next stage');
+   click(card.querySelector('.mpic'));$('#modalCloseBar').click();await sleep(100);assert.ok(seen.includes(next),'closing a case goes to the next stage');
    click($('#settingsBtn'));assert.ok($('#setRefNext').checked,'the setting is on by default');
    $('#setRefNext').checked=false;$('#setSave').click();assert.strictEqual(w.eval("store.get('refNext',true)"),false,'Save keeps the setting');
-   seen.length=0;click(card);$('#modalCloseBar').click();await sleep(100);assert.ok(!seen.includes(next),'with the setting off, the page stays');
+   seen.length=0;click(card.querySelector('.mpic'));$('#modalCloseBar').click();await sleep(100);assert.ok(!seen.includes(next),'with the setting off, the page stays');
    click($('#settingsBtn'));assert.ok(!$('#setRefNext').checked,'the window shows the saved setting');
    $('#setRefNext').checked=true;$('#setCancel').click();assert.strictEqual(w.eval("store.get('refNext',true)"),false,'Cancel keeps the old setting');
    w.eval("store.set('refNext',true)");w.HTMLElement.prototype.scrollIntoView=function(){};}
-  click(card);assert.ok($('#modalBg'));
+  click(card.querySelector('.mpic'));assert.ok($('#modalBg'));
   // Show all moves on the phone Reference page: one box, the setting shared with the desktop boxes, the window uncovered.
   const box=$('#refMobile .refAll');assert.ok(box&&!box.checked,'the phone Reference page has the box, off by default');
   box.checked=true;box.dispatchEvent(new w.Event('change',{bubbles:true}));

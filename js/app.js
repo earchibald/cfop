@@ -360,7 +360,9 @@ function railButtons(){return $$('#'+methodInfo().rail+' button');}
 function tabKey(){return (mobileMQ.matches?'m':'')+methodInfo().tabKey;}
 function homeTab(){return isBeg()?'learn':method==='speed2'?'ssolve':method==='speed4'?'fsolve':mobileMQ.matches?'ref':'solve';}
 $$('nav.rail button').forEach(b=>b.onclick=()=>{curTab=b.dataset.tab;$$('nav.rail button').forEach(x=>x.classList.toggle('on',x===b));$$('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+curTab));
-  document.body.dataset.tab=curTab;$('#mtitle').textContent=b.lastChild.textContent;store.set(tabKey(),curTab);setScope(TAB_SCOPE[curTab]);onEnterTab(curTab);document.dispatchEvent(new CustomEvent('cw:tab',{detail:curTab}));});
+  document.body.dataset.tab=curTab;$('#mtitle').textContent=b.lastChild.textContent;store.set(tabKey(),curTab);setScope(TAB_SCOPE[curTab]);onEnterTab(curTab);document.dispatchEvent(new CustomEvent('cw:tab',{detail:curTab}));
+  // The desktop Reference opens with its own heading at the top of the window, under the top bar, not the player.
+  const sec=$('#tab-ref');if(curTab==='ref'&&!mobileMQ.matches&&sec&&sec.scrollIntoView)sec.scrollIntoView({behavior:'smooth',block:'start'});});
 function goTab(name){const b=$(`nav.rail button[data-tab="${name}"]`);if(b)b.click();}
 function onEnterTab(t){if(!seqState.drill)showForTab();else if(t==='f2l'&&f2lState.mode==='live')showF2LState();else if(t==='f2l'&&f2lState.mode==='guide'&&typeof fgShow==='function')fgShow();if(t==='cross')refreshCross();}
 function nextForTab(){({solve:()=>newScramble(),cross:()=>$('#crossNew').click(),f2l:()=>(f2lState.mode==='guide'?$('#fgNew'):f2lState.mode==='live'?$('#f2lNew'):$('#f2lRandomCase')).click(),ll:()=>$('#llNext').click(),ssolve:()=>newScramble(),ortega:()=>{const b=$('#twNextOrtega');if(b)b.click();},cll:()=>{const b=$('#twNextCll');if(b)b.click();},fsolve:()=>newScramble(),parity:()=>{const b=$('#fwNext');if(b)b.click();}}[curTab]||(()=>{}))();}
@@ -690,7 +692,7 @@ $$('.ref-row').forEach(el=>el.onclick=()=>{const k=el.dataset.kind,id=el.dataset
 // ---------- mobile reference ----------
 // One row per case: the picture at three quarters of a desktop card's, the name, and the algorithm under the spoiler
 // rule with the short button. A tap on the line reveals a move; a tap anywhere else on the row opens the details.
-function renderMobileRef(){const row=(pic,label,sub,kind,id,alg)=>`<div class="mrow" data-kind="${kind}" data-id="${id}" title="Open the details of this case"><div class="mpic">${pic}</div><div class="mbody"><div class="nm">${esc(label)}${sub?` <span class="muted">${esc(sub)}</span>`:''}</div><div class="alg">${spoilAlg(alg,true)}</div></div></div>`;
+function renderMobileRef(){const row=(pic,label,sub,kind,id,alg)=>`<div class="mrow" data-kind="${kind}" data-id="${id}"><div class="mpic" title="Open the details of this case">${pic}</div><div class="mbody"><div class="nm">${esc(label)}${sub?` <span class="muted">${esc(sub)}</span>`:''}</div><div class="alg">${spoilAlg(alg,true)}</div></div></div>`;
   const ids=['mg-ollE','mg-ollC','mg-pllC','mg-pllE','mg-pll','mg-f2l'];
   const groups=[['Two-look OLL · 1. Edges',ALG_DB.eo.map(a=>row(thumbTop(caseCube(a),'eo'),a.name,'','ll',a.id,a.alg))],['Two-look OLL · 2. Corners',ALG_DB.co.map(a=>row(thumbTop(caseCube(a),'oll'),a.name,'','ll',a.id,a.alg))],
     ['Two-look PLL · 1. Corners',ALG_DB.cp.map(a=>row(thumbTop(caseCube(a),'pllc'),a.name,'','ll',a.id,a.alg))],['Two-look PLL · 2. Edges',ALG_DB.ep.map(a=>row(thumbTop(caseCube(a),'plle'),a.name,'','ll',a.id,a.alg))],
@@ -699,7 +701,8 @@ function renderMobileRef(){const row=(pic,label,sub,kind,id,alg)=>`<div class="m
   // The full PLL and the 41 F2L cases are for later: those two groups start folded, the heading opens them.
   $('#refMobileCases').innerHTML=groups.map(([g,rows],i)=>i<4?`<div class="mgroup" id="${ids[i]}"><h3>${g}</h3><div class="mrows">${rows.join('')}</div></div>`
     :`<details class="mgroup fold" id="${ids[i]}"><summary title="Open or close this list"><h3>${g}</h3></summary><div class="mrows">${rows.join('')}</div></details>`).join('');
-  $$('#refMobileCases .mrow').forEach(el=>el.onclick=()=>{const g=el.closest('.mgroup');modalNext=g?MOBILE_NEXT[g.id]||null:null;const k=el.dataset.kind,id=el.dataset.id;if(k==='ll')openCaseModal(modalForLL(LL_ALL.find(a=>a.id===id)));else if(k==='pll')openCaseModal(modalForPLL(PLL_FULL.find(p=>p.name===id)));else openCaseModal(modalForF2L(F2L_CASES.find(f=>f.n===+id)));});}
+  // Only the picture opens the details: a tap that misses the covered moves must not open the window.
+  $$('#refMobileCases .mrow .mpic').forEach(pic=>pic.onclick=()=>{const el=pic.closest('.mrow'),g=el.closest('.mgroup');modalNext=g?MOBILE_NEXT[g.id]||null:null;const k=el.dataset.kind,id=el.dataset.id;if(k==='ll')openCaseModal(modalForLL(LL_ALL.find(a=>a.id===id)));else if(k==='pll')openCaseModal(modalForPLL(PLL_FULL.find(p=>p.name===id)));else openCaseModal(modalForF2L(F2L_CASES.find(f=>f.n===+id)));});}
 $$('#mnav button').forEach(b=>b.onclick=()=>{const t=document.getElementById(b.dataset.go);if(t)t.scrollIntoView({behavior:'smooth',block:'start'});});
 function updateMnav(){if(curTab!=='ref'||!$('#mg-ollE'))return;const off=$('.top').getBoundingClientRect().height+20;let cur=null;for(const b of $$('#mnav button')){const t=document.getElementById(b.dataset.go);if(t&&t.getBoundingClientRect().top-off<=0)cur=b;}
   const end=document.getElementById('mg-pll');if(end&&end.getBoundingClientRect().top-off<=0)cur=null;$$('#mnav button').forEach(b=>b.classList.toggle('on',b===cur));}

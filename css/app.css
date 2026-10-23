@@ -136,6 +136,7 @@ body.cube-drag,body.cube-drag *{user-select:none!important;-webkit-user-select:n
 .main{min-width:0;display:flex;flex-direction:column;gap:var(--gap)}
 .main>*{min-width:0}
 .tab{display:none}.tab.on{display:flex;flex-direction:column;gap:var(--gap)}
+#tab-ref{scroll-margin-top:calc(var(--toph,58px) + 12px)} /* the Reference tab opens scrolled to its heading, under the top bar */
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
 .step{display:grid;grid-template-columns:130px 1fr auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
@@ -321,8 +322,8 @@ details.fold>summary:hover h3{color:var(--text)}
   .mgroup{scroll-margin-top:calc(var(--toph,58px) + 8px)}
   /* The phone Reference: one row per case, the picture at three quarters of a desktop card's, the name, the covered line with its short button. */
   .mrows{display:flex;flex-direction:column;gap:6px}
-  .mrow{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:var(--r);background:var(--panel2);cursor:pointer;border:1px solid transparent}
-  .mrow .mpic{flex:0 0 63px}
+  .mrow{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:var(--r);background:var(--panel2);border:1px solid transparent}
+  .mrow .mpic{flex:0 0 63px;cursor:pointer}
   .mrow .mpic svg{width:63px;height:63px;display:block}
   .mrow .mbody{flex:1 1 auto;min-width:0}
   .mrow .nm{font-weight:600;font-size:14px}

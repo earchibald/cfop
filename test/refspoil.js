@@ -15,6 +15,11 @@ const shown=s=>s.firstChild.textContent.trim();
 
 w.addEventListener('load',async()=>{try{
   await sleep(100);
+  // The desktop Reference opens scrolled to its own heading: the section is scrolled into view, at the top.
+  const scrolled=[];w.HTMLElement.prototype.scrollIntoView=function(o){scrolled.push([this.id,o&&o.block]);};
+  click($('nav.rail button[data-tab="solve"]'));scrolled.length=0;click($('nav.rail button[data-tab="ref"]'));
+  assert.deepStrictEqual(scrolled,[['tab-ref','start']],'the Reference section scrolls to the top of the window');
+  click($('nav.rail button[data-tab="solve"]'));assert.strictEqual(scrolled.length,1,'another tab does not scroll');click($('nav.rail button[data-tab="ref"]'));
   // An OLL card: the first move shows, the rest is covered, the button counts the rest.
   const card=$('#refOLLe .rcard'),sp=card.querySelector('.spoil'),alg=w.eval('ALG_DB').eo.find(a=>a.id===card.dataset.id).alg.split(' ');
   assert.strictEqual(shown(sp),alg[0],'the first move shows');

@@ -139,9 +139,11 @@ above. Add a new script with a `<script src>` tag after the one it depends on.
 - Phone layout (760px and narrower): the Reference section is the CFOP home
   screen and Learn is the beginner home. The phone Reference is one row per
   case (`.mrow`): the picture at 63px, the name, the algorithm under the
-  spoiler rule with the short button (`spoilAlg(alg, true)`: "5 more"). On
+  spoiler rule with the short button (`spoilAlg(alg, true)`: "5 more"). Only the
+  picture opens the details, so a tap that misses a covered move does nothing. On
   both layouts the full PLL and the 41 F2L cases are `details.fold` lists
-  that start folded. The menu button in the top bar opens
+  that start folded. On the desktop the Reference tab opens scrolled to its own
+  heading, under the top bar (`#tab-ref` has a scroll margin). The menu button in the top bar opens
   the other sections. `goTab()` switches sections. Mark text for one layout only with `.desktop-only` or
   `.mobile-only`.
 - Prose in the UI follows ASD-STE100 style: short sentences, active voice,
