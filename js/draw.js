@@ -76,7 +76,7 @@ function cubePolys(facelets,opts={}){
     // are still counted from the negative end.
     if(cam(nv.map(Math.abs))[2]<0)slabs.reverse();}
   const k=nv.findIndex(v=>v!==0);const polys=[];
-  if(opts.hidden)polys.push(...hiddenFacePolys(facelets,{n,cam,proj,color,body,fade:opts.fade,to54,dist:opts.hiddenDist,labels:!opts.color||opts.labels}));
+  if(opts.hidden)polys.push(...hiddenFacePolys(facelets,{n,cam,proj,color,body,fade:opts.fade,to54,dist:opts.hiddenDist,flat:opts.hiddenFlat,labels:!opts.color||opts.labels,move:opts.move,t:opts.t}));
   for(const sl of slabs){
     // the slab's box, and the turn it has made
     const lo=[-1.5,-1.5,-1.5],hi=[1.5,1.5,1.5];lo[k]=layerAt(sl.lo)-hs;hi[k]=layerAt(sl.hi)+hs; // layers are counted along the axis, so the sign of nv does not matter here
@@ -103,15 +103,43 @@ function cubePolys(facelets,opts={}){
 // Hidden faces: each face that looks away from the camera, moved out along its normal by `dist`
 // (2.4 by default, in cubie widths) and drawn before the cube, a little faded. The camera sees such a
 // face from inside the cube, so it reads as in a mirror behind the cube. A drag of the view shows
-// the faces that are hidden then. During a part turn they show the cube before the move.
-function hiddenFacePolys(facelets,{n,cam,proj,color,body,fade,to54,dist,labels}){
-  const hs=1.5/n,D=1.5+(dist??2.4),out=[];
-  for(let f=0;f<6;f++){const g=FACE_GEOM[f];if(cam(g.n)[2]>-0.02)continue;
-    for(let i=0;i<n;i++)for(let j=0;j<n;j++){const idx=n*n*f+n*i+j,i54=to54(idx),cu=(j-(n-1)/2)*2*hs,cv=(i-(n-1)/2)*2*hs,h=0.88*hs;
-      const pts=[[cu-h,cv-h],[cu+h,cv-h],[cu+h,cv+h],[cu-h,cv+h]].map(([u,v])=>proj([0,1,2].map(t=>g.n[t]*D+g.r[t]*u+g.d[t]*v)));
-      const poly={pts,fill:color(facelets[idx],i54),stroke:body,faded:!!(fade&&!fade.has(i54)),op:0.6,idx:i54,hint:true};
-      if(labels)poly.ci=facelets[idx];
-      out.push(poly);}}
+// the faces that are hidden then.
+//
+// During a part turn the mirrors turn too. A hidden face that the move turns spins in its own
+// plane. On a hidden face beside the move, the moving strip rolls over the edge as a flattened
+// 3D layer: each sticker of the turning layer turns about the move axis, and its height above
+// the face is cut to `flat` (0.35 by default) so the strip stays near the mirror. A sticker shows
+// on a mirror while it looks out of that face, and it fades as it tips away. At t=1 each mirror
+// shows the stickers of the cube after the move.
+function hiddenFacePolys(facelets,{n,cam,proj,color,body,fade,to54,dist,flat,labels,move,t}){
+  const hs=1.5/n,D=1.5+(dist??2.4),k=flat??0.35,h=0.88*hs,out=[];
+  const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  // the turn: the axis, the angle, and whether a cubie at c (counted from the negative end) moves
+  let turn=null;
+  if(move&&t){const g=moveGeom(move,n),pos=g.n[0]+g.n[1]+g.n[2]>0,ax=g.n.map(Math.abs);
+    turn={nv:g.n,deg:g.deg*t,moves:p=>{const c=Math.round((dot(p,ax)+1.5-hs)/(2*hs));return g.depths.includes(pos?n-1-c:c);}};}
+  const sticker=(f,i,j)=>{const g=FACE_GEOM[f],cu=(j-(n-1)/2)*2*hs,cv=(i-(n-1)/2)*2*hs;
+    return {g,cubie:[0,1,2].map(q=>g.n[q]*(1.5-hs)+g.r[q]*cu+g.d[q]*cv),
+      corners:[[cu-h,cv-h],[cu+h,cv-h],[cu+h,cv+h],[cu-h,cv+h]].map(([u,v])=>[0,1,2].map(q=>g.n[q]*1.5+g.r[q]*u+g.d[q]*v))};};
+  const poly=(pts,idx,op)=>{const i54=to54(idx),p={pts:pts.map(proj),fill:color(facelets[idx],i54),stroke:body,faded:!!(fade&&!fade.has(i54)),op,idx:i54,hint:true};
+    if(labels)p.ci=facelets[idx];return p;};
+  // a point on or near the cube to its place on the mirror of face m: out by D, its height above the face cut to k
+  const onMirror=(p,m)=>{const w=dot(p,m);return [0,1,2].map(q=>p[q]+m[q]*(D-w+k*(w-1.5)));};
+  const mirrors=[];for(let f=0;f<6;f++)if(cam(FACE_GEOM[f].n)[2]<=-0.02)mirrors.push(f);
+  for(const f of mirrors){const m=FACE_GEOM[f].n;
+    for(let i=0;i<n;i++)for(let j=0;j<n;j++){const s=sticker(f,i,j);
+      if(turn&&turn.moves(s.cubie))continue; // drawn with the turning layer below
+      const pts=s.corners.map(c=>onMirror(c,m)),p=poly(pts,n*n*f+n*i+j,0.6);
+      if(turn)p.z=cam(onMirror(s.cubie,m))[2];out.push(p);}}
+  if(turn){const R=p=>rotAxis(p,turn.nv,turn.deg);
+    for(let f=0;f<6;f++){const nr=R(FACE_GEOM[f].n);
+      for(let i=0;i<n;i++)for(let j=0;j<n;j++){const s=sticker(f,i,j);if(!turn.moves(s.cubie))continue;
+        const pts=s.corners.map(R);
+        for(const mf of mirrors){const m=FACE_GEOM[mf].n,c=dot(nr,m);if(c<0.02)continue;
+          const p=poly(pts.map(q=>onMirror(q,m)),n*n*f+n*i+j,+(0.6*(0.35+0.65*Math.min(1,c))).toFixed(3));
+          p.z=cam(onMirror(pts.reduce((a,q)=>a.map((v,x)=>v+q[x]/4),[0,0,0]),m))[2];out.push(p);}}}
+    // far to near, so a strip that rolls over its edge draws in the right order
+    out.sort((a,b)=>a.z-b.z);for(const p of out)delete p.z;}
   return out;}
 // The center of a 3x3 sticker in the 3D view, and how much a face looks at the camera. The same
 // camera as cubePolys, so the What it moves marks sit on the stickers it draws.

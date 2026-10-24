@@ -76,4 +76,22 @@ for(const [yaw,pitch] of views)for(const [rot,mv] of [[ry(90),"y'"],[ry(180),'y2
 assert.strictEqual(T.renderCube3D(base.toFacelets(),{rot:[[1,0,0],[0,1,0],[0,0,1]]}),T.renderCube3D(base.toFacelets()),'the identity changes nothing');
 // A part turn with the body turned lands on the moved cube.
 {const after=T.applyAlg(base,['R']);const A=stickers(T.cubePolys(base.toFacelets(),{rot:ry(60),move:'R',t:1})),B=stickers(T.cubePolys(after.toFacelets(),{rot:ry(60)}));assert.ok(same(A,B),'a part turn with rot');}
-console.log('draw ok:',checks,'move/view checks,',hiddenChecks,'hidden-face turns');
+// The hidden faces turn with the move. At t=1 the mirrors show the cube after the move, from any
+// view, for every move. A hidden face that the move turns spins in its own plane at full strength;
+// a strip beside the move rolls over the edge and fades as it tips away.
+let mirrorChecks=0;
+const hints=polys=>stickers(polys.filter(p=>p.hint));
+for(const [yaw,pitch] of views)for(const m of moves){
+  const f=base.toFacelets(),after=T.applyAlg(base,[m]).toFacelets();
+  assert.ok(same(hints(T.cubePolys(f,{yaw,pitch,hidden:true,move:m,t:1})),hints(T.cubePolys(after,{yaw,pitch,hidden:true}))),`mirrors after ${m} at yaw ${yaw} pitch ${pitch}`);
+  assert.ok(T.cubePolys(f,{yaw,pitch,hidden:true,move:m,t:0.5}).every(p=>p.pts.every(q=>q.every(Number.isFinite))),`mirrors half way through ${m}`);
+  mirrorChecks++;}
+{const solved=new T.Cube().toFacelets();
+  const B=T.cubePolys(solved,{hidden:true,move:'B',t:0.5}).filter(p=>p.hint&&Math.floor(p.idx/9)===5);
+  assert.strictEqual(B.length,9,'B half way: the back mirror keeps its nine stickers');
+  assert.ok(B.every(p=>p.op===0.6),'a face that spins in its own plane does not fade');
+  const R=T.cubePolys(solved,{hidden:true,move:'R',t:0.5}).filter(p=>p.hint);
+  assert.ok(R.some(p=>p.op<0.6),'R half way: the strips beside the move fade as they tip');
+  assert.ok(R.some(p=>Math.floor(p.idx/9)===0),'R half way: the U strip rolls onto the back mirror');
+  assert.strictEqual(T.cubePolys(solved,{hidden:true,move:'R',t:0}).filter(p=>p.hint).length,27,'t=0: the mirrors at rest');}
+console.log('draw ok:',checks,'move/view checks,',hiddenChecks,'hidden-face turns,',mirrorChecks,'mirror turns');

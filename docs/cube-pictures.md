@@ -37,6 +37,14 @@ drag the cube or switch to the net.
   faces turn with the hold and the tilt (`rot`), so the mirror always shows the
   faces turned away from the user. In the lab, straight on, the back face sits
   behind the front: turn Isometric on, or tilt the cube.
+- The mirrors turn with a move. A hidden face that the move turns spins in its
+  own plane. On a hidden face beside the move, the moving strip rolls over the
+  edge as a flattened 3D layer. Each sticker turns about the move axis, but its
+  height above the face is cut to 35% (`hiddenFlat`), so the strip stays near
+  the mirror. A sticker fades as it tips away from the mirror. At the end of the
+  move each mirror shows the cube after the move. This works wherever a move
+  turns on the picture: the player (Animate on), the smart cube window and the
+  lab.
 
 ## 4. A flat diagram for F2L
 
