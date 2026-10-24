@@ -45,12 +45,18 @@ function showCubeMoved(from,move,cube,fade){
 }
 // The "Drag to rotate" hint shows in the 3D view until the first drag of the session.
 let dragHintDone=false;
-function drawDragHint(){const h=$('#dragHint');if(h)h.classList.toggle('hidden',dragHintDone||view.mode!=='3d');const a=$('#animBtn');if(a)a.classList.toggle('hidden',view.mode!=='3d');}
+function drawDragHint(){const h=$('#dragHint');if(h)h.classList.toggle('hidden',dragHintDone||view.mode!=='3d');const a=$('#animBtn');if(a)a.classList.toggle('hidden',view.mode!=='3d');
+  const hb=$('#hiddenBtn');if(hb){hb.classList.toggle('hidden',view.mode!=='3d');hb.setAttribute('aria-pressed',String(hiddenOn()));}}
+// Hidden faces (cw:hidden, off by default): the back, left and bottom drawn as in a mirror behind the
+// cube (hiddenFacePolys in js/draw.js). The cube draws smaller so the faces fit the box.
+function hiddenOn(){return !!store.get('hidden',false);}
+function setHidden(on){store.set('hidden',!!on);drawMain();}
+function view3D(){return hiddenOn()?{yaw:view.yaw,pitch:view.pitch,hidden:true,scale:40}:{yaw:view.yaw,pitch:view.pitch};}
 function drawMain(){
   const f=displayedCube.toFacelets();const svg=$('#cube');
   if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');svg.innerHTML=renderNet(f,{fade:fadeSet});}
-  else if(anim.move&&anim.t<1){svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(anim.from.toFacelets(),{yaw:view.yaw,pitch:view.pitch,fade:fadeSet,move:anim.move,t:Math.max(anim.t,0.01)});}
-  else{svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(f,{yaw:view.yaw,pitch:view.pitch,fade:fadeSet});}
+  else if(anim.move&&anim.t<1){svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(anim.from.toFacelets(),{...view3D(),fade:fadeSet,move:anim.move,t:Math.max(anim.t,0.01)});}
+  else{svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(f,{...view3D(),fade:fadeSet});}
   drawDragHint();
 }
 // The mark: the solved cube in the player view, half way through R. The same code draws
@@ -71,7 +77,8 @@ function thumbTop(cube,mode,parts){ // mode 'eo' (edges only matter), 'oll' (U c
   const col=(c,idx)=>{if(mode.startsWith('pll'))return stickerColor(c);if(mode==='eo'&&isCornerFacelet.has(idx))return 'var(--sticker-X)';return c===uc?stickerColor(uc):'var(--sticker-X)';};
   const cx=j=>o+2+j*(s+1)+s/2,cy=i=>o+2+i*(s+1)+s/2;
   const at={},fc=idx=>parts?` class="fc f${idx}"`:'';
-  for(let i=0;i<3;i++)for(let j=0;j<3;j++){const idx=3*i+j;at[idx]=[cx(j),cy(i)];out+=`<rect${fc(idx)} x="${o+2+j*(s+1)}" y="${o+2+i*(s+1)}" width="${s}" height="${s}" rx="2" fill="${col(f[idx],idx)}"/>`;}
+  for(let i=0;i<3;i++)for(let j=0;j<3;j++){const idx=3*i+j,x=o+2+j*(s+1),y=o+2+i*(s+1),fill=col(f[idx],idx);at[idx]=[cx(j),cy(i)];
+    out+=`<rect${fc(idx)} x="${x}" y="${y}" width="${s}" height="${s}" rx="2" fill="${fill}"/>`+(fill==='var(--sticker-X)'?'':stickerLabel(f[idx],x+s/2,y+s/2,0.6*s));}
   const strip=(idxs,fx,vert)=>idxs.forEach((idx,k)=>{const [x,y]=fx(k);const w=vert?g:s,h=vert?s:g;at[idx]=[x+w/2,y+h/2];out+=`<rect${fc(idx)} x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5" fill="${col(f[idx],idx)}"/>`;});
   strip([47,46,45],k=>[o+2+k*(s+1),0],false);strip([18,19,20],k=>[o+2+k*(s+1),o+2+3*(s+1)+1],false);
   strip([36,37,38],k=>[0,o+2+k*(s+1)],true);strip([11,10,9],k=>[o+2+3*(s+1)+1,o+2+k*(s+1)],true);
@@ -159,6 +166,32 @@ function thumb3DMarks(cube,parts,{scale=60,viewBox='20 10 360 340'}={}){const v=
 function mvShow(svg,i){if(!svg)return;svg.querySelectorAll('.fc.lit').forEach(e=>e.classList.remove('lit'));
   svg.querySelectorAll('.mv').forEach(g=>{const on=g.dataset.mv===i;g.classList.toggle('on',on);if(on)g.dataset.f.split(' ').forEach(f=>svg.querySelectorAll('.f'+f).forEach(e=>e.classList.add('lit')));});}
 function modeFor(group){return group==='OLL edges'?'eo':group==='OLL corners'?'oll':group==='PLL corners'?'pllc':'plle';}
+// The side view of a PLL case: the front and right of the top layer, as a cuber reads the case
+// ("headlights", "blocks"). A lower camera, the top layer bright and the two layers under it dim.
+const SIDE_VIEW={yaw:-40,pitch:18,scale:52};
+const TOP_LAYER=new Set([0,1,2,3,4,5,6,7,8,9,10,11,18,19,20,36,37,38,45,46,47]);
+function thumbSide(cube){const polys=cubePolys(cube.toFacelets(),{...SIDE_VIEW,n:3,fade:TOP_LAYER});
+  return `<svg viewBox="${polysViewBox(polys,8)}" role="img" aria-label="The case from the side: the front and right faces of the top layer">${polysSVG(polys)}</svg>`;}
+// The flat diagram of an F2L case: the top face, and the two faces of the slot the pair goes into,
+// laid out flat (netCells in js/draw.js). The pair's corner and edge keep their colors, and so do the
+// three centers. Every other sticker is gray. c is the case in the frame its moves are written in,
+// P the case as held; after a y in the algorithm the slot is not the front-right one. The top face
+// turns so its edge next to the left face of the two sits at the bottom, as in the cube.
+const FLAT_SLOT_FACES={4:[2,1,0],5:[4,2,1],6:[5,4,2],7:[1,5,3]}; // slot corner: left face, right face, quarter turns of the top
+function thumbF2LFlat(c,P){
+  const SLOT_EDGE={4:8,5:9,6:10,7:11},out=(k,q)=>k==='c'?c.cp.indexOf(q)!==q||c.co[q]:c.ep.indexOf(q)!==q||c.eo[q];
+  const sc=[4,5,6,7].find(q=>out('c',q)||out('e',SLOT_EDGE[q]))??4,f=P.toFacelets(),[lf,rf,k]=FLAT_SLOT_FACES[sc];
+  const lit=new Set([...cornerFacelet[c.cp.indexOf(sc)],...edgeFacelet[c.ep.indexOf(SLOT_EDGE[sc])],4,9*lf+4,9*rf+4]);
+  const tile=16,gap=1.5,pad=2,fw=3*tile+2*gap+2*pad,col=i=>lit.has(i)?f[i]:-1;let svg='';
+  const rect=(i,x,y)=>col(i)<0?`<rect x="${x}" y="${y}" width="${tile}" height="${tile}" rx="2" fill="var(--sticker-X)"/>`:netRect(col(i),x,y,tile,tile,'rx="2"');
+  // the top face, turned k quarter turns: the cell (I,J) on the page shows the sticker (i,j) of the face
+  const src=[(I,J)=>[I,J],(I,J)=>[J,2-I],(I,J)=>[2-I,2-J],(I,J)=>[2-J,I]][k];
+  for(let I=0;I<3;I++)for(let J=0;J<3;J++){const [i,j]=src(I,J);svg+=rect(3*i+j,pad+J*(tile+gap),pad+I*(tile+gap));}
+  for(const cell of netCells(3,{tile,gap,pad,faces:[lf,rf],pos:{[lf]:[0,1],[rf]:[1,1]}}))svg+=rect(cell.idx,cell.x,cell.y);
+  const word=fi=>({0:'top',1:'right',2:'front',3:'bottom',4:'left',5:'back'})[fi];
+  const lab=(t,x,y)=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="8.5" fill="var(--muted)" class="flatlbl">${t}</text>`;
+  svg+=lab('top',1.5*fw,fw/2)+lab(word(lf),fw/2,2*fw+9)+lab(word(rf),1.5*fw,2*fw+9);
+  return `<svg viewBox="-2 -2 ${2*fw+4} ${2*fw+15}" role="img" aria-label="The case laid out flat: the top face and the two faces of the slot">${svg}</svg>`;}
 function thumb3D(cube){const f=cube.toFacelets();return `<svg viewBox="40 30 320 300">${renderCube3D(f,{yaw:-32,pitch:28,scale:48,n:3})}</svg>`;}
 
 // ---------- sequence (scramble) panel ----------
@@ -610,7 +643,7 @@ function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why,
   // On a phone the window is a sheet under a strip of scrim. The strip, the X and the Close bar close it; a tap on the
   // sheet itself does nothing, so a finger near the covered moves cannot close the window by mistake.
   bg.innerHTML=`${mobileMQ.matches?'<div class="dismiss" title="Close the details">Tap here to close</div>':''}<div class="modal" role="dialog" aria-label="${esc(o.title)}"><button class="close small ghost" id="modalClose" aria-label="Close" title="Close the details (Esc)">✕</button>
-    <div class="pic">${o.pic}</div>
+    <div class="picwrap"><div class="pic">${caseViewsHTML(o)}</div>${caseViewBar(o)}</div>
     <div>
       <div class="row"><span class="tag">${esc(o.group)}</span><span class="tag">${an.moveCount} moves</span><span class="tag">repeat ${an.order}× to return</span></div>
       <h2 style="margin-top:6px">${esc(o.title)}</h2>
@@ -624,8 +657,9 @@ function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why,
       <button class="closebar" id="modalCloseBar" title="Close the details (Esc)">Close</button>
     </div></div>`;
   document.body.appendChild(bg);
-  const pic=bg.querySelector('.pic svg'),hint=bg.querySelector('.mvhint');
-  bg.querySelectorAll('.mvpart').forEach(b=>b.onclick=()=>{const on=b.getAttribute('aria-pressed')!=='true';
+  const pic=bg.querySelector('.pic .pv[data-v="main"] svg'),hint=bg.querySelector('.mvhint');
+  caseViewsWire(bg,o);
+  bg.querySelectorAll('.mvpart').forEach(b=>b.onclick=()=>{const on=b.getAttribute('aria-pressed')!=='true';if(on)caseViewShow(bg,o,'main');
     bg.querySelectorAll('.mvpart').forEach(x=>{x.classList.toggle('on',on&&x===b);x.setAttribute('aria-pressed',String(on&&x===b));});
     mvShow(pic,on?b.dataset.mv:null);hint.textContent=on?'Choose it again to clear the picture.':'Choose a part to show it on the picture.';});
   const close=()=>closeModal();bg.addEventListener('click',e=>{if(e.target===bg||e.target.classList.contains('dismiss'))close();});$('#modalClose').onclick=close;$('#modalCloseBar').onclick=close;
@@ -638,6 +672,42 @@ function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why,
   const lab=$('#modalLab');if(lab)lab.onclick=()=>{setSequence([...(r?[r]:[]),...o.setupMoves],'setup for '+o.title,undefined,o.title);$('#labFromSolved').checked=false;loadLab(o.alg,o.title);close();};
   document.addEventListener('keydown',escClose);
 }
+// Play case pictures on the desktop: a hover or a keyboard focus on a 3×3 case card or a Reference
+// card plays its algorithm in the card's picture; the still picture comes back when the pointer or
+// the focus leaves. On a phone the details window plays the case instead.
+const PLAY_CARDS='#llGroups .case[data-id],#f2lCaseGrid .case[data-n],#tab-ref .ref-row';
+function cardPlay(card){
+  const k=card.dataset.kind||(card.dataset.n?'f2l':'ll'),id=card.dataset.id||card.dataset.n;
+  const a=k==='ll'?LL_ALL.find(x=>x.id===id):k==='pll'?PLL_FULL.find(x=>x.name===id):F2L_CASES.find(x=>x.n===+id);
+  return a?{start:phys(caseState(a.alg)),moves:parseAlg(a.alg),n:3}:null;}
+function cardLoopStart(card){if(!playPicsOn()||mobileMQ.matches)return;const svg=card.querySelector('svg');if(!svg)return;
+  let box=svg.parentNode.classList.contains('loopbox')?svg.parentNode:null;
+  if(!box){box=document.createElement('span');box.className='loopbox';svg.before(box);box.appendChild(svg);}
+  if(loopRunning(box))return;const pl=cardPlay(card);if(pl)loopPlay(box,pl);}
+function cardLoopEnd(card){const box=card.querySelector('.loopbox');if(box)loopStop(box);}
+// The loop redraws its picture each frame, so the element under the pointer comes and goes: the card
+// that plays is the one the pointer or the focus last entered, and it stops when another place is entered.
+let cardPlaying=null;
+function cardEnter(t){const c=t&&t.closest?t.closest(PLAY_CARDS):null;if(!t||!t.isConnected)return;
+  if(cardPlaying&&cardPlaying!==c){cardLoopEnd(cardPlaying);cardPlaying=null;}
+  if(c&&c!==cardPlaying){cardPlaying=c;cardLoopStart(c);}}
+document.addEventListener('pointerover',e=>cardEnter(e.target));
+document.addEventListener('focusin',e=>cardEnter(e.target));
+document.documentElement.addEventListener('pointerleave',()=>{if(cardPlaying){cardLoopEnd(cardPlaying);cardPlaying=null;}});
+// The views of the details picture. o.views lists them, the main picture (o.pic) first; o.play
+// adds Play, the algorithm in a loop, shown first when the setting is on and the device allows motion.
+function playPicsOn(){return !!store.get('playPics',false)&&!reducedMotion()&&typeof requestAnimationFrame==='function';}
+function caseViews(o){const v=(o.views||[{key:'main',label:'Picture'}]).slice();if(o.play&&playPicsOn())v.unshift({key:'play',label:'Play'});return v;}
+function caseViewsHTML(o){const vs=caseViews(o);return vs.map((v,i)=>`<div class="pv" data-v="${v.key}"${i?' hidden':''}>${v.key==='main'?o.pic:v.key==='play'?'':v.pic}</div>`).join('');}
+function caseViewBar(o){const vs=caseViews(o);
+  return `<div class="picbar">${vs.length>1?`<div class="pvchips" role="group" aria-label="Views">${vs.map((v,i)=>`<button type="button" class="pvchip" data-v="${v.key}" aria-pressed="${!i}" title="${esc(CASE_VIEW_TITLE[v.key]||'Show this view')}">${esc(v.label)}</button>`).join('')}</div>`:'<span></span>'}<button type="button" class="small ghost savebtn" id="modalSave" title="Save this picture as an image file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>Save image</button></div>`;}
+const CASE_VIEW_TITLE={main:'Show the picture with What it moves',side:'Show the case from the side: the front and right of the top layer',flat:'Show the case laid out flat: the top and the two faces of the slot',play:'Play the algorithm on the cube, over and over'};
+function caseViewShow(bg,o,key){bg.querySelectorAll('.pic .pv').forEach(el=>{const on=el.dataset.v===key;el.hidden=!on;
+    if(el.dataset.v==='play'){if(on&&!loopRunning(el))loopPlay(el,o.play);else if(!on)loopStop(el);}});
+  bg.querySelectorAll('.pvchip').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===key)));}
+function caseViewsWire(bg,o){bg.querySelectorAll('.pvchip').forEach(b=>b.onclick=()=>caseViewShow(bg,o,b.dataset.v));
+  const first=caseViews(o)[0];if(first.key==='play')caseViewShow(bg,o,'play');
+  const sv=bg.querySelector('#modalSave');if(sv)pictureButton(sv,()=>{const el=[...bg.querySelectorAll('.pic .pv')].find(x=>!x.hidden);return el&&el.querySelector('svg');},()=>o.title);}
 function escClose(e){if(e.key==='Escape')closeModal();}
 const MOBILE_NEXT={'mg-ollE':'mg-ollC','mg-ollC':'mg-pllC','mg-pllC':'mg-pllE','mg-pllE':'mg-ollE'};
 let modalNext=null;
@@ -647,12 +717,16 @@ try{window.history.scrollRestoration='manual';}catch(e){}
 function goNext(){const id=modalNext;modalNext=null;if(!id||!mobileMQ.matches||!store.get('refNext',true))return;setTimeout(()=>{const t=document.getElementById(id);if(t)t.scrollIntoView({behavior:'smooth',block:'start'});},60);}
 function popClose(){const b=$('#modalBg');if(b){b.remove();document.removeEventListener('keydown',escClose);}window.removeEventListener('popstate',popClose);goNext();}
 function closeModal(){const b=$('#modalBg');if(!b)return;b.remove();document.removeEventListener('keydown',escClose);window.removeEventListener('popstate',popClose);if(window.history.state&&window.history.state.modal){try{window.history.back();}catch(e){}}goNext();}
-function caseWithParts(c,mode){const P=phys(c),parts=caseParts(c,P.toFacelets(),mode);return {parts,pic:mode==='f2l'?thumb3DMarks(P,parts):thumbTop(P,mode,parts)};}
-function modalForLL(a){const c=caseState(a.alg);return {title:a.name,statusId:a.id,tab:'ll',group:a.group,alg:a.alg,recog:a.recog,why:a.why,...caseWithParts(c,modeFor(a.group)),setupMoves:caseSetupMoves(a.alg)};}
-function modalForPLL(p){const c=caseState(p.alg);const two=LL_ALL.find(x=>x.name.startsWith(p.name+' '));return {title:p.name+' perm',tab:'ll',group:'PLL · '+p.type,alg:p.alg,recog:two?two.recog:'',why:two?two.why:'',...caseWithParts(c,'pll'),setupMoves:caseSetupMoves(p.alg)};}
+// The details picture and its other views: Side for a PLL case, Flat for an F2L case, Play when the
+// setting Play case pictures is on (js/loop.js).
+function caseWithParts(c,mode,alg){const P=phys(c),parts=caseParts(c,P.toFacelets(),mode);
+  const views=mode==='f2l'?[{key:'main',label:'3D'},{key:'flat',label:'Flat',pic:thumbF2LFlat(c,P)}]:mode.startsWith('pll')?[{key:'main',label:'Top'},{key:'side',label:'Side',pic:thumbSide(P)}]:[{key:'main',label:'Top'}];
+  return {parts,pic:mode==='f2l'?thumb3DMarks(P,parts):thumbTop(P,mode,parts),views,play:alg?{start:P,moves:parseAlg(alg),n:3}:null};}
+function modalForLL(a){const c=caseState(a.alg);return {title:a.name,statusId:a.id,tab:'ll',group:a.group,alg:a.alg,recog:a.recog,why:a.why,...caseWithParts(c,modeFor(a.group),a.alg),setupMoves:caseSetupMoves(a.alg)};}
+function modalForPLL(p){const c=caseState(p.alg);const two=LL_ALL.find(x=>x.name.startsWith(p.name+' '));return {title:p.name+' perm',tab:'ll',group:'PLL · '+p.type,alg:p.alg,recog:two?two.recog:'',why:two?two.why:'',...caseWithParts(c,'pll',p.alg),setupMoves:caseSetupMoves(p.alg)};}
 function modalForF2L(f){const c=caseState(f.alg);const cpos=c.cp.indexOf(4),epos=c.ep.indexOf(8);
   const recog=`Pair for the front-right slot. Corner is at ${CORNER_NAMES[cpos]}${cpos<4?` with its ${COLOR_NAMES[phys(c).toFacelets()[cornerFacelet[cpos][0]]]} sticker on top`:''}; edge is at ${EDGE_NAMES[epos]}.`;
-  return {title:'F2L case #'+f.n,statusId:f2lId(f.n),tab:'f2l',group:f.grp,alg:f.alg,recog,why:F2L_WHY[f.grp]||'',...caseWithParts(c,'f2l'),setupMoves:caseSetupMoves(f.alg)};}
+  return {title:'F2L case #'+f.n,statusId:f2lId(f.n),tab:'f2l',group:f.grp,alg:f.alg,recog,why:F2L_WHY[f.grp]||'',...caseWithParts(c,'f2l',f.alg),setupMoves:caseSetupMoves(f.alg)};}
 
 // ---------- REFERENCE ----------
 // Each reference algorithm shows its first move; a spoiler covers each move after it. A click on the line
@@ -731,7 +805,8 @@ function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHi
     [k('1')+'–'+k(String(railButtons().length)),'switch tab'],...(beg?[]:[[k('N'),'next scramble / case'],[k('H'),'reveal the answer']]),[k('?'),'this card'],['drag cube','orbit the view']];
   return `<h3>Keys</h3><table>${rows.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table><p class="muted" style="margin-top:8px;font-size:13px">${beg?'Your progress and seed history are':'Times, case statuses and seed history are'} saved in this browser.</p>`;}
 // ---------- settings ----------
-// The Settings window. One setting so far: the phone Reference section goes on to the next stage
+// The Settings window. Pictures: Play case pictures (cw:playPics, js/loop.js). Color Blind Assist: a
+// letter on each sticker (cw:cba, body.cba). Phone: the Reference section goes on to the next stage
 // when a case's details close (cw:refNext). With a Listen log, a button copies it for a report. It shows the version, under the buttons, so a report
 // can name it. While it is open, keys go to the window only: Esc cancels and Enter saves.
 function openSettings(){if($('#setBg'))return;
@@ -739,6 +814,13 @@ function openSettings(){if($('#setBg'))return;
   bg.innerHTML=`<div class="modal ask settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
    <h2 id="setTitle">Settings</h2>
    <div class="setarea" id="setArea">
+    <h3>Pictures</h3>
+    <label class="setrow" title="A case picture turns its algorithm over and over: on a hover or focus of a case card, and in the details window"><input type="checkbox" id="setPlayPics"${store.get('playPics',false)?' checked':''}> Play case pictures</label>
+    <p class="muted">The details window plays the case. On a computer, a case card plays it under the pointer. Off when your device asks for less motion.</p>
+    <h3>Color Blind Assist</h3>
+    <label class="setrow" title="Put the letter of its color on each sticker: W white, Y yellow, R red, O orange, G green, B blue"><input type="checkbox" id="setCba"${store.get('cba',false)?' checked':''}> Show a letter on each sticker</label>
+    <p class="muted">W white, Y yellow, R red, O orange, G green, B blue. A gray sticker has no letter.</p>
+    <h3>Phone</h3>
     <label class="setrow" title="On a phone, in the Reference section: close a case's details, and the page goes on to the next stage"><input type="checkbox" id="setRefNext"${store.get('refNext',true)?' checked':''}> Go to the next stage after a case closes</label>
     <p class="muted">Phone only, in the Reference section.</p>
     ${typeof listenLogText==='function'&&listenLogText()?`<div class="row" style="gap:8px;margin-top:10px"><button type="button" class="small" id="setListenLog" title="Copy what Listen heard and what it showed, for a report">Copy what Listen heard</button><button type="button" class="small ghost" id="setListenClear" title="Forget what Listen heard">Clear it</button></div>`:''}
@@ -747,7 +829,7 @@ function openSettings(){if($('#setBg'))return;
    <div class="appver" id="appVer">Twistwright ${esc(APP_VERSION)}</div>
   </div>`;
   const close=()=>{document.removeEventListener('keydown',keys,true);document.removeEventListener('keyup',keys,true);bg.remove();$('#settingsBtn').focus();};
-  const save=()=>{store.set('refNext',$('#setRefNext').checked);close();};
+  const save=()=>{store.set('refNext',$('#setRefNext').checked);store.set('playPics',$('#setPlayPics').checked);setCba($('#setCba').checked);close();};
   const keys=e=>{if(e.key==='Tab')return;e.stopPropagation();if(e.type!=='keydown')return;
     if(e.key==='Escape'){e.preventDefault();close();}else if(e.key==='Enter'){e.preventDefault();save();}};
   document.body.appendChild(bg);
@@ -760,6 +842,11 @@ function openSettings(){if($('#setBg'))return;
   document.addEventListener('keydown',keys,true);document.addEventListener('keyup',keys,true);
   setTimeout(()=>{const b=$('#setSave');if(b)b.focus();},20);}
 $('#settingsBtn').onclick=openSettings;
+$('#hiddenBtn').onclick=()=>setHidden(!hiddenOn());
+pictureButton($('#saveImgBtn'),()=>$('#cube'),()=>seqState.drill||(scr.seed?'seed '+scr.seed:'cube'));
+// Color Blind Assist: every picture carries its letters; body.cba shows them.
+function setCba(on){store.set('cba',!!on);document.body.classList.toggle('cba',!!on);}
+document.body.classList.toggle('cba',!!store.get('cba',false));
 $('#helpBtn').onclick=()=>{const b=$('#helpBox');b.classList.toggle('hidden');b.innerHTML=helpHTML();};
 document.addEventListener('cw:method',()=>{renderAnimBtn();const b=$('#helpBox');if(b&&!b.classList.contains('hidden'))b.innerHTML=helpHTML();});
 $('#scrLen').onchange=()=>newScramble($('#seed').value||undefined);

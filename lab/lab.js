@@ -254,6 +254,8 @@ function labMovesLast(){
 }
 // Isometric (I): on, the camera looks from a little to the right and above; off, straight on.
 function labIso(on){lab.iso=!!on;$('#iso').checked=lab.iso;try{localStorage.setItem('cw:labIso',lab.iso?'1':'');}catch(e){}lab.view={yaw:0,pitch:0};labDraw();}
+// Color Blind Assist: the site's setting (cw:cba) shows a letter on each sticker here too.
+try{document.body.classList.toggle('cba',localStorage.getItem('cw:cba')==='true');}catch(e){}
 function labIsoLoad(){try{return !!localStorage.getItem('cw:labIso');}catch(e){return false;}}
 // Turn with the tilt: the turn detector feeds only while the box is on. Kept in cw:labTurn.
 function labTurnOn(on){on=!!on;$('#turnOn').checked=on;try{localStorage.setItem('cw:labTurn',on?'1':'');}catch(e){}labLog('hold',on?'Turn with the tilt: on. A turn of the whole cube that rests near another hold moves the hold.':'Turn with the tilt: off. The hold moves only from the bar.');labBlur();}

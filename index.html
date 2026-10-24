@@ -60,6 +60,8 @@
       <svg id="cube" viewBox="0 0 400 360" aria-label="Cube view"></svg>
       <div class="viewbtns"><button id="viewTop" title="Look at the cube from above">Top</button><button id="viewBottom" title="Look at the cube from below, where the cross is">Bottom</button><button id="viewNet" title="The six faces unfolded flat">Net</button></div>
       <button class="animbtn" id="animBtn" aria-pressed="false" title="Turn the layer on the cube for each move (A)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6"/><path d="M18 3v4h-4"/><path d="M20 12a8 8 0 0 1-13.7 5.6"/><path d="M6 21v-4h4"/></svg>Animate<span class="hk" aria-hidden="true">A</span></button>
+      <button class="animbtn hidbtn" id="hiddenBtn" aria-pressed="false" title="Show the hidden faces: the back, left and bottom, as in a mirror behind the cube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8l8-4 8 4-8 4z"/><path d="M4 8v8l8 4v-8"/><path d="M20 8v8l-8 4" stroke-dasharray="2 2.4"/></svg>Hidden faces</button>
+      <button class="savebtn" id="saveImgBtn" title="Save the cube picture as an image file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>Save image</button>
       <div class="draghint" id="dragHint" aria-hidden="true"><svg viewBox="0 0 24 16"><path d="M3 12a9 9 0 0 1 18 0"/><path d="M3 12l-1.6-3.2M3 12l3.3-1.3"/><path d="M21 12l1.6-3.2M21 12l-3.3-1.3"/></svg><span>Drag to rotate</span></div>
     </div>
     <div class="panel seqpanel">
@@ -313,6 +315,8 @@
 <script src="js/four.js"></script>
 <script src="js/state-text.js"></script>
 <script src="js/draw.js"></script>
+<script src="js/picture.js"></script>
+<script src="js/loop.js"></script>
 <script src="js/solver.js"></script>
 <script src="js/resync.js"></script>
 <script src="js/beginner.js"></script>

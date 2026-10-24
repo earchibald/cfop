@@ -76,6 +76,7 @@ function cubePolys(facelets,opts={}){
     // are still counted from the negative end.
     if(cam(nv.map(Math.abs))[2]<0)slabs.reverse();}
   const k=nv.findIndex(v=>v!==0);const polys=[];
+  if(opts.hidden)polys.push(...hiddenFacePolys(facelets,{n,cam,proj,color,body,fade:opts.fade,to54,dist:opts.hiddenDist,labels:!opts.color||opts.labels}));
   for(const sl of slabs){
     // the slab's box, and the turn it has made
     const lo=[-1.5,-1.5,-1.5],hi=[1.5,1.5,1.5];lo[k]=layerAt(sl.lo)-hs;hi[k]=layerAt(sl.hi)+hs; // layers are counted along the axis, so the sign of nv does not matter here
@@ -91,6 +92,7 @@ function cubePolys(facelets,opts={}){
         const c=Math.round((along+1.5-hs)/(2*hs));if(c<sl.lo||c>sl.hi)continue; // this cubie is in another slab
         const h=0.88*hs,i54=to54(idx);const pts=[[cu-h,cv-h],[cu+h,cv-h],[cu+h,cv+h],[cu-h,cv+h]].map(([u,v])=>proj(R([0,1,2].map(t=>g.n[t]*1.5+g.r[t]*u+g.d[t]*v))));
         const poly={pts,fill:color(facelets[idx],i54),stroke:body,faded:!!(opts.fade&&!opts.fade.has(i54)),idx:i54};
+        if(!opts.color||opts.labels)poly.ci=facelets[idx]; // the color the Color Blind Assist letter names
         if(opts.cls){const c=opts.cls(i54);if(c)poly.cls=c;}
         polys.push(poly);
       }
@@ -98,13 +100,36 @@ function cubePolys(facelets,opts={}){
   }
   return polys;
 }
+// Hidden faces: each face that looks away from the camera, moved out along its normal by `dist`
+// (2.4 by default, in cubie widths) and drawn before the cube, a little faded. The camera sees such a
+// face from inside the cube, so it reads as in a mirror behind the cube. A drag of the view shows
+// the faces that are hidden then. During a part turn they show the cube before the move.
+function hiddenFacePolys(facelets,{n,cam,proj,color,body,fade,to54,dist,labels}){
+  const hs=1.5/n,D=1.5+(dist??2.4),out=[];
+  for(let f=0;f<6;f++){const g=FACE_GEOM[f];if(cam(g.n)[2]>-0.02)continue;
+    for(let i=0;i<n;i++)for(let j=0;j<n;j++){const idx=n*n*f+n*i+j,i54=to54(idx),cu=(j-(n-1)/2)*2*hs,cv=(i-(n-1)/2)*2*hs,h=0.88*hs;
+      const pts=[[cu-h,cv-h],[cu+h,cv-h],[cu+h,cv+h],[cu-h,cv+h]].map(([u,v])=>proj([0,1,2].map(t=>g.n[t]*D+g.r[t]*u+g.d[t]*v)));
+      const poly={pts,fill:color(facelets[idx],i54),stroke:body,faded:!!(fade&&!fade.has(i54)),op:0.6,idx:i54,hint:true};
+      if(labels)poly.ci=facelets[idx];
+      out.push(poly);}}
+  return out;}
 // The center of a 3x3 sticker in the 3D view, and how much a face looks at the camera. The same
 // camera as cubePolys, so the What it moves marks sit on the stickers it draws.
 function faceletPt(idx,opts={}){const g=FACE_GEOM[Math.floor(idx/9)],p=idx%9,i=Math.floor(p/3),j=p%3;
   const yaw=opts.yaw??-32,pitch=opts.pitch??28,S=opts.scale||52,cx=opts.cx??200,cy=opts.cy??185;
   const q=rot3([0,1,2].map(t=>g.n[t]*1.5+g.r[t]*(j-1)+g.d[t]*(i-1)),yaw,pitch);return [cx+q[0]*S,cy-q[1]*S];}
 function faceFacing(f,opts={}){return rot3(FACE_GEOM[f].n,opts.yaw??-32,opts.pitch??28)[2];}
-function polysSVG(polys){return polys.map(p=>`<polygon${p.cls?` class="${p.cls}"`:''} points="${p.pts.map(q=>q.map(v=>v.toFixed(2)).join(',')).join(' ')}" fill="${p.fill}"${p.faded?' opacity="0.22"':''}${p.stroke?` stroke="${p.stroke}" stroke-width="0.6" stroke-linejoin="round"`:''}/>`).join('');}
+function polysSVG(polys){return polys.map(p=>`<polygon${p.cls?` class="${p.cls}"`:''} points="${p.pts.map(q=>q.map(v=>v.toFixed(2)).join(',')).join(' ')}" fill="${p.fill}"${p.faded||p.op?` opacity="${+((p.faded?0.22:1)*(p.op||1)).toFixed(3)}"`:''}${p.stroke?` stroke="${p.stroke}" stroke-width="0.6" stroke-linejoin="round"`:''}/>`+
+  (p.ci!=null?polyLabel(p):'')).join('');}
+// Color Blind Assist: a letter for each sticker color (W R G Y O B). The letter is always in the
+// picture and hidden by CSS unless body.cba is set, so a change of the setting draws nothing again.
+// A gray sticker (a color that does not matter, or is not known) has no letter.
+function stickerLabel(ci,x,y,size,op){const L=COLOR_VARS[ci];if(!L||!(size>2))return '';
+  return `<text class="cbl cb-${L}" x="${x.toFixed(2)}" y="${y.toFixed(2)}" font-size="${size.toFixed(1)}" text-anchor="middle" dominant-baseline="central"${op?` opacity="${op}"`:''} aria-hidden="true">${L}</text>`;}
+// The letter of a 3D sticker: at its center, sized by its area on the screen.
+function polyLabel(p){const P=p.pts;let a=0,x=0,y=0;
+  for(let i=0;i<P.length;i++){const q=P[i],r=P[(i+1)%P.length];a+=q[0]*r[1]-r[0]*q[1];x+=q[0];y+=q[1];}
+  return stickerLabel(p.ci,x/P.length,y/P.length,0.62*Math.sqrt(Math.abs(a)/2),p.faded||p.op?+((p.faded?0.22:1)*(p.op||1)).toFixed(3):0);}
 // The kind of piece a facelet belongs to: 'center', 'edge' or 'corner'.
 function pieceKind(idx,n){n=n||3;const p=idx%(n*n),i=Math.floor(p/n),j=p%n;const e=x=>x===0||x===n-1;return e(i)&&e(j)?'corner':e(i)||e(j)?'edge':'center';}
 // A ring of three curved arrows in the plane of a face, the way the move turns it: clockwise
@@ -134,11 +159,25 @@ function turnRing(move,opts={}){
 function polysViewBox(polys,margin=0){const xs=polys.flatMap(p=>p.pts.map(q=>q[0])),ys=polys.flatMap(p=>p.pts.map(q=>q[1]));
   const x0=Math.min(...xs)-margin,y0=Math.min(...ys)-margin,x1=Math.max(...xs)+margin,y1=Math.max(...ys)+margin;return [x0,y0,x1-x0,y1-y0].map(v=>v.toFixed(2)).join(' ');}
 function renderCube3D(facelets,opts={}){return polysSVG(cubePolys(facelets,opts));}
+// The net: the top face above, then left, front, right and back in a row, the bottom below. One
+// layout for every net in the app: the player's, the smart cube dialog's, the scanner's, the
+// painter's and the F2L flat diagram. NET_POS is each face's place in face widths, in the order
+// U R F D L B. netCells gives every sticker's box: tile is its size, gap the space between two
+// stickers of a face, pad the space round a face, ox and oy the corner of the net, faces the faces
+// to draw (all six by default) and pos another layout of faces.
+const NET_POS=[[1,0],[2,1],[1,1],[1,2],[0,1],[3,1]];
+function netCells(n,{tile=28,gap=2,pad=1,ox=0,oy=0,faces=[0,1,2,3,4,5],pos=NET_POS}={}){
+  const fw=n*tile+(n-1)*gap+2*pad,out=[];
+  for(const f of faces){const [px,py]=pos[f];for(let i=0;i<n;i++)for(let j=0;j<n;j++)
+    out.push({idx:n*n*f+n*i+j,f,p:n*i+j,x:ox+px*fw+pad+j*(tile+gap),y:oy+py*fw+pad+i*(tile+gap),s:tile});}
+  return out;}
+// A square sticker of a net or a top view, with its Color Blind Assist letter.
+function netRect(c,x,y,w,h,attrs){return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${stickerColor(c)}"${attrs?' '+attrs:''}/>`+(w>=8&&h>=8?stickerLabel(c,x+w/2,y+h/2,0.55*Math.min(w,h)):'');}
 function renderNet(facelets,opts={}){
   const n=opts.n||DRAW_N;if(n===2&&facelets.length===54)facelets=TWO_FACELET.map(i=>facelets[i]);
   const to54=n===2?i=>TWO_FACELET[i]:i=>i; // the index the options see: the 3×3 one for a 2×2, the native one otherwise
-  const s=opts.size||(n===2?45:n===4?22.5:30);const pos=[[n,0],[2*n,n],[n,n],[n,2*n],[0,n],[3*n,n]];let out='';
-  for(let f=0;f<6;f++){const [px,py]=pos[f];for(let i=0;i<n;i++)for(let j=0;j<n;j++){const idx=n*n*f+n*i+j;const faded=opts.fade&&!opts.fade.has(to54(idx));
-    out+=`<rect x="${(px+j)*s+20}" y="${(py+i)*s+20}" width="${s-2}" height="${s-2}" rx="3" fill="${stickerColor(facelets[idx])}" ${faded?'opacity="0.22"':''} stroke="var(--sticker-line)" stroke-width="1"/>`;}}
+  const s=opts.size||(n===2?45:n===4?22.5:30);let out='';
+  for(const c of netCells(n,{tile:s-2,gap:2,pad:1,ox:19,oy:19})){const faded=opts.fade&&!opts.fade.has(to54(c.idx));
+    out+=netRect(facelets[c.idx],c.x,c.y,c.s,c.s,`rx="3"${faded?' opacity="0.22"':''} stroke="var(--sticker-line)" stroke-width="1"`).replace(/<text /,faded?'<text opacity="0.22" ':'<text ');}
   return out;
 }
