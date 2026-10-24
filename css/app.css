@@ -904,12 +904,13 @@ body.cba .face.f4 i,body.cba .gd-net .face i{font-size:6px}
 body.cba .pt-tile[data-cb]:not([data-cb=""])::after{content:attr(data-cb);font:700 12px/1 var(--mono,ui-monospace,monospace);color:#15161a}
 body.cba .pt-tile[data-cb="R"]::after,body.cba .pt-tile[data-cb="B"]::after{color:#fff}
 body.cba .pt-tile{display:flex;align-items:center;justify-content:center}
-/* The Hidden faces chip sits above Animate; Save image at the top left of the cube */
-.cubebox .hidbtn{bottom:40px}
+/* The Hidden faces chip at the bottom left, the drag hint above it; Save image at the top left of the cube */
+.cubebox .hidbtn{right:auto;left:8px}
+.cubebox .draghint{bottom:40px}
 .cubebox .savebtn{position:absolute;left:8px;top:8px;display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 7px;font-size:12px;border-radius:var(--rb);background:var(--panel);border:1px solid var(--line);color:var(--muted)}
 .cubebox .savebtn:hover{color:var(--text);border-color:var(--muted)}
 .savebtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-@media (max-width:760px){.cubebox .hidbtn{bottom:32px}.cubebox .savebtn{left:4px;top:4px;font-size:11px;padding:2px 8px 2px 6px}}
+@media (max-width:760px){.cubebox .hidbtn{right:auto;left:4px}.cubebox .draghint{bottom:32px}.cubebox .savebtn{left:4px;top:4px;font-size:11px;padding:2px 8px 2px 6px}}
 /* The details picture: the views (Top, Side, 3D, Flat, Play) and Save image under it */
 .modal .picwrap{display:flex;flex-direction:column;gap:6px;min-width:0}
 .modal .picbar{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap}

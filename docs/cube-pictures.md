@@ -29,8 +29,8 @@ drag the cube or switch to the net.
   cube. It follows the drag.
 - `renderCube3D(f, {hidden: true})` draws those faces first, at 55% opacity,
   and shrinks the cube so the faces fit the box.
-- A **Hidden faces** chip on the player cube, above Animate. Off by default,
-  saved in `cw:hidden`. Only in the 3D view.
+- A **Hidden faces** chip on the player cube, at the bottom left. Animate is at
+  the bottom right. Off by default, saved in `cw:hidden`. Only in the 3D view.
 - The smart cube pictures follow the same setting. The smart cube window
   (`cubetab.js`) has a **Hidden faces** button under Clear moves; the lab has a
   **Hidden faces** box in its bar (H). Both read and write `cw:hidden`. The
