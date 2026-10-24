@@ -188,6 +188,29 @@ message, a timer that starts on the first turn and stops on the solve, a
 player that follows the cube, and hints for the cross and the pairs (the stage
 names them but shows no moves).
 
+Version 1.33.0 adds the voice commands (`js/smart-listen.js`). A Listen
+button sits with Clear moves and Hidden faces: a click listens until Stop, a
+hold of the button listens once, as the Reference's Listen does, and a line
+under the buttons says what was heard and what was done. Two commands. "Reset"
+(or "reset cube") empties the list of moves, takes the heading again as Reset
+view does when the tilt is live, and reads the stage again; the hold stays.
+"Top yellow, bottom white" sets the hold: the top color names it, the bottom
+must be the color under it ("White and red are not opposite faces" otherwise,
+and nothing changes), and the front stays where it was when it can (from white
+up, green in front, "top yellow" is z2: green stays in front), else the hold
+the fewest turns away is taken; "front green" or "green toward me" in the
+same breath sets the front. A hold said with moves on the list puts the
+whole-cube turn on the list, as the buttons do, so the moves before it still
+read right; an empty list takes none. With the tilt live, the heading is taken
+again against the new hold; a cube that still sits another way brings the band.
+The recognizer is a dictation model, so each color has the words it comes out
+as ("wait", "read", "blew"), and a command must be the whole of what was
+said, bar the small words around it: a color word inside talk is no command.
+As in `listen.js`, a command acts on the final guess or on two early guesses in
+a row, and only the new end of a long result is read. One microphone: the
+Reference's Listen and this one stop each other. The listening ends with the
+window and when the link drops. The lab has none of this yet.
+
 ## The lab
 
 `lab/` is a page of its own for work on the smart cube, without the rest of the
