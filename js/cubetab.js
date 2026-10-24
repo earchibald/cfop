@@ -6,7 +6,7 @@
 // back. When the link drops by itself (the cube went to sleep), the panel stays, dimmed, and offers
 // Connect again. The rail button carries a dot: green while the cube is live, orange while it is
 // held unlike the hold, gray while the link is down.
-// Versions 1.4 to 1.33 put the cube in the top bar, as a tab that opened a floating window. 1.34
+// Versions 1.4 to 1.33 put the cube in the top bar, as a tab that opened a floating window. 1.35
 // made it this tab: the picture is big, and every control sits beside it, in view. The reference
 // card (smart-card.js) is the one floating window left: a case said to the tab opens it.
 // The dialog reports every change of the link as a cw:smart event (smart-ui.js); nothing here

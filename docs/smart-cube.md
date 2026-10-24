@@ -211,7 +211,7 @@ a row, and only the new end of a long result is read. One microphone: the
 Reference's Listen and this one stop each other. The listening ends with the
 window and when the link drops. The lab has none of this yet.
 
-Version 1.34.0 makes the smart cube a tab of its own: Smart cube, tab 7 of the
+Version 1.35.0 makes the smart cube a tab of its own: Smart cube, tab 7 of the
 CFOP rail (`#tab-smart`), in place of the top-bar tab, its floating window and
 the callout. Before a cube connects the tab is a Connect card; when one
 connects in CFOP the page goes to the tab, so the live cube is there when the
