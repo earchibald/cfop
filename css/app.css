@@ -829,6 +829,13 @@ body[data-kind="beg"][data-key] #progressPanel,body[data-kind="beg"][data-key] .
 .cubewin .cw-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-left:auto}
 .cubewin .cw-side .small{padding:2px 8px;font-size:12px}
 .cubewin .cw-side .small[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--panel))}
+/* The voice commands (smart-listen.js): the Listen button, and the line under the buttons for what was heard */
+#cubeWinListen{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;touch-action:manipulation} /* a hold listens once; no callout, no selection */
+#cubeWinListen.on{color:var(--accent-ink);background:var(--accent);border-color:transparent}
+body:not(.can-listen) #cubeWinListen,body:not(.can-listen) #cubeWinListenRow{display:none}
+.cubewin .cw-listen{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-top:8px;font-size:12.5px;line-height:1.35}
+.cubewin .cw-listen .listen-dot{align-self:center}.cubewin .cw-listen.on .listen-dot{background:var(--accent);opacity:1;animation:listenPulse 1.4s ease-in-out infinite}
+.cubewin .cw-listen .txt{flex:1 1 200px}.cubewin .cw-listen .heard{flex:1 0 100%;color:var(--muted);font-size:12px}.cubewin .cw-listen .heard:empty{display:none}
 /* the stage above the picture: the name, the hold, the moves hidden until they show; a turn fades it */
 .cubewin .cw-stage{min-height:72px;margin-bottom:8px;transition:opacity .4s}
 .cubewin .cw-stage.stale{opacity:.4}
@@ -845,7 +852,7 @@ body[data-kind="beg"][data-key] #progressPanel,body[data-kind="beg"][data-key] .
 @keyframes spotring{50%{box-shadow:0 0 0 3px var(--accent),0 0 10px 2px color-mix(in srgb,var(--accent) 35%,transparent)}}
 .spot .callout{position:fixed;z-index:18;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:15px;line-height:1.35;padding:10px 14px;border-radius:var(--rb);max-width:min(320px,calc(100vw - 16px));box-shadow:var(--shadow)}
 .spot .callout::before{content:'';position:absolute;top:-8px;left:var(--arrow,22px);border:8px solid transparent;border-top:0;border-bottom-color:var(--accent)}
-@media (prefers-reduced-motion:reduce){.cubetab .dot,.cubewin .dot,.spot .ring{animation:none}.cubewin .cw-stage{transition:none}}
+@media (prefers-reduced-motion:reduce){.cubetab .dot,.cubewin .dot,.spot .ring,.cubewin .cw-listen .listen-dot{animation:none}.cubewin .cw-stage{transition:none}}
 @media (max-width:760px){
   /* A phone's top bar is full: the tab is the live dot alone, the name is in the window. */
   .cubetab{margin-bottom:-9px;padding:8px 10px 10px;gap:0}

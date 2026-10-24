@@ -53,6 +53,9 @@
 // (a Sune breaks the cross with its first move) keeps the stage, cubeTabBehind, until the cube is
 // at or past it again, or more moves have gone by since it was read (`since`) than the user needs
 // for it. A turn of the whole cube with the cube still reads the stage again at once.
+// The voice commands (smart-listen.js): a Listen button with Clear moves and Hidden faces, and a
+// line under them for what was heard. "Reset" clears the moves, lines the picture up and reads the
+// stage again; "top yellow, bottom white" sets the hold. The listening ends with the window.
 const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,yaw:-32,pitch:28,asked:false,want:false,tipWait:false,spotTimer:0,pos:null,
   q:null,qTo:null,qraf:0,qAt:0,moves:[],hold:null,
   gyro:false,raw:null,basis:null,away:null,awayTimer:0,awayMs:500,awayDeg:55,backDeg:40,warn:false,
@@ -97,7 +100,8 @@ function cubeTabOpen(){
    <div class="cw-warn hidden" id="cubeWinWarn" role="status"><span class="txt"></span><span class="btns"><button class="small" id="cubeWinMatch" title="Turn the hold to match the cube. The turn goes on the list">Read as held</button><button class="small ghost" id="cubeWinKeep" title="The cube did not turn: line the picture up with the hold again.">Keep this hold</button></span></div>
    <div class="cw-turns" id="cubeWinTurns" role="group" aria-label="Turn the whole cube"><span class="lbl" title="Turned the cube in your hands? Press the same turn here, so the picture, the moves and the stage read as you hold it.">Turn the cube</span></div>
    <div class="cw-moves" id="cubeWinMoves" aria-label="Your last moves"></div>
-   <div class="cw-row" id="cubeWinView"><div class="cw-side"><button class="small ghost hidden" id="cubeWinReset" title="Line the picture up with the cube in your hands">Reset view</button><button class="small ghost" id="cubeWinClear" title="Empty the list of moves under the picture">Clear moves</button><button class="small ghost" id="cubeWinHidden" aria-pressed="false" title="Show the hidden faces: the faces turned away from you, as in a mirror behind the cube">Hidden faces</button></div></div>
+   <div class="cw-row" id="cubeWinView"><div class="cw-side"><button class="small ghost hidden" id="cubeWinReset" title="Line the picture up with the cube in your hands">Reset view</button><button class="small ghost" id="cubeWinClear" title="Empty the list of moves under the picture">Clear moves</button><button class="small ghost" id="cubeWinHidden" aria-pressed="false" title="Show the hidden faces: the faces turned away from you, as in a mirror behind the cube">Hidden faces</button><button class="small ghost" id="cubeWinListen" aria-pressed="false" title='Listen for "reset" and "top yellow, bottom white": click to listen until Stop; hold, say one command and let go'>Listen</button></div></div>
+   <div class="cw-listen hidden" id="cubeWinListenRow" role="status"><span class="listen-dot" aria-hidden="true"></span><span class="txt"></span><span class="heard"></span></div>
    <p class="muted cw-note" id="cubeWinNote"></p>
    <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect" title="Open the Smart cube window and connect the cube again">Connect again</button></div>`;
   document.body.appendChild(w);
@@ -112,6 +116,7 @@ function cubeTabOpen(){
   $('#cubeWinClear').onclick=()=>{cubeTab.moves=[];cubeTabMovesDraw();};
   $('#cubeWinHidden').onclick=()=>setHidden(!hiddenOn());
   $('#cubeWinMatch').onclick=cubeTabMatch;$('#cubeWinKeep').onclick=cubeTabKeep;$('#cubeWinReset').onclick=cubeTabKeep;
+  if(typeof smartListenMount==='function')smartListenMount(); // the voice commands (smart-listen.js)
   document.addEventListener('keydown',cubeTabKeys,true);
   cubeTabDrag(w);
   if(!cubeTab.pos)cubeTab.pos=store.get('cubeWin',null);
@@ -124,6 +129,7 @@ function cubeTabOpen(){
 function cubeTabClose(){
   const w=$('#cubeWin');if(!w)return;
   document.removeEventListener('keydown',cubeTabKeys,true);window.removeEventListener('resize',cubeTabResize);
+  if(typeof smartListenStop==='function')smartListenStop(); // the listening ends with the window
   cubeTabStopAnim();cubeTabStopView();w.remove();cubeTabRender();
   const b=cubeTabBtn();if(b)b.focus();
 }
@@ -170,6 +176,7 @@ function cubeTabWindow(){
   $('#cubeWinAgain').classList.toggle('hidden',!off);
   $$('#cubeWinTurns button').forEach(b=>{b.disabled=off;});
   const reset=$('#cubeWinReset');reset.classList.toggle('hidden',!cubeTab.gyro);reset.disabled=off;
+  const listen=$('#cubeWinListen');if(listen)listen.disabled=off;
   reset.title=`Hold the cube with ${cubeTabHoldWords(cubeTab.hold)}, then press. The picture lines up with your cube.`;
   $('#cubeWinHidden').setAttribute('aria-pressed',String(hiddenOn()));
   cubeTabWarnDraw();
@@ -548,7 +555,7 @@ function cubeTabEvent(ev){
     cubeTabSpot();return;
   }
   if(ev.type==='disconnect'){cubeTab.conn=null;cubeTab.name='';cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;cubeTab.moves=[];cubeTabClose();cubeTabResetView();cubeTabStageReset();cubeTabSpotEnd();cubeTabRender();return;}
-  if(ev.type==='gone'){if(ev.conn!==cubeTab.conn)return;cubeTab.conn=null;cubeTab.asked=false;cubeTab.want=false;cubeTabStageStop();cubeTabAwayClear();cubeTabRender();cubeTabWindow();return;}
+  if(ev.type==='gone'){if(ev.conn!==cubeTab.conn)return;cubeTab.conn=null;cubeTab.asked=false;cubeTab.want=false;cubeTabStageStop();cubeTabAwayClear();if(typeof smartListenStop==='function')smartListenStop();cubeTabRender();cubeTabWindow();return;}
   if(ev.type==='close'){if(cubeTab.tipWait)cubeTabSpot();return;}
   if(ev.conn!==cubeTab.conn)return;
   if(ev.type==='move')cubeTabAsk(); // the state that answers shows the turn
