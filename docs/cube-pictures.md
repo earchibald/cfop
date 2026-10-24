@@ -46,7 +46,7 @@ F2L cases had the 3D view only.
 
 A case card was a still picture.
 
-- A new setting, **Play case pictures**, in Settings. Off by default, saved in
+- A new setting, **Play case animations**, in Settings. Off by default, saved in
   `cw:playPics`. It shows on the phone and the desktop.
 - `js/loop.js`: `loopPlay(el, start, moves, opts)` turns the moves on a 3D cube
   in `el`, holds the solved cube for a moment, and starts again.
@@ -57,7 +57,9 @@ A case card was a still picture.
 - Phone and desktop: the details window opens on a **Play** view that loops the
   algorithm, for the 3×3 cases and the 2×2 speed cases. Top, Side, 3D and Flat
   stay one tap away.
-- Reduced motion turns the loop off. The setting then does nothing.
+- With the setting off, the details window still has the **Play** chip, last.
+  The window opens on Top, 3D or the main picture, and Play starts on a tap.
+- Reduced motion turns the setting off. Play stays a chip that starts only on a tap.
 
 ## 6. Color Blind Assist
 

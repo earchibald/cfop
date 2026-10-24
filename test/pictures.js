@@ -1,5 +1,5 @@
 // The cube pictures of docs/cube-pictures.md: the shared net, the Color Blind Assist letters, the
-// hidden faces, the PLL side view, the F2L flat diagram, Play case pictures, Save image (the
+// hidden faces, the PLL side view, the F2L flat diagram, Play case animations, Save image (the
 // standalone SVG) and the painter's hold. The pure parts run in a vm; the rest in the page.
 const assert=require('assert');
 const run=require('./vm-load')('js/engine.js','js/two.js','js/draw.js');
@@ -49,9 +49,9 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 w.addEventListener('load',async()=>{try{
   await sleep(100);ev("setMethod('cfop')");await sleep(50);
 
-  // Settings: Play case pictures and Color Blind Assist, saved, and body.cba follows.
+  // Settings: Play case animations and Color Blind Assist, saved, and body.cba follows.
   $('#settingsBtn').click();
-  assert.ok($('#setPlayPics')&&!$('#setPlayPics').checked,'Play case pictures, off by default');
+  assert.ok($('#setPlayPics')&&!$('#setPlayPics').checked,'Play case animations, off by default');
   assert.ok($('#setCba')&&!$('#setCba').checked,'Color Blind Assist, off by default');
   assert.ok(/Color Blind Assist/.test($('#setArea').textContent),'the section is named');
   $('#setCba').checked=true;$('#setSave').click();
@@ -72,7 +72,7 @@ w.addEventListener('load',async()=>{try{
 
   // The PLL details: Top and Side. The side view has the top layer bright, the rest dim.
   ev("openCaseModal(modalForPLL(PLL_FULL.find(p=>p.name==='T')))");
-  assert.strictEqual($$('#modalBg .pvchip').map(b=>b.textContent).join(),'Top,Side','PLL views');
+  assert.strictEqual($$('#modalBg .pvchip').map(b=>b.textContent).join(),'Top,Side,Play','PLL views, Play last with the setting off');
   const side=$('#modalBg .pv[data-v="side"]');assert.ok(side.hidden,'Side starts hidden');
   $('#modalBg .pvchip[data-v="side"]').click();assert.ok(!side.hidden&&$('#modalBg .pv[data-v="main"]').hidden,'Side shown');
   const sp=[...side.querySelectorAll('polygon[stroke]')];
@@ -91,13 +91,13 @@ w.addEventListener('load',async()=>{try{
 
   // The F2L details: 3D and Flat. Every case: the top and two slot faces, the pair and the centers in color.
   ev("openCaseModal(modalForF2L(F2L_CASES[0]))");
-  assert.strictEqual($$('#modalBg .pvchip').map(b=>b.textContent).join(),'3D,Flat','F2L views');
+  assert.strictEqual($$('#modalBg .pvchip').map(b=>b.textContent).join(),'3D,Flat,Play','F2L views, Play last with the setting off');
   ev('closeModal()');await sleep(30);
   const flats=ev(`F2L_CASES.map(f=>{const c=caseState(f.alg);return thumbF2LFlat(c,phys(c));})`);
   flats.forEach((s,i)=>{const rects=count(s,/<rect/g),lit=rects-count(s,/fill="var\(--sticker-X\)"/g);
     assert.strictEqual(rects,27,'three faces, case '+(i+1));assert.ok(lit>=5&&lit<=8,`pair and centers in color, case ${i+1}: ${lit}`);});
 
-  // Play case pictures: the details window opens on Play and loops; reduced motion turns it off.
+  // Play case animations: the details window opens on Play and loops; reduced motion turns it off.
   w.localStorage.setItem('cw:playPics','true');
   ev("openCaseModal(modalForLL(LL_ALL[0]))");
   assert.strictEqual($('#modalBg .pvchip').textContent,'Play','Play comes first');
@@ -112,7 +112,12 @@ w.addEventListener('load',async()=>{try{
   $('#llGroups').parentNode.dispatchEvent(new w.Event('pointerover',{bubbles:true}));
   assert.ok(!ev('loopRunning')(card.querySelector('.loopbox'))&&card.querySelector('.loopbox svg'),'the still picture is back');
   w.localStorage.setItem('cw:playPics','false');
-  ev("openCaseModal(modalForLL(LL_ALL[0]))");assert.ok(!$('#modalBg .pvchip[data-v="play"]'),'no Play with the setting off');ev('closeModal()');await sleep(30);
+  ev("openCaseModal(modalForLL(LL_ALL[0]))");
+  const chips=$$('#modalBg .pvchip');assert.strictEqual(chips.map(b=>b.textContent).join(),'Top,Play','with the setting off, Play is the last chip');
+  assert.strictEqual(chips[0].getAttribute('aria-pressed'),'true','the window opens on Top');
+  const pv2=$('#modalBg .pv[data-v="play"]');assert.ok(pv2.hidden&&!ev('loopRunning')(pv2),'Play waits for a tap');
+  chips[1].click();assert.ok(!pv2.hidden&&ev('loopRunning')(pv2),'a tap on Play starts the loop');
+  ev('closeModal()');await sleep(30);
 
   // Letters on the top views: the main tiles carry one, gray tiles none.
   const top=ev(`thumbTop(caseCube(LL_ALL.find(a=>a.group==='PLL corners')),'pllc')`);

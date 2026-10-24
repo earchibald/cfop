@@ -672,7 +672,7 @@ function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why,
   const lab=$('#modalLab');if(lab)lab.onclick=()=>{setSequence([...(r?[r]:[]),...o.setupMoves],'setup for '+o.title,undefined,o.title);$('#labFromSolved').checked=false;loadLab(o.alg,o.title);close();};
   document.addEventListener('keydown',escClose);
 }
-// Play case pictures on the desktop: a hover or a keyboard focus on a 3×3 case card or a Reference
+// Play case animations on the desktop: a hover or a keyboard focus on a 3×3 case card or a Reference
 // card plays its algorithm in the card's picture; the still picture comes back when the pointer or
 // the focus leaves. On a phone the details window plays the case instead.
 const PLAY_CARDS='#llGroups .case[data-id],#f2lCaseGrid .case[data-n],#tab-ref .ref-row';
@@ -695,9 +695,11 @@ document.addEventListener('pointerover',e=>cardEnter(e.target));
 document.addEventListener('focusin',e=>cardEnter(e.target));
 document.documentElement.addEventListener('pointerleave',()=>{if(cardPlaying){cardLoopEnd(cardPlaying);cardPlaying=null;}});
 // The views of the details picture. o.views lists them, the main picture (o.pic) first; o.play
-// adds Play, the algorithm in a loop, shown first when the setting is on and the device allows motion.
+// adds Play, the algorithm in a loop. With Play case animations on and a device that allows motion,
+// Play comes first and starts at once. Otherwise it comes last, and the window opens on the main picture.
 function playPicsOn(){return !!store.get('playPics',false)&&!reducedMotion()&&typeof requestAnimationFrame==='function';}
-function caseViews(o){const v=(o.views||[{key:'main',label:'Picture'}]).slice();if(o.play&&playPicsOn())v.unshift({key:'play',label:'Play'});return v;}
+function caseViews(o){const v=(o.views||[{key:'main',label:'Picture'}]).slice();
+  if(o.play&&typeof requestAnimationFrame==='function'){const p={key:'play',label:'Play'};if(playPicsOn())v.unshift(p);else v.push(p);}return v;}
 function caseViewsHTML(o){const vs=caseViews(o);return vs.map((v,i)=>`<div class="pv" data-v="${v.key}"${i?' hidden':''}>${v.key==='main'?o.pic:v.key==='play'?'':v.pic}</div>`).join('');}
 function caseViewBar(o){const vs=caseViews(o);
   return `<div class="picbar">${vs.length>1?`<div class="pvchips" role="group" aria-label="Views">${vs.map((v,i)=>`<button type="button" class="pvchip" data-v="${v.key}" aria-pressed="${!i}" title="${esc(CASE_VIEW_TITLE[v.key]||'Show this view')}">${esc(v.label)}</button>`).join('')}</div>`:'<span></span>'}<button type="button" class="small ghost savebtn" id="modalSave" title="Save this picture as an image file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>Save image</button></div>`;}
@@ -717,8 +719,8 @@ try{window.history.scrollRestoration='manual';}catch(e){}
 function goNext(){const id=modalNext;modalNext=null;if(!id||!mobileMQ.matches||!store.get('refNext',true))return;setTimeout(()=>{const t=document.getElementById(id);if(t)t.scrollIntoView({behavior:'smooth',block:'start'});},60);}
 function popClose(){const b=$('#modalBg');if(b){b.remove();document.removeEventListener('keydown',escClose);}window.removeEventListener('popstate',popClose);goNext();}
 function closeModal(){const b=$('#modalBg');if(!b)return;b.remove();document.removeEventListener('keydown',escClose);window.removeEventListener('popstate',popClose);if(window.history.state&&window.history.state.modal){try{window.history.back();}catch(e){}}goNext();}
-// The details picture and its other views: Side for a PLL case, Flat for an F2L case, Play when the
-// setting Play case pictures is on (js/loop.js).
+// The details picture and its other views: Side for a PLL case, Flat for an F2L case, and Play, the
+// view of the algorithm in a loop (js/loop.js).
 function caseWithParts(c,mode,alg){const P=phys(c),parts=caseParts(c,P.toFacelets(),mode);
   const views=mode==='f2l'?[{key:'main',label:'3D'},{key:'flat',label:'Flat',pic:thumbF2LFlat(c,P)}]:mode.startsWith('pll')?[{key:'main',label:'Top'},{key:'side',label:'Side',pic:thumbSide(P)}]:[{key:'main',label:'Top'}];
   return {parts,pic:mode==='f2l'?thumb3DMarks(P,parts):thumbTop(P,mode,parts),views,play:alg?{start:P,moves:parseAlg(alg),n:3}:null};}
@@ -805,7 +807,7 @@ function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHi
     [k('1')+'–'+k(String(railButtons().length)),'switch tab'],...(beg?[]:[[k('N'),'next scramble / case'],[k('H'),'reveal the answer']]),[k('?'),'this card'],['drag cube','orbit the view']];
   return `<h3>Keys</h3><table>${rows.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table><p class="muted" style="margin-top:8px;font-size:13px">${beg?'Your progress and seed history are':'Times, case statuses and seed history are'} saved in this browser.</p>`;}
 // ---------- settings ----------
-// The Settings window. Pictures: Play case pictures (cw:playPics, js/loop.js). Color Blind Assist: a
+// The Settings window. Pictures: Play case animations (cw:playPics, js/loop.js). Color Blind Assist: a
 // letter on each sticker (cw:cba, body.cba). Phone: the Reference section goes on to the next stage
 // when a case's details close (cw:refNext). With a Listen log, a button copies it for a report. It shows the version, under the buttons, so a report
 // can name it. While it is open, keys go to the window only: Esc cancels and Enter saves.
@@ -815,8 +817,8 @@ function openSettings(){if($('#setBg'))return;
    <h2 id="setTitle">Settings</h2>
    <div class="setarea" id="setArea">
     <h3>Pictures</h3>
-    <label class="setrow" title="A case picture turns its algorithm over and over: on a hover or focus of a case card, and in the details window"><input type="checkbox" id="setPlayPics"${store.get('playPics',false)?' checked':''}> Play case pictures</label>
-    <p class="muted">The details window plays the case. On a computer, a case card plays it under the pointer. Off when your device asks for less motion.</p>
+    <label class="setrow" title="Turn each case algorithm on the cube, over and over: on a hover or focus of a case card, and in the details window"><input type="checkbox" id="setPlayPics"${store.get('playPics',false)?' checked':''}> Play case animations</label>
+    <p class="muted">The details window opens on Play. On a computer, a case card plays under the pointer. When this is off, the details window opens on the picture, and Play is one tap away. Off when your device asks for less motion.</p>
     <h3>Color Blind Assist</h3>
     <label class="setrow" title="Put the letter of its color on each sticker: W white, Y yellow, R red, O orange, G green, B blue"><input type="checkbox" id="setCba"${store.get('cba',false)?' checked':''}> Show a letter on each sticker</label>
     <p class="muted">W white, Y yellow, R red, O orange, G green, B blue. A gray sticker has no letter.</p>

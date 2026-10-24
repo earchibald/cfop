@@ -1,5 +1,5 @@
 // ===================== CASE PICTURES IN MOTION =====================
-// Play case pictures (Settings, cw:playPics): a case picture turns its algorithm on a 3D cube, holds
+// Play case animations (Settings, cw:playPics): a case picture turns its algorithm on a 3D cube, holds
 // the solved cube, and starts again. loopPlay(el, {start, moves, n, viewBox}) puts the loop in el
 // and keeps the still picture; loopStop(el) puts the still picture back. A loop stops by itself when
 // el leaves the page. Each move turns as the player's moves do: an ease in and out, a quarter turn
