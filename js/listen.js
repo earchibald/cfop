@@ -4,11 +4,12 @@
 // hold on the button listens once, while it is held: a short sentence is what the phone's recognizer
 // is built for. The page listens through the browser's speech recognition. When it hears a case name
 // ("T perm", "Sune", "G a perm", "F2L 12", "twelve"), the case window opens, as a tap on the row's picture
-// opens it, and its covered moves uncover one per second. A tap on the line uncovers the next move at
-// once. The window keeps listening: the next name swaps it for that case; the same name again plays the
-// reveal again; Close ends the listening a hold began. A strip at the top of the window says what was
-// heard, asks between close cases and carries Not this. Two commands override the reveal in the open window:
-// "reveal moves" uncovers every move at once, "hide moves" covers them all again (listenCommand, listenMoves).
+// opens it, with its moves covered. A tap on the line uncovers the next move. The window keeps listening:
+// the next name swaps it for that case; the same name again covers its moves again; Close ends the
+// listening a hold began. A strip at the top of the window says what was heard, asks between close cases,
+// carries Not this and shows three commands for the moves of the open window, said or tapped: "play
+// moves" uncovers them one per second, "reveal moves" all at once, "hide moves" covers them all again
+// (listenCommand, listenMoves).
 //
 // The recognizer is a dictation model: it cannot be told the case names, so it hears "tea perm",
 // "soon", "you be perm" and "all" for OLL. The matcher reads a sentence in three parts: an anchor word
@@ -221,13 +222,14 @@ function listenPick(text,choices){const p=listenParse(text);
   if(!p.name.length)return null;
   const d=listenDecide(listenRank(text,choices,null));return d&&d.hit||null;}
 
-// A command for the open case window, said alone: 'reveal' ("reveal moves", "reveal all", "show all the
-// moves", "uncover"), 'hide' ("hide moves", "hide", "cover them up"), or null. Only a sentence that is the
-// command counts, so "hide and seek" in talk does nothing.
+// A command for the open case window, said alone: 'play' ("play moves", "play"), 'reveal' ("reveal moves",
+// "reveal all", "show all the moves", "uncover"), 'hide' ("hide moves", "hide", "cover them up"), or null.
+// Only a sentence that is the command counts, so "hide and seek" in talk does nothing.
 function listenCommand(text){const t=String(text).toLowerCase().replace(/[’']/g,'').replace(/[^a-z ]+/g,' ').split(/\s+/)
     .filter(w=>w&&!/^(please|the|me|now|them|it|its|ok|okay|of|those|these|again)$/.test(w)).join(' ');
   if(/^(reveal|uncover)( all)?( moves?| algorithm| alg)?$/.test(t)||/^(show|open)( all( moves?| algorithm| alg)?| moves?)$/.test(t))return 'reveal';
   if(/^(hide|cover)( all)?( moves?| algorithm| alg)?( up)?$/.test(t))return 'hide';
+  if(/^play( all)?( moves?| algorithm| alg)?$/.test(t))return 'play';
   return null;}
 
 // ----- the microphone and the card -----
@@ -241,37 +243,38 @@ function listenSection(){if(LISTEN.section!==undefined)return LISTEN.section;
   const marks=mobileMQ.matches?[['mg-ollE','oll'],['mg-ollC','oll'],['mg-pllC','pll'],['mg-pllE','pll'],['mg-pll','pll'],['mg-f2l','f2l']]:[['foldPLL','pll'],['foldF2L','f2l']];
   for(const [id,set] of marks){const el=document.getElementById(id);if(el&&el.getBoundingClientRect().top-off<=0)cur=set;}
   return cur;}
-// The strip at the top of the case window: what was heard, the choices and Not this.
+// The strip at the top of the case window: what was heard, Not this, the two commands as buttons, and the choices.
 function listenStrip(){return document.getElementById('listenStrip');}
-// Show the case: the case window opens, the strip goes in, every covered move uncovers one per second.
-// A window a hold opened keeps listening once the hold's recognizer ends.
+// Show the case: the case window opens with its moves covered, and the strip goes in. "Play moves" uncovers them
+// one per second. A window a hold opened keeps listening once the hold's recognizer ends.
 function listenShow(e){LISTEN.entry=e;LISTEN.choices=null;clearTimeout(LISTEN.timer);$('#listenCard').classList.add('hidden');
   listenSwapOut();modalNext=null;listenOpen(e);
   const col=document.querySelector(mobileMQ.matches?'#modalBg .modal > div:not(.pic)':'#modalBg .modal > div:not(.picwrap)');if(!col)return; // the top of the sheet; on the desktop, of the text beside the picture
   const strip=document.createElement('div');strip.className='listen-strip';strip.id='listenStrip';
-  strip.innerHTML=`<span class="listen-dot"></span><span id="listenModalState"></span><button type="button" class="small ghost listen-not" title="This is not the case I said: show the other cases it could be">Not this</button><span id="listenModalAsk" class="listen-ask"></span>`;
+  strip.innerHTML=`<span class="listen-dot"></span><span id="listenModalState"></span><button type="button" class="small ghost listen-not" title="This is not the case I said: show the other cases it could be">Not this</button><span class="listen-cmds"><span class="muted">Say or tap:</span><button type="button" class="small" data-cmd="play" title="Uncover the moves one per second. You can also say &quot;play moves&quot;">play moves</button><button type="button" class="small" data-cmd="reveal" title="Show every move now. You can also say &quot;reveal moves&quot;">reveal moves</button><button type="button" class="small" data-cmd="hide" title="Cover every move again. You can also say &quot;hide moves&quot;">hide moves</button></span><span id="listenModalAsk" class="listen-ask"></span>`;
   strip.querySelector('.listen-not').onclick=()=>listenNotThis(e);
+  strip.querySelectorAll('[data-cmd]').forEach(b=>b.onclick=()=>listenMoves(b.dataset.cmd)); // the commands, shown so people know them, and a tap does the same
   col.insertBefore(strip,col.firstChild);strip.classList.toggle('on',LISTEN.on);
   listenState($('#listenState').textContent,$('#listenHeard').textContent);
-  if(!LISTEN.on){if(LISTEN.hold)LISTEN.wantCard=true;else listenStart(false,true);}
-  listenReveal();}
+  if(!LISTEN.on){if(LISTEN.hold)LISTEN.wantCard=true;else listenStart(false,true);}}
 // An open window goes away for the next one with no step back in the history: the next window takes its place there.
 function listenSwapOut(){const b=document.getElementById('modalBg');if(!b)return;b.remove();document.removeEventListener('keydown',escClose);window.removeEventListener('popstate',popClose);}
-// Uncover the next covered move of the window each second. A tap on the line uncovers one at once (app.js) and the timer goes on.
+// "Play moves": uncover the next covered move of the window each second. A tap on the line uncovers one at once (app.js) and the timer goes on.
 function listenReveal(){clearTimeout(LISTEN.timer);const s=document.querySelector('#modalBg .algbig .spoil');
   if(!s||document.body.classList.contains('refall')||!s.querySelector('.sp-m:not(.on)'))return;
   LISTEN.timer=setTimeout(()=>{const t=document.querySelector('#modalBg .algbig .spoil');if(t===s&&s.querySelector('.sp-m:not(.on)'))spoilStep(s);listenReveal();},LISTEN.ms);}
-// The commands: 'reveal' uncovers every move of the open window at once, 'hide' covers them all again. Either
-// stops the reveal one move per second; after hide, a tap on the line still uncovers the next move. The next
-// case opens with the reveal again.
+// The commands for the moves of the open window: 'play' uncovers them one per second, from the moves shown on, or
+// from the start when every move shows; 'reveal' uncovers them all at once; 'hide' covers them all again. Reveal
+// and hide stop the play. A tap on the line still uncovers the next move. The next case opens covered.
 function listenMoves(cmd){const pre=listenPre(),s=document.querySelector('#modalBg .algbig .spoil');
   if(!document.getElementById('modalBg')){listenState(pre+`Say a case name first, then "${cmd} moves".`);return;}
   if(!s){listenState(pre+'This window shows every move.');return;}
   clearTimeout(LISTEN.timer);
-  if(cmd==='hide'&&document.body.classList.contains('refall')){listenState(pre+'Show all moves is on. Turn it off on the Reference page to hide the moves.');return;}
+  if(cmd!=='reveal'&&document.body.classList.contains('refall')){listenState(pre+'Show all moves is on. Turn it off on the Reference page to cover the moves.');return;}
   if(cmd==='reveal'){s.querySelectorAll('.sp-m:not(.on)').forEach(m=>m.classList.add('on'));spoilSync(s);listenState(pre+'All moves shown.');}
-  else{spoilReset(s);listenState(pre+'Moves hidden. Say "reveal moves", or tap the line for the next move.');}}
-// The window covers the algorithm on both layouts, for the reveal.
+  else if(cmd==='play'){if(!s.querySelector('.sp-m:not(.on)'))spoilReset(s);listenReveal();listenState(pre+'Playing the moves, one per second.');}
+  else{spoilReset(s);listenState(pre+'Moves hidden. Say "play moves" or "reveal moves", or tap the line for the next move.');}}
+// The window covers the algorithm on both layouts, for the commands.
 function listenOpen(e){const o=e.kind==='ll'?modalForLL(LL_ALL.find(a=>a.id===e.id)):e.kind==='pll'?modalForPLL(PLL_FULL.find(p=>p.name===e.id)):modalForF2L(F2L_CASES.find(f=>f.n===+e.id));o.spoil=true;openCaseModal(o);}
 // The choices as chips, in the window's strip while a window is open, else in the panel. A tap picks one; so does the next sentence, through listenPick.
 function listenAsk(choices){LISTEN.choices=choices;
@@ -344,7 +347,7 @@ function listenResult(ev){
 function listenBias(rec){if(!LISTEN.local||typeof window.SpeechRecognitionPhrase!=='function'||!('phrases' in rec))return;
   try{LISTEN.catalog=LISTEN.catalog||listenCatalog();const ph=[];
     for(const c of LISTEN.catalog){if(c.set==='f2l')continue;for(const s of c.say)ph.push(new SpeechRecognitionPhrase(c.set==='pll'?s+' perm':s,3));}
-    for(const s of ['reveal moves','hide moves'])ph.push(new SpeechRecognitionPhrase(s,3));
+    for(const s of ['play moves','reveal moves','hide moves'])ph.push(new SpeechRecognitionPhrase(s,3));
     rec.processLocally=true;rec.phrases=ph;}catch(e){}}
 function listenButton(){const b=$('#listenBtn');b.textContent=LISTEN.on?'Stop':LISTEN.hold?'Let go when done':'Listen';b.classList.toggle('on',LISTEN.on||LISTEN.hold);b.setAttribute('aria-pressed',LISTEN.on?'true':'false');
   const s=listenStrip();if(s)s.classList.toggle('on',LISTEN.on);}
@@ -367,7 +370,7 @@ function listenStart(once,card){
   if(!once&&navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{LISTEN.wake=l;}).catch(()=>{}); // keep the screen on while it listens
 }
 // The words under the button at rest. In a noisy room a hold is best: the microphone hears only what is said while the button is down.
-function listenIdle(){return (mobileMQ.matches?'Tap':'Click')+' to listen, or hold and say a case name, such as "T perm" or "Sune". In a case window, say "hide moves" or "reveal moves". In a noisy room, hold the button while you speak.';}
+function listenIdle(){return (mobileMQ.matches?'Tap':'Click')+' to listen, or hold and say a case name, such as "T perm" or "Sune". A case opens with its moves covered: say "play moves" or "reveal moves". In a noisy room, hold the button while you speak.';}
 function listenStop(){LISTEN.on=false;LISTEN.hold=false;LISTEN.card=false;LISTEN.wantCard=false;const rec=LISTEN.rec;LISTEN.rec=null;if(rec)try{rec.onend=null;rec.stop();}catch(e){}
   if(LISTEN.wake){LISTEN.wake.release().catch(()=>{});LISTEN.wake=null;}
   listenButton();
