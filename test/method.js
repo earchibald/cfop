@@ -45,8 +45,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const key=(type,k,code)=>d.dispatchEvent(new w.KeyboardEvent(type,{key:k,code:code||k,bubbles:true,cancelable:true}));
   key('keydown',' ','Space');key('keyup',' ','Space');assert.ok(!$('#timer').classList.contains('run'),'space does not start a hidden timer');
   assert.ok(w.auto.timer,'space plays the moves in beginner mode');key('keydown',' ','Space');key('keyup',' ','Space');assert.ok(!w.auto.timer,'space again pauses');
-  // Animation: on by default in beginner mode, off in CFOP, each method keeps its own setting.
-  assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'true','animation is on in beginner mode');
+  // Animation: on by default, one setting for every method.
+  assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'true','animation is on by default');
   w.seqGo(0);w.seqGo(1);assert.ok(w.anim.move,'one step forward turns the layer');
   await sleep(600);assert.ok(!w.anim.move,'the turn ends');assert.ok(w.eval('displayedCube').toFacelets().join()===w.cubeAtSeq(1).toFacelets().join(),'the picture lands on the cube after the move');
   w.seqGo(0);assert.strictEqual(w.anim.move,w.invertAlg([w.seqState.moves[0]]),'one step back turns the layer the other way');
@@ -72,11 +72,11 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   w.goTab('progress');w.setMethod('cfop');assert.strictEqual(d.body.dataset.tab,'solve','CFOP returns to its tab');
   w.goTab('f2l');w.setMethod('beginner');assert.strictEqual(d.body.dataset.tab,'progress','the beginner method returns to its tab');
   w.setMethod('cfop');assert.strictEqual(d.body.dataset.tab,'f2l');
-  assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'false','animation is off in CFOP by default');
+  assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'false','the setting turned off in beginner mode holds in CFOP');
   assert.ok(/timer/.test(w.helpHTML()),'the CFOP keys card has the timer row');
   $('#animBtn').click();assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'true','the chip turns it on');
-  w.setMethod('beginner');assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'false','the beginner setting is kept apart');
-  w.setMethod('cfop');assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'true','and so is the CFOP one');$('#animBtn').click();
+  w.setMethod('beginner');assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'true','and it is on in beginner mode too');
+  w.setMethod('cfop');$('#animBtn').click();
   assert.ok(!/z2/.test($('#seqLabel').textContent)||$('#crossColor').value==='white','CFOP follows the cross color');
   // Progress counts persist.
   w.begProgress.solved();w.begProgress.practiced(3);

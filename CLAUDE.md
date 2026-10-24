@@ -36,7 +36,7 @@ The app was called Cubeworks. Keep these old names as they are:
 | `js/speed2.js` | 2x2 speed data and solvers: `ORTEGA_OLL`, `ORTEGA_PBL`, `CLL_CASES`, `twoFindStep`, `solveOrtega`, `solveCLL` (pure, no DOM) |
 | `js/f2l.js` | The F2L guide's solvers, shared by the site's Guide mode and the lab: `f2lSlotWords`, `f2lStatus`, `f2lPairSolutions` (every shortest solution of a pair with the cross and the solved pairs kept), `f2lNext`, `f2lThen`, `f2lAlso`, `f2lSetup`, `f2lCombos`, `f2lDone`, `f2lPart`, `f2lAlong`; `f2lBasic` (the textbook way: free a stuck piece, then one of the 41 cases, with `F2L_WHY`), `f2lArc` (what each move does to the pair, in plain words), `f2lJoined`, `f2lUnrotate` (`removeRotations` in `app.js` is this). Loads after `algs.js` (pure, no DOM) |
 | `js/speed4.js` | 4x4 advanced: `FOUR_PARITY` (the three parity cases), `FOUR_LL` (outside-turn two-look sets), `solveMasterSpeed` (reduction, then CFOP with parity where it falls) (pure, no DOM) |
-| `js/app.js` | UI, trainer, timer, history, `loadScramble`; the case pictures (`thumbTop`, `thumb3D`, `thumbSide`: a PLL case from the side, `thumbF2LFlat`: an F2L case laid out flat), the details window's views (`caseViews`: Top, Side, 3D, Flat and Play, with Save image under the picture), the card loops on the desktop (`cardLoopStart`), the Hidden faces chip (`cw:hidden`) and the Settings window |
+| `js/app.js` | UI, trainer, timer, history, `loadScramble`; the case pictures (`thumbTop`, `thumb3D`, `thumbSide`: a PLL case from the side, `thumbF2LFlat`: an F2L case laid out flat), the details window's views (`caseViews`: Top, Side, 3D, Flat and Play, with Save image under the picture), the card loops on the desktop (`cardLoopStart`), the Hidden faces chip (`cw:hidden`) and the Settings window (Cube player: Animate the moves, Show the hidden faces; Timer: 15 s inspection, `cw:insp`, on by default, the same setting as the box by the timer) |
 | `js/enter.js` | Enter-a-scramble dialog (moves, or the letters of a state through `enterState`), a paste of state letters anywhere on the page outside a field, `scrambleFromCube(cube, name)` |
 | `js/scan-assemble.js` | Scanner stage 5 for the 3x3, the 2x2 and the 4x4: `scanSize(n)` (pieces and the 24 holdings of any size), `assembleScan` (3x3, faces by center), `assembleFree` (2x2 and 4x4, faces placed by their pieces, every fit returned), the joint color read on every six-face read (`jointColors`, a legal result that differs wins), then the color repairs (pure, no DOM) |
 | `js/scan.js` | Scanner stages 1-4 for any face size and the Scan cube dialog: `readFace(img,{n, style})` (two reference sets, `SCAN_REFS` for stickers and `SCAN_REFS_PLASTIC` for stickerless plastic; Auto keeps the nearer, the Sticker style chip pins one, `cw:scanStyle`), `makeVoter({n})`, `openScan({n, onCube, onClose, resync})`; the painter's palette beside the net (`SCAN_PALETTE`: a click paints and pins, keys 1 to 6 pick); with `resync: {bases}` a refresh scan for the F2L guide (the net starts as the state the guide expects, each face shown or painted goes to `resyncFind`, Set up from current and Return to scramble call `onCube(cube, how, info)`) |
@@ -109,9 +109,9 @@ above. Add a new script with a `<script src>` tag after the one it depends on.
   five, Home and End go to the ends, P plays. Space is the timer in CFOP and
   play/pause in beginner mode, where there is no timer. `helpHTML()` draws the
   Keys card for the current method. A one-move step turns the layer on the 3D
-  cube (`showCubeMoved`, `anim` in `app.js`); the Animate chip on the cube and
-  the A key switch it, per method, saved in `cw:anim`. On by default in beginner
-  mode, off in CFOP.
+  cube (`showCubeMoved`, `anim` in `app.js`); the Animate chip on the cube, the
+  A key and Settings switch it, one setting for every method, saved in
+  `cw:animate`, on by default.
   Auto-step turns each move at the start of its interval, so Play shows the
   first move at once. D deletes the last time and C clears the times; both do
   nothing while the timer runs or where there is no timer. Every control with

@@ -31,6 +31,7 @@ drag the cube or switch to the net.
   and shrinks the cube so the faces fit the box.
 - A **Hidden faces** chip on the player cube, at the bottom left. Animate is at
   the bottom right. Off by default, saved in `cw:hidden`. Only in the 3D view.
+  Settings has the same setting: Show the hidden faces, under Cube player.
 - The smart cube pictures follow the same setting. The smart cube window
   (`cubetab.js`) has a **Hidden faces** button under Clear moves; the lab has a
   **Hidden faces** box in its bar (H). Both read and write `cw:hidden`. The

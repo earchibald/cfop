@@ -4,7 +4,9 @@ const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
 const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
 const dom=new JSDOM(html,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,url:'file://'+path.join(__dirname,'..','index.html'),virtualConsole:vc,
-  beforeParse(w){w.matchMedia=()=>({matches:false,addEventListener(){},addListener(){}});w.scrollTo=()=>{};}});
+  beforeParse(w){w.matchMedia=()=>({matches:false,addEventListener(){},addListener(){}});w.scrollTo=()=>{};
+    // A fake localStorage (jsdom has none for file: pages), so the settings save.
+    const m=new Map();Object.defineProperty(w,'localStorage',{value:{getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear()}});}});
 const w=dom.window;const d=w.document;w.HTMLElement.prototype.scrollIntoView=function(){};
 const $=s=>d.querySelector(s);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -33,6 +35,20 @@ w.addEventListener('load',async()=>{try{
   $('#settingsBtn').click();await sleep(30);key('keydown','Enter');assert.ok(!$('#setBg'),'Enter saves and closes');
   $('#settingsBtn').click();$('#setCancel').click();assert.ok(!$('#setBg'),'Cancel closes');
   $('#settingsBtn').click();$('#setBg').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));assert.ok(!$('#setBg'),'a click outside closes');
+  // Cube player and Timer: the same settings as the chips on the cube and the box by the timer.
+  assert.ok($('#animBtn').getAttribute('aria-pressed')==='true'&&$('#hiddenBtn').getAttribute('aria-pressed')==='false'&&$('#inspChk').checked,'Animate on, Hidden faces off, inspection on by default');
+  $('#settingsBtn').click();
+  assert.ok($('#setAnim').checked&&!$('#setHidden').checked&&$('#setInsp').checked,'Settings shows the defaults');
+  $('#setAnim').checked=false;$('#setHidden').checked=true;$('#setInsp').checked=false;$('#setSave').click();
+  assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'false','Save turns Animate off on the chip');
+  assert.strictEqual($('#hiddenBtn').getAttribute('aria-pressed'),'true','and Hidden faces on');
+  assert.ok(!$('#inspChk').checked&&w.localStorage.getItem('cw:insp')==='false','and the inspection box off');
+  $('#settingsBtn').click();$('#setAnim').checked=true;$('#setCancel').click();
+  assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'false','Cancel changes nothing');
+  $('#animBtn').click();$('#hiddenBtn').click();$('#inspChk').checked=true;$('#inspChk').dispatchEvent(new w.Event('change'));
+  $('#settingsBtn').click();
+  assert.ok($('#setAnim').checked&&!$('#setHidden').checked&&$('#setInsp').checked,'Settings shows what the chips and the box set');
+  $('#setCancel').click();
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('settings: button, empty area, Cancel and Save keys, version ok');process.exit(0);
+  console.log('settings: Cube player and Timer settings, button, empty area, Cancel and Save keys, version ok');process.exit(0);
 }catch(e){console.error('settings: FAIL',e.message,errs);process.exit(1);}});

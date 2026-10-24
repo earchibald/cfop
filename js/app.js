@@ -23,11 +23,11 @@ function caseSetupMoves(alg,pre){const ms=parseAlg(alg);return removeRotations([
 // ---------- SVG cube rendering: js/draw.js ----------
 const view={yaw:-32,pitch:28,mode:'3d'};
 let displayedCube=new Cube();let fadeSet=null;
-// Animation: a layer turns on the player cube when the player steps one move. On by default in
-// beginner mode, off in CFOP; the Animate chip on the cube (or the A key) changes it, per method.
-var anim={pref:Object.assign({beginner:true,cfop:false,mini:true,speed2:false,master:true,speed4:false},store.get('anim',{})),raf:0,move:null,t:0,from:null}; // var: tests read it
-function animOn(){return !!anim.pref[method];}
-function setAnim(on){anim.pref[method]=!!on;store.set('anim',anim.pref);if(!on)stopAnim();renderAnimBtn();}
+// Animation: a layer turns on the player cube when the player steps one move. One setting for every
+// method, on by default (cw:animate); the Animate chip on the cube, the A key and Settings change it.
+var anim={on:store.get('animate',true),raf:0,move:null,t:0,from:null}; // var: tests read it
+function animOn(){return !!anim.on;}
+function setAnim(on){anim.on=!!on;store.set('animate',anim.on);if(!on)stopAnim();renderAnimBtn();}
 function renderAnimBtn(){const b=$('#animBtn');if(!b)return;const on=animOn();b.setAttribute('aria-pressed',String(on));b.title=on?'Moves turn on the cube. Press to show each move at once (A).':'Each move shows at once. Press to turn the layer on the cube (A).';}
 function stopAnim(){if(anim.raf){cancelAnimationFrame(anim.raf);anim.raf=0;}anim.move=null;}
 function reducedMotion(){try{return matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){return false;}}
@@ -402,7 +402,8 @@ function onEnterTab(t){if(!seqState.drill)showForTab();else if(t==='f2l'&&f2lSta
 function nextForTab(){({solve:()=>newScramble(),cross:()=>$('#crossNew').click(),f2l:()=>(f2lState.mode==='guide'?$('#fgNew'):f2lState.mode==='live'?$('#f2lNew'):$('#f2lRandomCase')).click(),ll:()=>$('#llNext').click(),ssolve:()=>newScramble(),ortega:()=>{const b=$('#twNextOrtega');if(b)b.click();},cll:()=>{const b=$('#twNextCll');if(b)b.click();},fsolve:()=>newScramble(),parity:()=>{const b=$('#fwNext');if(b)b.click();}}[curTab]||(()=>{}))();}
 function hintForTab(){({cross:()=>$('#crossReveal').click(),f2l:()=>{if(f2lState.mode!=='guide')(f2lState.mode==='live'?$('#f2lReveal'):$('#f2lCaseReveal')).click();},ll:()=>$('#llHint').click(),ortega:()=>{const b=$('#twRevealOrtega');if(b)b.click();},cll:()=>{const b=$('#twRevealCll');if(b)b.click();},parity:()=>{const b=$('#fwReveal');if(b)b.click();}}[curTab]||(()=>{}))();}
 $('#autoNext').checked=store.get('autoNext',false);$('#autoNext').onchange=()=>store.set('autoNext',$('#autoNext').checked);
-$('#inspChk').checked=store.get('insp',false);$('#inspChk').onchange=()=>store.set('insp',$('#inspChk').checked);
+// 15 s inspection (cw:insp, on by default): the box by the timer and the one in Settings are the same setting.
+$('#inspChk').checked=store.get('insp',true);$('#inspChk').onchange=()=>store.set('insp',$('#inspChk').checked);
 onTimerStop=()=>{if($('#autoNext').checked&&(curTab==='solve'||curTab==='cross'||curTab==='f2l'||curTab==='ll'||curTab==='ssolve'||curTab==='fsolve'))setTimeout(nextForTab,150);};
 
 // ---------- cross color / orientation ----------
@@ -808,7 +809,9 @@ function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHi
     [k('1')+'–'+k(String(railButtons().length)),'switch tab'],...(beg?[]:[[k('N'),'next scramble / case'],[k('H'),'reveal the answer']]),[k('?'),'this card'],['drag cube','orbit the view']];
   return `<h3>Keys</h3><table>${rows.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table><p class="muted" style="margin-top:8px;font-size:13px">${beg?'Your progress and seed history are':'Times, case statuses and seed history are'} saved in this browser.</p>`;}
 // ---------- settings ----------
-// The Settings window. Pictures: Play case animations (cw:playPics, js/loop.js). Color Blind Assist: a
+// The Settings window. Cube player: Animate the moves (setAnim, cw:animate) and Show the hidden faces
+// (setHidden, cw:hidden), the same settings as the chips on the cube. Timer: 15 s inspection (cw:insp), the
+// same as the box by the timer. Pictures: Play case animations (cw:playPics, js/loop.js). Color Blind Assist: a
 // letter on each sticker (cw:cba, body.cba). Phone: the Reference section goes on to the next stage
 // when a case's details close (cw:refNext). With a Listen log, a button copies it for a report. It shows the version, under the buttons, so a report
 // can name it. While it is open, keys go to the window only: Esc cancels and Enter saves.
@@ -817,6 +820,13 @@ function openSettings(){if($('#setBg'))return;
   bg.innerHTML=`<div class="modal ask settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
    <h2 id="setTitle">Settings</h2>
    <div class="setarea" id="setArea">
+    <h3>Cube player</h3>
+    <label class="setrow" title="Turn the layer on the cube for each move in the player"><input type="checkbox" id="setAnim"${animOn()?' checked':''}> Animate the moves</label>
+    <label class="setrow" title="Show the back, left and bottom, as in a mirror behind the cube"><input type="checkbox" id="setHidden"${hiddenOn()?' checked':''}> Show the hidden faces</label>
+    <p class="muted">The Animate and Hidden faces chips on the cube change the same settings. Animate is off when your device asks for less motion.</p>
+    <h3>Timer</h3>
+    <label class="setrow" title="Count down 15 seconds to look at the cube before the timer starts, as in a competition"><input type="checkbox" id="setInsp"${store.get('insp',true)?' checked':''}> 15 s inspection</label>
+    <p class="muted">The box by the timer changes the same setting.</p>
     <h3>Pictures</h3>
     <label class="setrow" title="Turn each case algorithm on the cube, over and over: on a hover or focus of a case card, and in the details window"><input type="checkbox" id="setPlayPics"${store.get('playPics',false)?' checked':''}> Play case animations</label>
     <p class="muted">The details window opens on Play. On a computer, a case card plays under the pointer. When this is off, the details window opens on the picture, and Play is one tap away. Off when your device asks for less motion.</p>
@@ -832,7 +842,7 @@ function openSettings(){if($('#setBg'))return;
    <div class="appver" id="appVer">Twistwright ${esc(APP_VERSION)}</div>
   </div>`;
   const close=()=>{document.removeEventListener('keydown',keys,true);document.removeEventListener('keyup',keys,true);bg.remove();$('#settingsBtn').focus();};
-  const save=()=>{store.set('refNext',$('#setRefNext').checked);store.set('playPics',$('#setPlayPics').checked);setCba($('#setCba').checked);close();};
+  const save=()=>{setAnim($('#setAnim').checked);if($('#setHidden').checked!==hiddenOn())setHidden($('#setHidden').checked);store.set('insp',$('#setInsp').checked);$('#inspChk').checked=$('#setInsp').checked;store.set('refNext',$('#setRefNext').checked);store.set('playPics',$('#setPlayPics').checked);setCba($('#setCba').checked);close();};
   const keys=e=>{if(e.key==='Tab')return;e.stopPropagation();if(e.type!=='keydown')return;
     if(e.key==='Escape'){e.preventDefault();close();}else if(e.key==='Enter'){e.preventDefault();save();}};
   document.body.appendChild(bg);

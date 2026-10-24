@@ -84,7 +84,9 @@ w.addEventListener('load',async()=>{try{
   // D deletes the last time and C opens the Clear dialog. Neither works while the timer runs.
   w.recordTime(11110);w.recordTime(10100);key('keydown','d');assert.strictEqual($('#stN').textContent,'1','D deletes the last time');
   key('keydown','c');assert.ok($('#askBg'),'C opens the Clear dialog');key('keydown','Escape');
-  key('keydown',' ','Space');key('keyup',' ','Space');assert.strictEqual(w.eval('timer.state'),'running','the timer runs');
+  assert.ok($('#inspChk').checked,'15 s inspection is on by default');
+  key('keydown',' ','Space');key('keyup',' ','Space');assert.strictEqual(w.eval('timer.state'),'inspecting','Space starts the inspection');
+  key('keydown',' ','Space');key('keyup',' ','Space');assert.strictEqual(w.eval('timer.state'),'running','Space again starts the timer');
   key('keydown','d');key('keydown','c');assert.ok(!$('#askBg'),'C does nothing while the timer runs');
   key('keydown',' ','Space');key('keyup',' ','Space');assert.strictEqual($('#stN').textContent,'2','D does nothing while the timer runs');
   w.eval('times[timer.scope]=[];renderTimes()');
