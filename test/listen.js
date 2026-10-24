@@ -4,13 +4,13 @@
 // or the next word picks; the section in view breaks a tie; Not this offers the runners-up. A name opens
 // the case window with a strip at the top: its covered moves uncover one each tick, a tap on the line
 // uncovers the next at once, an early guess only shows what was heard, the window stays until the next
-// name, which takes its place, the same name again plays it again, and Stop ends the listening. A hold on
+// name, which takes its place, the same name again covers it again, and Stop ends the listening. A hold on
 // the button listens once; the window it opens keeps listening until it closes. Each row
 // carries its shortest name. What was heard goes to a log the Settings window copies. Chrome with
 // on-device recognition takes the names as phrases. A browser with no recognizer gets a message. The noise
 // set: a name inside talk is found, ordinary talk names nothing; a strong name acts on two early guesses in a
-// row, the words used are not read again, and a weak name does not change an open window. "Hide moves" and
-// "reveal moves" override the reveal in the open window.
+// row, the words used are not read again, and a weak name does not change an open window. A case opens with its
+// moves covered; "play moves", "reveal moves" and "hide moves", said or tapped, uncover or cover them.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
 const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
@@ -80,6 +80,7 @@ w.addEventListener('load',async()=>{try{
   assert.strictEqual(w.listenFresh(['one two three four five six seven eight nine ten'],0)[0],'three four five six seven eight nine ten');
   // The commands, said alone: reveal and hide. Talk with the same words is no command.
   for(const [t,c] of [['reveal moves','reveal'],['Reveal all moves.','reveal'],['show me all the moves','reveal'],['show all','reveal'],['uncover','reveal'],['reveal','reveal'],
+    ['play moves','play'],['Play.','play'],['play them all','play'],['play the T perm',null],
     ['hide moves','hide'],['Hide.','hide'],['cover them up','hide'],['hide the moves please','hide'],['hide all','hide'],
     ['show',null],['show me the T perm',null],['hide and seek',null],['I will hide it later',null],['moves',null],['reveal the T perm',null]])
     assert.strictEqual(w.listenCommand(t),c,`"${t}" is ${c}`);
@@ -108,22 +109,27 @@ w.addEventListener('load',async()=>{try{
   const rec=recs[0];rec.say(0,'tea',false);assert.ok(!win(),'an early guess opens no window');assert.strictEqual($('#listenHeard').textContent,'Heard: tea');
   rec.say(0,'T perm',false);assert.ok(!win(),'still no window');assert.strictEqual($('#listenHeard').textContent,'Heard: T perm');
   rec.say(0,'T perm',true);assert.strictEqual(title(),'T perm','the final guess opens the window');assert.ok($('#listenStrip'),'with the strip');
-  assert.ok($('#listenStrip').classList.contains('on'),'the strip shows it listens');assert.ok(!L.card,'the button began the listening, not the window');
+  assert.ok($('#listenStrip').classList.contains('on'),'the strip shows it listens');
+  const cmdBtns=()=>$$('#listenStrip .listen-cmds button');
+  assert.deepStrictEqual(cmdBtns().map(b=>b.textContent),['play moves','reveal moves','hide moves'],'the strip shows the three commands');
+  assert.ok(cmdBtns().every(b=>/You can also say/.test(b.title)),'each with a tooltip');assert.strictEqual($('#listenStrip .listen-cmds .muted').textContent,'Say or tap:');assert.ok(!L.card,'the button began the listening, not the window');
   const tAlg=w.eval('ALG_DB').cp.find(a=>a.id==='pll-T').alg.split(' ');
   assert.strictEqual(sp().firstChild.textContent.trim(),tAlg[0],'the first move in clear');assert.strictEqual(all(),tAlg.length-1,'one bar per move after it');assert.strictEqual(on(),0,'all covered at first');
   assert.strictEqual(mst(),'Listening. Heard T perm.','the strip says what was heard');assert.strictEqual(st(),'Listening. Heard T perm.');assert.strictEqual($('#listenHeard').textContent,'');
   assert.deepStrictEqual([...log().map(o=>o.hit)],['pll-T'],'the log has the hit');
+  await sleep(300);assert.strictEqual(on(),0,'the moves stay covered');
+  click($('#listenStrip [data-cmd="play"]'));assert.strictEqual(mst(),'Listening. Playing the moves, one per second.','play moves');
   await sleep(300);assert.strictEqual(on(),1,'one move after a tick');
   click(sp().querySelector('.sp-rest'));assert.strictEqual(on(),2,'a tap on the line uncovers the next move at once');assert.ok(win(),'and the window stays');
   await sleep(150);assert.strictEqual(on(),3,'and the timer goes on');
   await sleep(200*tAlg.length);assert.strictEqual(on(),all(),'every move shows in the end');assert.ok(sp().classList.contains('open'),'the reveal button goes');
-  // The window stays through other talk; the next name takes its place; the same name again plays again.
+  // The window stays through other talk; the next name takes its place, covered; the same name again covers it again.
   rec.say(1,'hello there',true);assert.strictEqual(title(),'T perm','the window stays');assert.strictEqual(mst(),'Listening. No case is called that. Heard: hello there');assert.strictEqual(log().pop().hit,null,'the miss is logged');
   rec.say(2,'you a perm',false);assert.strictEqual(title(),'T perm','an early guess changes nothing');
   rec.say(2,'you be perm',true);assert.strictEqual(title(),'Ub perm','the next name takes its place');assert.strictEqual(on(),0);assert.strictEqual($$('#modalBg').length,1,'one window');
   assert.ok(w.history.state&&w.history.state.modal,'one step in the history');
-  await sleep(300);assert.strictEqual(on(),1);
-  rec.say(3,'U B perm',true);assert.strictEqual(title(),'Ub perm');assert.strictEqual(on(),0,'the same name again plays it again');
+  await sleep(300);assert.strictEqual(on(),0,'the next case stays covered');sp().querySelector('.sp-rest').click();assert.strictEqual(on(),1);
+  rec.say(3,'U B perm',true);assert.strictEqual(title(),'Ub perm');assert.strictEqual(on(),0,'the same name again covers it again');
   rec.say(4,'F2L 12',true);assert.strictEqual(title(),'F2L case #12');assert.strictEqual(all(),$$('#refMobileCases .mrow[data-kind="f2l"][data-id="12"] .spoil .sp-m').length,'covered as the row covers it');
   rec.say(5,'J perm',true);assert.strictEqual(title(),'Ja perm');assert.strictEqual(sp().firstChild.textContent.trim(),'x R2','a lead rotation goes with the first turn, in clear');
   // The recognizer's alternatives all count: the second one names the case.
@@ -169,7 +175,7 @@ w.addEventListener('load',async()=>{try{
   ptr(btn,'pointerdown');await sleep(50);ptr(btn,'pointerup');click(btn);assert.ok(L.on&&recs.length===5&&recs[4].continuous,'a short tap toggles');click(btn);assert.ok(!L.on);
   // Chrome with on-device recognition: every name goes in as a phrase.
   w.SpeechRecognitionPhrase=class{constructor(p,b){this.phrase=p;this.boost=b;}};L.local=true;click(btn);
-  const pr=recs[5];assert.ok(pr.processLocally&&pr.phrases.length>50,'the phrases');assert.ok(pr.phrases.some(p=>p.phrase==='t perm')&&pr.phrases.some(p=>p.phrase==='bruno'));assert.ok(pr.phrases.some(p=>p.phrase==='reveal moves')&&pr.phrases.some(p=>p.phrase==='hide moves'),'the commands too');click(btn);
+  const pr=recs[5];assert.ok(pr.processLocally&&pr.phrases.length>50,'the phrases');assert.ok(pr.phrases.some(p=>p.phrase==='t perm')&&pr.phrases.some(p=>p.phrase==='bruno'));assert.ok(pr.phrases.some(p=>p.phrase==='play moves')&&pr.phrases.some(p=>p.phrase==='reveal moves')&&pr.phrases.some(p=>p.phrase==='hide moves'),'the commands too');click(btn);
   // The Settings window copies the log, or clears it.
   let copied=null;w.navigator.clipboard={writeText:t=>{copied=t;return Promise.resolve();}};
   click($('#settingsBtn'));assert.ok($('#setListenLog'),'the copy button, with a log');click($('#setListenLog'));await sleep(20);
@@ -193,25 +199,30 @@ w.addEventListener('load',async()=>{try{
   n.say(3,'twelve',true);assert.strictEqual(title(),'F2L case #12','the same name again shows it');
   n.say(4,'you know what',true);assert.strictEqual(title(),'F2L case #12','talk keeps the window');assert.strictEqual(strip().length,0,'and asks nothing');
   n.say(5,'tea',false);n.say(5,'tea',false);assert.strictEqual(title(),'F2L case #12','a weak early guess does nothing');
-  // "hide moves" covers every move and stops the reveal; a tap still uncovers one; "reveal moves" shows them all.
-  // The next name opens with the reveal one move a tick again.
+  // "play moves" uncovers one move a tick; "hide moves" covers every move and stops it; a tap still uncovers one;
+  // "reveal moves" shows them all; "play moves" with every move shown starts over. The next name opens covered.
   const cov=()=>$('#modalBg .algbig .spoil'),shown=()=>cov().querySelectorAll('.sp-m.on').length,moves=()=>cov().querySelectorAll('.sp-m').length;
-  await sleep(250);assert.ok(shown()>0,'the reveal has begun');
+  await sleep(250);assert.strictEqual(shown(),0,'covered until a command');
+  n.say(20,'play moves',true);assert.strictEqual(log().pop().command,'play','the command is logged');await sleep(250);assert.ok(shown()>0,'play moves: the reveal has begun');
   n.say(6,'hide moves',true);assert.strictEqual(title(),'F2L case #12','a command keeps the window');assert.strictEqual(shown(),0,'hide: every move covered');
-  assert.strictEqual(mst(),'Listening. Moves hidden. Say "reveal moves", or tap the line for the next move.');assert.strictEqual(log().pop().command,'hide','the command is logged');
+  assert.strictEqual(mst(),'Listening. Moves hidden. Say "play moves" or "reveal moves", or tap the line for the next move.');assert.strictEqual(log().pop().command,'hide');
   await sleep(450);assert.strictEqual(shown(),0,'and the reveal stops');
   click(cov().querySelector('.sp-rest'));assert.strictEqual(shown(),1,'a tap still uncovers the next move');await sleep(450);assert.strictEqual(shown(),1,'one only');
   n.say(7,'reveal moves',true);assert.strictEqual(shown(),moves(),'reveal: every move');assert.ok(cov().classList.contains('open'));assert.strictEqual(mst(),'Listening. All moves shown.');
-  n.say(8,'Sune',true);assert.strictEqual(title(),'Sune');assert.strictEqual(shown(),0,'the next case: covered');await sleep(300);assert.strictEqual(shown(),1,'and the reveal goes on again');
+  click($('#listenStrip [data-cmd="hide"]'));assert.strictEqual(shown(),0,'a tap on "hide moves" covers every move');assert.ok(/Moves hidden/.test(mst()));
+  click($('#listenStrip [data-cmd="reveal"]'));assert.strictEqual(shown(),moves(),'a tap on "reveal moves" shows them all');assert.strictEqual(mst(),'Listening. All moves shown.');
+  click($('#listenStrip [data-cmd="play"]'));assert.strictEqual(shown(),0,'play with every move shown: from the start');await sleep(250);assert.strictEqual(shown(),1);
+  n.say(8,'Sune',true);assert.strictEqual(title(),'Sune');assert.strictEqual(shown(),0,'the next case: covered');await sleep(300);assert.strictEqual(shown(),0,'and it stays covered');
+  n.say(21,'play moves',true);await sleep(300);assert.strictEqual(shown(),1,'until play moves');
   n.say(9,'hide',false);assert.ok(shown()>0,'one early guess of a command: nothing yet');n.say(9,'hide',false);assert.strictEqual(shown(),0,'two early guesses: the command acts');
   const before=log().length;n.say(9,'hide',true);assert.strictEqual(log().length,before,'the final guess of the same words does not act again');
   assert.ok(/\tearly/.test(w.listenLogText()),'the log text marks an early guess');assert.ok(/command hide/.test(w.listenLogText()),'and a command');
   $('#modalClose').click();await sleep(20);
   n.say(10,'reveal moves',true);assert.strictEqual(st(),'Listening. Say a case name first, then "reveal moves".','a command with no window');
   click(btn);assert.ok(!L.on);
-  assert.ok(/In a noisy room, hold the button/.test(st()),'the words at rest say to hold in a noisy room');assert.ok(/say "hide moves" or "reveal moves"/.test(st()),'and name the commands');
+  assert.ok(/In a noisy room, hold the button/.test(st()),'the words at rest say to hold in a noisy room');assert.ok(/A case opens with its moves covered: say "play moves" or "reveal moves"/.test(st()),'and name the commands');
   // A blocked microphone: a message, and it is off.
   click(btn);recs[7].onerror({error:'not-allowed'});assert.ok(!L.on);assert.ok(/blocked/.test(st()),'blocked: a message');
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('listen: names matched, chips, pick, section, Not this, hold, labels, phrases, log, the window one move per second, tap, stays, swaps, listens on, stop, noise set, early guess, weak names, hide and reveal ok');process.exit(0);
+  console.log('listen: names matched, chips, pick, section, Not this, hold, labels, phrases, log, the window one move per second, tap, stays, swaps, listens on, stop, noise set, early guess, weak names, covered by default, play, reveal and hide, the command buttons ok');process.exit(0);
 }catch(e){console.error('listen: FAIL',e.message,errs);process.exit(1);}});
