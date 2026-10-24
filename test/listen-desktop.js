@@ -1,7 +1,7 @@
 // Listen on the desktop Reference page: the one panel sits under the page's first panel and moves with the
 // layout; the cards and the rows of the full PLL and F2L tables carry their names; the words say Click; a
-// name opens the case window with the algorithm covered and the strip beside the picture, one move
-// uncovered per tick, while a click on a card still opens it uncovered; only the full PLL and F2L lists
+// name opens the case window with the algorithm covered and the strip beside the picture; play moves
+// uncovers one move per tick, while a click on a card still opens it uncovered; only the full PLL and F2L lists
 // name a section, since the two-look OLL and PLL stand side by side.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
@@ -49,12 +49,15 @@ w.addEventListener('load',async()=>{try{
   assert.ok(/^Click the line/.test($('#modalBg .sp-hint').textContent),'the hint says Click');
   const strip=$('#listenStrip');assert.ok(strip&&!strip.closest('.picwrap')&&strip.parentElement.parentElement.classList.contains('modal'),'the strip at the top of the text beside the picture');
   assert.strictEqual(strip.parentElement.firstElementChild,strip);
-  await sleep(300);assert.strictEqual(sp.querySelectorAll('.sp-m.on').length,1,'one move after a tick');
+  await sleep(300);assert.strictEqual(sp.querySelectorAll('.sp-m.on').length,0,'covered until a command');
+  click($('#listenStrip [data-cmd="play"]'));await sleep(300);assert.strictEqual(sp.querySelectorAll('.sp-m.on').length,1,'play moves: one move after a tick');
   rec.say(1,'T',true);assert.strictEqual(title(),'T perm','with no section, a bare letter keeps the window');
   assert.deepStrictEqual($$('#listenModalAsk button').map(b=>b.textContent),['T (chameleon)','T perm'],'and asks');
   rec.say(2,'Sune',true);assert.strictEqual(title(),'Sune','a strong name changes it');assert.ok($('#modalBg .algbig.spoiled'),'covered again');
   const cs=$('#modalBg .algbig .spoil');rec.say(3,'reveal moves',true);assert.strictEqual(cs.querySelectorAll('.sp-m:not(.on)').length,0,'"reveal moves" shows every move');
   rec.say(4,'hide moves',true);assert.strictEqual(cs.querySelectorAll('.sp-m.on').length,0,'"hide moves" covers them again');
+  assert.deepStrictEqual($$('#listenStrip .listen-cmds button').map(b=>b.textContent),['play moves','reveal moves','hide moves'],'the strip shows the commands');
+  click($('#listenStrip [data-cmd="reveal"]'));assert.strictEqual(cs.querySelectorAll('.sp-m:not(.on)').length,0,'and a click on one works');
   $('#modalClose').click();await sleep(20);assert.ok(L.on,'the listening the button began goes on');
   click($('#listenBtn'));assert.ok(!L.on);assert.ok(/^Click to listen/.test(st()));
   // The layout changes: the panel moves to the phone page, and the words say Tap; then back.

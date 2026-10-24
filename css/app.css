@@ -279,6 +279,10 @@ details.fold>summary:hover h3{color:var(--text)}
 .listen-strip.on .listen-dot{background:var(--accent);opacity:1;animation:listenPulse 1.4s ease-in-out infinite}
 @keyframes listenPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.55}}
 .listen-strip .listen-ask{flex:1 0 100%}.listen-strip .listen-ask:empty{display:none}
+/* The commands for the open window, on a line of their own; with Show all moves on there is nothing to hide or reveal. */
+.listen-cmds{flex:1 0 100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12.5px}
+.listen-cmds button{font-size:12.5px;padding:3px 10px}
+.refall .listen-cmds{display:none}
 .listen-ask{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:14px;padding:2px 0}
 .listen-ask button{font-size:13.5px}
 @media (min-width:761px){.modal .listen-strip{margin-right:30px}} /* clear of the window's close button */
