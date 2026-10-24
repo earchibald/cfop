@@ -20,7 +20,7 @@ function twoThumb(cube,mode){
   const col=c=>mode==='oll'?(c===top?stickerColor(top):'var(--sticker-X)'):stickerColor(c);
   const s=18,g=6,o=6,W=2*s+1+2*(o+g+2)+1;
   const grid=(cells,[bk,ft,lf,rt])=>{let out='';const x0=o+g+2;
-    cells.forEach((c,i)=>{out+=`<rect x="${x0+(i%2)*(s+1)}" y="${x0+Math.floor(i/2)*(s+1)}" width="${s}" height="${s}" rx="2" fill="${col(c)}"/>`;});
+    cells.forEach((c,i)=>{const x=x0+(i%2)*(s+1),y=x0+Math.floor(i/2)*(s+1),fill=col(c);out+=`<rect x="${x}" y="${y}" width="${s}" height="${s}" rx="2" fill="${fill}"/>`+(fill==='var(--sticker-X)'?'':stickerLabel(c,x+s/2,y+s/2,0.6*s));});
     bk.forEach((c,k)=>{out+=`<rect x="${x0+k*(s+1)}" y="${o}" width="${s}" height="${g}" rx="1.5" fill="${col(c)}"/>`;});
     ft.forEach((c,k)=>{out+=`<rect x="${x0+k*(s+1)}" y="${x0+2*(s+1)+1}" width="${s}" height="${g}" rx="1.5" fill="${col(c)}"/>`;});
     lf.forEach((c,k)=>{out+=`<rect x="${o}" y="${x0+k*(s+1)}" width="${g}" height="${s}" rx="1.5" fill="${col(c)}"/>`;});
@@ -33,7 +33,7 @@ function twoThumb(cube,mode){
 }
 const twoCaseCube=a=>applyAlg(new Cube(),invertAlg(a.alg));
 function twoModal(a,tab){return {title:(a.group?a.group+' · ':'')+a.name,statusId:a.id,tab,group:{oll:'Ortega OLL',pbl:'Ortega PBL',cll:'CLL'}[twoKindOf(a)],alg:a.alg,recog:a.recog,why:a.why||'',
-  pic:twoThumb(twoCaseCube(a),twoModeOf(a)),setupMoves:removeRotations(parseAlg(invertAlg(a.alg))),noLab:true};}
+  pic:twoThumb(twoCaseCube(a),twoModeOf(a)),play:{start:twoCaseCube(a),moves:parseAlg(a.alg),n:2},setupMoves:removeRotations(parseAlg(invertAlg(a.alg))),noLab:true};}
 
 // ---------- the Solve tab: plans ----------
 const twoPlanState={plan:null};

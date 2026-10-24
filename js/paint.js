@@ -2,12 +2,13 @@
 // A camera-free way to read a cube. See docs/beginner-mode.md and the shared beginner-mode
 // brief for the other modules (learn.js, guide.js, practice.js).
 //
-// The painter holds the cube yellow up, green in front — the held frame, as in
-// js/beginner-ui.js (heldCube()). The held array H uses the engine's index scheme (face
-// order U R F D L B, 9 stickers per face, position 0..8 left to right then top to bottom),
-// but H's "U" face is the yellow face on top, "R" is orange, "F" is green, "D" is white,
-// "L" is red, "B" is blue. heldToEngineFacelets(H) converts H to the engine (white-up,
-// green-front) array that fromFacelets expects.
+// The painter holds the 3×3 the way the solve holds it: the cross color down (paintHold(),
+// crossRotation() in app.js). That is yellow up, green in front for the beginner method, for a
+// white cross and in the lab, as in js/beginner-ui.js (heldCube()). The held array H uses the
+// engine's index scheme (face order U R F D L B, 9 stickers per face, position 0..8 left to
+// right then top to bottom), but H's "U" face is the face on top as held: yellow for z2.
+// heldToEngineFacelets(H) converts H to the engine (white-up, green-front) array that
+// fromFacelets expects.
 //
 // Every string shown in the dialog goes through esc(). The HTML built here is assembled
 // from this module's own fixed labels and color names, never from outside input.
@@ -15,17 +16,19 @@
 // Palette order: white, yellow, green, blue, red, orange. Keys 1-6 pick these in order.
 const PAINT_PALETTE=[{c:0,label:'white'},{c:3,label:'yellow'},{c:2,label:'green'},{c:5,label:'blue'},{c:1,label:'red'},{c:4,label:'orange'}];
 
-let PAINT_PERM=null;
+const PAINT_PERM={};
+// The whole-cube turn from the engine frame to the cube as held. The lab has no cross color: z2.
+function paintHold(){return typeof crossRotation==='function'?crossRotation():'z2';}
 // The held-index -> engine-index map, found by brute force rather than worked out by hand.
 // For 16 random cubes, compare the cube as held (after z2) with the cube as engine. A held
 // position always lands on the same engine position, on every cube, so 16 cubes are enough
 // to pin each one down against the handful of same-color stickers elsewhere on the cube.
 function paintPerm(){
-  if(PAINT_PERM)return PAINT_PERM;
+  const hold=paintHold();if(PAINT_PERM[hold])return PAINT_PERM[hold];
   const trials=[];
   for(let k=0;k<16;k++){
     const c=applyAlg(new Cube(),randomMoveScramble('paint-'+k,25));
-    trials.push({engine:c.toFacelets(),held:applyAlg(c,['z2']).toFacelets()});
+    trials.push({engine:c.toFacelets(),held:(hold?applyAlg(c,parseAlg(hold)):c).toFacelets()});
   }
   const perm=new Array(54).fill(-1);
   for(let h=0;h<54;h++){
@@ -36,7 +39,7 @@ function paintPerm(){
     }
     perm[h]=cand.values().next().value;
   }
-  PAINT_PERM=perm;
+  PAINT_PERM[hold]=perm;
   return perm;
 }
 // H: 54 colors in the held frame (or -1 where not painted yet). Returns the 54 colors
@@ -56,7 +59,9 @@ function paintN(){return puzzleN()===2?4:puzzleN()===4?16:9;}
 // The held centers: always the same six colors, in held-face order, however the cube is
 // scrambled (centers do not move for a face-turn scramble, so this is the held cube's own
 // center row, not a guess at the colors).
-function paintCenters(){return applyAlg(new Cube(),['z2']).center;}
+function paintCenters(){const h=paintHold();return (h?applyAlg(new Cube(),parseAlg(h)):new Cube()).center;}
+// The words for the hold: "yellow up and green in front".
+function paintHoldText(){const c=paintCenters(),N=['white','red','green','yellow','orange','blue'];return `${N[c[0]]} up and ${N[c[2]]} in front`;}
 function paintReset(){
   const n=paintN();const H=new Array(6*n).fill(-1);
   if(n===9){const centers=paintCenters();for(let i=0;i<6;i++)H[9*i+4]=centers[i];}
@@ -65,21 +70,17 @@ function paintReset(){
 function paintTileHTML(i){
   const v=paintH[i];const isCenter=paintN()===9&&i%9===4;
   const bg=v>=0?stickerColor(v):'var(--sticker-X)';
-  return `<button type="button" class="pt-tile${isCenter?' pt-center':''}" data-i="${i}" style="background:${bg}"${isCenter?' disabled aria-label="center, fixed" title="The center: fixed"':' title="Tap to paint this tile with the chosen color"'}></button>`;
+  return `<button type="button" class="pt-tile${isCenter?' pt-center':''}" data-i="${i}" data-cb="${v>=0?COLOR_VARS[v]:''}" style="background:${bg}"${isCenter?' disabled aria-label="center, fixed" title="The center: fixed"':' title="Tap to paint this tile with the chosen color"'}></button>`;
 }
 function paintFaceHTML(face){
   const n=paintN();let out=`<div class="pt-face${n===4?' pt-face2':n===16?' pt-face4':''}" data-face="${face}">`;
   for(let pos=0;pos<n;pos++)out+=paintTileHTML(n*face+pos);
   return out+'</div>';
 }
+// The net in the one layout of the app (NET_POS in js/draw.js): each face goes to its own cell of
+// a four by three grid. The faces are the faces as held.
 function paintNetHTML(){
-  // Held face order U R F D L B. Cross layout: yellow (U) on top, red (L), green (F),
-  // orange (R), blue (B) in the middle row, white (D) on the bottom.
-  return '<div class="pt-net">'+
-    `<span></span><div class="pt-slot">${paintFaceHTML(0)}</div><span></span><span></span>`+
-    `<div class="pt-slot">${paintFaceHTML(4)}</div><div class="pt-slot">${paintFaceHTML(2)}</div><div class="pt-slot">${paintFaceHTML(1)}</div><div class="pt-slot">${paintFaceHTML(5)}</div>`+
-    `<span></span><div class="pt-slot">${paintFaceHTML(3)}</div><span></span><span></span>`+
-  '</div>';
+  return '<div class="pt-net">'+[0,1,2,3,4,5].map(f=>`<div class="pt-slot" style="grid-column:${NET_POS[f][0]+1};grid-row:${NET_POS[f][1]+1}">${paintFaceHTML(f)}</div>`).join('')+'</div>';
 }
 function paintPaletteHTML(){
   return PAINT_PALETTE.map((p,i)=>`<button type="button" class="pt-swatch${p.c===paintColor?' on':''}" data-c="${p.c}" aria-label="${esc(p.label)}" title="${esc(p.label.charAt(0).toUpperCase()+p.label.slice(1))}: key ${i+1}" style="background:${stickerColor(p.c)}"></button>`).join('');
@@ -92,7 +93,7 @@ function paintUpdate(){
 function paintTileClick(e){
   const b=e.target.closest('button[data-i]');if(!b||b.disabled)return;
   const i=+b.dataset.i;paintH[i]=paintColor;
-  b.style.background=stickerColor(paintColor);
+  b.style.background=stickerColor(paintColor);b.dataset.cb=COLOR_VARS[paintColor];
   paintUpdate();
 }
 function paintPaletteClick(e){
@@ -146,7 +147,7 @@ function openPaint(opts){
   bg.innerHTML=`<div class="modal paint" role="dialog" aria-label="Paint my cube">
    <button class="close small ghost" id="paintClose" aria-label="Close" title="Close this window (Esc)">✕</button>
    <h2>Paint my cube</h2>
-   <p class="muted" style="margin-top:0">${paintN()===4?'Hold your cube the way the 3D cube shows: the face on top in the picture is the one on top in your hand. Pick a color, then tap the tiles. Every color is on four tiles.':paintN()===16?'Hold your cube the way the 3D cube shows: the face on top in the picture is the one on top in your hand. Pick a color, then tap the tiles. Every color is on sixteen tiles.':'Hold your cube with yellow up and green in front, like the 3D cube. Pick a color, then tap the tiles. The centers are fixed.'}</p>
+   <p class="muted" style="margin-top:0">${paintN()===4?'Hold your cube the way the 3D cube shows: the face on top in the picture is the one on top in your hand. Pick a color, then tap the tiles. Every color is on four tiles.':paintN()===16?'Hold your cube the way the 3D cube shows: the face on top in the picture is the one on top in your hand. Pick a color, then tap the tiles. Every color is on sixteen tiles.':`Hold your cube with ${paintHoldText()}. Pick a color, then tap the tiles. The centers are fixed.`}</p>
    <div class="pt-body">
     <div id="paintNet">${paintNetHTML()}</div>
     <div class="pt-side">

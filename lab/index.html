@@ -138,6 +138,13 @@ aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-
 .pt-swatch{width:36px;height:36px;border-radius:8px;border:2px solid var(--line);padding:0;cursor:pointer}.pt-swatch.on{border-color:var(--text);border-width:3px}
 .pt-count{font-size:14px}
 [hidden]{display:none!important}
+/* Color Blind Assist, as on the site (cw:cba): a letter on each sticker */
+.cbl{display:none;pointer-events:none;font-family:ui-monospace,monospace;font-weight:700}
+body.cba .cbl{display:inline}
+.cbl.cb-W,.cbl.cb-Y,.cbl.cb-O,.cbl.cb-G{fill:#15161a}.cbl.cb-R,.cbl.cb-B{fill:#fff}
+body.cba .pt-tile[data-cb]:not([data-cb=""])::after{content:attr(data-cb);font:700 12px/1 ui-monospace,monospace;color:#15161a}
+body.cba .pt-tile[data-cb="R"]::after,body.cba .pt-tile[data-cb="B"]::after{color:#fff}
+body.cba .pt-tile{display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>

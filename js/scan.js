@@ -588,7 +588,6 @@ function scanUse(how){
 // The net: U on top, L F R B across, D below. Before all six faces fit, each face shows as read:
 // at its center's side on the 3x3, in the order read otherwise. Once the cube fits (or is found),
 // the net shows the cube itself, so a repaired sticker shows repaired.
-const NET_POS=[[1,0],[2,1],[1,1],[1,2],[0,1],[3,1]];
 function netSlot(slot){
   let id,k=0;
   if(scanRes&&scanRes.ok){const s=scanRes.slots?scanRes.slots[slot]:{id:slot,k:0};if(!s)return null;id=s.id;k=s.k;}
@@ -601,13 +600,15 @@ function drawNet(){
   const el=$('#scanNet');if(!el)return;
   const n=scanN,s=Math.round((70-(n-1)*2)/n),g=2,fw=n*s+(n-1)*g+6;
   let out=`<svg viewBox="0 0 ${4*fw} ${3*fw}" role="img" aria-label="${scanResync?'The cube the guide expects, and the faces read':'Scanned faces'}">`;
+  // The places come from netCells in js/draw.js, the one net layout of the app.
+  const cells=netCells(n,{tile:s,gap:g,pad:3});
   for(let slot=0;slot<6;slot++){
-    const [fx,fy]=NET_POS[slot],nf=netSlot(slot),ox=fx*fw+3,oy=fy*fw+3;
+    const nf=netSlot(slot);
     out+=`<g data-slot="${slot}"${nf?` data-id="${nf.id}"`:''}${nf&&!nf.given?' class="expect"':''}>`;
-    for(let p=0;p<n*n;p++){
-      const x=ox+(p%n)*(s+g),y=oy+Math.floor(p/n)*(s+g),center=n===3&&p===4;
-      const col=nf?stickerColor(nf.stickers[p]):center?stickerColor(slot):'var(--panel2)';
-      out+=`<rect${nf?` data-id="${nf.id}" data-pos="${p}"`:''} x="${x}" y="${y}" width="${s}" height="${s}" rx="3" fill="${col}" stroke="${nf&&nf.pinned[p]?'var(--accent)':'var(--sticker-line,#111)'}" stroke-width="${nf&&nf.pinned[p]?2.5:1}" style="${nf&&!center?'cursor:pointer':''}"${nf?(center?' title="The center: fixed"':` title="Click to paint this sticker ${SCAN_PALETTE.find(q=>q.c===scanColor).label}"`):''}/>`;
+    for(const {p,x,y} of cells.filter(c=>c.f===slot)){
+      const center=n===3&&p===4,ci=nf?nf.stickers[p]:center?slot:-1;
+      const attrs=`${nf?`data-id="${nf.id}" data-pos="${p}" `:''}rx="3" stroke="${nf&&nf.pinned[p]?'var(--accent)':'var(--sticker-line,#111)'}" stroke-width="${nf&&nf.pinned[p]?2.5:1}" style="${nf&&!center?'cursor:pointer':''}"${nf?(center?' title="The center: fixed"':` title="Click to paint this sticker ${SCAN_PALETTE.find(q=>q.c===scanColor).label}"`):''}`;
+      out+=ci<0?`<rect x="${x}" y="${y}" width="${s}" height="${s}" fill="var(--panel2)" ${attrs}/>`:netRect(ci,x,y,s,s,attrs);
     }
     out+='</g>';
   }
