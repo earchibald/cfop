@@ -639,7 +639,7 @@ function cycleText(alg){const an=analyzeAlg(alg);const parts=[];
 // algorithm follows the Reference spoiler rule (spoilAlg): the first move in clear, a bar on each move after it, a tap
 // on the line reveals the next move, the button the rest, and Show all moves uncovers it. On the desktop the window
 // shows the whole algorithm with its triggers boxed, as the Reference list behind it already covers the moves.
-function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why, setupMoves (engine frame, from solved), kind:'ll'|'f2l'|'pll'}
+function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why, setupMoves (engine frame, from solved), kind:'ll'|'f2l'|'pll', spoil: the algorithm covered on the desktop too (Listen)}
   closeModal();const {an,text}=cycleText(o.alg);
   const bg=document.createElement('div');bg.className='modal-bg case-bg';bg.id='modalBg';
   // On a phone the window is a sheet under a strip of scrim. The strip, the X and the Close bar close it; a tap on the
@@ -649,7 +649,7 @@ function openCaseModal(o){ // o: {title, group, alg, pic (svg html), recog, why,
     <div>
       <div class="row"><span class="tag">${esc(o.group)}</span><span class="tag">${an.moveCount} moves</span><span class="tag">repeat ${an.order}× to return</span></div>
       <h2 style="margin-top:6px">${esc(o.title)}</h2>
-      ${mobileMQ.matches?`<div class="algbig spoiled">${spoilAlg(o.alg)}</div><div class="muted sp-hint">Tap the line for the next move. Show all moves on the Reference page uncovers every algorithm.</div>`:`<div class="algbig">${trigSpans(o.alg)}</div>`}
+      ${mobileMQ.matches||o.spoil?`<div class="algbig spoiled">${spoilAlg(o.alg)}</div><div class="muted sp-hint">${mobileMQ.matches?'Tap':'Click'} the line for the next move. Show all moves on the Reference page uncovers every algorithm.</div>`:`<div class="algbig">${trigSpans(o.alg)}</div>`}
       ${o.recog?`<div class="sec"><b>Recognize</b>${esc(o.recog)}</div>`:''}
       ${o.why?`<div class="sec"><b>Why it works</b>${esc(o.why)}</div>`:''}
       ${o.statusId?`<div class="sec"><b>Status</b>${stBtn(o.statusId)}</div>`:''}
