@@ -31,6 +31,12 @@ drag the cube or switch to the net.
   and shrinks the cube so the faces fit the box.
 - A **Hidden faces** chip on the player cube, above Animate. Off by default,
   saved in `cw:hidden`. Only in the 3D view.
+- The smart cube pictures follow the same setting. The smart cube window
+  (`cubetab.js`) has a **Hidden faces** button under Clear moves; the lab has a
+  **Hidden faces** box in its bar (H). Both read and write `cw:hidden`. The
+  faces turn with the hold and the tilt (`rot`), so the mirror always shows the
+  faces turned away from the user. In the lab, straight on, the back face sits
+  behind the front: turn Isometric on, or tilt the cube.
 
 ## 4. A flat diagram for F2L
 

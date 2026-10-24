@@ -94,7 +94,7 @@
 // smartBatteryDraw), and the log notes each change.
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,patOpen:{},
-  q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,view:{yaw:0,pitch:0},drag:null,
+  q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,hidden:false,view:{yaw:0,pitch:0},drag:null,
   battLogged:null,holdSrc:'load',busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,f2l:null,f2lPos:null,winTop:'pat',copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200,LAB_CROSS_MAX=7,LAB_SOLS_SHOWN=3;
 const LAB_PAT_STEPS={eo:'OLL edges',co:'OLL corners',cp:'PLL corners',ep:'PLL edges'};
@@ -171,7 +171,8 @@ function labVersion(){
 // A drag on the picture spins the view, as on the site's cube: lab.view is the drag's offset over
 // the camera, pitch held within 80 degrees of level. A double click or the Isometric box puts it back.
 function labDraw(){
-  const cam=lab.iso?LAB_ISO:LAB_FLAT,svg=$('#cube'),a=lab.anim,o={n:3,scale:60,cx:200,cy:185,yaw:cam.yaw+lab.view.yaw,pitch:Math.max(-80,Math.min(80,cam.pitch+lab.view.pitch))};
+  const cam=lab.iso?LAB_ISO:LAB_FLAT,svg=$('#cube'),a=lab.anim,o={n:3,scale:lab.hidden?46:60,cx:200,cy:185,yaw:cam.yaw+lab.view.yaw,pitch:Math.max(-80,Math.min(80,cam.pitch+lab.view.pitch))};
+  if(lab.hidden)o.hidden=true;
   o.rot=quatMat(lab.q||lab.hold.q);
   if(a&&a.t<1)svg.innerHTML=renderCube3D(a.from.toFacelets(),Object.assign(o,{move:a.move,t:Math.max(a.t,0.01)}));
   else{const f=lab.shown?lab.shown.toFacelets():Array.from({length:54},(_,i)=>i%9===4?(i-4)/9:-1);svg.innerHTML=renderCube3D(f,o);}
@@ -256,6 +257,10 @@ function labMovesLast(){
 function labIso(on){lab.iso=!!on;$('#iso').checked=lab.iso;try{localStorage.setItem('cw:labIso',lab.iso?'1':'');}catch(e){}lab.view={yaw:0,pitch:0};labDraw();}
 // Color Blind Assist: the site's setting (cw:cba) shows a letter on each sticker here too.
 try{document.body.classList.toggle('cba',localStorage.getItem('cw:cba')==='true');}catch(e){}
+// Hidden faces (H): the faces turned away from the user, as in a mirror behind the cube, as on the
+// site. One setting with the site's: cw:hidden, as JSON.
+function labHidden(on){lab.hidden=!!on;$('#hiddenFaces').checked=lab.hidden;try{localStorage.setItem('cw:hidden',JSON.stringify(lab.hidden));}catch(e){}labDraw();}
+function labHiddenLoad(){try{return JSON.parse(localStorage.getItem('cw:hidden')||'false')===true;}catch(e){return false;}}
 function labIsoLoad(){try{return !!localStorage.getItem('cw:labIso');}catch(e){return false;}}
 // Turn with the tilt: the turn detector feeds only while the box is on. Kept in cw:labTurn.
 function labTurnOn(on){on=!!on;$('#turnOn').checked=on;try{localStorage.setItem('cw:labTurn',on?'1':'');}catch(e){}labLog('hold',on?'Turn with the tilt: on. A turn of the whole cube that rests near another hold moves the hold.':'Turn with the tilt: off. The hold moves only from the bar.');labBlur();}
@@ -1033,6 +1038,7 @@ function labKeys(e){
   if(k==='l'){e.preventDefault();labSide($('#side').hidden);}
   if(k==='c'){e.preventDefault();if(e.shiftKey)labMovesLast();else labClear();}
   if(k==='i'){e.preventDefault();labIso(!lab.iso);}
+  if(k==='h'){e.preventDefault();labHidden(!lab.hidden);}
 }
 // Clear all (C): the moves and the log. Clear moves in the box empties the moves alone, and Clear
 // last (Shift+C) takes the last move off.
@@ -1178,7 +1184,8 @@ function labDisconnect(){
 function labStart(){
   lab.det=smackDetector({});lab.turn=turnDetector({});lab.twist=twistDetector({});
   labSetHold(labHoldLoad(),'load');$('#holdUp').onchange=labHoldPick;$('#holdFront').onchange=labHoldPick;
-  lab.iso=labIsoLoad();$('#iso').checked=lab.iso;$('#iso').onchange=e=>labIso(e.target.checked);labViewDrag();
+  lab.iso=labIsoLoad();$('#iso').checked=lab.iso;$('#iso').onchange=e=>labIso(e.target.checked);
+  lab.hidden=labHiddenLoad();$('#hiddenFaces').checked=lab.hidden;$('#hiddenFaces').onchange=e=>labHidden(e.target.checked);labViewDrag();
   $('#turnOn').checked=labTurnLoad();$('#turnOn').onchange=e=>labTurnOn(e.target.checked);
   labKnobs();labMovesDraw();labDraw();labButtons();
   $('#connect').onclick=labConnect;$('#disconnect').onclick=labDisconnect;$('#reset').onclick=labReset;$('#solved').onclick=labSolved;$('#scan').onclick=labRead;$('#paint').onclick=labPaint;$('#clear').onclick=labClear;$('#movesClear').onclick=labMovesClear;$('#movesLast').onclick=labMovesLast;

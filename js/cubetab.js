@@ -97,7 +97,7 @@ function cubeTabOpen(){
    <div class="cw-warn hidden" id="cubeWinWarn" role="status"><span class="txt"></span><span class="btns"><button class="small" id="cubeWinMatch" title="Turn the hold to match the cube. The turn goes on the list">Read as held</button><button class="small ghost" id="cubeWinKeep" title="The cube did not turn: line the picture up with the hold again.">Keep this hold</button></span></div>
    <div class="cw-turns" id="cubeWinTurns" role="group" aria-label="Turn the whole cube"><span class="lbl" title="Turned the cube in your hands? Press the same turn here, so the picture, the moves and the stage read as you hold it.">Turn the cube</span></div>
    <div class="cw-moves" id="cubeWinMoves" aria-label="Your last moves"></div>
-   <div class="cw-row" id="cubeWinView"><div class="cw-side"><button class="small ghost hidden" id="cubeWinReset" title="Line the picture up with the cube in your hands">Reset view</button><button class="small ghost" id="cubeWinClear" title="Empty the list of moves under the picture">Clear moves</button></div></div>
+   <div class="cw-row" id="cubeWinView"><div class="cw-side"><button class="small ghost hidden" id="cubeWinReset" title="Line the picture up with the cube in your hands">Reset view</button><button class="small ghost" id="cubeWinClear" title="Empty the list of moves under the picture">Clear moves</button><button class="small ghost" id="cubeWinHidden" aria-pressed="false" title="Show the hidden faces: the faces turned away from you, as in a mirror behind the cube">Hidden faces</button></div></div>
    <p class="muted cw-note" id="cubeWinNote"></p>
    <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect" title="Open the Smart cube window and connect the cube again">Connect again</button></div>`;
   document.body.appendChild(w);
@@ -110,6 +110,7 @@ function cubeTabOpen(){
   $('#cubeWinClose').onclick=cubeTabClose;
   $('#cubeWinConnect').onclick=()=>{cubeTabClose();openSmart();};
   $('#cubeWinClear').onclick=()=>{cubeTab.moves=[];cubeTabMovesDraw();};
+  $('#cubeWinHidden').onclick=()=>setHidden(!hiddenOn());
   $('#cubeWinMatch').onclick=cubeTabMatch;$('#cubeWinKeep').onclick=cubeTabKeep;$('#cubeWinReset').onclick=cubeTabKeep;
   document.addEventListener('keydown',cubeTabKeys,true);
   cubeTabDrag(w);
@@ -170,6 +171,7 @@ function cubeTabWindow(){
   $$('#cubeWinTurns button').forEach(b=>{b.disabled=off;});
   const reset=$('#cubeWinReset');reset.classList.toggle('hidden',!cubeTab.gyro);reset.disabled=off;
   reset.title=`Hold the cube with ${cubeTabHoldWords(cubeTab.hold)}, then press. The picture lines up with your cube.`;
+  $('#cubeWinHidden').setAttribute('aria-pressed',String(hiddenOn()));
   cubeTabWarnDraw();
   cubeTabMovesDraw();
   cubeTabStageDraw();
@@ -214,12 +216,21 @@ function cubeTabMovesDraw(){
   }
 }
 // The picture: the cube as the cube names it, turned by the hold (`rot`), seen from the fixed camera.
+// With Hidden faces (cw:hidden, the site's setting) the faces turned away show as in a mirror
+// behind the cube, and the cube draws smaller so they fit.
 function cubeTabDraw(){
   const svg=$('#cubeWinSvg');if(!svg)return;
   const a=cubeTab.anim,o={yaw:cubeTab.yaw,pitch:cubeTab.pitch,n:3};
+  if(hiddenOn())Object.assign(o,{hidden:true,scale:40});
   if(cubeTab.q)o.rot=quatMat(cubeTab.q);
   if(a&&a.t<1)svg.innerHTML=renderCube3D(a.from.toFacelets(),Object.assign(o,{move:a.move,t:Math.max(a.t,0.01)}));
   else{const f=cubeTab.shown?cubeTab.shown.toFacelets():Array.from({length:54},(_,i)=>i%9===4?(i-4)/9:-1);svg.innerHTML=renderCube3D(f,o);}
+}
+// The Hidden faces button and the picture, after a change of the setting here or on the site.
+function cubeTabHiddenDraw(){
+  const b=$('#cubeWinHidden');if(!b)return;
+  b.setAttribute('aria-pressed',String(hiddenOn()));
+  cubeTabDraw();
 }
 // ----- live: a turn asks the cube for its state, the state turns the layer -----
 // One request at a time. A turn during a request marks `want`, and the answer asks again, so the

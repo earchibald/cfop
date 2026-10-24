@@ -50,7 +50,8 @@ function drawDragHint(){const h=$('#dragHint');if(h)h.classList.toggle('hidden',
 // Hidden faces (cw:hidden, off by default): the back, left and bottom drawn as in a mirror behind the
 // cube (hiddenFacePolys in js/draw.js). The cube draws smaller so the faces fit the box.
 function hiddenOn(){return !!store.get('hidden',false);}
-function setHidden(on){store.set('hidden',!!on);drawMain();}
+// The smart cube window (js/cubetab.js) follows the same setting.
+function setHidden(on){store.set('hidden',!!on);drawMain();if(typeof cubeTabHiddenDraw==='function')cubeTabHiddenDraw();}
 function view3D(){return hiddenOn()?{yaw:view.yaw,pitch:view.pitch,hidden:true,scale:40}:{yaw:view.yaw,pitch:view.pitch};}
 function drawMain(){
   const f=displayedCube.toFacelets();const svg=$('#cube');

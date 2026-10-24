@@ -122,6 +122,11 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.ok(!$('#cubeWinFollow')&&!$('#cubeWinHome')&&!$('#cubeWinIso'),'no tilt controls');
   assert.ok(!ev('cubeTab.hold')&&!ev('cubeTab.q'),'held as the cube names its faces until a press');
   assert.ok(same(winPolys(),fixed(c6)),'the fixed view');
+  // Hidden faces: the site's setting (cw:hidden) and a button in the window; both draw the mirror faces
+  {const hb=$('#cubeWinHidden'),n0=winPolys().length;assert.ok(hb&&hb.getAttribute('aria-pressed')==='false','Hidden faces is off');
+    click(hb);assert.strictEqual(hb.getAttribute('aria-pressed'),'true','the button turns it on');assert.strictEqual(w.localStorage.getItem('cw:hidden'),'true','one setting with the site');
+    assert.ok(same(winPolys(),fixed(c6,{hidden:true,scale:40})),'the faces turned away show behind the cube');assert.strictEqual(winPolys().length-n0,27);
+    w.setHidden(false);assert.strictEqual(hb.getAttribute('aria-pressed'),'false','the site\'s button turns it off here too');assert.ok(same(winPolys(),fixed(c6)),'the fixed view again');}
   assert.ok(/press the same turn/.test($('#cubeWinNote').textContent),'the note says to press the turns');
   assert.ok($('#cubeWinWarn').classList.contains('hidden')&&$('#cubeWinWarn').previousElementSibling===$('#cubeWinSvg'),'the band under the picture is hidden until the cube is held unlike the hold');
   assert.ok(!ev('cubeTab.gyro'),'no tilt yet: a press turns the picture');
@@ -264,12 +269,15 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.strictEqual(stMoves().join(''),'•'.repeat(st.moves.length),'every move hidden at first: '+stMoves().join(' '));
   assert.ok(st.moves.length>=8,'z2 and the seven moves of Sune');
   // The cube sends its state again with no turn (a real cube does, on its own): the stage does not
-  // fade, and the reveals go on. One move shows every revealMs.
+  // fade, and the reveals go on. One move shows every revealMs: longer here, so a slow machine does
+  // not show the second move before the check of the first.
+  ev('cubeTab.revealMs=500');
   for(let i=0;i<3;i++){dev.notify(stateMsg(4,cube,200+i));await sleep(25);}
   assert.ok(!stage().classList.contains('stale'),'a state read again with no turn does not fade the stage');
   assert.ok(await until(()=>stMoves()[0]==='z2',600),'the first move shows: '+stMoves().join(' '));assert.strictEqual(stMoves()[1],'•');
   assert.ok($('#cubeWinStage .mv.rot'),'a turn of the cube is marked');
-  assert.ok(await until(()=>stMoves()[1]!=='•',600),'then the second');
+  assert.ok(await until(()=>stMoves()[1]!=='•',1200),'then the second');
+  ev('cubeTab.revealMs=120');
   // The cube turned over in the hands, z pressed twice: the hold is z2, the turn goes on the list,
   // and the z2 of the case is done.
   click($('#cubeWinClear'));

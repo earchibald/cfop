@@ -146,6 +146,13 @@ async function page(){
     cube.dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));assert.strictEqual(JSON.stringify(L().view),'{"yaw":0,"pitch":0}','a double click puts the view back');assert.strictEqual($$('#cube polygon').length,flat,'one face again after the double click');
     cube.dispatchEvent(pev('pointerdown',100,100));cube.dispatchEvent(pev('pointermove',100,400));cube.dispatchEvent(pev('pointerup',100,400));assert.strictEqual(L().view.pitch,150,'the offset is kept as dragged');
     key('i');assert.strictEqual(JSON.stringify(L().view),'{"yaw":0,"pitch":0}','the Isometric box puts the view back');key('i');assert.ok(!L().iso,'off again');}
+  // Hidden faces (H): the faces turned away, as in a mirror behind the cube, one setting with the site's (cw:hidden)
+  {assert.ok(!L().hidden&&!$('#hiddenFaces').checked,'off by default');key('i');const iso=$$('#cube polygon').length;
+    key('h');assert.ok(L().hidden&&$('#hiddenFaces').checked,'H turns Hidden faces on');assert.strictEqual(w.localStorage.getItem('cw:hidden'),'true','kept as the site keeps it');
+    assert.strictEqual($$('#cube polygon').length-iso,27,'three hidden faces show: '+iso+' -> '+$$('#cube polygon').length);
+    assert.ok($$('#cube polygon').slice(0,27).every(p=>p.getAttribute('opacity')==='0.6'),'drawn first, faded, behind the cube');
+    $('#hiddenFaces').checked=false;$('#hiddenFaces').dispatchEvent(new w.Event('change',{bubbles:true}));assert.ok(!L().hidden,'the box turns it off');
+    assert.strictEqual(w.localStorage.getItem('cw:hidden'),'false');assert.strictEqual($$('#cube polygon').length,iso,'no hidden faces');key('i');}
   // the lab opens as if Connect were pressed: the list is up with no click
   assert.ok(!$('#list').hidden,'the list shows by itself');assert.ok(/Looking for cubes|Choose your cube/.test($('#listNote').textContent),'the note: '+$('#listNote').textContent);
   assert.ok(/remembers it/.test($('#status').textContent),'the status says the lab remembers the cube: '+$('#status').textContent);
