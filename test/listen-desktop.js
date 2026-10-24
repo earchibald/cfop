@@ -53,11 +53,13 @@ w.addEventListener('load',async()=>{try{
   rec.say(1,'T',true);assert.strictEqual(title(),'T perm','with no section, a bare letter keeps the window');
   assert.deepStrictEqual($$('#listenModalAsk button').map(b=>b.textContent),['T (chameleon)','T perm'],'and asks');
   rec.say(2,'Sune',true);assert.strictEqual(title(),'Sune','a strong name changes it');assert.ok($('#modalBg .algbig.spoiled'),'covered again');
+  const cs=$('#modalBg .algbig .spoil');rec.say(3,'reveal moves',true);assert.strictEqual(cs.querySelectorAll('.sp-m:not(.on)').length,0,'"reveal moves" shows every move');
+  rec.say(4,'hide moves',true);assert.strictEqual(cs.querySelectorAll('.sp-m.on').length,0,'"hide moves" covers them again');
   $('#modalClose').click();await sleep(20);assert.ok(L.on,'the listening the button began goes on');
   click($('#listenBtn'));assert.ok(!L.on);assert.ok(/^Click to listen/.test(st()));
   // The layout changes: the panel moves to the phone page, and the words say Tap; then back.
   flip(true);assert.strictEqual($('#refMobile > .panel').nextElementSibling.id,'listenPanel','the panel under the phone heading');assert.ok(/^Tap to listen/.test(st()),'the words say Tap');
   flip(false);assert.strictEqual($('#refDesktop > .panel').nextElementSibling.id,'listenPanel','and back');assert.ok(/^Click to listen/.test(st()));
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('listen-desktop: the panel, the names, a click uncovered, the section, a name covered with the strip, one move a tick, weak and strong, the layout change ok');process.exit(0);
+  console.log('listen-desktop: the panel, the names, a click uncovered, the section, a name covered with the strip, one move a tick, weak and strong, reveal and hide, the layout change ok');process.exit(0);
 }catch(e){console.error('listen-desktop: FAIL',e.message,errs);process.exit(1);}});

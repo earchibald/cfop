@@ -7,7 +7,8 @@
 // opens it, and its covered moves uncover one per second. A tap on the line uncovers the next move at
 // once. The window keeps listening: the next name swaps it for that case; the same name again plays the
 // reveal again; Close ends the listening a hold began. A strip at the top of the window says what was
-// heard, asks between close cases and carries Not this.
+// heard, asks between close cases and carries Not this. Two commands override the reveal in the open window:
+// "reveal moves" uncovers every move at once, "hide moves" covers them all again (listenCommand, listenMoves).
 //
 // The recognizer is a dictation model: it cannot be told the case names, so it hears "tea perm",
 // "soon", "you be perm" and "all" for OLL. The matcher reads a sentence in three parts: an anchor word
@@ -27,7 +28,7 @@
 // Each row of the Reference (both layouts) carries the shortest name that works ("Say: T perm"). Chrome with
 // on-device recognition is told every name as a phrase to favor (SpeechRecognitionPhrase).
 //
-// Pure (no DOM): listenCatalog, listenNormalize, listenKey, listenTokens, listenParse, listenRank, listenDecide,
+// Pure (no DOM): listenCommand, listenCatalog, listenNormalize, listenKey, listenTokens, listenParse, listenRank, listenDecide,
 // listenMatch, listenPick, listenFresh.
 
 // The words a recognizer gives for a letter said alone (the spelling alphabet counts too), and the
@@ -220,6 +221,15 @@ function listenPick(text,choices){const p=listenParse(text);
   if(!p.name.length)return null;
   const d=listenDecide(listenRank(text,choices,null));return d&&d.hit||null;}
 
+// A command for the open case window, said alone: 'reveal' ("reveal moves", "reveal all", "show all the
+// moves", "uncover"), 'hide' ("hide moves", "hide", "cover them up"), or null. Only a sentence that is the
+// command counts, so "hide and seek" in talk does nothing.
+function listenCommand(text){const t=String(text).toLowerCase().replace(/[’']/g,'').replace(/[^a-z ]+/g,' ').split(/\s+/)
+    .filter(w=>w&&!/^(please|the|me|now|them|it|its|ok|okay|of|those|these|again)$/.test(w)).join(' ');
+  if(/^(reveal|uncover)( all)?( moves?| algorithm| alg)?$/.test(t)||/^(show|open)( all( moves?| algorithm| alg)?| moves?)$/.test(t))return 'reveal';
+  if(/^(hide|cover)( all)?( moves?| algorithm| alg)?( up)?$/.test(t))return 'hide';
+  return null;}
+
 // ----- the microphone and the card -----
 // card: the listening began for the window and ends with it. wantCard: a hold found a case; listen on when it ends.
 const LISTEN={on:false,hold:false,card:false,wantCard:false,rec:null,entry:null,timer:null,ms:1000,wake:null,catalog:null,choices:null,last:null,local:false,section:undefined,used:{},pend:null};
@@ -251,6 +261,16 @@ function listenSwapOut(){const b=document.getElementById('modalBg');if(!b)return
 function listenReveal(){clearTimeout(LISTEN.timer);const s=document.querySelector('#modalBg .algbig .spoil');
   if(!s||document.body.classList.contains('refall')||!s.querySelector('.sp-m:not(.on)'))return;
   LISTEN.timer=setTimeout(()=>{const t=document.querySelector('#modalBg .algbig .spoil');if(t===s&&s.querySelector('.sp-m:not(.on)'))spoilStep(s);listenReveal();},LISTEN.ms);}
+// The commands: 'reveal' uncovers every move of the open window at once, 'hide' covers them all again. Either
+// stops the reveal one move per second; after hide, a tap on the line still uncovers the next move. The next
+// case opens with the reveal again.
+function listenMoves(cmd){const pre=listenPre(),s=document.querySelector('#modalBg .algbig .spoil');
+  if(!document.getElementById('modalBg')){listenState(pre+`Say a case name first, then "${cmd} moves".`);return;}
+  if(!s){listenState(pre+'This window shows every move.');return;}
+  clearTimeout(LISTEN.timer);
+  if(cmd==='hide'&&document.body.classList.contains('refall')){listenState(pre+'Show all moves is on. Turn it off on the Reference page to hide the moves.');return;}
+  if(cmd==='reveal'){s.querySelectorAll('.sp-m:not(.on)').forEach(m=>m.classList.add('on'));spoilSync(s);listenState(pre+'All moves shown.');}
+  else{spoilReset(s);listenState(pre+'Moves hidden. Say "reveal moves", or tap the line for the next move.');}}
 // The window covers the algorithm on both layouts, for the reveal.
 function listenOpen(e){const o=e.kind==='ll'?modalForLL(LL_ALL.find(a=>a.id===e.id)):e.kind==='pll'?modalForPLL(PLL_FULL.find(p=>p.name===e.id)):modalForF2L(F2L_CASES.find(f=>f.n===+e.id));o.spoil=true;openCaseModal(o);}
 // The choices as chips, in the window's strip while a window is open, else in the panel. A tap picks one; so does the next sentence, through listenPick.
@@ -272,17 +292,19 @@ function listenState(msg,heard){$('#listenState').textContent=msg;$('#listenHear
 // What the phone heard and what came of it, kept for tuning: cw:listenLog, the last 200.
 function listenLogAdd(o){const log=store.get('listenLog',[]);log.push({t:Date.now(),...o});while(log.length>200)log.shift();store.set('listenLog',log);}
 function listenLogMark(){const log=store.get('listenLog',[]);if(!log.length)return;log[log.length-1].wrong=true;store.set('listenLog',log);}
-function listenLogText(){return store.get('listenLog',[]).map(o=>`${new Date(o.t).toISOString()}\t${(o.heard||[]).join(' | ')}\t${o.hit?'shown '+o.hit:o.picked?'picked '+o.picked:o.choices?'asked '+o.choices.join(', '):'none'}${o.early?'\tearly':''}${o.wrong?'\tWRONG':''}`).join('\n');}
+function listenLogText(){return store.get('listenLog',[]).map(o=>`${new Date(o.t).toISOString()}\t${(o.heard||[]).join(' | ')}\t${o.command?'command '+o.command:o.hit?'shown '+o.hit:o.picked?'picked '+o.picked:o.choices?'asked '+o.choices.join(', '):'none'}${o.early?'\tearly':''}${o.wrong?'\tWRONG':''}`).join('\n');}
 function listenLogClear(){store.set('listenLog',[]);}
-// What a sentence (with the recognizer's alternatives) asks for: {pick} from the choices on the screen,
-// or listenDecide's {hit, strong, choices, ranked}, or {} for nothing.
+// What a sentence (with the recognizer's alternatives) asks for: a {command} for the open window, {pick} from
+// the choices on the screen, or listenDecide's {hit, strong, choices, ranked}, or {} for nothing.
 function listenAction(alts){LISTEN.catalog=LISTEN.catalog||listenCatalog();
+  for(const a of alts){const c=listenCommand(a);if(c)return {command:c};}
   if(LISTEN.choices){for(const a of alts){const c=listenPick(a,LISTEN.choices);if(c)return {pick:c};}}
   return listenDecide(listenRankAll(alts,LISTEN.catalog,listenSection()))||{};}
 // Do what a sentence asks for. A sure winner shows. A weak one (a letter or a number said alone) does not
 // change an open window: it asks, and the same name again shows it. Close scores ask. Early: an early
 // result acts only for a pick or a strong name, and says nothing else. The case shown, or null.
 function listenDo(a,alts,early){const pre=listenPre(),ex=early?{early:true}:{}; // listenShow may start the listening: the word comes after it
+  if(a.command){listenLogAdd({heard:alts,command:a.command,...ex});listenMoves(a.command);return null;}
   if(a.pick){listenLogAdd({heard:alts,picked:a.pick.id,...ex});listenShow(a.pick);listenState(listenPre()+'Heard '+a.pick.name+'.');return a.pick;}
   const again=a.hit&&LISTEN.choices&&LISTEN.choices.length===1&&LISTEN.choices[0]===a.hit;
   if(a.hit&&(a.strong||again||(!early&&!listenStrip()))){LISTEN.last={heard:alts,ranked:a.ranked};listenLogAdd({heard:alts,hit:a.hit.id,...ex});listenShow(a.hit);listenState(listenPre()+'Heard '+a.hit.name+'.');return a.hit;}
@@ -312,16 +334,17 @@ function listenResult(ev){
     let a=listenAction(fresh),said=fresh;
     if(u.text&&!a.pick&&!a.hit){const both=fresh.map(f=>u.text+' '+f),b=listenAction(both);if(b.hit&&b.strong&&b.hit!==u.entry){a=b;said=both;}}
     if(!r.isFinal){listenState(listenPre()+'Heard so far.','Heard: '+fresh[0]);
-      const key=a.pick?'p:'+a.pick.id:a.hit&&a.strong?'h:'+a.hit.kind+':'+a.hit.id:null;
+      const key=a.command?'c:'+a.command:a.pick?'p:'+a.pick.id:a.hit&&a.strong?'h:'+a.hit.kind+':'+a.hit.id:null;
       const ready=key&&LISTEN.pend&&LISTEN.pend.i===i&&LISTEN.pend.key===key;LISTEN.pend=key&&!ready?{i,key}:null;
       if(!ready)continue;}
-    else{LISTEN.pend=null;if(u.entry&&!a.pick&&!a.hit)continue;} // the rest of a sentence that named a case: talk
-    const e=listenDo(a,said,!r.isFinal);
-    if(e)LISTEN.used[i]={n:alts[0].split(/\s+/).filter(Boolean).length,text:said[0],entry:e};}}
+    else{LISTEN.pend=null;if(u.entry&&!a.command&&!a.pick&&!a.hit)continue;} // the rest of a sentence that named a case: talk
+    const e=listenDo(a,said,!r.isFinal),n=alts[0].split(/\s+/).filter(Boolean).length;
+    if(e)LISTEN.used[i]={n,text:said[0],entry:e};else if(a.command)LISTEN.used[i]={n,text:'',entry:u.entry||null};}}
 // Chrome with on-device recognition takes the names as phrases to favor. Safari and Android take none.
 function listenBias(rec){if(!LISTEN.local||typeof window.SpeechRecognitionPhrase!=='function'||!('phrases' in rec))return;
   try{LISTEN.catalog=LISTEN.catalog||listenCatalog();const ph=[];
     for(const c of LISTEN.catalog){if(c.set==='f2l')continue;for(const s of c.say)ph.push(new SpeechRecognitionPhrase(c.set==='pll'?s+' perm':s,3));}
+    for(const s of ['reveal moves','hide moves'])ph.push(new SpeechRecognitionPhrase(s,3));
     rec.processLocally=true;rec.phrases=ph;}catch(e){}}
 function listenButton(){const b=$('#listenBtn');b.textContent=LISTEN.on?'Stop':LISTEN.hold?'Let go when done':'Listen';b.classList.toggle('on',LISTEN.on||LISTEN.hold);b.setAttribute('aria-pressed',LISTEN.on?'true':'false');
   const s=listenStrip();if(s)s.classList.toggle('on',LISTEN.on);}
@@ -344,7 +367,7 @@ function listenStart(once,card){
   if(!once&&navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{LISTEN.wake=l;}).catch(()=>{}); // keep the screen on while it listens
 }
 // The words under the button at rest. In a noisy room a hold is best: the microphone hears only what is said while the button is down.
-function listenIdle(){return (mobileMQ.matches?'Tap':'Click')+' to listen, or hold and say a case name, such as "T perm" or "Sune". In a noisy room, hold the button while you speak.';}
+function listenIdle(){return (mobileMQ.matches?'Tap':'Click')+' to listen, or hold and say a case name, such as "T perm" or "Sune". In a case window, say "hide moves" or "reveal moves". In a noisy room, hold the button while you speak.';}
 function listenStop(){LISTEN.on=false;LISTEN.hold=false;LISTEN.card=false;LISTEN.wantCard=false;const rec=LISTEN.rec;LISTEN.rec=null;if(rec)try{rec.onend=null;rec.stop();}catch(e){}
   if(LISTEN.wake){LISTEN.wake.release().catch(()=>{});LISTEN.wake=null;}
   listenButton();

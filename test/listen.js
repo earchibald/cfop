@@ -9,7 +9,8 @@
 // carries its shortest name. What was heard goes to a log the Settings window copies. Chrome with
 // on-device recognition takes the names as phrases. A browser with no recognizer gets a message. The noise
 // set: a name inside talk is found, ordinary talk names nothing; a strong name acts on two early guesses in a
-// row, the words used are not read again, and a weak name does not change an open window.
+// row, the words used are not read again, and a weak name does not change an open window. "Hide moves" and
+// "reveal moves" override the reveal in the open window.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
 const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
@@ -77,6 +78,11 @@ w.addEventListener('load',async()=>{try{
   // Only the new end of a result is read: the words after the ones a match used, the last eight.
   assert.deepStrictEqual([...w.listenFresh(['so T perm and then','so T perm'],3)],['and then']);
   assert.strictEqual(w.listenFresh(['one two three four five six seven eight nine ten'],0)[0],'three four five six seven eight nine ten');
+  // The commands, said alone: reveal and hide. Talk with the same words is no command.
+  for(const [t,c] of [['reveal moves','reveal'],['Reveal all moves.','reveal'],['show me all the moves','reveal'],['show all','reveal'],['uncover','reveal'],['reveal','reveal'],
+    ['hide moves','hide'],['Hide.','hide'],['cover them up','hide'],['hide the moves please','hide'],['hide all','hide'],
+    ['show',null],['show me the T perm',null],['hide and seek',null],['I will hide it later',null],['moves',null],['reveal the T perm',null]])
+    assert.strictEqual(w.listenCommand(t),c,`"${t}" is ${c}`);
   // Close scores are choices: "d perm" is one of the E-set perms. The next word picks one.
   const dd=w.listenDecide(w.listenRank('d perm',cat));assert.ok(!dd.hit&&dd.choices.length===5,'d perm: five choices');
   assert.ok(dd.choices.every(c=>c.set==='pll'),'all perms');
@@ -163,7 +169,7 @@ w.addEventListener('load',async()=>{try{
   ptr(btn,'pointerdown');await sleep(50);ptr(btn,'pointerup');click(btn);assert.ok(L.on&&recs.length===5&&recs[4].continuous,'a short tap toggles');click(btn);assert.ok(!L.on);
   // Chrome with on-device recognition: every name goes in as a phrase.
   w.SpeechRecognitionPhrase=class{constructor(p,b){this.phrase=p;this.boost=b;}};L.local=true;click(btn);
-  const pr=recs[5];assert.ok(pr.processLocally&&pr.phrases.length>50,'the phrases');assert.ok(pr.phrases.some(p=>p.phrase==='t perm')&&pr.phrases.some(p=>p.phrase==='bruno'));click(btn);
+  const pr=recs[5];assert.ok(pr.processLocally&&pr.phrases.length>50,'the phrases');assert.ok(pr.phrases.some(p=>p.phrase==='t perm')&&pr.phrases.some(p=>p.phrase==='bruno'));assert.ok(pr.phrases.some(p=>p.phrase==='reveal moves')&&pr.phrases.some(p=>p.phrase==='hide moves'),'the commands too');click(btn);
   // The Settings window copies the log, or clears it.
   let copied=null;w.navigator.clipboard={writeText:t=>{copied=t;return Promise.resolve();}};
   click($('#settingsBtn'));assert.ok($('#setListenLog'),'the copy button, with a log');click($('#setListenLog'));await sleep(20);
@@ -187,11 +193,25 @@ w.addEventListener('load',async()=>{try{
   n.say(3,'twelve',true);assert.strictEqual(title(),'F2L case #12','the same name again shows it');
   n.say(4,'you know what',true);assert.strictEqual(title(),'F2L case #12','talk keeps the window');assert.strictEqual(strip().length,0,'and asks nothing');
   n.say(5,'tea',false);n.say(5,'tea',false);assert.strictEqual(title(),'F2L case #12','a weak early guess does nothing');
-  assert.ok(/\tearly/.test(w.listenLogText()),'the log text marks an early guess');
-  $('#modalClose').click();await sleep(20);click(btn);assert.ok(!L.on);
-  assert.ok(/In a noisy room, hold the button/.test(st()),'the words at rest say to hold in a noisy room');
+  // "hide moves" covers every move and stops the reveal; a tap still uncovers one; "reveal moves" shows them all.
+  // The next name opens with the reveal one move a tick again.
+  const cov=()=>$('#modalBg .algbig .spoil'),shown=()=>cov().querySelectorAll('.sp-m.on').length,moves=()=>cov().querySelectorAll('.sp-m').length;
+  await sleep(250);assert.ok(shown()>0,'the reveal has begun');
+  n.say(6,'hide moves',true);assert.strictEqual(title(),'F2L case #12','a command keeps the window');assert.strictEqual(shown(),0,'hide: every move covered');
+  assert.strictEqual(mst(),'Listening. Moves hidden. Say "reveal moves", or tap the line for the next move.');assert.strictEqual(log().pop().command,'hide','the command is logged');
+  await sleep(450);assert.strictEqual(shown(),0,'and the reveal stops');
+  click(cov().querySelector('.sp-rest'));assert.strictEqual(shown(),1,'a tap still uncovers the next move');await sleep(450);assert.strictEqual(shown(),1,'one only');
+  n.say(7,'reveal moves',true);assert.strictEqual(shown(),moves(),'reveal: every move');assert.ok(cov().classList.contains('open'));assert.strictEqual(mst(),'Listening. All moves shown.');
+  n.say(8,'Sune',true);assert.strictEqual(title(),'Sune');assert.strictEqual(shown(),0,'the next case: covered');await sleep(300);assert.strictEqual(shown(),1,'and the reveal goes on again');
+  n.say(9,'hide',false);assert.ok(shown()>0,'one early guess of a command: nothing yet');n.say(9,'hide',false);assert.strictEqual(shown(),0,'two early guesses: the command acts');
+  const before=log().length;n.say(9,'hide',true);assert.strictEqual(log().length,before,'the final guess of the same words does not act again');
+  assert.ok(/\tearly/.test(w.listenLogText()),'the log text marks an early guess');assert.ok(/command hide/.test(w.listenLogText()),'and a command');
+  $('#modalClose').click();await sleep(20);
+  n.say(10,'reveal moves',true);assert.strictEqual(st(),'Listening. Say a case name first, then "reveal moves".','a command with no window');
+  click(btn);assert.ok(!L.on);
+  assert.ok(/In a noisy room, hold the button/.test(st()),'the words at rest say to hold in a noisy room');assert.ok(/say "hide moves" or "reveal moves"/.test(st()),'and name the commands');
   // A blocked microphone: a message, and it is off.
   click(btn);recs[7].onerror({error:'not-allowed'});assert.ok(!L.on);assert.ok(/blocked/.test(st()),'blocked: a message');
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('listen: names matched, chips, pick, section, Not this, hold, labels, phrases, log, the window one move per second, tap, stays, swaps, listens on, stop, noise set, early guess, weak names ok');process.exit(0);
+  console.log('listen: names matched, chips, pick, section, Not this, hold, labels, phrases, log, the window one move per second, tap, stays, swaps, listens on, stop, noise set, early guess, weak names, hide and reveal ok');process.exit(0);
 }catch(e){console.error('listen: FAIL',e.message,errs);process.exit(1);}});
