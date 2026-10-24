@@ -1,24 +1,35 @@
-// ================= Voice commands for the smart cube window =================
-// The window of a smart cube (cubetab.js) listens for two commands.
+// ================= Voice commands for the Smart cube tab =================
+// The Smart cube tab (cubetab.js) listens for three kinds of thing.
 // "Reset", or "reset cube": the list of moves is emptied, the picture is lined up with the cube in
 // the hands (as Reset view does, once the tilt is live) and the stage is read again. The hold stays.
 // "Top yellow, bottom white": the hold, how the cube sits in the hands, so the moves and the stage
-// read as held. The top color sets the hold. The bottom must be the color under it, or the window
+// read as held. The top color sets the hold. The bottom must be the color under it, or the line
 // says so and nothing changes. The front stays where it was when it can ("top yellow" from white
 // up, green in front is z2: green stays in front), else the hold the fewest turns away is taken;
 // "front green" or "green toward me" in the same breath sets it. A hold said with moves on the list
 // puts the whole-cube turn on the list, as the turn buttons do, so the moves before it still read
 // right; an empty list takes none.
-// The Listen button sits with Clear moves and Hidden faces. A click listens until Stop; a hold of
-// the button listens once, while it is held. The line under the buttons says what was heard and what
-// was done. The listening ends with the window, and when the link drops. One microphone: the
-// Reference's Listen and this one stop each other.
+// A case name ("T perm", "Sune", "F2L 12"): the reference card (smart-card.js) opens beside the
+// cube with that case, its moves covered and uncovered one per second. The names go through the
+// Reference's matcher (listen.js: listenCatalog, listenRankAll, listenDecide): a sure winner shows;
+// close calls come as chips on the listen line, and a click or the next sentence ("second", "the
+// perm") picks one (listenPick); a weak name (a letter or a number said alone) does not change an
+// open card, it asks, and the same name again shows it. The stage on the cube breaks a tie: an OLL
+// case while the top is being oriented, a PLL case after (smartListenSection). In a card, five
+// commands: "reveal moves" and "hide moves" (listenCommand), "play", "stop" and "close"
+// (smartCardCommand, pure).
+// The Listen button sits with Clear moves and Hidden faces, beside the picture, in view with the
+// cube. A click listens until Stop; a hold of the button listens once, while it is held. While it
+// listens, the hints under the line say what to say (SMART_HINTS). The line says what was heard
+// and what was done. The listening ends when the user leaves the tab, and when the link drops. One
+// microphone: the Reference's Listen and this one stop each other.
 // The recognizer is a dictation model: it hears "wait" for white, "read" for red and "blew" for
 // blue, so each color has the words it comes out as (SMART_COLOR_WORDS). A command must be the whole
 // of what was said, bar the small words around it ("the top is yellow and the bottom is white"): a
-// color word inside talk is no command. As in listen.js, a command acts on two early guesses in a
-// row, or on the final one, and only the new end of a long result is read.
-// Pure (no DOM): smartWords, smartCommand, smartHoldFor.
+// color word inside talk is no command. The tab's own commands are read first, so a color word is
+// never taken for a case. As in listen.js, an action comes on two early guesses in a row, or on the
+// final one, and only the new end of a long result is read.
+// Pure (no DOM): smartWords, smartCommand, smartHoldFor, smartCardCommand.
 
 const SMART_COLOR_NAMES=['white','red','green','yellow','orange','blue'];
 // The words a recognizer gives for each color.
@@ -83,8 +94,20 @@ function smartHoldFor(cmd,cur){
   const want=CUBE_TAB_HOLDS.filter(h=>h.cube.center[0]===up&&(cmd.front==null||h.cube.center[2]===cmd.front));
   const score=h=>(h.cube.center[2]===c[2]?0:10)+cubeTabHoldDelta(cur,h).length;
   return want.sort((a,b)=>score(a)-score(b))[0]||null;}
+// A command for the open card, said alone: 'reveal' and 'hide' as the Reference's Listen takes them
+// (listenCommand: "reveal moves", "hide moves", "show all"), 'play' ("play", "play it", "play the
+// moves", "animate"), 'stop' ("stop", "pause", "stop playing") and 'close' ("close", "close the
+// card", "dismiss"). Only a sentence that is the command counts: "stop" in talk does nothing.
+function smartCardCommand(text){
+  const ws=String(text).toLowerCase().replace(/[’']/g,'').replace(/[^a-z ]+/g,' ').split(/\s+/).filter(w=>w&&!/^(please|the|me|now|it|its|ok|okay|again|that|this|hey|twistwright|a)$/.test(w)),t=ws.join(' ');
+  if(!t)return null;
+  if(/^(close|dismiss)( (card|window|reference))?$/.test(t)||/^(hide|remove) (card|window)$/.test(t))return 'close';
+  const lc=typeof listenCommand==='function'?listenCommand(text):null;if(lc)return lc;
+  if(/^(play|animate|loop)( (moves?|algorithm|alg|case|animation|cube|loop))?$/.test(t))return 'play';
+  if(/^(stop|pause|freeze)( (playing|play|moves?|algorithm|alg|animation|cube|loop|animating))?$/.test(t))return 'stop';
+  return null;}
 
-// ----- the window: do what was said -----
+// ----- the tab: do what was said -----
 // Returns the words for the line under the buttons.
 function smartListenApply(cmd){
   if(cmd.cmd==='error')return cmd.msg;
@@ -106,28 +129,93 @@ function smartListenApply(cmd){
   if(!cubeTab.stillTimer&&cubeTab.target)cubeTabSettle();
   cubeTabWindow();
   return `Held ${cubeTabHoldWords(cubeTab.hold)}. The moves and the stage read that way.`;}
+// What a card command does, in words for the line.
+function smartCardVoice(c){
+  if(c==='reveal'||c==='hide')return smartCardMoves(c);
+  if(c==='play')return smartCardPlay(true);
+  if(c==='stop')return smartCardPlay(false);
+  if(!smartCardOpenNow())return 'No card is open.';
+  smartCardClose();return 'Card closed.';}
 
 // ----- the microphone -----
-const SMART_LISTEN={on:false,hold:false,rec:null,used:{},pend:null};
+const SMART_LISTEN={on:false,hold:false,rec:null,used:{},pend:null,catalog:null,choices:null};
 const SMART_RECENT=8;
-const SMART_SAY='Say "reset", or "top yellow, bottom white".';
+const SMART_SAY='Say "reset", "top yellow, bottom white", or a case name such as "T perm".';
+// The hints while the tab listens: each thing to say, and what it does.
+const SMART_HINTS=[
+  ['Reset','Clear the moves. With the tilt live, line the picture up with your cube.'],
+  ['Top yellow, bottom white','How you hold the cube. Add "front green" or "green toward me" for the front.'],
+  ['T perm · Sune · F2L 12','A case name opens its card beside the cube, with the moves covered.'],
+  ['Reveal moves · Hide moves','In the card: every move at once, or all of them covered again.'],
+  ['Play · Stop · Close','In the card: the moves on the small cube, over and over; the still picture; the card closed.']];
 function smartListenSupported(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition);}
 const smartListenPre=()=>SMART_LISTEN.on?'Listening. ':'';
+// The hints: drawn once, shown while the tab listens.
+function smartListenHintsDraw(){
+  const el=$('#cubeWinHints');if(!el)return;
+  if(!el.childElementCount){
+    const lbl=document.createElement('div');lbl.className='lbl';lbl.textContent='You can say';el.appendChild(lbl);
+    for(const [say,what] of SMART_HINTS){const row=document.createElement('div');row.className='hint';
+      const b=document.createElement('b');b.textContent=say;const s=document.createElement('span');s.textContent=what;row.append(b,s);el.appendChild(row);}}
+  el.classList.toggle('hidden',!(SMART_LISTEN.on||SMART_LISTEN.hold));}
 // The button: Listen, Stop while it listens, Let go when done while it is held.
 function smartListenButton(){
   const b=$('#cubeWinListen');if(!b)return;
   const live=SMART_LISTEN.on||SMART_LISTEN.hold;
   b.textContent=SMART_LISTEN.on?'Stop':SMART_LISTEN.hold?'Let go when done':'Listen';
   b.classList.toggle('on',live);b.setAttribute('aria-pressed',String(SMART_LISTEN.on));
-  const row=$('#cubeWinListenRow');if(row)row.classList.toggle('on',live);}
+  const row=$('#cubeWinListenRow');if(row)row.classList.toggle('on',live);
+  smartListenHintsDraw();}
 // The line under the buttons: what was done, and what was heard. Hidden with nothing to say.
 function smartListenSay(msg,heard){
   const row=$('#cubeWinListenRow');if(!row)return;
   row.classList.toggle('hidden',!msg);
   row.querySelector('.txt').textContent=msg||'';row.querySelector('.heard').textContent=heard||'';}
-// A result from the recognizer. Only the words after the ones a command used are read, the last
-// SMART_RECENT of them. A command acts on the final guess, or on two early guesses in a row; a hold
-// that cannot be waits for the final guess, in case the next guess mends it.
+// The choices as chips on the line: a click shows the case; so does the next sentence, through listenPick.
+function smartListenAsk(choices){
+  SMART_LISTEN.choices=choices||null;
+  const row=$('#cubeWinListenRow'),box=row&&row.querySelector('.ask');if(!box)return;
+  box.textContent='';if(!choices)return;
+  for(const c of choices){const b=document.createElement('button');b.type='button';b.className='small';b.textContent=c.name;b.title='Show this case';
+    b.onclick=()=>{listenLogAdd({picked:c.id});smartListenShow(c,'Showing '+c.name+'.');};box.appendChild(b);}}
+// Show a case: the card opens on it, the chips go.
+function smartListenShow(c,msg,heard){smartListenAsk(null);smartCardOpen(c);smartListenSay(smartListenPre()+msg,heard);}
+// The set the stage on the cube points to, for a tie between an OLL and a PLL name.
+function smartListenSection(){const st=typeof cubeTab!=='undefined'&&cubeTab.stage?cubeTab.stage.stage:null;
+  return st==='eo'||st==='co'?'oll':st==='cp'||st==='ep'||st==='auf'?'pll':st==='f2l'?'f2l':null;}
+// What a sentence (with the recognizer's alternatives) asks for: {cmd} for the tab (reset, a hold,
+// an error), {card} for the open card, {pick} from the chips, the matcher's {hit, strong, choices,
+// ranked} for a case name, or {} for nothing. The tab's own commands come first.
+function smartListenAction(fresh){
+  for(const f of fresh){const c=smartCommand(f);if(c)return {cmd:c};}
+  for(const f of fresh){const c=smartCardCommand(f);if(c)return {card:c};}
+  if(SMART_LISTEN.choices)for(const f of fresh){const c=listenPick(f,SMART_LISTEN.choices);if(c)return {pick:c};}
+  SMART_LISTEN.catalog=SMART_LISTEN.catalog||listenCatalog();
+  return listenDecide(listenRankAll(fresh,SMART_LISTEN.catalog,smartListenSection()))||{};}
+// The key of an action an early guess may act on, when it comes twice in a row: a command, a card
+// command, a pick, a strong name. Null for the rest (a hold that cannot be waits for the final guess).
+function smartListenKey(a){
+  if(a.cmd)return a.cmd.cmd==='error'?null:JSON.stringify(a.cmd);
+  if(a.card)return 'card:'+a.card;
+  if(a.pick)return 'p:'+a.pick.kind+':'+a.pick.id;
+  if(a.hit&&a.strong)return 'h:'+a.hit.kind+':'+a.hit.id;
+  return null;}
+// Do what a sentence asks for. A weak name does not change an open card: it asks. Returns true when
+// something was done, and the words of the sentence are then used up.
+function smartListenDo(a,fresh,early){
+  const pre=smartListenPre(),heard='Heard: '+fresh[0],ex=early?{early:true}:{};
+  if(a.cmd){const ok=a.cmd.cmd!=='error';if(ok)listenLogAdd({heard:fresh,command:a.cmd.cmd,...ex});smartListenSay(pre+smartListenApply(a.cmd),heard);return ok;}
+  if(a.card){listenLogAdd({heard:fresh,command:a.card,...ex});smartListenSay(pre+smartCardVoice(a.card),heard);return true;}
+  if(a.pick){listenLogAdd({heard:fresh,picked:a.pick.id,...ex});smartListenShow(a.pick,'Showing '+a.pick.name+'.',heard);return true;}
+  const again=a.hit&&SMART_LISTEN.choices&&SMART_LISTEN.choices.length===1&&SMART_LISTEN.choices[0]===a.hit;
+  if(a.hit&&(a.strong||again||(!early&&!smartCardOpenNow()))){listenLogAdd({heard:fresh,hit:a.hit.id,...ex});smartListenShow(a.hit,'Showing '+a.hit.name+'.',heard);return true;}
+  if(early)return false;
+  const ch=a.hit?[a.hit]:a.choices;
+  if(ch){listenLogAdd({heard:fresh,choices:ch.map(c=>c.id)});smartListenAsk(ch);smartListenSay(pre+(a.hit?'Is it this one? Say it again, or click it.':'Which one?'),heard);return false;}
+  if(SMART_LISTEN.choices){smartListenSay(pre+'Which one? Say the name again, or click one.',heard);return false;}
+  smartListenSay(pre+'No command heard. '+SMART_SAY,heard);return false;}
+// A result from the recognizer. Only the words after the ones an action used are read, the last
+// SMART_RECENT of them. An action comes on the final guess, or on two early guesses in a row.
 function smartListenResult(ev){
   for(let i=ev.resultIndex||0;i<ev.results.length;i++){const r=ev.results[i];const alts=[];
     for(let j=0;j<r.length;j++){const t=(r[j].transcript||'').trim();if(t)alts.push(t);}
@@ -135,25 +223,27 @@ function smartListenResult(ev){
     const n=SMART_LISTEN.used[i]||0;
     const fresh=alts.map(a=>a.split(/\s+/).filter(Boolean).slice(n).slice(-SMART_RECENT).join(' ')).filter(Boolean);
     if(!fresh.length)continue;
-    let cmd=null;for(const f of fresh){cmd=smartCommand(f);if(cmd)break;}
-    const key=cmd&&cmd.cmd!=='error'?JSON.stringify(cmd):null;
+    const a=smartListenAction(fresh),key=smartListenKey(a);
     if(!r.isFinal){
       smartListenSay(smartListenPre()+'Heard so far.','Heard: '+fresh[0]);
       const ready=key&&SMART_LISTEN.pend&&SMART_LISTEN.pend.i===i&&SMART_LISTEN.pend.key===key;
       SMART_LISTEN.pend=key&&!ready?{i,key}:null;
       if(!ready)continue;}
     else SMART_LISTEN.pend=null;
-    if(!cmd){if(r.isFinal&&!n)smartListenSay(smartListenPre()+'No command heard. '+SMART_SAY,'Heard: '+fresh[0]);continue;}
-    SMART_LISTEN.used[i]=alts[0].split(/\s+/).filter(Boolean).length;
-    smartListenSay(smartListenPre()+smartListenApply(cmd),'Heard: '+fresh[0]);}}
-// Chrome with on-device recognition takes the commands as phrases to favor (as listen.js does for the names).
+    const none=!a.cmd&&!a.card&&!a.pick&&!a.hit&&!a.choices;
+    if(none&&n)continue; // the rest of a sentence that was used: talk
+    if(smartListenDo(a,fresh,!r.isFinal))SMART_LISTEN.used[i]=alts[0].split(/\s+/).filter(Boolean).length;}}
+// Chrome with on-device recognition takes the commands and the case names as phrases to favor (as listen.js does).
 function smartListenBias(rec){
   const local=typeof LISTEN!=='undefined'&&LISTEN.local;
   if(!local||typeof window.SpeechRecognitionPhrase!=='function'||!('phrases' in rec))return;
   try{const ph=[new SpeechRecognitionPhrase('reset',3),new SpeechRecognitionPhrase('reset cube',3)];
     SMART_COLOR_NAMES.forEach((c,i)=>{ph.push(new SpeechRecognitionPhrase(`top ${c} bottom ${SMART_COLOR_NAMES[(i+3)%6]}`,3),new SpeechRecognitionPhrase(`front ${c}`,2));});
+    for(const s of ['reveal moves','hide moves','play','stop','close'])ph.push(new SpeechRecognitionPhrase(s,3));
+    SMART_LISTEN.catalog=SMART_LISTEN.catalog||listenCatalog();
+    for(const c of SMART_LISTEN.catalog){if(c.set==='f2l')continue;for(const s of c.say)ph.push(new SpeechRecognitionPhrase(c.set==='pll'?s+' perm':s,3));}
     rec.processLocally=true;rec.phrases=ph;}catch(e){}}
-// Start the recognizer: on until Stop, or once, for one command while the button is held.
+// Start the recognizer: on until Stop, or once, for one sentence while the button is held.
 function smartListenStart(once){
   if(!smartListenSupported()){smartListenSay('This browser cannot listen. Use Safari or Chrome.');return;}
   if(typeof LISTEN!=='undefined'&&(LISTEN.on||LISTEN.hold)&&typeof listenStop==='function')listenStop(); // one microphone
@@ -165,7 +255,7 @@ function smartListenStart(once){
   rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){smartListenStop();smartListenSay('The microphone is blocked. Allow it for this site in the browser settings.');}};
   rec.onend=()=>{if(SMART_LISTEN.rec!==rec)return;
     if(once){SMART_LISTEN.rec=null;SMART_LISTEN.hold=false;smartListenButton();
-      const row=$('#cubeWinListenRow');if(row&&/^Say /.test(row.querySelector('.txt').textContent))smartListenSay('Nothing heard. Hold the button and say "reset", or "top yellow, bottom white".');return;}
+      const row=$('#cubeWinListenRow');if(row&&/^Say /.test(row.querySelector('.txt').textContent))smartListenSay('Nothing heard. Hold the button and say "reset", "top yellow, bottom white", or a case name.');return;}
     if(SMART_LISTEN.on)setTimeout(()=>{if(SMART_LISTEN.on&&SMART_LISTEN.rec===rec)try{SMART_LISTEN.used={};SMART_LISTEN.pend=null;rec.start();}catch(e){}},250);}; // the browser stops on its own after a quiet spell
   try{rec.start();}catch(e){SMART_LISTEN.on=SMART_LISTEN.hold=false;SMART_LISTEN.rec=null;smartListenButton();smartListenSay('The microphone did not start. Try again.');return;}
   smartListenButton();
@@ -178,7 +268,7 @@ function smartListenStop(){
   const row=$('#cubeWinListenRow');if(row){const t=row.querySelector('.txt');t.textContent=t.textContent.replace(/^Listening\. /,'');if(/^(Heard so far|Say )/.test(t.textContent))smartListenSay('');}}
 // The button let go after a hold: the recognizer stops and gives its final sentence.
 function smartListenRelease(){const rec=SMART_LISTEN.rec;if(SMART_LISTEN.hold&&rec)try{rec.stop();}catch(e){}}
-// The window opened: the button. A click toggles. A hold of 300 ms listens once, until the button
+// The tab's button, wired once. A click toggles. A hold of 300 ms listens once, until the button
 // is let go; the click after it does nothing.
 function smartListenMount(){
   const b=$('#cubeWinListen');if(!b||b.dataset.ready)return;b.dataset.ready='1';
@@ -191,3 +281,5 @@ function smartListenMount(){
   smartListenButton();}
 // The Reference's Listen starts: this one stops. (listen.js declares listenStart as a global function; the global is rebound here.)
 if(typeof listenStart==='function'){const start=listenStart;listenStart=function(){if(SMART_LISTEN.on||SMART_LISTEN.hold)smartListenStop();return start.apply(this,arguments);};}
+// The tab was wired before this script loaded (cubetab.js): wire the button now.
+if(typeof document!=='undefined')smartListenMount();

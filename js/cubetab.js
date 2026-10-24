@@ -1,25 +1,26 @@
-// ================= The cube tab =================
-// While a smart cube is connected, the top bar carries a tab with the name of the cube. The tab
-// opens a floating window with a live cube: each turn of the real cube turns the layer on the
-// screen. Close (Esc) collapses the window back into the tab. Disconnect in the Smart cube dialog
-// removes the tab. When the link drops by itself (the cube went to sleep), the tab stays, dimmed,
-// and the window offers the way back to the dialog.
-// The first time a cube connects, the page dims around the tab for a moment and a callout points
-// to it. The Smart cube dialog is a modal, so the callout waits until the dialog closes.
-// The window moves: drag it by its head. The place is kept in cw:cubeWin and clamped to the screen.
+// ================= The smart cube tab =================
+// The Smart cube tab on the CFOP rail (tab 7) shows a smart cube live, large, in the main panel:
+// each turn of the real cube turns the layer on the screen. With no cube connected the tab offers
+// Connect (the Smart cube dialog, smart-ui.js). When a cube connects, the page goes to the tab,
+// so the live cube is there when the dialog closes. Disconnect in the dialog puts the Connect card
+// back. When the link drops by itself (the cube went to sleep), the panel stays, dimmed, and offers
+// Connect again. The rail button carries a dot: green while the cube is live, orange while it is
+// held unlike the hold, gray while the link is down.
+// Versions 1.4 to 1.33 put the cube in the top bar, as a tab that opened a floating window. 1.34
+// made it this tab: the picture is big, and every control sits beside it, in view. The reference
+// card (smart-card.js) is the one floating window left: a case said to the tab opens it.
 // The dialog reports every change of the link as a cw:smart event (smart-ui.js); nothing here
-// reaches into the dialog. All markup here is fixed text; the cube's name goes in as text.
-// The charge (`battery`, from the link and each battery event) shows after the name, on the tab
-// and in the head of the window, as the dialog shows it (smartBatteryDraw); it goes while the
-// link is down.
+// reaches into the dialog. All markup is fixed text in index.html; the cube's name goes in as text.
+// The charge (`battery`, from the link and each battery event) shows after the name in the head
+// of the panel, as the dialog shows it (smartBatteryDraw); it goes while the link is down.
 // `shown` is the cube the picture is on (or turns toward), `queue` the moves still to turn, and
 // `target` the cube at the end of the queue: the real cube, as far as the page knows.
 // `moves` is every move since the cube connected, merged as they come (cubeTabMerge): R then R is
-// R2, R then R' is nothing, so a turn back takes its move off the list. The readout under the
+// R2, R then R' is nothing, so a turn back takes its move off the list. The readout beside the
 // picture shows the last CUBE_TAB_SHOWN of them; a triangle after them says there are more.
 // Clear moves empties the list.
 // The hold: the cube names its faces its own way (its white face is U however it sits), and the
-// window shows it as the user holds it. Six buttons under the picture turn the whole cube: x, y, z
+// panel shows it as the user holds it. Six buttons under the picture turn the whole cube: x, y, z
 // and their primes (cubeTabTurn). A press turns the picture (`q` is the turn of the body the
 // picture shows, `qTo` the one it turns toward, in the frame of draw.js), puts the turn on the
 // list, and sets the hold (`hold`, one of the 24 CUBE_TAB_HOLDS, null for white up, green front).
@@ -40,10 +41,10 @@
 // from the hold for `awayMs`, and a band under the picture says how the cube sits and how the
 // moves read, with Read as held (the turns from the hold to the cube, cubeTabHoldDelta, pressed
 // for the user) and, where only the heading differs, Keep this hold (the heading is taken
-// again: the cube did not turn). The tab's dot turns orange meanwhile. The stage and the moves
+// again: the cube did not turn). The rail's dot turns orange meanwhile. The stage and the moves
 // keep reading by the hold: the band is the only place the two meet. A gen 3 cube has no tilt,
 // and nothing here changes for it.
-// Above the picture, the stage of a CFOP solve (cfopStage, stage.js): Cross, F2L, or the two-look
+// Beside the picture, the stage of a CFOP solve (cfopStage, stage.js): Cross, F2L, or the two-look
 // case ("Sune") with the hold under it and its moves hidden. The stage is read only after the
 // cube has been still for `stillMs` (1200); every `revealMs` (1500) more without a turn, one
 // more move shows. A turn fades what is shown but leaves it there, until the cube is still
@@ -53,15 +54,15 @@
 // (a Sune breaks the cross with its first move) keeps the stage, cubeTabBehind, until the cube is
 // at or past it again, or more moves have gone by since it was read (`since`) than the user needs
 // for it. A turn of the whole cube with the cube still reads the stage again at once.
-// The voice commands (smart-listen.js): a Listen button with Clear moves and Hidden faces, and a
-// line under them for what was heard. "Reset" clears the moves, lines the picture up and reads the
-// stage again; "top yellow, bottom white" sets the hold. The listening ends with the window.
-const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,yaw:-32,pitch:28,asked:false,want:false,tipWait:false,spotTimer:0,pos:null,
+// The voice commands (smart-listen.js): a Listen button with Clear moves and Hidden faces, a line
+// under them for what was heard, and the hints while it listens. The listening ends when the user
+// leaves the tab, and when the link drops. The turns and the tilt draw only while the tab is in
+// view (cubeTabShown); the moves and the stage count all the same.
+const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,yaw:-32,pitch:28,asked:false,want:false,
   q:null,qTo:null,qraf:0,qAt:0,moves:[],hold:null,
   gyro:false,raw:null,basis:null,away:null,awayTimer:0,awayMs:500,awayDeg:55,backDeg:40,warn:false,
   stage:null,done:0,revealed:0,stale:false,stillTimer:0,revealTimer:0,stillMs:1200,revealMs:1500,since:0,keepMoves:12,battery:null};
 const CUBE_TAB_SHOWN=10;
-const CUBE_TAB_TIP='Click your smart cube to open the Smart Cube interface!';
 // The six turns of the whole cube, as buttons, with what each one does in the hands.
 const CUBE_TAB_TURNS=[
   {m:'x',tip:'x: turn the whole cube like R. The front goes to the top.'},
@@ -70,109 +71,55 @@ const CUBE_TAB_TURNS=[
   {m:"y'",tip:"y': turn the whole cube like U'. The left face comes to the front."},
   {m:'z',tip:'z: turn the whole cube like F. The top goes to the right.'},
   {m:"z'",tip:"z': turn the whole cube like F'. The top goes to the left."}];
-function cubeTabBtn(){return $('#cubeTab');}
-// The tab: made when a cube connects, removed on Disconnect. `off` marks a link that dropped.
+// The rail button of the tab.
+function cubeTabBtn(){return $('nav.rail button[data-tab="smart"]');}
+// Is the live panel in view? The tab is on, and a cube has connected.
+function cubeTabShown(){return !!cubeTab.name&&typeof curTab!=='undefined'&&curTab==='smart';}
+// The rail button and the panel: live, off (the link dropped), or no cube (the Connect card).
 function cubeTabRender(){
-  const top=$('header.top');if(!top)return;
-  let b=cubeTabBtn();
-  if(!cubeTab.name){if(b)b.remove();return;}
-  if(!b){
-    b=document.createElement('button');b.id='cubeTab';b.className='cubetab';b.setAttribute('aria-controls','cubeWin');
-    b.innerHTML='<span class="dot" aria-hidden="true"></span><span class="nm"></span><span class="batt" hidden></span><span class="brk" aria-hidden="true">⧉</span>';
-    b.onclick=()=>{cubeTabSpotEnd();if($('#cubeWin'))cubeTabClose();else cubeTabOpen();};
-    const pop=$('#methodPop');if(pop)pop.after(b);else top.appendChild(b);
+  const b=cubeTabBtn(),off=!cubeTab.conn,warn=!off&&cubeTab.warn;
+  if(b){
+    b.classList.toggle('live',!!cubeTab.name);b.classList.toggle('off',!!cubeTab.name&&off);b.classList.toggle('warn',warn);
+    b.title=!cubeTab.name?'Your smart cube, live: each turn of the cube turns the layer here, with the stage of your solve and the voice commands':off?`${cubeTab.name} is no longer connected. Open the tab to connect again.`:warn?`${cubeTab.name} is held differently from how the moves read.`:`${cubeTab.name}, live: each turn of your cube turns the layer here.`;
   }
-  const off=!cubeTab.conn,warn=!off&&cubeTab.warn;
-  b.classList.toggle('off',off);b.classList.toggle('warn',warn);
-  b.querySelector('.nm').textContent=cubeTab.name;
-  smartBatteryDraw(b.querySelector('.batt'),off?null:cubeTab.battery);
-  b.setAttribute('aria-expanded',String(!!$('#cubeWin')));
-  b.title=off?`${cubeTab.name} is no longer connected. Open its window to connect again.`:warn?`${cubeTab.name} is held differently from how the moves read. Open its window.`:`Open the window of ${cubeTab.name}: a live view of your smart cube.`;
-  b.setAttribute('aria-label',off?`${cubeTab.name}, not connected. Open its window.`:warn?`Your smart cube, ${cubeTab.name}, is held differently from how the moves read. Open its window.`:`Open the window of your smart cube, ${cubeTab.name}`);
+  const w=$('#cubeWin'),home=$('#smartHome');
+  if(w)w.hidden=!cubeTab.name;if(home)home.hidden=!!cubeTab.name;
 }
-// ----- the floating window -----
-function cubeTabOpen(){
-  if($('#cubeWin')||!cubeTab.name)return;
-  const w=document.createElement('div');w.className='cubewin panel';w.id='cubeWin';w.setAttribute('role','dialog');w.setAttribute('aria-label',`Smart cube window: ${cubeTab.name}`);
-  w.innerHTML=`<div class="cw-head" title="Drag to move the window"><span class="dot" aria-hidden="true"></span><b class="nm"></b><span class="batt" id="cubeWinBatt" hidden></span><button class="small ghost" id="cubeWinClose" title="Collapse the window back into the tab (Esc)">Close<span class="hk" aria-hidden="true">Esc</span></button></div>
-   <div class="cw-stage" id="cubeWinStage"><div class="st-name" aria-live="polite"></div><div class="st-sub"></div><div class="st-alg" aria-label="The moves of this case"></div></div>
-   <svg id="cubeWinSvg" viewBox="0 0 400 360" role="img" aria-label="Your smart cube, live"></svg>
-   <div class="cw-warn hidden" id="cubeWinWarn" role="status"><span class="txt"></span><span class="btns"><button class="small" id="cubeWinMatch" title="Turn the hold to match the cube. The turn goes on the list">Read as held</button><button class="small ghost" id="cubeWinKeep" title="The cube did not turn: line the picture up with the hold again.">Keep this hold</button></span></div>
-   <div class="cw-turns" id="cubeWinTurns" role="group" aria-label="Turn the whole cube"><span class="lbl" title="Turned the cube in your hands? Press the same turn here, so the picture, the moves and the stage read as you hold it.">Turn the cube</span></div>
-   <div class="cw-moves" id="cubeWinMoves" aria-label="Your last moves"></div>
-   <div class="cw-row" id="cubeWinView"><div class="cw-side"><button class="small ghost hidden" id="cubeWinReset" title="Line the picture up with the cube in your hands">Reset view</button><button class="small ghost" id="cubeWinClear" title="Empty the list of moves under the picture">Clear moves</button><button class="small ghost" id="cubeWinHidden" aria-pressed="false" title="Show the hidden faces: the faces turned away from you, as in a mirror behind the cube">Hidden faces</button><button class="small ghost" id="cubeWinListen" aria-pressed="false" title='Listen for "reset" and "top yellow, bottom white": click to listen until Stop; hold, say one command and let go'>Listen</button></div></div>
-   <div class="cw-listen hidden" id="cubeWinListenRow" role="status"><span class="listen-dot" aria-hidden="true"></span><span class="txt"></span><span class="heard"></span></div>
-   <p class="muted cw-note" id="cubeWinNote"></p>
-   <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect" title="Open the Smart cube window and connect the cube again">Connect again</button></div>`;
-  document.body.appendChild(w);
-  const turns=$('#cubeWinTurns');
+// ----- the panel: wired once, at load -----
+function cubeTabMount(){
+  const turns=$('#cubeWinTurns');if(!turns||turns.dataset.ready)return;turns.dataset.ready='1';
   CUBE_TAB_TURNS.forEach((t,i)=>{
     if(i%2===0){const g=document.createElement('span');g.className='grp';turns.appendChild(g);}
     const b=document.createElement('button');b.className='small';b.dataset.turn=t.m;b.textContent=t.m;b.title=t.tip;b.setAttribute('aria-label',t.tip);
     b.onclick=()=>cubeTabTurn(t.m);turns.lastElementChild.appendChild(b);
   });
-  $('#cubeWinClose').onclick=cubeTabClose;
-  $('#cubeWinConnect').onclick=()=>{cubeTabClose();openSmart();};
+  $('#smartTabConnect').onclick=()=>openSmart();
+  $('#cubeWinOptions').onclick=()=>openSmart();
+  $('#cubeWinConnect').onclick=()=>openSmart();
   $('#cubeWinClear').onclick=()=>{cubeTab.moves=[];cubeTabMovesDraw();};
   $('#cubeWinHidden').onclick=()=>setHidden(!hiddenOn());
   $('#cubeWinMatch').onclick=cubeTabMatch;$('#cubeWinKeep').onclick=cubeTabKeep;$('#cubeWinReset').onclick=cubeTabKeep;
   if(typeof smartListenMount==='function')smartListenMount(); // the voice commands (smart-listen.js)
-  document.addEventListener('keydown',cubeTabKeys,true);
-  cubeTabDrag(w);
-  if(!cubeTab.pos)cubeTab.pos=store.get('cubeWin',null);
-  if(cubeTab.pos)cubeTabPlace(cubeTab.pos.x,cubeTab.pos.y);
-  window.addEventListener('resize',cubeTabResize);
+  document.addEventListener('cw:tab',e=>cubeTabTab(e.detail));
   cubeTabRender();cubeTabWindow();
-  if(cubeTab.conn)cubeTabAsk(); // the first picture
-  setTimeout(()=>{const c=$('#cubeWinClose');if(c)c.focus();},20);
 }
-function cubeTabClose(){
-  const w=$('#cubeWin');if(!w)return;
-  document.removeEventListener('keydown',cubeTabKeys,true);window.removeEventListener('resize',cubeTabResize);
-  if(typeof smartListenStop==='function')smartListenStop(); // the listening ends with the window
-  cubeTabStopAnim();cubeTabStopView();w.remove();cubeTabRender();
-  const b=cubeTabBtn();if(b)b.focus();
+// The tab shown: the picture is drawn afresh and the cube asked for its state. Left: the turns stop
+// (the picture lands on the cube), and so does the listening.
+function cubeTabTab(tab){
+  if(tab==='smart'){cubeTabWindow();if(cubeTab.conn)cubeTabAsk();return;}
+  cubeTabStopAnim();cubeTabStopView();if(cubeTab.qTo)cubeTab.q=cubeTab.qTo;
+  if(typeof smartListenStop==='function')smartListenStop();
 }
-// ----- move the window: drag it by its head -----
-// On a phone the window spans the screen and stays put.
-function cubeTabPhone(){try{return matchMedia('(max-width:760px)').matches;}catch(e){return false;}}
-// Put the window at (x,y), kept on the screen: the whole width, and at least the head in view.
-function cubeTabPlace(x,y){
-  const w=$('#cubeWin');if(!w||cubeTabPhone())return;
-  const W=window.innerWidth||0,H=window.innerHeight||0,ww=w.offsetWidth||320;
-  x=Math.round(Math.max(8,Math.min(x,Math.max(8,W-ww-8))));y=Math.round(Math.max(0,Math.min(y,Math.max(0,H-48))));
-  w.style.left=x+'px';w.style.top=y+'px';w.style.right='auto';
-  cubeTab.pos={x,y};
-}
-function cubeTabResize(){if(cubeTab.pos)cubeTabPlace(cubeTab.pos.x,cubeTab.pos.y);}
-function cubeTabDrag(w){
-  const h=w.querySelector('.cw-head');
-  h.addEventListener('pointerdown',e=>{
-    if(e.button>0||e.target.closest('button')||cubeTabPhone())return;
-    e.preventDefault();
-    const r=w.getBoundingClientRect(),d={x:e.clientX-r.left,y:e.clientY-r.top,id:e.pointerId};
-    const move=ev=>{if(ev.pointerId!==d.id)return;cubeTabPlace(ev.clientX-d.x,ev.clientY-d.y);};
-    const up=ev=>{if(ev.pointerId!==d.id)return;
-      h.removeEventListener('pointermove',move);h.removeEventListener('pointerup',up);h.removeEventListener('pointercancel',up);
-      w.classList.remove('drag');if(cubeTab.pos)store.set('cubeWin',cubeTab.pos);};
-    h.addEventListener('pointermove',move);h.addEventListener('pointerup',up);h.addEventListener('pointercancel',up);
-    if(h.setPointerCapture)try{h.setPointerCapture(e.pointerId);}catch(_){}
-    w.classList.add('drag');
-  });
-}
-// Esc closes the window, unless a modal is open: that one takes the key.
-function cubeTabKeys(e){
-  if(e.key!=='Escape'||!$('#cubeWin')||document.querySelector('.modal-bg'))return;
-  e.preventDefault();e.stopPropagation();cubeTabClose();
-}
-// The window's text and the cube it shows.
+// Go to the tab: when a cube connects in CFOP. In another method the tab is not on the rail.
+function cubeTabGo(){if(typeof method!=='undefined'&&method==='cfop'&&typeof goTab==='function'&&curTab!=='smart')goTab('smart');}
+// The panel's text and the cube it shows.
 function cubeTabWindow(){
   const w=$('#cubeWin');if(!w)return;
   const off=!cubeTab.conn;
   w.classList.toggle('off',off);
   w.querySelector('.nm').textContent=cubeTab.name;
   smartBatteryDraw($('#cubeWinBatt'),off?null:cubeTab.battery);
-  $('#cubeWinNote').textContent=off?'The cube is no longer connected. Turn a face to wake it up, then connect again.':!cubeTab.shown?'Reading the cube.':cubeTab.gyro?'Live. Each turn of your cube turns the layer here, and the picture tilts with the cube. When you turn the whole cube in your hands, press the same turn above, so the moves read as you hold it.':'Live. Each turn of your cube turns the layer here. When you turn the whole cube in your hands, press the same turn above, so the moves read as you hold it.';
+  $('#cubeWinNote').textContent=off?'The cube is no longer connected. Turn a face to wake it up, then connect again.':!cubeTab.shown?'Reading the cube.':cubeTab.gyro?'Live. Each turn of your cube turns the layer here, and the picture tilts with the cube. When you turn the whole cube in your hands, press the same turn under the picture, so the moves read as you hold it.':'Live. Each turn of your cube turns the layer here. When you turn the whole cube in your hands, press the same turn under the picture, so the moves read as you hold it.';
   $('#cubeWinAgain').classList.toggle('hidden',!off);
   $$('#cubeWinTurns button').forEach(b=>{b.disabled=off;});
   const reset=$('#cubeWinReset');reset.classList.toggle('hidden',!cubeTab.gyro);reset.disabled=off;
@@ -224,9 +171,10 @@ function cubeTabMovesDraw(){
 }
 // The picture: the cube as the cube names it, turned by the hold (`rot`), seen from the fixed camera.
 // With Hidden faces (cw:hidden, the site's setting) the faces turned away show as in a mirror
-// behind the cube, and the cube draws smaller so they fit.
+// behind the cube, and the cube draws smaller so they fit. Drawn only while the tab is in view;
+// the tab shown draws it afresh. The markup is the renderer's own (draw.js).
 function cubeTabDraw(){
-  const svg=$('#cubeWinSvg');if(!svg)return;
+  const svg=$('#cubeWinSvg');if(!svg||!cubeTabShown())return;
   const a=cubeTab.anim,o={yaw:cubeTab.yaw,pitch:cubeTab.pitch,n:3};
   if(hiddenOn())Object.assign(o,{hidden:true,scale:40});
   if(cubeTab.q)o.rot=quatMat(cubeTab.q);
@@ -241,7 +189,7 @@ function cubeTabHiddenDraw(){
 }
 // ----- live: a turn asks the cube for its state, the state turns the layer -----
 // One request at a time. A turn during a request marks `want`, and the answer asks again, so the
-// picture ends on the real cube however fast the turns come. The window closed, the request still
+// picture ends on the real cube however fast the turns come. On another tab, the request still
 // goes: the move list needs every state.
 function cubeTabAsk(){
   if(!cubeTab.conn)return;
@@ -272,14 +220,14 @@ function cubeTabPath(from,to){
 }
 // Show `cube`, the real cube's state. Up to four moves past the last picture: queue the turns, so
 // each one turns its layer, even when the turns come fast. Further away: show it at once.
-// The moves on the way go on the list, window or no window. Five or more apart, the moves are not
+// The moves on the way go on the list, tab in view or not. Five or more apart, the moves are not
 // known, and the list keeps what it has.
 function cubeTabShow(cube){
   const moved=cubeTabPath(cubeTab.target||cubeTab.shown,cube);
   if(moved&&moved.length)cubeTabRecord(moved);
   if(!moved||moved.length)cubeTabStir(); // the cube changed; a state read again with no turn is not a turn
   const still=(typeof reducedMotion==='function'&&reducedMotion())||typeof requestAnimationFrame!=='function';
-  const path=still||!$('#cubeWin')?null:moved;
+  const path=still||!cubeTabShown()?null:moved;
   if(!path){cubeTabStopAnim();cubeTab.shown=cubeTab.target=cube;cubeTabWindow();return;}
   cubeTab.target=cube;cubeTab.queue.push(...path);
   if(cubeTab.anim)return; // the running turn goes on; the new ones follow it
@@ -321,13 +269,13 @@ function quatSlerp(a,b,t){
 // The angle between two turns, in degrees.
 function quatAngle(a,b){const d=Math.abs(a[0]*b[0]+a[1]*b[1]+a[2]*b[2]+a[3]*b[3]);return 2*Math.acos(Math.min(1,d))*180/Math.PI;}
 // Turn the picture toward qTo, a little closer each frame, so a press, or a turn of the cube in
-// the hands, reads as a turn and not a jump. With reduced motion, or with no window, the picture
-// goes straight there, drawn once a frame at most: the tilt readings come faster than that.
+// the hands, reads as a turn and not a jump. With reduced motion, or with the tab out of view, the
+// picture goes straight there, drawn once a frame at most: the tilt readings come faster than that.
 function cubeTabTurnView(){
   if(!cubeTab.qTo)return;
   const noRaf=typeof requestAnimationFrame!=='function';
-  const still=!$('#cubeWin')||(typeof reducedMotion==='function'&&reducedMotion())||noRaf;
-  if(still){cubeTab.q=cubeTab.qTo;if(!$('#cubeWin')||cubeTab.raf)return;
+  const still=!cubeTabShown()||(typeof reducedMotion==='function'&&reducedMotion())||noRaf;
+  if(still){cubeTab.q=cubeTab.qTo;if(!cubeTabShown()||cubeTab.raf)return;
     if(noRaf){cubeTabDraw();return;}
     if(!cubeTab.qraf)cubeTab.qraf=requestAnimationFrame(()=>{cubeTab.qraf=0;if(!cubeTab.raf)cubeTabDraw();});return;}
   if(cubeTab.qraf)return;
@@ -451,7 +399,7 @@ function cubeTabTurn(m){
   else{if(!cubeTab.q)cubeTab.q=[0,0,0,1];cubeTab.qTo=h.q;cubeTabTurnView();} // the first press turns from the cube's own frame
   if(!cubeTab.stillTimer&&cubeTab.target)cubeTabSettle();
 }
-// ----- the stage above the picture -----
+// ----- the stage beside the picture -----
 // The cube turned (its state differs from the picture): fade the stage, and read it again once the
 // cube has been still for stillMs. Only a change counts: a cube can send its state again on its
 // own, and a state that matches the picture must not put the reveals off.
@@ -509,58 +457,22 @@ function cubeTabStageDraw(){
     else{s.className='mv hid';s.textContent='•';s.setAttribute('aria-label','hidden move');}
     alg.appendChild(s);});
 }
-// ----- the first time: dim the page around the tab and point to it -----
-function cubeTabSpot(){
-  if(store.get('cubeTip',0)||!cubeTabBtn()||$('#cubeSpot'))return;
-  if(document.querySelector('.modal-bg')){cubeTab.tipWait=true;return;} // after the dialog closes
-  cubeTab.tipWait=false;store.set('cubeTip',1);
-  const s=document.createElement('div');s.className='spot';s.id='cubeSpot';
-  s.innerHTML='<div class="sh"></div><div class="sh"></div><div class="sh"></div><div class="sh"></div><div class="ring" aria-hidden="true"></div><div class="callout" role="status"></div>';
-  s.querySelector('.callout').textContent=CUBE_TAB_TIP;
-  s.querySelectorAll('.sh').forEach(d=>{d.onclick=cubeTabSpotEnd;});
-  document.body.appendChild(s);
-  cubeTabSpotLayout();
-  window.addEventListener('resize',cubeTabSpotLayout);
-  document.addEventListener('keydown',cubeTabSpotKeys,true);
-  cubeTab.spotTimer=setTimeout(cubeTabSpotEnd,8000);
-}
-// Four shades around a hole over the tab, a ring on the hole, the callout under it.
-function cubeTabSpotLayout(){
-  const s=$('#cubeSpot'),b=cubeTabBtn();if(!s||!b)return;
-  const r=b.getBoundingClientRect(),pad=10,W=window.innerWidth;
-  const top=Math.max(0,r.top-pad),left=Math.max(0,r.left-pad),bottom=r.bottom+pad,right=r.right+pad;
-  const sh=s.querySelectorAll('.sh'),px=v=>Math.round(v)+'px';
-  Object.assign(sh[0].style,{top:0,left:0,right:0,height:px(top)});
-  Object.assign(sh[1].style,{top:px(bottom),left:0,right:0,bottom:0});
-  Object.assign(sh[2].style,{top:px(top),left:0,width:px(left),height:px(bottom-top)});
-  Object.assign(sh[3].style,{top:px(top),left:px(right),right:0,height:px(bottom-top)});
-  Object.assign(s.querySelector('.ring').style,{top:px(top),left:px(left),width:px(right-left),height:px(bottom-top)});
-  const c=s.querySelector('.callout'),cl=Math.max(8,Math.min(left,W-c.offsetWidth-8));
-  c.style.top=px(bottom+12);c.style.left=px(cl);
-  c.style.setProperty('--arrow',px(Math.max(12,Math.min(r.left-cl+r.width/2-8,Math.max(12,c.offsetWidth-28)))));
-}
-function cubeTabSpotKeys(e){if(e.key==='Escape'){e.preventDefault();e.stopPropagation();cubeTabSpotEnd();}}
-function cubeTabSpotEnd(){
-  const s=$('#cubeSpot');if(!s)return;
-  clearTimeout(cubeTab.spotTimer);window.removeEventListener('resize',cubeTabSpotLayout);document.removeEventListener('keydown',cubeTabSpotKeys,true);
-  s.remove();
-}
 // ----- what the Smart cube dialog reports -----
 function cubeTabEvent(ev){
   if(ev.type==='connect'){
     cubeTab.conn=ev.conn;cubeTab.name=smartNiceName(ev.conn.name);cubeTab.battery=ev.conn.battery;cubeTab.asked=false;cubeTab.want=false;cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;cubeTab.moves=[];cubeTabResetView();cubeTabStageReset();
-    cubeTabRender();
+    cubeTabRender();cubeTabGo();
     if(ev.cube)cubeTabShow(ev.cube);else cubeTabWindow();
-    if($('#cubeWin'))cubeTabAsk();
-    cubeTabSpot();return;
+    if(cubeTabShown())cubeTabAsk();
+    return;
   }
-  if(ev.type==='disconnect'){cubeTab.conn=null;cubeTab.name='';cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;cubeTab.moves=[];cubeTabClose();cubeTabResetView();cubeTabStageReset();cubeTabSpotEnd();cubeTabRender();return;}
+  if(ev.type==='disconnect'){cubeTab.conn=null;cubeTab.name='';cubeTabStopAnim();cubeTab.shown=cubeTab.target=null;cubeTab.moves=[];if(typeof smartListenStop==='function')smartListenStop();cubeTabResetView();cubeTabStageReset();cubeTabRender();cubeTabWindow();return;}
   if(ev.type==='gone'){if(ev.conn!==cubeTab.conn)return;cubeTab.conn=null;cubeTab.asked=false;cubeTab.want=false;cubeTabStageStop();cubeTabAwayClear();if(typeof smartListenStop==='function')smartListenStop();cubeTabRender();cubeTabWindow();return;}
-  if(ev.type==='close'){if(cubeTab.tipWait)cubeTabSpot();return;}
+  if(ev.type==='close')return;
   if(ev.conn!==cubeTab.conn)return;
   if(ev.type==='move')cubeTabAsk(); // the state that answers shows the turn
   if(ev.type==='gyro')cubeTabGyro(ev.q);
-  if(ev.type==='battery'){cubeTab.battery=ev.level;const b=cubeTabBtn();if(b)smartBatteryDraw(b.querySelector('.batt'),ev.level);smartBatteryDraw($('#cubeWinBatt'),ev.level);}
+  if(ev.type==='battery'){cubeTab.battery=ev.level;smartBatteryDraw($('#cubeWinBatt'),ev.level);}
   if(ev.type==='state'){cubeTab.asked=false;if(cubeTab.want){cubeTab.want=false;cubeTabAsk();}cubeTabShow(ev.cube);}
 }
-if(typeof document!=='undefined')document.addEventListener('cw:smart',e=>cubeTabEvent(e.detail));
+if(typeof document!=='undefined'){document.addEventListener('cw:smart',e=>cubeTabEvent(e.detail));cubeTabMount();}

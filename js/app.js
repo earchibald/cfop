@@ -329,7 +329,7 @@ document.addEventListener('keydown',e=>{const el=document.activeElement,tag=el?e
   if(e.code==='Space'){e.preventDefault();if(e.repeat)return;if(timerHidden())toggleAuto();else timerPress();return;}
   if(timer.state==='running')return;
   if(typeof f2lGuideKey==='function'&&f2lGuideKey(e))return; // the F2L guide: the arrows make and cover moves
-  if(e.key>='1'&&e.key<='6'){const b=railButtons()[+e.key-1];if(b)b.click();}
+  if(e.key>='1'&&e.key<='9'){const b=railButtons()[+e.key-1];if(b)b.click();}
   const jump=e.shiftKey?5:1;
   if(e.key==='ArrowLeft'){e.preventDefault();seqGo(seqState.idx-jump);}if(e.key==='ArrowRight'){e.preventDefault();seqGo(seqState.idx+jump);}
   if(e.key==='Home'){e.preventDefault();seqGo(0);}if(e.key==='End'){e.preventDefault();seqGo(seqState.moves.length);}
@@ -388,7 +388,7 @@ function puzzleCube(){return puzzleN()===4?new FourCube():new Cube();}
 function applyMethodData(){const i=methodInfo();document.body.dataset.method=method;document.body.dataset.kind=i.kind;document.body.dataset.puzzle=i.puzzle;setDrawN(puzzleN());}
 applyMethodData();
 let curTab='solve';
-const TAB_SCOPE={solve:'solve',cross:'cross',f2l:'f2l',ll:'ll',lab:'lab',ref:'ref',learn:'solve',bsolve:'solve',practice:'solve',progress:'solve',cheat:'solve',ssolve:'two',ortega:'two',cll:'two',sref:'two',fsolve:'four',parity:'four',fref:'four'};
+const TAB_SCOPE={solve:'solve',cross:'cross',f2l:'f2l',ll:'ll',lab:'lab',ref:'ref',smart:'solve',learn:'solve',bsolve:'solve',practice:'solve',progress:'solve',cheat:'solve',ssolve:'two',ortega:'two',cll:'two',sref:'two',fsolve:'four',parity:'four',fref:'four'};
 const BEGINNER_TABS=['learn','bsolve','practice','progress','cheat'];
 function railButtons(){return $$('#'+methodInfo().rail+' button');}
 function tabKey(){return (mobileMQ.matches?'m':'')+methodInfo().tabKey;}
@@ -396,7 +396,8 @@ function homeTab(){return isBeg()?'learn':method==='speed2'?'ssolve':method==='s
 $$('nav.rail button').forEach(b=>b.onclick=()=>{curTab=b.dataset.tab;$$('nav.rail button').forEach(x=>x.classList.toggle('on',x===b));$$('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+curTab));
   document.body.dataset.tab=curTab;$('#mtitle').textContent=b.lastChild.textContent;store.set(tabKey(),curTab);setScope(TAB_SCOPE[curTab]);onEnterTab(curTab);document.dispatchEvent(new CustomEvent('cw:tab',{detail:curTab}));
   // The desktop Reference opens with its own heading at the top of the window, under the top bar, not the player.
-  const sec=$('#tab-ref');if(curTab==='ref'&&!mobileMQ.matches&&sec&&sec.scrollIntoView)sec.scrollIntoView({behavior:'smooth',block:'start'});});
+  // So does the Smart cube tab: the live cube and every control beside it come into view together.
+  const sec=$('#tab-'+curTab);if((curTab==='ref'||curTab==='smart')&&!mobileMQ.matches&&sec&&sec.scrollIntoView)sec.scrollIntoView({behavior:'smooth',block:'start'});});
 function goTab(name){const b=$(`nav.rail button[data-tab="${name}"]`);if(b)b.click();}
 function onEnterTab(t){if(!seqState.drill)showForTab();else if(t==='f2l'&&f2lState.mode==='live')showF2LState();else if(t==='f2l'&&f2lState.mode==='guide'&&typeof fgShow==='function')fgShow();if(t==='cross')refreshCross();}
 function nextForTab(){({solve:()=>newScramble(),cross:()=>$('#crossNew').click(),f2l:()=>(f2lState.mode==='guide'?$('#fgNew'):f2lState.mode==='live'?$('#f2lNew'):$('#f2lRandomCase')).click(),ll:()=>$('#llNext').click(),ssolve:()=>newScramble(),ortega:()=>{const b=$('#twNextOrtega');if(b)b.click();},cll:()=>{const b=$('#twNextCll');if(b)b.click();},fsolve:()=>newScramble(),parity:()=>{const b=$('#fwNext');if(b)b.click();}}[curTab]||(()=>{}))();}

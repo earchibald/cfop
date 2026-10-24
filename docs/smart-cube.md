@@ -4,7 +4,7 @@
 |---|---|
 | Protocol, cipher, Bluetooth link | `js/gan.js` (no DOM) |
 | Smart cube dialog | `js/smart-ui.js`, opened by `#smartBtn` in the seed bar (3x3 only) |
-| The cube tab | `js/cubetab.js`: the tab in the top bar while a cube is connected, its floating window with the live cube (turns, the tilt of the cube, the moves), the first-time callout; `test/cubetab.js` |
+| The Smart cube tab | `js/cubetab.js`: tab 7 of the CFOP rail, the live cube large in the main panel with every control beside it (turns, the tilt of the cube, the moves, the stage, Listen); `test/cubetab.js`. The voice: `js/smart-listen.js`; the reference card a case name opens: `js/smart-card.js` |
 | Tests | `test/gan.js` (protocol), `test/smart-ui.js` (dialog), `test/fake-gan.js` (a fake GAN cube) |
 | Saved MAC addresses | `cw:ganMac`, a map from the Bluetooth name to the address |
 | The macOS app (Bluetooth bridge for Safari) | `mac/` (Swift, AppKit, Network, CoreBluetooth); `js/bridge.js` is the page side; `test/bridge.js` and `test/fake-bridge.js` |
@@ -210,6 +210,33 @@ As in `listen.js`, a command acts on the final guess or on two early guesses in
 a row, and only the new end of a long result is read. One microphone: the
 Reference's Listen and this one stop each other. The listening ends with the
 window and when the link drops. The lab has none of this yet.
+
+Version 1.34.0 makes the smart cube a tab of its own: Smart cube, tab 7 of the
+CFOP rail (`#tab-smart`), in place of the top-bar tab, its floating window and
+the callout. Before a cube connects the tab is a Connect card; when one
+connects in CFOP the page goes to the tab, so the live cube is there when the
+dialog closes. The live panel puts the picture large on the left, with the band
+and the turn buttons under it, and everything else beside it: the stage, the
+moves, then Reset view, Clear moves, Hidden faces and Listen with its line, so
+no control needs a scroll away from the cube. On the desktop the tab scrolls
+its section under the top bar, as the Reference does. The rail button carries
+the live dot (green; orange while the cube is held unlike the hold; gray while
+the link is down, with Connect again in the panel). Leaving the tab stops the
+turns and the listening; the moves and the stage count on. The picture draws
+only while the tab is in view (`cubeTabShown`). While the tab listens, hints
+under the line say what to say. A case name ("T perm", "Sune", "F2L 12") now
+opens the reference card (`js/smart-card.js`): a small floating window beside
+the cube with the group and the name, the picture with its views as chips (Top,
+Side, 3D, Flat and Play, which loops the algorithm on the small cube) and Save
+image, the algorithm covered and uncovered one move per second, Recognize, and
+Details. The names go through the Reference's matcher; close calls come as
+chips on the line, a click or the next sentence picks one, a weak name asks
+while a card is open, and the stage on the cube breaks an OLL/PLL tie. In a
+card: "reveal moves", "hide moves", "play", "stop", "close". The head drags the
+card; the grip at its corner zooms it, the font size and the width together, so
+everything inside scales (0.7 to 2.6, no wider than the screen); the place and
+the zoom are kept in `cw:smartCard`. Esc closes the card; a modal takes Esc
+first. `test/cubetab.js`, `test/smart-listen.js`, `test/smart-card.js`.
 
 ## The lab
 
