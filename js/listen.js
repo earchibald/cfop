@@ -1,6 +1,6 @@
-// Listen: the phone hears a case name and shows its algorithm, one move per second.
+// Listen: the page hears a case name and shows its algorithm, one move per second.
 //
-// The Listen button on the phone Reference section turns the microphone on (the browser asks once). A
+// The Listen button on the Reference section (the phone and the desktop) turns the microphone on (the browser asks once). A
 // hold on the button listens once, while it is held: a short sentence is what the phone's recognizer
 // is built for. The page listens through the browser's speech recognition. When it hears a case name
 // ("T perm", "Sune", "G a perm", "F2L 12", "twelve"), the case window opens, as a tap on the row's picture
@@ -24,7 +24,7 @@
 // winner shows at once. Close scores show the choices as chips: a tap or the next word ("second", "the
 // perm", "G a") picks one. Not this, on the window, marks a miss and offers the runners-up. What the
 // phone heard, what was shown and the misses go to cw:listenLog; the Settings window copies it.
-// Each row of the phone Reference carries the shortest name that works ("Say: T perm"). Chrome with
+// Each row of the Reference (both layouts) carries the shortest name that works ("Say: T perm"). Chrome with
 // on-device recognition is told every name as a phrase to favor (SpeechRecognitionPhrase).
 //
 // Pure (no DOM): listenCatalog, listenNormalize, listenKey, listenTokens, listenParse, listenRank, listenDecide,
@@ -224,10 +224,12 @@ function listenPick(text,choices){const p=listenParse(text);
 // card: the listening began for the window and ends with it. wantCard: a hold found a case; listen on when it ends.
 const LISTEN={on:false,hold:false,card:false,wantCard:false,rec:null,entry:null,timer:null,ms:1000,wake:null,catalog:null,choices:null,last:null,local:false,section:undefined,used:{},pend:null};
 function listenSupported(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition);}
-// The section of the phone Reference in view: oll, pll, f2l, or null above the first. A test sets LISTEN.section.
+// The section of the Reference page in view: oll, pll, f2l, or null above the first. On the desktop the two-look
+// OLL and PLL stand side by side, so only the full PLL and the F2L lists name a section. A test sets LISTEN.section.
 function listenSection(){if(LISTEN.section!==undefined)return LISTEN.section;
   const top=$('.top');const off=(top?top.getBoundingClientRect().height:0)+20;let cur=null;
-  for(const [id,set] of [['mg-ollE','oll'],['mg-ollC','oll'],['mg-pllC','pll'],['mg-pllE','pll'],['mg-pll','pll'],['mg-f2l','f2l']]){const el=document.getElementById(id);if(el&&el.getBoundingClientRect().top-off<=0)cur=set;}
+  const marks=mobileMQ.matches?[['mg-ollE','oll'],['mg-ollC','oll'],['mg-pllC','pll'],['mg-pllE','pll'],['mg-pll','pll'],['mg-f2l','f2l']]:[['foldPLL','pll'],['foldF2L','f2l']];
+  for(const [id,set] of marks){const el=document.getElementById(id);if(el&&el.getBoundingClientRect().top-off<=0)cur=set;}
   return cur;}
 // The strip at the top of the case window: what was heard, the choices and Not this.
 function listenStrip(){return document.getElementById('listenStrip');}
@@ -235,7 +237,7 @@ function listenStrip(){return document.getElementById('listenStrip');}
 // A window a hold opened keeps listening once the hold's recognizer ends.
 function listenShow(e){LISTEN.entry=e;LISTEN.choices=null;clearTimeout(LISTEN.timer);$('#listenCard').classList.add('hidden');
   listenSwapOut();modalNext=null;listenOpen(e);
-  const col=document.querySelector('#modalBg .modal > div:not(.pic)');if(!col)return;
+  const col=document.querySelector(mobileMQ.matches?'#modalBg .modal > div:not(.pic)':'#modalBg .modal > div:not(.picwrap)');if(!col)return; // the top of the sheet; on the desktop, of the text beside the picture
   const strip=document.createElement('div');strip.className='listen-strip';strip.id='listenStrip';
   strip.innerHTML=`<span class="listen-dot"></span><span id="listenModalState"></span><button type="button" class="small ghost listen-not" title="This is not the case I said: show the other cases it could be">Not this</button><span id="listenModalAsk" class="listen-ask"></span>`;
   strip.querySelector('.listen-not').onclick=()=>listenNotThis(e);
@@ -249,7 +251,8 @@ function listenSwapOut(){const b=document.getElementById('modalBg');if(!b)return
 function listenReveal(){clearTimeout(LISTEN.timer);const s=document.querySelector('#modalBg .algbig .spoil');
   if(!s||document.body.classList.contains('refall')||!s.querySelector('.sp-m:not(.on)'))return;
   LISTEN.timer=setTimeout(()=>{const t=document.querySelector('#modalBg .algbig .spoil');if(t===s&&s.querySelector('.sp-m:not(.on)'))spoilStep(s);listenReveal();},LISTEN.ms);}
-function listenOpen(e){if(e.kind==='ll')openCaseModal(modalForLL(LL_ALL.find(a=>a.id===e.id)));else if(e.kind==='pll')openCaseModal(modalForPLL(PLL_FULL.find(p=>p.name===e.id)));else openCaseModal(modalForF2L(F2L_CASES.find(f=>f.n===+e.id)));}
+// The window covers the algorithm on both layouts, for the reveal.
+function listenOpen(e){const o=e.kind==='ll'?modalForLL(LL_ALL.find(a=>a.id===e.id)):e.kind==='pll'?modalForPLL(PLL_FULL.find(p=>p.name===e.id)):modalForF2L(F2L_CASES.find(f=>f.n===+e.id));o.spoil=true;openCaseModal(o);}
 // The choices as chips, in the window's strip while a window is open, else in the panel. A tap picks one; so does the next sentence, through listenPick.
 function listenAsk(choices){LISTEN.choices=choices;
   const html=choices.map((c,i)=>`<button type="button" class="small" data-i="${i}" title="Show this case">${esc(c.name)}</button>`).join('');
@@ -340,12 +343,12 @@ function listenStart(once,card){
   listenState(once?'Say the case name, then let go.':card?'Listening. Say another case to change the card.':'Listening. Say a case name.');
   if(!once&&navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{LISTEN.wake=l;}).catch(()=>{}); // keep the screen on while it listens
 }
-// The words under the button at rest. In a noisy room a hold is best: the phone hears only what is said while the button is down.
-const LISTEN_IDLE='Tap to listen, or hold and say a case name, such as "T perm" or "Sune". In a noisy room, hold the button while you speak.';
+// The words under the button at rest. In a noisy room a hold is best: the microphone hears only what is said while the button is down.
+function listenIdle(){return (mobileMQ.matches?'Tap':'Click')+' to listen, or hold and say a case name, such as "T perm" or "Sune". In a noisy room, hold the button while you speak.';}
 function listenStop(){LISTEN.on=false;LISTEN.hold=false;LISTEN.card=false;LISTEN.wantCard=false;const rec=LISTEN.rec;LISTEN.rec=null;if(rec)try{rec.onend=null;rec.stop();}catch(e){}
   if(LISTEN.wake){LISTEN.wake.release().catch(()=>{});LISTEN.wake=null;}
   listenButton();
-  listenState(LISTEN_IDLE);}
+  listenState(listenIdle());}
 function listenToggle(){if(LISTEN.on)listenStop();else listenStart(false);}
 // The button let go after a hold: the recognizer stops and gives its final sentence.
 function listenRelease(){const rec=LISTEN.rec;if(LISTEN.hold&&rec)try{rec.stop();}catch(e){}}
@@ -358,14 +361,22 @@ function listenRelease(){const rec=LISTEN.rec;if(LISTEN.hold&&rec)try{rec.stop()
   b.addEventListener('contextmenu',e=>e.preventDefault());})();
 // The case window closes: the reveal stops, and so does the listening that began for the window.
 new MutationObserver(()=>{if(document.getElementById('modalBg'))return;clearTimeout(LISTEN.timer);LISTEN.wantCard=false;if(LISTEN.card)listenStop();}).observe(document.body,{childList:true});
-// Each row of the phone Reference carries the shortest name that works. The rows are drawn again when the
-// cross color changes, so the labels go on after every draw.
+// Each row of the Reference carries the shortest name that works: the phone rows, the desktop cards and the rows
+// of the full PLL and F2L tables. The phone rows are drawn again when the cross color changes, so the labels go on
+// after every draw.
 function listenLabelRows(){LISTEN.catalog=LISTEN.catalog||listenCatalog();
-  for(const row of document.querySelectorAll('#refMobileCases .mrow')){const nm=row.querySelector('.nm');if(!nm||nm.querySelector('.say'))continue;
-    const c=LISTEN.catalog.find(c=>c.kind===row.dataset.kind&&String(c.id)===row.dataset.id);if(!c)continue;
+  for(const row of document.querySelectorAll('#refMobileCases .mrow, #refDesktop .ref-row')){const nm=row.querySelector('.nm')||row.querySelector('td:nth-child(2)');if(!nm||nm.querySelector('.say'))continue;
+    const k=row.dataset.kind,id=row.dataset.id; // a full PLL row of a two-look case (T, Y, H, Z, Ua, Ub) carries that case's name
+    const c=LISTEN.catalog.find(c=>c.kind===k&&String(c.id)===id)||(k==='pll'&&LISTEN.catalog.find(c=>c.kind==='ll'&&c.id==='pll-'+id));if(!c)continue;
     const s=document.createElement('span');s.className='say';s.title='Say this to Listen';s.textContent='Say "'+c.hint+'"';nm.appendChild(s);}}
 if(typeof renderMobileRef==='function'){const draw=renderMobileRef;renderMobileRef=function(){draw.apply(this,arguments);listenLabelRows();};}
 listenLabelRows();
+// One Listen panel for both layouts: under the first panel of the Reference page in use, moved when the layout changes.
+function listenPlace(){const p=$('#listenPanel'),host=$(mobileMQ.matches?'#refMobile > .panel':'#refDesktop > .panel');if(!p||!host)return;
+  if(host.nextElementSibling!==p)host.after(p);
+  if(!LISTEN.on&&!LISTEN.hold&&/^(Tap|Click) to listen/.test($('#listenState').textContent))listenState(listenIdle());}
+listenPlace();
+if(mobileMQ.addEventListener)mobileMQ.addEventListener('change',listenPlace);else if(mobileMQ.addListener)mobileMQ.addListener(listenPlace);
 document.body.classList.toggle('can-listen',listenSupported());
 // Is on-device recognition there, for the phrases? Asked once; Chrome on a desktop says yes, phones say no.
 (function(){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R||typeof R.available!=='function')return;
