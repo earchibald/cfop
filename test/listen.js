@@ -7,7 +7,9 @@
 // name, which takes its place, the same name again plays it again, and Stop ends the listening. A hold on
 // the button listens once; the window it opens keeps listening until it closes. Each row
 // carries its shortest name. What was heard goes to a log the Settings window copies. Chrome with
-// on-device recognition takes the names as phrases. A browser with no recognizer gets a message.
+// on-device recognition takes the names as phrases. A browser with no recognizer gets a message. The noise
+// set: a name inside talk is found, ordinary talk names nothing; a strong name acts on two early guesses in a
+// row, the words used are not read again, and a weak name does not change an open window.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
 const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
@@ -56,6 +58,25 @@ w.addEventListener('load',async()=>{try{
   assert.deepStrictEqual([...w.listenDecide(w.listenRank('You',cat,null)).choices.map(c=>c.id)].sort(),['co-U','pll-Ua'],'U alone, no section: both');
   assert.strictEqual(m('T','oll'),'co-T','T in the OLL section');assert.strictEqual(m('T','pll'),'pll-T','T in the PLL section');assert.strictEqual(m('H','oll'),'co-H');
   assert.ok(cat.every(c=>c.say.length&&c.alg&&c.name&&c.hint&&c.set),'every case has names, a set and a hint');
+  // The noise set, with no section in view. A name inside talk is found when an anchor touches it or it is
+  // no everyday word; ordinary talk names nothing. A strong name may change an open window.
+  const heard=t=>{const d=w.listenDecide(w.listenRankAll([t],cat,null));return d?d.hit?d.hit.id:'ask':null;};
+  for(const [say,id] of [['so I told him T perm','pll-T'],['T perm yeah I think so','pll-T'],['and then the weather turned cold T perm tomorrow','pll-T'],
+    ['he said the Sune is easy','co-sune'],['okay so the J perm','Ja'],['wait wait show me the Y perm','pll-Y'],['yeah the chameleon one','co-T'],
+    ['right so headlights','co-U'],['um the bruno thing','co-pi'],['so we did F2L twelve',12],['he wants case seven now',7],
+    ['I think it is the G a perm right','Ga'],['no not that the U perm B','pll-Ub'],['can you do the A perm','Aa'],['all the T perm','pll-T'],
+    ['you know what',null],['I have two dogs',null],['all of them',null],['see you later',null],['that one is mine',null],['I think so',null],
+    ['what time is it',null],['turn it up a bit',null],['are you coming',null],['the sun is out',null],['draw a line',null],['two of us',null],
+    ['I will be there soon',null],['one more time',null],['are you okay',null],['be right back',null],['why not',null],['see you soon',null],
+    ['let me see',null],['I said no',null],['we need to go',null],['the T is cold',null],['you and me',null],['give me two minutes',null],['that one',null]]){
+    assert.strictEqual(heard(say),id,`noise: "${say}" is ${id}`);}
+  const strong=t=>w.listenDecide(w.listenRankAll([t],cat,null)).strong;
+  for(const t of ['T perm','Sune','F2L 12','he said the Sune is easy','chameleon'])assert.ok(strong(t),`"${t}" is strong`);
+  for(const t of ['twelve','soon','dot'])assert.ok(!strong(t),`"${t}" is weak`);
+  assert.strictEqual(m('F2L one'),1,'"one" after an F2L word is a number');assert.strictEqual(m('case one'),1);
+  // Only the new end of a result is read: the words after the ones a match used, the last eight.
+  assert.deepStrictEqual([...w.listenFresh(['so T perm and then','so T perm'],3)],['and then']);
+  assert.strictEqual(w.listenFresh(['one two three four five six seven eight nine ten'],0)[0],'three four five six seven eight nine ten');
   // Close scores are choices: "d perm" is one of the E-set perms. The next word picks one.
   const dd=w.listenDecide(w.listenRank('d perm',cat));assert.ok(!dd.hit&&dd.choices.length===5,'d perm: five choices');
   assert.ok(dd.choices.every(c=>c.set==='pll'),'all perms');
@@ -110,15 +131,18 @@ w.addEventListener('load',async()=>{try{
   rec.say(10,'d perm',true);click($$('#listenModalAsk button')[2]);assert.strictEqual(title(),'E perm','a tap picks');assert.strictEqual(log().pop().picked,'E');assert.strictEqual(mst(),'Listening. Showing E perm.');
   rec.say(11,'T',true);assert.deepStrictEqual([...chips()],['T (chameleon)','T perm'],'T alone, no section: both');
   rec.say(12,'the perm',true);assert.strictEqual(title(),'T perm','"the perm" picks the perm');
-  L.section='oll';rec.say(13,'T',true);assert.strictEqual(title(),'T (chameleon)','T with the OLL section in view');L.section=null;
+  // A weak name (a letter said alone) does not change an open window: it asks; the same name again shows it.
+  L.section='oll';rec.say(13,'T',true);assert.strictEqual(title(),'T perm','a bare letter keeps the window');assert.deepStrictEqual([...chips()],['T (chameleon)'],'and asks');
+  assert.strictEqual(mst(),'Listening. Is it this one? Say it again, or tap it. Heard: T');
+  rec.say(14,'T',true);assert.strictEqual(title(),'T (chameleon)','T again, with the OLL section in view');L.section=null;
   // Not this: the runners-up as chips, and the miss marked in the log. With no runners-up, a word.
-  rec.say(14,'tea perm',true);assert.strictEqual(title(),'T perm');click($('#listenStrip .listen-not'));
+  rec.say(15,'tea perm',true);assert.strictEqual(title(),'T perm');click($('#listenStrip .listen-not'));
   assert.ok(chips().length>=2&&chips().length<=4&&!chips().includes('T perm'),'Not this: the runners-up');assert.strictEqual(log().pop().wrong,true,'the miss is marked');
-  rec.say(15,'sune',true);assert.strictEqual(title(),'Sune');click($('#listenStrip .listen-not'));assert.strictEqual(mst(),'Listening. Say it again, or tap the case in the list.');assert.strictEqual(title(),'Sune','the window stays');
+  rec.say(16,'sune',true);assert.strictEqual(title(),'Sune');click($('#listenStrip .listen-not'));assert.strictEqual(mst(),'Listening. Say it again, or tap the case in the list.');assert.strictEqual(title(),'Sune','the window stays');
   // Close the window: the listening the button began goes on. With no window, the chips go in the panel.
   $('#modalClose').click();await sleep(20);assert.ok(!win()&&L.on,'closed, still listening');
-  rec.say(16,'d perm',true);assert.strictEqual($$('#listenCard .listen-ask button').length,5,'the chips in the panel');assert.ok($('#listenPanel').classList.contains('pinned'));
-  rec.say(17,'second',true);assert.strictEqual(title(),'Z perm');assert.ok($('#listenCard').classList.contains('hidden'),'the panel card goes');$('#modalClose').click();await sleep(20);
+  rec.say(17,'d perm',true);assert.strictEqual($$('#listenCard .listen-ask button').length,5,'the chips in the panel');assert.ok($('#listenPanel').classList.contains('pinned'));
+  rec.say(18,'second',true);assert.strictEqual(title(),'Z perm');assert.ok($('#listenCard').classList.contains('hidden'),'the panel card goes');$('#modalClose').click();await sleep(20);
   // The phone stops on its own: the page starts it again. Stop ends it.
   rec.onend();await sleep(300);assert.strictEqual(rec.started,2,'started again after it ended');
   click($('#listenBtn'));assert.ok(!L.on&&rec.stopped===1,'Stop stops it');assert.strictEqual($('#listenBtn').textContent,'Listen');assert.ok(/^Tap to listen, or hold/.test(st()));
@@ -146,8 +170,28 @@ w.addEventListener('load',async()=>{try{
   assert.ok(copied&&/shown pll-T/.test(copied)&&/WRONG/.test(copied)&&/picked pll-Z/.test(copied),'the log is copied');assert.strictEqual($('#setListenLog').textContent,'Copied');
   click($('#setListenClear'));assert.ok(!$('#setListenLog')&&w.listenLogText()==='','cleared');click($('#setCancel'));
   click($('#settingsBtn'));assert.ok(!$('#setListenLog'),'no button without a log');click($('#setCancel'));
+  // In constant talk: a strong name acts on an early guess, the same in two early guesses in a row; the words
+  // it used are not read again; the words after it may change it; a long result is read at its end only;
+  // a weak name does not change an open window, and talk leaves it as it is.
+  L.local=false;click(btn);const n=recs[6];assert.ok(L.on&&n.continuous);
+  n.say(0,'so I told him',false);n.say(0,'so I told him T perm',false);assert.ok(!win(),'one early guess: no window');
+  n.say(0,'so I told him T perm and',false);assert.strictEqual(title(),'T perm','the same name in two early guesses: the window');
+  assert.strictEqual(log().pop().early,true,'logged as early');
+  n.say(0,'so I told him T perm and then',false);n.say(0,'so I told him T perm and then',true);assert.strictEqual(title(),'T perm');
+  assert.strictEqual(log().length,1,'the words used are not read again; the rest of the sentence is talk');
+  n.say(1,'U perm',false);n.say(1,'U perm',false);assert.strictEqual(title(),'Ua perm','early: U perm');
+  n.say(1,'U perm B',false);n.say(1,'U perm B',false);assert.strictEqual(title(),'Ub perm','the word after it changes it');
+  n.say(1,'U perm B and now the weather is nice but the Sune',false);n.say(1,'U perm B and now the weather is nice but the Sune is',false);
+  assert.strictEqual(title(),'Sune','a long result: its new end is read');
+  n.say(2,'twelve',true);assert.strictEqual(title(),'Sune','a bare number keeps the window');const strip=()=>$$('#listenModalAsk button').map(b=>b.textContent);assert.deepStrictEqual(strip(),['F2L case #12'],'and asks');
+  n.say(3,'twelve',true);assert.strictEqual(title(),'F2L case #12','the same name again shows it');
+  n.say(4,'you know what',true);assert.strictEqual(title(),'F2L case #12','talk keeps the window');assert.strictEqual(strip().length,0,'and asks nothing');
+  n.say(5,'tea',false);n.say(5,'tea',false);assert.strictEqual(title(),'F2L case #12','a weak early guess does nothing');
+  assert.ok(/\tearly/.test(w.listenLogText()),'the log text marks an early guess');
+  $('#modalClose').click();await sleep(20);click(btn);assert.ok(!L.on);
+  assert.ok(/In a noisy room, hold the button/.test(st()),'the words at rest say to hold in a noisy room');
   // A blocked microphone: a message, and it is off.
-  click(btn);recs[6].onerror({error:'not-allowed'});assert.ok(!L.on);assert.ok(/blocked/.test(st()),'blocked: a message');
+  click(btn);recs[7].onerror({error:'not-allowed'});assert.ok(!L.on);assert.ok(/blocked/.test(st()),'blocked: a message');
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('listen: names matched, chips, pick, section, Not this, hold, labels, phrases, log, the window one move per second, tap, stays, swaps, listens on, stop ok');process.exit(0);
+  console.log('listen: names matched, chips, pick, section, Not this, hold, labels, phrases, log, the window one move per second, tap, stays, swaps, listens on, stop, noise set, early guess, weak names ok');process.exit(0);
 }catch(e){console.error('listen: FAIL',e.message,errs);process.exit(1);}});
