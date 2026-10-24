@@ -15,15 +15,20 @@
 // scores every case against the name words: the same word costs 0, a letter the recognizer swaps for
 // another (T for D, E, G) costs a little, a word that sounds alike ("soon" for Sune, by listenKey)
 // costs a little, an extra word costs more, a missing word more still. The anchor rules out the other
-// sets; without one, the section in view breaks a tie ("T" in the OLL part is the T OLL). A sure
+// sets; without one, the section in view breaks a tie ("T" in the OLL part is the T OLL). In a noisy room
+// the recognizer puts talk in the sentence, so the matcher finds the name inside it: a name inside talk
+// counts when an anchor touches it ("so I told him T perm") or it is no everyday word ("Sune"); a letter
+// or a number in ordinary talk names nothing. Such a strong name acts on an early guess, before the
+// sentence ends, and only the new end of a long result is read. A weak name (a letter or a number said
+// alone) does not change an open window: it asks, and the same name again shows it. A sure
 // winner shows at once. Close scores show the choices as chips: a tap or the next word ("second", "the
 // perm", "G a") picks one. Not this, on the window, marks a miss and offers the runners-up. What the
 // phone heard, what was shown and the misses go to cw:listenLog; the Settings window copies it.
 // Each row of the phone Reference carries the shortest name that works ("Say: T perm"). Chrome with
 // on-device recognition is told every name as a phrase to favor (SpeechRecognitionPhrase).
 //
-// Pure (no DOM): listenCatalog, listenNormalize, listenKey, listenParse, listenRank, listenDecide,
-// listenMatch, listenPick.
+// Pure (no DOM): listenCatalog, listenNormalize, listenKey, listenTokens, listenParse, listenRank, listenDecide,
+// listenMatch, listenPick, listenFresh.
 
 // The words a recognizer gives for a letter said alone (the spelling alphabet counts too), and the
 // words it gives for "perm" and "OLL".
@@ -40,6 +45,8 @@ const LISTEN_TENS={twenty:20,thirty:30,forty:40};
 // Talk around a name. "Can you" and friends go as a pair, so "you" is not the letter U.
 const LISTEN_FILLER=new Set(['show','me','the','an','please','what','whats','is','it','its','how','do','does','give','open','play','let','lets','see','want','i','my',
   'that','this','next','now','hey','ok','okay','um','uh','cube','twistwright','algorithm','alg','moves','for','of','to','too','go','and','then','again','one']);
+// Talk words that join one thing to the next. A sentence with one is talk, so a weak name in it names nothing ("you and me").
+const LISTEN_LINK=new Set(['and','then','of','to','too']);
 // Lower case, letters and digits only, each spoken letter as its letter, "f 2 l" as "f2l", numbers as
 // digits, a letter and "perm" run together apart ("jperm", "gaperm"), a two-letter case apart ("ga").
 function listenNormalize(text){
@@ -52,12 +59,14 @@ function listenNormalize(text){
     const one=LISTEN_ONES.indexOf(w0);
     if(LISTEN_TENS[w0]){if(tens)out.push(String(tens));tens=LISTEN_TENS[w0];continue;}
     if(tens){if(one>0&&one<10){out.push(String(tens+one));tens=0;continue;}out.push(String(tens));tens=0;}
-    if(one>=0){out.push(String(one));continue;}
+    if(one>=0){out.push(one===1?'one':String(one));continue;} // "one" stays a word: "that one" is talk, "F2L one" a number (listenTokens)
     out.push(LISTEN_WORDS[w0]||w0);}
   if(tens)out.push(String(tens));
   return (' '+out.join(' ')+' ').replace(/ f ?(2|to|too) ?l /g,' f2l ').replace(/ o (double )?l l? /g,' oll ').replace(/ p l l /g,' perm ')
     .replace(/ (anti|auntie|aunty|ante|and he|anty) ?(sune|soon|sooner|sunny|sunni|suna|sun|sooney|sunday) /g,' antisune ').replace(/ bow tie /g,' bowtie ')
-    .replace(/ head lights? /g,' headlights ').replace(/ sue (nay|ney|knee|nee) /g,' sune ').replace(/\s+/g,' ').trim();}
+    .replace(/ head lights? /g,' headlights ').replace(/ sue (nay|ney|knee|nee) /g,' sune ')
+    .replace(/ ([agjnru]) perm ([abcd])(?= )/g,(s,x,y)=>x==='g'||'ab'.includes(y)?` ${x} ${y} perm`:s) // "U perm B" is "U B perm"
+    .replace(/\s+/g,' ').trim();}
 // A word as it sounds: the first letter, then the consonants, with the letters that sound the same
 // made one. "sune", "soon" and "sunny" are all SN. A single letter is itself.
 function listenKey(w){let s=String(w).toLowerCase().replace(/[^a-z]/g,'');if(s.length<2)return s.toUpperCase();
@@ -68,20 +77,33 @@ function listenKey(w){let s=String(w).toLowerCase().replace(/[^a-z]/g,'');if(s.l
 function listenEdit(a,b){const D=[];for(let i=0;i<=a.length;i++){D[i]=[i];}for(let j=1;j<=b.length;j++)D[0][j]=j;
   for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)D[i][j]=Math.min(D[i-1][j]+1,D[i][j-1]+1,D[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
   return D[a.length][b.length];}
+// The words of a sentence that count, in order, with the talk taken out: {w}, an anchor {w, set} ("perm"
+// is pll, "oll" is oll, "F2L", "case", "pair" and "number" are f2l) or a number {w, num}. "One" is a number
+// only after an F2L word. A leading "a" before a name is the article.
+function listenTokens(text){
+  const toks=listenNormalize(text).split(' ').filter(Boolean),out=[];
+  for(let i=0;i<toks.length;i++){const w=toks[i];
+    if(/^(can|could|would|will|do)$/.test(w)&&toks[i+1]==='u'){i++;continue;}
+    if(w==='one'){if(out.length&&out[out.length-1].set==='f2l')out.push({w:'1',num:1});continue;}
+    if(LISTEN_LINK.has(w))out.linked=true;
+    if(LISTEN_FILLER.has(w))continue;
+    if(w==='perm')out.push({w,set:'pll'});else if(w==='oll')out.push({w,set:'oll'});
+    else if(/^(f2l|case|pair|number)$/.test(w))out.push({w,set:'f2l'});
+    else if(/^\d+$/.test(w))out.push({w,num:+w});else out.push({w});}
+  const isName=x=>!x.set&&x.num==null;
+  for(;;){const i=out.findIndex(isName),j=out.findIndex((x,k)=>k>i&&isName(x));
+    if(i<0||j<0||out[i].w!=='a'||/^[ab]$/.test(out[j].w))break;out.splice(i,1);}
+  return out;}
 // A sentence in three parts: the set an anchor word names ("perm" is pll, "oll", a number is f2l),
-// the number, and the name words with the talk taken out. A leading "a" before a name is the article.
+// the number, and the name words.
 function listenParse(text){
-  const toks=listenNormalize(text).split(' ').filter(Boolean),kept=[];
-  for(let i=0;i<toks.length;i++){if(/^(can|could|would|will|do)$/.test(toks[i])&&toks[i+1]==='u'){i++;continue;}if(!LISTEN_FILLER.has(toks[i]))kept.push(toks[i]);}
   let set=null,num=null;const name=[];
-  for(const w of kept){
-    if(w==='perm'){set=set||'pll';continue;}
-    if(w==='oll'){set=set||'oll';continue;}
-    if(w==='f2l'||w==='case'||w==='pair'||w==='number')continue;
-    if(/^\d+$/.test(w)){if(num==null)num=+w;continue;}
-    name.push(w);}
+  for(const x of listenTokens(text)){
+    if(x.set==='pll'||x.set==='oll'){set=set||x.set;continue;}
+    if(x.set)continue;
+    if(x.num!=null){if(num==null)num=x.num;continue;}
+    name.push(x.w);}
   if(num!=null&&!set)set='f2l';
-  while(name.length>1&&name[0]==='a'&&!/^[ab]$/.test(name[1]))name.shift();
   return {set,num,name};}
 
 // The names of the OLL and PLL cases as people say them, by case id, in normalized form, and the
@@ -131,34 +153,66 @@ function listenTokenCost(h,x){if(h===x)return 0;
   if(kh.length>=3&&kx.length>=3&&listenEdit(kh,kx)<=1)return 0.5;
   if(listenEdit(h,x)/Math.max(h.length,x.length)<=0.34)return 0.5;
   return 1;}
-// The cost of heard words against a name: words swapped by sound, an extra heard word 0.6, a missing name word 1.
-function listenCost(heard,say){const n=heard.length,m=say.length;const D=[];for(let i=0;i<=n;i++){D[i]=[i*0.6];}for(let j=1;j<=m;j++)D[0][j]=j;
-  for(let i=1;i<=n;i++)for(let j=1;j<=m;j++)D[i][j]=Math.min(D[i-1][j]+0.6,D[i][j-1]+1,D[i-1][j-1]+listenTokenCost(heard[i-1],say[j-1]));
+// The cost of heard words against a name: words swapped by sound, an extra heard word between name words
+// 0.6, a missing name word 1. The first and the last heard word must stand for name words: talk around a
+// name is for listenRank to leave out.
+function listenCost(heard,say){const n=heard.length,m=say.length,X=9;const D=[];for(let i=0;i<=n;i++){D[i]=[i*X];}for(let j=1;j<=m;j++)D[0][j]=j;
+  for(let i=1;i<=n;i++)for(let j=1;j<=m;j++)D[i][j]=Math.min(D[i-1][j]+(j===m?X:0.6),D[i][j-1]+1,D[i-1][j-1]+listenTokenCost(heard[i-1],say[j-1]));
   return D[n][m];}
-// Every case a sentence may name, with its cost, the best first. An anchor rules the other sets out; with
-// none, the section in view (oll, pll, f2l) costs the other sets a little. Nothing costs more than LISTEN_OK.
+// Name words that are no everyday word, so they name a case from inside talk: "he said the Sune is easy".
+const LISTEN_STRONG=new Set(['sune','sooney','suna','sunni','antisune','chameleon','chamelion','camelion','cameleon','headlights','headlight','bowtie','bruno']);
+// What a name inside talk costs over the same name said alone. A weak name (no anchor, no word of
+// LISTEN_STRONG) said alone must be the name or sound the same: "mine" is not "line", "see" is no perm.
+const LISTEN_TALK=0.35,LISTEN_WEAK=0.25;
+// Every case a sentence may name, with its cost, the best first: {entry, cost, strong}. The matcher reads
+// each run of up to three name words. A run that is the whole sentence may be any name. A run inside talk
+// counts only when it is strong: an anchor word touches it ("so I told him T perm") or it holds a word of
+// LISTEN_STRONG. So a letter or a number in ordinary talk ("you know what", "I have two dogs") names
+// nothing. An anchor rules the other sets out; with none, the section in view (oll, pll, f2l) costs the
+// other sets a little. Strong tells a name that may change an open window (listenDo). Nothing costs more
+// than LISTEN_OK.
 function listenRank(text,catalog,section){
-  const p=listenParse(text);const out=[];
-  for(const c of catalog){let cost;
-    if(p.num!=null){if(c.set!=='f2l'||p.name.length)continue;cost=p.num===+c.id?0:9;}
-    else{if(!p.name.length||c.set==='f2l')continue;
-      cost=Math.min(...c.say.map(s=>listenCost(p.name,s.split(' '))));
-      if(p.set&&p.set!==c.set)cost+=1.5;else if(!p.set&&section&&section!==c.set)cost+=0.35;}
-    if(cost<=LISTEN_OK)out.push({entry:c,cost});}
-  return out.sort((a,b)=>a.cost-b.cost);}
+  const t=listenTokens(text),p=listenParse(text),out=[];
+  const names=[];t.forEach((x,i)=>{if(!x.set&&x.num==null)names.push(i);});
+  const hasNum=t.some(x=>x.num!=null),f2lWord=t.some(x=>x.set==='f2l');
+  const ll=x=>x&&(x.set==='pll'||x.set==='oll')?x.set:null;
+  // The runs, each with the anchor that touches it: the one after it ("T perm"), else before ("OLL T"), else inside.
+  const runs=[];
+  for(let a=0;a<names.length;a++)for(let b=a;b<names.length&&b<a+3;b++){const s=names[a],e=names[b];
+    let anc=ll(t[e+1])||ll(t[s-1]);for(let k=s+1;!anc&&k<e;k++)anc=ll(t[k]);
+    const words=names.slice(a,b+1).map(i=>t[i].w);
+    runs.push({words,anc,s,e,whole:a===0&&b===names.length-1&&!hasNum,named:words.some(w=>LISTEN_STRONG.has(w))});}
+  // A number with an F2L word beside it names the case from inside talk: "so we did F2L twelve".
+  const f2lNear=t.filter((x,i)=>x.num!=null&&((t[i-1]&&t[i-1].set==='f2l')||(t[i+1]&&t[i+1].set==='f2l'))).map(x=>x.num);
+  for(const c of catalog){let best=Infinity,strong=false,run=null;
+    const take=(cost,s,r)=>{if(cost<best-1e-9||(cost<best+1e-9&&s&&!strong)){best=cost;strong=s;run=r;}};
+    if(c.set==='f2l'){
+      if(p.num!=null&&!names.length)take(p.num===+c.id?0:9,f2lWord,null);
+      if(f2lNear.includes(+c.id))take(names.length?LISTEN_TALK:0,true,null);}
+    else for(const r of runs){const anc=r.anc||(r.whole?p.set:null);
+      if(anc&&anc!==c.set)continue;
+      const sure=!!anc||r.named;if(!sure&&(!r.whole||t.linked))continue;
+      const cost=Math.min(...c.say.map(s=>listenCost(r.words,s.split(' '))));if(cost>(sure?LISTEN_OK:LISTEN_WEAK))continue;
+      take(cost+(r.whole?(!anc&&section&&section!==c.set?0.35:0):LISTEN_TALK),sure,r);}
+    if(best<=LISTEN_OK)out.push({entry:c,cost:best,strong,run});}
+  // Of two names on one anchor, the longer one wins: "the G a perm" is not the A perm.
+  const kept=out.filter(x=>!(x.run&&x.run.anc&&out.some(o=>o!==x&&o.run&&o.run.anc===x.run.anc&&o.run.s<=x.run.s&&o.run.e>=x.run.e&&o.run.e-o.run.s>x.run.e-x.run.s&&o.cost<=x.cost+1e-9)));
+  return kept.map(({entry,cost,strong})=>({entry,cost,strong})).sort((a,b)=>a.cost-b.cost);}
 // The ranks of several sentences (the recognizer's alternatives) as one list: each case at its best cost.
 function listenRankAll(texts,catalog,section){const best=new Map();
-  for(const t of texts)for(const r of listenRank(t,catalog,section)){const k=r.entry.kind+':'+r.entry.id;if(!best.has(k)||best.get(k).cost>r.cost)best.set(k,r);}
+  for(const t of texts)for(const r of listenRank(t,catalog,section)){const k=r.entry.kind+':'+r.entry.id,o=best.get(k);
+    if(!o||o.cost>r.cost||(o.cost===r.cost&&r.strong))best.set(k,r);}
   return [...best.values()].sort((a,b)=>a.cost-b.cost);}
-// A sure winner, or the choices that lie within LISTEN_GAP of the best: {hit, choices, ranked}, or null for none.
+// A sure winner, or the choices that lie within LISTEN_GAP of the best: {hit, strong, choices, ranked}, or null for none.
 function listenDecide(ranked){if(!ranked.length)return null;
   const near=ranked.filter(r=>r.cost-ranked[0].cost<LISTEN_GAP);
-  if(near.length===1)return {hit:ranked[0].entry,choices:null,ranked};
-  return {hit:null,choices:near.slice(0,5).map(r=>r.entry),ranked};}
+  if(near.length===1)return {hit:ranked[0].entry,strong:!!ranked[0].strong,choices:null,ranked};
+  return {hit:null,strong:false,choices:near.slice(0,5).map(r=>r.entry),ranked};}
 // The catalog entry a sentence names for sure, or null.
 function listenMatch(text,catalog,section){const d=listenDecide(listenRank(text,catalog,section));return d&&d.hit||null;}
 // One of the choices on the screen, from the next sentence: "second", "two", "the perm", or the name again. Null for none.
 function listenPick(text,choices){const p=listenParse(text);
+  if(listenNormalize(text)==='one')return choices[0]||null;
   const ord={first:0,second:1,third:2,fourth:3,fifth:4};
   if(p.name.length===1&&ord[p.name[0]]!=null)return choices[ord[p.name[0]]]||null;
   if(p.set&&!p.name.length&&p.set!=='f2l'){const s=choices.filter(c=>c.set===p.set);return s.length===1?s[0]:null;}
@@ -168,7 +222,7 @@ function listenPick(text,choices){const p=listenParse(text);
 
 // ----- the microphone and the card -----
 // card: the listening began for the window and ends with it. wantCard: a hold found a case; listen on when it ends.
-const LISTEN={on:false,hold:false,card:false,wantCard:false,rec:null,entry:null,timer:null,ms:1000,wake:null,catalog:null,choices:null,last:null,local:false,section:undefined};
+const LISTEN={on:false,hold:false,card:false,wantCard:false,rec:null,entry:null,timer:null,ms:1000,wake:null,catalog:null,choices:null,last:null,local:false,section:undefined,used:{},pend:null};
 function listenSupported(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition);}
 // The section of the phone Reference in view: oll, pll, f2l, or null above the first. A test sets LISTEN.section.
 function listenSection(){if(LISTEN.section!==undefined)return LISTEN.section;
@@ -215,25 +269,52 @@ function listenState(msg,heard){$('#listenState').textContent=msg;$('#listenHear
 // What the phone heard and what came of it, kept for tuning: cw:listenLog, the last 200.
 function listenLogAdd(o){const log=store.get('listenLog',[]);log.push({t:Date.now(),...o});while(log.length>200)log.shift();store.set('listenLog',log);}
 function listenLogMark(){const log=store.get('listenLog',[]);if(!log.length)return;log[log.length-1].wrong=true;store.set('listenLog',log);}
-function listenLogText(){return store.get('listenLog',[]).map(o=>`${new Date(o.t).toISOString()}\t${(o.heard||[]).join(' | ')}\t${o.hit?'shown '+o.hit:o.picked?'picked '+o.picked:o.choices?'asked '+o.choices.join(', '):'none'}${o.wrong?'\tWRONG':''}`).join('\n');}
+function listenLogText(){return store.get('listenLog',[]).map(o=>`${new Date(o.t).toISOString()}\t${(o.heard||[]).join(' | ')}\t${o.hit?'shown '+o.hit:o.picked?'picked '+o.picked:o.choices?'asked '+o.choices.join(', '):'none'}${o.early?'\tearly':''}${o.wrong?'\tWRONG':''}`).join('\n');}
 function listenLogClear(){store.set('listenLog',[]);}
-// A final sentence, with the recognizer's alternatives. With choices on the screen, the sentence may
-// pick one. Otherwise every alternative is ranked; a sure winner shows, close scores ask.
-function listenHeard(alts){LISTEN.catalog=LISTEN.catalog||listenCatalog();const pre=listenPre(); // listenShow may start the listening: the word comes after it
-  if(LISTEN.choices){for(const a of alts){const c=listenPick(a,LISTEN.choices);if(c){listenLogAdd({heard:alts,picked:c.id});listenShow(c);listenState(listenPre()+'Heard '+c.name+'.');return;}}}
-  const ranked=listenRankAll(alts,LISTEN.catalog,listenSection());const d=listenDecide(ranked);
-  if(d&&d.hit){LISTEN.last={heard:alts,ranked};listenLogAdd({heard:alts,hit:d.hit.id});listenShow(d.hit);listenState(listenPre()+'Heard '+d.hit.name+'.');}
-  else if(d){LISTEN.last={heard:alts,ranked};listenLogAdd({heard:alts,choices:d.choices.map(c=>c.id)});listenAsk(d.choices);listenState(pre+'Which one?','Heard: '+alts[0]);}
+// What a sentence (with the recognizer's alternatives) asks for: {pick} from the choices on the screen,
+// or listenDecide's {hit, strong, choices, ranked}, or {} for nothing.
+function listenAction(alts){LISTEN.catalog=LISTEN.catalog||listenCatalog();
+  if(LISTEN.choices){for(const a of alts){const c=listenPick(a,LISTEN.choices);if(c)return {pick:c};}}
+  return listenDecide(listenRankAll(alts,LISTEN.catalog,listenSection()))||{};}
+// Do what a sentence asks for. A sure winner shows. A weak one (a letter or a number said alone) does not
+// change an open window: it asks, and the same name again shows it. Close scores ask. Early: an early
+// result acts only for a pick or a strong name, and says nothing else. The case shown, or null.
+function listenDo(a,alts,early){const pre=listenPre(),ex=early?{early:true}:{}; // listenShow may start the listening: the word comes after it
+  if(a.pick){listenLogAdd({heard:alts,picked:a.pick.id,...ex});listenShow(a.pick);listenState(listenPre()+'Heard '+a.pick.name+'.');return a.pick;}
+  const again=a.hit&&LISTEN.choices&&LISTEN.choices.length===1&&LISTEN.choices[0]===a.hit;
+  if(a.hit&&(a.strong||again||(!early&&!listenStrip()))){LISTEN.last={heard:alts,ranked:a.ranked};listenLogAdd({heard:alts,hit:a.hit.id,...ex});listenShow(a.hit);listenState(listenPre()+'Heard '+a.hit.name+'.');return a.hit;}
+  if(early)return null;
+  const ch=a.hit?[a.hit]:a.choices;
+  if(ch){LISTEN.last={heard:alts,ranked:a.ranked};listenLogAdd({heard:alts,choices:ch.map(c=>c.id)});listenAsk(ch);listenState(pre+(a.hit?'Is it this one? Say it again, or tap it.':'Which one?'),'Heard: '+alts[0]);}
   else if(LISTEN.choices)listenState(pre+'Which one? Say the name again, or tap one.','Heard: '+alts[0]);
-  else{listenLogAdd({heard:alts,hit:null});listenState(pre+'No case is called that.','Heard: '+alts[0]);}}
-// A result from the recognizer. An early guess only shows what was heard: "tea" would name the OLL T
-// before "T perm" arrives. The final guess for a sentence acts; the same name said again plays it again.
+  else{listenLogAdd({heard:alts,hit:null});listenState(pre+'No case is called that.','Heard: '+alts[0]);}
+  return null;}
+// A final sentence, with the recognizer's alternatives.
+function listenHeard(alts){return listenDo(listenAction(alts),alts,false);}
+// The words of a result after the ones a match used, the last LISTEN_RECENT, for each alternative. In
+// constant talk a result can grow long (Safari keeps one for the whole session); only its end is new.
+const LISTEN_RECENT=8;
+function listenFresh(alts,n){return alts.map(a=>a.split(/\s+/).filter(Boolean).slice(n).slice(-LISTEN_RECENT).join(' ')).filter(Boolean);}
+// A result from the recognizer. In constant talk the final guess comes late or not at all, so an early
+// guess acts too: a pick, or a strong name ("T perm", "Sune"), the same in two early guesses in a row.
+// A weak early guess only shows what was heard: "tea" would name the OLL T before "T perm" arrives. The
+// words a match used are not read again (LISTEN.used, by result). The words after a match may change it:
+// "U perm", then "B", is the U b perm. The same name said again in a new sentence plays it again.
 function listenResult(ev){
   for(let i=ev.resultIndex||0;i<ev.results.length;i++){const r=ev.results[i];const alts=[];
     for(let j=0;j<r.length;j++){const t=(r[j].transcript||'').trim();if(t)alts.push(t);}
     if(!alts.length)continue;
-    if(!r.isFinal)listenState(listenPre()+'Heard so far.','Heard: '+alts[0]);
-    else listenHeard(alts);}}
+    const u=LISTEN.used[i]||{n:0},fresh=listenFresh(alts,u.n);
+    if(!fresh.length)continue;
+    let a=listenAction(fresh),said=fresh;
+    if(u.text&&!a.pick&&!a.hit){const both=fresh.map(f=>u.text+' '+f),b=listenAction(both);if(b.hit&&b.strong&&b.hit!==u.entry){a=b;said=both;}}
+    if(!r.isFinal){listenState(listenPre()+'Heard so far.','Heard: '+fresh[0]);
+      const key=a.pick?'p:'+a.pick.id:a.hit&&a.strong?'h:'+a.hit.kind+':'+a.hit.id:null;
+      const ready=key&&LISTEN.pend&&LISTEN.pend.i===i&&LISTEN.pend.key===key;LISTEN.pend=key&&!ready?{i,key}:null;
+      if(!ready)continue;}
+    else{LISTEN.pend=null;if(u.entry&&!a.pick&&!a.hit)continue;} // the rest of a sentence that named a case: talk
+    const e=listenDo(a,said,!r.isFinal);
+    if(e)LISTEN.used[i]={n:alts[0].split(/\s+/).filter(Boolean).length,text:said[0],entry:e};}}
 // Chrome with on-device recognition takes the names as phrases to favor. Safari and Android take none.
 function listenBias(rec){if(!LISTEN.local||typeof window.SpeechRecognitionPhrase!=='function'||!('phrases' in rec))return;
   try{LISTEN.catalog=LISTEN.catalog||listenCatalog();const ph=[];
@@ -245,7 +326,7 @@ function listenButton(){const b=$('#listenBtn');b.textContent=LISTEN.on?'Stop':L
 // listens for the open case window and ends when the window closes.
 function listenStart(once,card){
   if(!listenSupported()){listenState('This browser cannot listen. Use Safari or Chrome.');return;}
-  const R=window.SpeechRecognition||window.webkitSpeechRecognition;const rec=new R();LISTEN.rec=rec;LISTEN.on=!once;LISTEN.hold=!!once;LISTEN.card=!once&&!!card;
+  const R=window.SpeechRecognition||window.webkitSpeechRecognition;const rec=new R();LISTEN.rec=rec;LISTEN.used={};LISTEN.pend=null;LISTEN.on=!once;LISTEN.hold=!!once;LISTEN.card=!once&&!!card;
   rec.lang='en-US';rec.continuous=!once;rec.interimResults=true;rec.maxAlternatives=5;
   listenBias(rec);
   rec.onresult=listenResult;
@@ -253,16 +334,18 @@ function listenStart(once,card){
   rec.onend=()=>{if(LISTEN.rec!==rec)return;
     if(once){LISTEN.rec=null;LISTEN.hold=false;listenButton();if(/^Say the case name/.test($('#listenState').textContent))listenState('Nothing heard. Hold the button and say a case name.');
       if(LISTEN.wantCard){LISTEN.wantCard=false;if(listenStrip())listenStart(false,true);}return;}
-    if(LISTEN.on)setTimeout(()=>{if(LISTEN.on&&LISTEN.rec===rec)try{rec.start();}catch(e){}},250);}; // the phone stops on its own after a quiet spell
+    if(LISTEN.on)setTimeout(()=>{if(LISTEN.on&&LISTEN.rec===rec)try{LISTEN.used={};LISTEN.pend=null;rec.start();}catch(e){}},250);}; // the phone stops on its own after a quiet spell
   try{rec.start();}catch(e){LISTEN.on=false;LISTEN.hold=false;LISTEN.card=false;LISTEN.rec=null;listenButton();listenState('The microphone did not start. Try again.');return;}
   listenButton();
   listenState(once?'Say the case name, then let go.':card?'Listening. Say another case to change the card.':'Listening. Say a case name.');
   if(!once&&navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{LISTEN.wake=l;}).catch(()=>{}); // keep the screen on while it listens
 }
+// The words under the button at rest. In a noisy room a hold is best: the phone hears only what is said while the button is down.
+const LISTEN_IDLE='Tap to listen, or hold and say a case name, such as "T perm" or "Sune". In a noisy room, hold the button while you speak.';
 function listenStop(){LISTEN.on=false;LISTEN.hold=false;LISTEN.card=false;LISTEN.wantCard=false;const rec=LISTEN.rec;LISTEN.rec=null;if(rec)try{rec.onend=null;rec.stop();}catch(e){}
   if(LISTEN.wake){LISTEN.wake.release().catch(()=>{});LISTEN.wake=null;}
   listenButton();
-  listenState('Tap to listen, or hold and say a case name, such as "T perm" or "Sune".');}
+  listenState(LISTEN_IDLE);}
 function listenToggle(){if(LISTEN.on)listenStop();else listenStart(false);}
 // The button let go after a hold: the recognizer stops and gives its final sentence.
 function listenRelease(){const rec=LISTEN.rec;if(LISTEN.hold&&rec)try{rec.stop();}catch(e){}}
