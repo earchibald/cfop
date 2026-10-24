@@ -788,17 +788,13 @@ body[data-kind="beg"][data-key] #progressPanel,body[data-kind="beg"][data-key] .
   .keylist{font-size:12px;gap:2px 8px}
 }
 
-/* The cube tab (cubetab.js): a smart cube in the top bar, its floating window, the first-time callout */
-.cubetab{display:inline-flex;align-items:center;gap:7px;align-self:flex-end;margin-bottom:-11px;padding:6px 11px 9px 10px;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);background:var(--bg);border:1px solid var(--line);border-bottom:0;border-radius:var(--rb) var(--rb) 0 0;white-space:nowrap;max-width:260px;line-height:1.3}
-.cubetab:hover,.cubetab[aria-expanded="true"]{border-color:var(--muted)}
-.cubetab[aria-expanded="true"]{background:var(--panel)}
-.cubetab .nm{overflow:hidden;text-overflow:ellipsis}
-.cubetab .brk,.cubewin .cw-head .dot{flex:none}
-.cubetab .brk{color:var(--muted);font-size:13px}
-.cubetab .dot,.cubewin .dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 50%,transparent);animation:livedot 1.6s ease-out infinite;flex:none}
-.cubetab.off .dot,.cubewin.off .dot{background:var(--muted);animation:none;box-shadow:none}
-.cubetab.off{color:var(--muted)}
-.cubetab.warn .dot{background:var(--warn);box-shadow:0 0 0 0 color-mix(in srgb,var(--warn) 50%,transparent)}
+/* The smart cube tab (cubetab.js): the live cube large in the main panel, every control beside it. The rail button carries a dot while a cube is connected. */
+[data-sec="smart"]{--sec:var(--text)}
+#tab-smart{scroll-margin-top:calc(var(--toph,58px) + 12px)} /* the tab opens scrolled to its panel, under the top bar, so the controls are in view with the cube */
+nav.rail button .dot{display:none;width:8px;height:8px;border-radius:50%;background:var(--good);flex:none;margin-left:-4px;box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 50%,transparent);animation:livedot 1.6s ease-out infinite}
+nav.rail button.live .dot{display:inline-block}
+nav.rail button.off .dot{background:var(--muted);animation:none;box-shadow:none}
+nav.rail button.warn .dot{background:var(--warn);box-shadow:0 0 0 0 color-mix(in srgb,var(--warn) 50%,transparent)}
 @keyframes livedot{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 50%,transparent)}70%,100%{box-shadow:0 0 0 6px transparent}}
 /* The charge of a smart cube (smartBatteryDraw): a small battery filled to the level, and the percent */
 .batt{display:inline-flex;align-items:center;gap:5px;flex:none;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--muted);cursor:help}
@@ -807,65 +803,88 @@ body[data-kind="beg"][data-key] #progressPanel,body[data-kind="beg"][data-key] .
 .batt-box::after{content:"";position:absolute;right:-4px;top:2px;width:2px;height:3px;background:currentColor;border-radius:0 1px 1px 0}
 .batt-fill{position:absolute;left:1px;top:1px;bottom:1px;max-width:calc(100% - 2px);background:var(--good);border-radius:1px}
 .batt.low{color:var(--warn)}.batt.low .batt-fill{background:var(--warn)}
-.cubetab .batt{margin-left:2px}.cubetab.off .batt{display:none}
-.cubewin .cw-head .batt{margin-right:2px}
-.cubewin{position:fixed;top:calc(var(--toph,58px) + 10px);right:18px;width:320px;z-index:12;padding:10px 14px 12px;box-shadow:var(--shadow)}
-.cubewin .cw-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
-.cubewin.drag .cw-head{cursor:grabbing}
-.cubewin.drag{box-shadow:0 18px 44px rgba(20,22,30,.3)}
-.cubewin .cw-head .nm{flex:1;font-family:var(--mono);font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cubewin svg{width:100%;height:auto;display:block;background:var(--cube-bg);border-radius:var(--rb)}
-.cubewin .cw-note{font-size:13px;margin:8px 0 0}
-.cubewin .cw-moves{display:flex;align-items:center;gap:4px;margin-top:8px;min-height:22px;font-family:var(--mono);font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden}
-.cubewin .cw-moves .mv{flex:none;min-width:21px;padding:1px 2px;text-align:center;border:1px solid var(--line);border-radius:4px;background:var(--panel)}
+.cubewin[hidden],#smartHome[hidden]{display:none}
+#smartHome h2::before{content:"";display:inline-block;width:12px;height:12px;border-radius:4px;background:var(--sec);margin-right:10px;vertical-align:-1px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.cubewin .cw-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.cubewin .cw-head h2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cubewin .cw-head .grow{flex:1}
+.cubewin .dot{width:9px;height:9px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 50%,transparent);animation:livedot 1.6s ease-out infinite;flex:none}
+.cubewin.off .dot{background:var(--muted);animation:none;box-shadow:none}
+.cubewin.off .cw-head h2{color:var(--muted)}
+.cubewin .cw-body{display:grid;grid-template-columns:minmax(0,3fr) minmax(280px,2fr);gap:18px;align-items:start}
+.cubewin .cw-main{min-width:0}
+.cubewin #cubeWinSvg{width:100%;height:auto;max-height:min(72vh,680px);display:block;background:var(--cube-bg);border-radius:var(--rb)}
+.cubewin .cw-aside{display:flex;flex-direction:column;gap:10px;min-width:0}
+.cubewin .cw-note{font-size:13px;margin:0}
+.cubewin .cw-moves{display:flex;align-items:center;gap:5px;min-height:26px;font-family:var(--mono);font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden}
+.cubewin .cw-moves .mv{flex:none;min-width:26px;padding:2px 4px;text-align:center;border:1px solid var(--line);border-radius:5px;background:var(--panel2)}
 .cubewin .cw-moves .none{color:var(--muted);font-family:inherit;font-weight:400}
 .cubewin .cw-moves .more{flex:none;display:inline-flex;width:8px;height:10px;margin-left:2px;color:var(--muted)}
 .cubewin .cw-moves .more svg{width:8px;height:10px;display:block;fill:currentColor}
-.cubewin .cw-row{display:flex;align-items:flex-start;gap:8px;margin-top:8px}
-.cubewin .cw-warn{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:8px;padding:7px 9px;font-size:12.5px;line-height:1.35;border:1px solid var(--warn);border-radius:var(--rb);background:color-mix(in srgb,var(--warn) 12%,var(--panel))}
+.cubewin .cw-row{display:flex;align-items:flex-start;gap:8px}
+.cubewin .cw-side{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.cubewin .cw-side .small[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--panel))}
+.cubewin .cw-warn{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:10px;padding:8px 10px;font-size:13px;line-height:1.35;border:1px solid var(--warn);border-radius:var(--rb);background:color-mix(in srgb,var(--warn) 12%,var(--panel))}
 .cubewin .cw-warn .txt{flex:1 1 180px}
 .cubewin .cw-warn .btns{display:inline-flex;gap:6px;margin-left:auto}
-.cubewin .cw-warn .small{padding:2px 8px;font-size:12px}
-.cubewin .cw-turns{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;margin-top:8px}
-.cubewin .cw-turns .lbl{font-size:12px;color:var(--muted);margin-right:2px;cursor:help}
-.cubewin .cw-turns .grp{display:inline-flex;gap:3px}
-.cubewin .cw-turns button{min-width:30px;padding:2px 6px;font-family:var(--mono);font-size:13px;font-weight:500}
-.cubewin .cw-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-left:auto}
-.cubewin .cw-side .small{padding:2px 8px;font-size:12px}
-.cubewin .cw-side .small[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--panel))}
-/* The voice commands (smart-listen.js): the Listen button, and the line under the buttons for what was heard */
-#cubeWinListen{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;touch-action:manipulation} /* a hold listens once; no callout, no selection */
+.cubewin .cw-turns{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin-top:10px}
+.cubewin .cw-turns .lbl{font-size:13px;color:var(--muted);margin-right:2px;cursor:help}
+.cubewin .cw-turns .grp{display:inline-flex;gap:4px}
+.cubewin .cw-turns button{min-width:42px;padding:5px 10px;font-family:var(--mono);font-size:15px;font-weight:500}
+#cubeWinListen{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;touch-action:manipulation;font-weight:600} /* a hold listens once; no callout, no selection */
 #cubeWinListen.on{color:var(--accent-ink);background:var(--accent);border-color:transparent}
-body:not(.can-listen) #cubeWinListen,body:not(.can-listen) #cubeWinListenRow{display:none}
-.cubewin .cw-listen{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-top:8px;font-size:12.5px;line-height:1.35}
+body:not(.can-listen) #cubeWinListen,body:not(.can-listen) #cubeWinListenRow,body:not(.can-listen) #cubeWinHints{display:none}
+.cubewin .cw-listen{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-size:13.5px;line-height:1.35}
 .cubewin .cw-listen .listen-dot{align-self:center}.cubewin .cw-listen.on .listen-dot{background:var(--accent);opacity:1;animation:listenPulse 1.4s ease-in-out infinite}
-.cubewin .cw-listen .txt{flex:1 1 200px}.cubewin .cw-listen .heard{flex:1 0 100%;color:var(--muted);font-size:12px}.cubewin .cw-listen .heard:empty{display:none}
-/* the stage above the picture: the name, the hold, the moves hidden until they show; a turn fades it */
-.cubewin .cw-stage{min-height:72px;margin-bottom:8px;transition:opacity .4s}
+.cubewin .cw-listen .txt{flex:1 1 200px}.cubewin .cw-listen .heard{flex:1 0 100%;color:var(--muted);font-size:12.5px}.cubewin .cw-listen .heard:empty{display:none}
+.cubewin .cw-listen .ask{flex:1 0 100%}.cubewin .cw-listen .ask:empty{display:none}
+/* The hints while the tab listens (smart-listen.js): what to say, and what each thing does */
+.cubewin .cw-hints{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 12px;padding:10px 12px;font-size:13px;line-height:1.35;border:1px dashed var(--line);border-radius:var(--rb);background:var(--panel2)}
+.cubewin .cw-hints .lbl{grid-column:1/-1;font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.cubewin .cw-hints .hint{display:contents}
+.cubewin .cw-hints b{font-weight:600;white-space:nowrap}
+.cubewin .cw-hints span{color:var(--muted)}
+.cubewin .cw-stage{min-height:72px;transition:opacity .4s}
 .cubewin .cw-stage.stale{opacity:.4}
-.cubewin .st-name{font-weight:600;font-size:16px;line-height:1.3;min-height:21px}
-.cubewin .st-sub{font-size:13px;color:var(--muted);min-height:18px}
-.cubewin .st-alg{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;min-height:22px;font-family:var(--mono);font-size:12px;font-weight:500}
-.cubewin .st-alg .mv{min-width:24px;padding:1px 3px;text-align:center;border:1px solid var(--line);border-radius:4px;background:var(--panel)}
+.cubewin .st-name{font-weight:600;font-size:24px;line-height:1.2;min-height:29px}
+.cubewin .st-sub{font-size:14px;color:var(--muted);min-height:19px;margin-top:2px}
+.cubewin .st-alg{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;min-height:26px;font-family:var(--mono);font-size:14px;font-weight:500}
+.cubewin .st-alg .mv{min-width:28px;padding:2px 5px;text-align:center;border:1px solid var(--line);border-radius:5px;background:var(--panel2)}
 .cubewin .st-alg .mv.hid{color:var(--muted);border-style:dashed;background:transparent}
 .cubewin .st-alg .mv.done{color:var(--muted);border-color:var(--good);background:color-mix(in srgb,var(--good) 18%,var(--panel))}
 .cubewin .mv.rot{font-style:italic;color:var(--muted)}
-.cubewin .scan-row{margin-top:8px}
-.spot .sh{position:fixed;background:var(--scrim);z-index:17}
-.spot .ring{position:fixed;z-index:18;pointer-events:none;border-radius:var(--rb);box-shadow:0 0 0 3px var(--accent),0 0 28px 8px color-mix(in srgb,var(--accent) 55%,transparent);animation:spotring 1.4s ease-in-out infinite}
-@keyframes spotring{50%{box-shadow:0 0 0 3px var(--accent),0 0 10px 2px color-mix(in srgb,var(--accent) 35%,transparent)}}
-.spot .callout{position:fixed;z-index:18;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:15px;line-height:1.35;padding:10px 14px;border-radius:var(--rb);max-width:min(320px,calc(100vw - 16px));box-shadow:var(--shadow)}
-.spot .callout::before{content:'';position:absolute;top:-8px;left:var(--arrow,22px);border:8px solid transparent;border-top:0;border-bottom-color:var(--accent)}
-@media (prefers-reduced-motion:reduce){.cubetab .dot,.cubewin .dot,.spot .ring,.cubewin .cw-listen .listen-dot{animation:none}.cubewin .cw-stage{transition:none}}
-@media (max-width:760px){
-  /* A phone's top bar is full: the tab is the live dot alone, the name is in the window. */
-  .cubetab{margin-bottom:-9px;padding:8px 10px 10px;gap:0}
-  .cubetab .brk,.cubetab .nm{display:none}
-  .cubewin{left:8px;right:8px;width:auto;top:calc(var(--toph,58px) + 6px)}
-  .cubewin .cw-head{cursor:default}
-  .cubewin svg{max-height:44vh;margin:0 auto}
-  .top:has(.cubetab) #mnav button{font-size:12px;white-space:nowrap;letter-spacing:-.02em}
-}
+.cubewin .scan-row{margin:0}
+@media (prefers-reduced-motion:reduce){nav.rail button .dot,.cubewin .dot,.cubewin .cw-listen .listen-dot{animation:none}.cubewin .cw-stage{transition:none}}
+@media (max-width:960px){.cubewin .cw-body{grid-template-columns:1fr}}
+@media (max-width:760px){.cubewin #cubeWinSvg{max-height:50vh}}
+
+/* The reference card (smart-card.js): a small floating window with one case, dragged by its head and zoomed by the grip at its corner. Everything inside is in em, so the zoom scales it all. */
+.smartcard{position:fixed;z-index:12;width:340px;font-size:13px;padding:.7em 1em .9em;box-shadow:var(--shadow);display:flex;flex-direction:column;max-height:calc(100vh - 16px);box-sizing:border-box;overflow:hidden}
+.smartcard.drag{box-shadow:0 18px 44px rgba(20,22,30,.3)}
+.smartcard .sc-head{display:flex;align-items:center;gap:.6em;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;padding-bottom:.55em}
+.smartcard.drag .sc-head{cursor:grabbing}
+.smartcard .sc-head .nm{flex:1;min-width:0;font-size:1.15em;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.smartcard .tag{font-size:.85em;padding:.1em .6em;margin:0;white-space:nowrap}
+.smartcard .sc-body{flex:1 1 auto;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:.55em}
+.smartcard .pic{background:var(--panel2);border-radius:var(--r);padding:.8em}
+.smartcard .pic svg{width:100%;height:auto;display:block}
+.smartcard .pic .pv[hidden]{display:none}
+.smartcard .sc-bar{display:flex;justify-content:space-between;align-items:center;gap:.5em;flex-wrap:wrap}
+.smartcard .small{font-size:.95em;padding:.3em .8em}
+.smartcard .pvchips .pvchip{font-size:.92em;padding:.25em .8em;border-radius:0}
+.smartcard .sc-save{display:inline-flex;align-items:center;gap:.4em}
+.smartcard .sc-save svg{width:1.1em;height:1.1em}
+.smartcard .algbig{font-family:var(--mono);font-size:1.45em;line-height:1.8;word-spacing:2px;margin:0}
+.smartcard .algbig .sp-m{display:inline-block;padding:0 .1em;margin:.1em 0}
+.smartcard .sp-btn{font-size:.6em;padding:.15em .7em;vertical-align:.15em}
+.smartcard .sc-hint{font-size:.92em;line-height:1.35}
+.refall .smartcard .sc-hint{display:none}
+.smartcard .sc-rec{font-size:.95em;line-height:1.4}.smartcard .sc-rec b{color:var(--muted);font-weight:500;margin-right:.3em}
+.smartcard .sc-foot{display:flex;gap:.5em;align-items:center}
+.smartcard .hk{font-size:.75em;line-height:1.3em;min-width:1.2em;margin-left:.45em}
+.smartcard .sc-grip{position:absolute;right:0;bottom:0;width:1.6em;height:1.6em;cursor:nwse-resize;touch-action:none;border-radius:0 0 var(--r) 0;background:linear-gradient(135deg,transparent 55%,var(--muted) 55%,var(--muted) 62%,transparent 62%,transparent 74%,var(--muted) 74%,var(--muted) 81%,transparent 81%);opacity:.6}
+.smartcard .sc-grip:hover{opacity:1}
+@media (max-width:760px){.smartcard{max-width:calc(100vw - 16px)}}
 
 /* F2L guide (js/f2l-ui.js): the chips, the step card with the hint as a drill, the tree of ways */
 .fg{display:flex;flex-direction:column;gap:10px}

@@ -44,7 +44,7 @@ w.addEventListener('load',async()=>{try{
   // The menu lists every section and marks the current one.
   $('#menuBtn').click();assert.ok(menuOpen(),'menu button opens the menu');
   assert.strictEqual($('#menuBtn').getAttribute('aria-expanded'),'true');
-  const items=$$('#menu button');assert.strictEqual(items.length,6,'six sections');
+  const items=$$('#menu button');assert.strictEqual(items.length,7,'seven sections');
   assert.strictEqual($('#menu button.on').dataset.tab,'ref','current section is marked');
   items.find(b=>b.dataset.tab==='f2l').click();
   assert.ok(!menuOpen(),'picking a section closes the menu');

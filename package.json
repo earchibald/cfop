@@ -1,10 +1,10 @@
 {
   "name": "twistwright",
-  "version": "1.34.0",
+  "version": "1.35.0",
   "private": true,
   "description": "Twistwright — learn and train the 2x2, 3x3 and 4x4. Static site, no build step.",
   "scripts": {
-    "test": "node test/load.js && node test/draw.js && node test/two.js && node test/state-text.js && node test/mini.js && node test/speed2.js && node test/four.js && node test/master.js && node test/speed4.js && node test/tabs.js && node test/enter.js && node test/refspoil.js && node test/cross.js && node test/listen.js && node test/listen-desktop.js && node test/refmoves.js && node test/settings.js && node test/pictures.js && node test/tips.js && node test/plan.js && node test/mobile.js && node test/glossary.js && node test/beginner.js && node test/method.js && node test/learn.js && node test/guide.js && node test/paint.js && node test/practice.js && node test/home.js && node test/two-ui.js && node test/four-ui.js && node test/scan-assemble.js && node test/scan-synth.js && node test/scan-vote.js && node test/scan-ui.js && node test/gan.js && node test/smart-ui.js && node test/stage.js && node test/cubetab.js && node test/smart-listen.js && node test/bridge.js && node test/lab.js && node test/f2l.js && node test/f2l-ui.js && node test/resync.js && node test/scan-real.js",
+    "test": "node test/load.js && node test/draw.js && node test/two.js && node test/state-text.js && node test/mini.js && node test/speed2.js && node test/four.js && node test/master.js && node test/speed4.js && node test/tabs.js && node test/enter.js && node test/refspoil.js && node test/cross.js && node test/listen.js && node test/listen-desktop.js && node test/refmoves.js && node test/settings.js && node test/pictures.js && node test/tips.js && node test/plan.js && node test/mobile.js && node test/glossary.js && node test/beginner.js && node test/method.js && node test/learn.js && node test/guide.js && node test/paint.js && node test/practice.js && node test/home.js && node test/two-ui.js && node test/four-ui.js && node test/scan-assemble.js && node test/scan-synth.js && node test/scan-vote.js && node test/scan-ui.js && node test/gan.js && node test/smart-ui.js && node test/stage.js && node test/cubetab.js && node test/smart-listen.js && node test/smart-card.js && node test/bridge.js && node test/lab.js && node test/f2l.js && node test/f2l-ui.js && node test/resync.js && node test/scan-real.js",
     "serve": "python3 -m http.server 8000"
   },
   "devDependencies": {
