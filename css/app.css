@@ -410,6 +410,11 @@ details.fold>summary:hover h3{color:var(--text)}
 .scan-net g.expect{opacity:.4} /* a face the guide expects, not yet shown or painted */
 .scan-pal{gap:6px}.scan-pal .pt-swatch{width:30px;height:30px}
 .modal.scan button:disabled{opacity:.45;cursor:not-allowed}
+.scan-net g.worked rect{stroke-dasharray:3 2} /* a face worked out from the other five */
+/* The card over the dialog once a cube is read: above the dialog, and above its close button, which a phone fixes at z-index 22. */
+.modal-bg.scan-ok{z-index:24}
+.scan-oknet{margin-top:12px}
+.scan-oknet svg{max-width:300px;margin:0 auto}
 /* smart cube */
 .modal.smart{display:block;max-width:820px}
 .modal.smart h2{margin-top:0}
