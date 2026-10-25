@@ -843,12 +843,16 @@ body:not(.can-listen) #cubeWinListen,body:not(.can-listen) #cubeWinListenRow,bod
 .cubewin .cw-listen .listen-dot{align-self:center}.cubewin .cw-listen.on .listen-dot{background:var(--accent);opacity:1;animation:listenPulse 1.4s ease-in-out infinite}
 .cubewin .cw-listen .txt{flex:1 1 200px}.cubewin .cw-listen .heard{flex:1 0 100%;color:var(--muted);font-size:12.5px}.cubewin .cw-listen .heard:empty{display:none}
 .cubewin .cw-listen .ask{flex:1 0 100%}.cubewin .cw-listen .ask:empty{display:none}
-/* The hints while the tab listens (smart-listen.js): what to say, and what each thing does */
-.cubewin .cw-hints{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 12px;padding:10px 12px;font-size:13px;line-height:1.35;border:1px dashed var(--line);border-radius:var(--rb);background:var(--panel2)}
+/* The hints while the tab listens (smart-listen.js): four groups, each a head, the things to say as
+   chips and one short line on what they do. The long note goes meanwhile, so the hints fit in view. */
+.cubewin .cw-hints{display:grid;grid-template-columns:minmax(0,1fr);gap:9px 16px;padding:10px 12px 11px;font-size:13px;line-height:1.3;border:1px solid var(--line);border-radius:var(--rb);background:var(--panel2)}
 .cubewin .cw-hints .lbl{grid-column:1/-1;font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.cubewin .cw-hints .hint{display:contents}
-.cubewin .cw-hints b{font-weight:600;white-space:nowrap}
-.cubewin .cw-hints span{color:var(--muted)}
+.cubewin .cw-hints .hint{display:grid;grid-template-columns:42px minmax(0,1fr);gap:0 8px}
+.cubewin .cw-hints .hd{padding-top:3px;font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.cubewin .cw-hints .says{display:flex;flex-wrap:wrap;gap:4px}
+.cubewin .cw-hints q{quotes:none;padding:2px 8px;font-weight:500;white-space:nowrap;border:1px solid var(--line);border-radius:999px;background:var(--panel)}
+.cubewin .cw-hints .what{margin-top:4px;font-size:12.5px;color:var(--muted)}
+.cubewin.listening .cw-note{display:none}
 .cubewin .cw-stage{min-height:72px;transition:opacity .4s}
 .cubewin .cw-stage.stale{opacity:.4}
 .cubewin .st-name{font-weight:600;font-size:24px;line-height:1.2;min-height:29px}
@@ -860,7 +864,9 @@ body:not(.can-listen) #cubeWinListen,body:not(.can-listen) #cubeWinListenRow,bod
 .cubewin .mv.rot{font-style:italic;color:var(--muted)}
 .cubewin .scan-row{margin:0}
 @media (prefers-reduced-motion:reduce){nav.rail button .dot,.cubewin .dot,.cubewin .cw-listen .listen-dot{animation:none}.cubewin .cw-stage{transition:none}}
-@media (max-width:960px){.cubewin .cw-body{grid-template-columns:1fr}}
+@media (max-width:960px){.cubewin .cw-body{grid-template-columns:1fr}
+  .cubewin.listening #cubeWinSvg{max-height:40vh} /* one column: the picture gives way while it listens, so the hints under it come into view */
+  .cubewin .cw-hints{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}} /* and the groups sit two to a row where the width allows */
 @media (max-width:760px){.cubewin #cubeWinSvg{max-height:50vh}}
 
 /* The reference card (smart-card.js): a small floating window with one case, dragged by its head and zoomed by the grip at its corner. Everything inside is in em, so the zoom scales it all. */

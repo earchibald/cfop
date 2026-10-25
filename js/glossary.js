@@ -152,7 +152,7 @@ function glLinkEl(id,text){return glEl('span',{className:'gl',tabIndex:0,role:'b
 
 // ---------- link the description text ----------
 // Never link inside these: moves, controls, labels (a click would toggle them), headings, case names.
-const GL_SKIP='button,input,select,option,textarea,label,svg,script,style,code,kbd,a,h1,h2,h3,dt,th,.sec>b,.gl,.gl-pop,.m,.mono,.kbd,.scramble,.algbig,.big,.alg,.tag,.timer,.times,.stats,.rail,header.top,.nm,.case,.alt,.lbl,#seqLabel,.viewbtns,.draghint,.animbtn';
+const GL_SKIP='button,input,select,option,textarea,label,svg,script,style,code,kbd,a,h1,h2,h3,dt,th,.sec>b,.gl,.gl-pop,.m,.mono,.kbd,.scramble,.algbig,.big,.alg,.tag,.timer,.times,.stats,.rail,header.top,.nm,.case,.alt,.lbl,#seqLabel,.viewbtns,.draghint,.animbtn,.cw-hints .says';
 const GL_BLOCK='p,li,td,dd,.sec,.tip,.notice,.muted,.step,div';
 const glDone=new WeakMap(); // block -> Set of ids already linked there
 function glossaryLink(root){
