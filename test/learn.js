@@ -86,23 +86,31 @@ w.addEventListener('load',async()=>{try{
   click($('#tab-learn .ln-act[data-kind="edge"]'));assert.strictEqual($('#tab-learn .ln-pic').dataset.hl,'edge','tapping edges lights the edges');
   assert.strictEqual($$('#tab-learn .ln-mv').length,12,'twelve move tiles, a letter and its mark');
   assert.deepStrictEqual($$('#tab-learn .ln-faces li').map(li=>[...li.querySelectorAll('.ln-mv')].map(b=>b.textContent).join(' ')),['U U\'','D D\'','F F\'','B B\'','R R\'','L L\''],'one row per face');
-  click($('#tab-learn .ln-mv[data-m="U\'"]'));assert.ok($('#lnGoalSvg .turn-ring'),'a letter shows the ring of arrows');
+  // A letter turns the layer on the goal cube, as the player does: no ring of arrows.
+  const pts=()=>$$('#lnGoalSvg polygon').map(p=>p.getAttribute('points')).join('|'),fills=()=>$$('#lnGoalSvg polygon').map(p=>p.getAttribute('fill')).join('|');
+  const goalPts=pts(),goalFills=fills();
+  click($('#tab-learn .ln-mv[data-m="U\'"]'));assert.ok(w.lnTurn.on&&w.lnTurn.m==="U'",'a letter starts the turn');
+  assert.strictEqual($('#tab-learn .ln-pic').dataset.turn,"U'",'the picture carries the move');assert.ok(!$('#lnGoalSvg .turn-ring'),'no ring of arrows');
   assert.ok(!$('#tab-learn .ln-pic').dataset.hl,'the piece highlight ends when a turn shows');
   assert.ok(/counterclockwise/.test($('#lnGoalCap').textContent),'the caption says which way');
   assert.strictEqual($$('#lnGoalSvg polygon[class]:not([opacity])').length,15,'the whole top layer stays bright: nine on top, three each on the front and right');
   click($('#tab-learn .ln-mv[data-m="L"]'));assert.ok(/hidden here/.test($('#lnGoalCap').textContent),'a hidden face says so');
-  assert.ok($('#lnGoalSvg .turn-ring')&&$$('#lnGoalSvg polygon.pc-center').length===3,'the cube keeps its view and a ring still shows');
+  assert.strictEqual($$('#lnGoalSvg polygon.pc-center').length,3,'the cube keeps its view');
   assert.strictEqual($$('#lnGoalSvg polygon[class]:not([opacity])').length,6,'the left layer stays bright: three on the front, three on top');
-  // A hidden face's ring sits over the cube, not beside it: every point is inside the cube's outline.
-  const xy=s=>s.split(' ').map(q=>q.split(',').map(Number));
-  const ringIn=()=>{const box=$$('#lnGoalSvg polygon').flatMap(p=>xy(p.getAttribute('points')));const xs=box.map(p=>p[0]),ys=box.map(p=>p[1]);
-    return $$('#lnGoalSvg .turn-ring polyline').flatMap(p=>xy(p.getAttribute('points'))).every(([x,y])=>x>Math.min(...xs)&&x<Math.max(...xs)&&y>Math.min(...ys)&&y<Math.max(...ys));};
-  assert.ok(ringIn(),'the ring for L sits over the cube');
-  click($('#tab-learn .ln-mv[data-m="D\'"]'));assert.ok(ringIn(),'the ring for D sits over the cube');
-  const midY=q=>{const ys=q.flatMap(p=>xy(p.getAttribute('points')).map(v=>v[1]));return ys.reduce((a,b)=>a+b,0)/ys.length;};
-  assert.ok(midY($$('#lnGoalSvg .turn-ring polyline'))<midY($$('#lnGoalSvg polygon[class]:not([opacity])'))-30,'the ring for D sits above the bottom layer');
-  click($('#tab-learn .ln-mv[data-m="B"]'));assert.ok(ringIn(),'the ring for B sits over the cube');
-  w.lnRestoreGoal();assert.ok(!$('#lnGoalSvg .turn-ring')&&$('#lnGoalSvg .ln-front'),'the picture returns');
+  // The turn plays out: the layer is part way round, then the moved cube rests, then the goal returns by itself.
+  // jsdom redraws the picture slowly on each frame, so the waits are generous.
+  w.lnTurn.ms=600;w.lnTurn.rest=400;
+  click($('#tab-learn .ln-mv[data-m="R"]'));await sleep(150);assert.ok(w.lnTurn.on&&w.lnTurn.raf,'the layer is turning');
+  assert.notStrictEqual(pts(),goalPts,'the layer is part way round: the stickers have moved');
+  await sleep(700);assert.ok(w.lnTurn.on&&!w.lnTurn.raf,'the turn is over and the cube rests');
+  assert.strictEqual(pts(),goalPts,'the cube is at rest in its view');assert.notStrictEqual(fills(),goalFills,'it shows the cube after R');
+  {const want=w.renderCube3D(w.applyAlg(w.lnGoals()[0],['R']).toFacelets(),{yaw:-32,pitch:28,scale:48,cx:200,cy:185,fade:w.lnLayer('R')}).match(/fill="[^"]*"/g).map(f=>f.slice(6,-1)).join('|');
+    assert.strictEqual(fills(),want,'the picture is the goal cube after R, drawn by renderCube3D');}
+  await sleep(600);assert.ok(!w.lnTurn.on&&$('#lnGoalSvg .ln-front')&&!$('#tab-learn .ln-pic').dataset.turn,'the goal returns by itself');
+  assert.strictEqual(fills(),goalFills,'the goal is back');
+  w.lnTurn.ms=900;w.lnTurn.rest=2000;
+  click($('#tab-learn .ln-mv[data-m="D\'"]'));assert.ok(/hidden here/.test($('#lnGoalCap').textContent));
+  w.lnRestoreGoal();assert.ok(!w.lnTurn.on&&$('#lnGoalSvg .ln-front')&&!$('#tab-learn .ln-pic').dataset.turn,'the picture returns');
   click($('#lnMark'));assert.strictEqual(w.begProgress.status(0),'finished','Mark finished sets the status');
   assert.strictEqual($('#tab-learn .stbtn').textContent,'finished','the lesson button follows');
   click($('#tab-learn button[data-ln="list"]'));nx=w.begProgress.next();

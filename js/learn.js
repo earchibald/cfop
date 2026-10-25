@@ -40,11 +40,14 @@ function lnPic(cube,below,fade){const f=cube.toFacelets();
 const lnGoalBelow=n=>!!begPack().goalBelow[n]; // the white face is below: look from below
 // The goal picture: every sticker carries its kind of piece, and a small figure stands in front
 // of the cube at the end of a dashed line from the front face, so the front is clear when the
-// front and the right are both in view. Lesson 0 leaves room round the cube for the rings.
+// front and the right are both in view. Lesson 0 leaves a little room round the cube.
 function lnGoalView(n){return {yaw:-32,pitch:lnGoalBelow(n)?-34:28};}
 function lnGoalBox(n){return n===0?'20 0 340 360':'40 30 320 300';}
-function lnGoalSVG(n,v,fade,on){v=v||lnGoalView(n);const f=lnGoals()[n].toFacelets();
-  return renderCube3D(f,{...v,...LN_PIC,fade,cls:i=>'pc-'+pieceKind(i,drawN())+(on&&on.has(i)?' hl-on':'')})+(fade?'':lnFrontMark(v));}
+// `turn`, {cube, move, t}, draws that cube instead, part way through the move when t is given.
+function lnGoalSVG(n,v,fade,on,turn){v=v||lnGoalView(n);const f=(turn&&turn.cube||lnGoals()[n]).toFacelets();
+  const o={...v,...LN_PIC,fade,cls:i=>'pc-'+pieceKind(i,drawN())+(on&&on.has(i)?' hl-on':'')};
+  if(turn&&turn.move&&turn.t>0){o.move=turn.move;o.t=turn.t;}
+  return renderCube3D(f,o)+(fade?'':lnFrontMark(v));}
 function lnFrontMark(v){
   const proj=p=>{const q=rot3(p,v.yaw,v.pitch);return [LN_PIC.cx+q[0]*LN_PIC.scale,LN_PIC.cy-q[1]*LN_PIC.scale];};
   const [x,y]=proj([0,0,5.3]),[ax,ay]=proj([0,0,1.7]),[bx,by]=proj([0,0,4.3]);const f=n=>n.toFixed(1);
@@ -103,28 +106,38 @@ function lnHighlight(kind){const pic=$('#tab-learn .ln-pic'),svg=$('#lnGoalSvg')
   const n=lnView.n;svg.innerHTML=LN_KINDS.includes(kind)?lnGoalSVG(n):lnGoalSVG(n,null,null,lnMarkSet(kind,lnGoals()[n]));
   delete pic.dataset.hl;void pic.offsetWidth;pic.dataset.hl=LN_KINDS.includes(kind)?kind:'on';
   clearTimeout(lnView.hlT);lnView.hlT=setTimeout(()=>{delete pic.dataset.hl;},2200);}
-// Tap a letter: the cube keeps its view. The layer that moves stays bright, the rest dims, and a
-// ring of arrows shows the turn. On the top, front and right the ring sits on the face. The left,
-// bottom and back are hidden, so their ring sits in the plane of that face at the center of the
-// cube, over the dimmed layers: above the bottom layer, right of the left one, in front of the back.
-const LN_RING_AT={L:{at:[0,0,0],r:1.3},D:{at:[0,0,0],r:1.3},B:{at:[0,0,0],r:1.3}};
+// Tap a letter: the layer turns on the goal cube, the way the player turns a layer (renderCube3D
+// with a move part way, {move, t}). The cube keeps its view. The layer that moves stays bright,
+// the rest dims, so the turn reads on the left, bottom and back too, which are hidden: their layer
+// turns at the edge of the faces in view. The turn takes lnTurn.ms, eased in and out, the moved
+// cube rests for lnTurn.rest, then the goal returns. Reduced motion jumps to the moved cube.
+var lnTurn={on:false,m:'',raf:0,t:0,ms:900,rest:2000}; // var: tests read it and set ms and rest
 const LN_FACE_NAME={U:'top',D:'bottom',F:'front',B:'back',R:'right',L:'left'};
-function lnTurnText(m){return `${m}: the ${LN_FACE_NAME[m[0]]} face turns ${m.endsWith("'")?'counterclockwise':'clockwise'}, as you look at it.`+(LN_RING_AT[m[0]]?' That face is hidden here. The ring shows the turn through the cube.':'');}
+const LN_HIDDEN_FACE={L:1,D:1,B:1};
+function lnTurnText(m){return `${m}: the ${LN_FACE_NAME[m[0]]} face turns ${m.endsWith("'")?'counterclockwise':'clockwise'}, as you look at it.`+(LN_HIDDEN_FACE[m[0]]?' That face is hidden here. Watch its layer turn at the edge of the cube.':'');}
 // The stickers of the cubies in the layer a face move turns.
 function lnLayer(face){const g=FACE_GEOM['URFDLB'.indexOf(face)];const s=new Set();const n=drawN(),hs=1.5/n;
   for(let f=0;f<6;f++){const h=FACE_GEOM[f];for(let i=0;i<n;i++)for(let j=0;j<n;j++){
     const c=[0,1,2].map(t=>h.n[t]*(1.5-hs)+h.r[t]*(j-(n-1)/2)*2*hs+h.d[t]*(i-(n-1)/2)*2*hs);if(Math.abs(c[0]*g.n[0]+c[1]*g.n[1]+c[2]*g.n[2]-(1.5-hs))<1e-6)s.add(n*n*f+n*i+j);}}
   return s;}
 function lnShowTurn(m){
-  const svg=$('#lnGoalSvg'),cap=$('#lnGoalCap'),pic=$('#tab-learn .ln-pic');if(!svg||!LN_FACE_NAME[m[0]])return;lnDemoStop();
-  const n=lnView.n,v=lnGoalView(n);
-  delete pic.dataset.hl;svg.innerHTML=lnGoalSVG(n,v,lnLayer(m[0]))+turnRing(m,{...v,...LN_PIC,...LN_RING_AT[m[0]]});pic.dataset.turn=m;
-  if(cap)cap.textContent=lnTurnText(m);
-  clearTimeout(lnView.turnT);lnView.turnT=setTimeout(lnRestoreGoal,2800);
+  const svg=$('#lnGoalSvg'),cap=$('#lnGoalCap'),pic=$('#tab-learn .ln-pic');if(!svg||!LN_FACE_NAME[m[0]])return;lnDemoStop();lnTurnStop();
+  const n=lnView.n,v=lnGoalView(n),fade=lnLayer(m[0]),c0=lnGoals()[n],c1=applyAlg(c0,[m]);
+  const draw=(c,t)=>{svg.innerHTML=lnGoalSVG(n,v,fade,null,{cube:c,move:m,t});};
+  delete pic.dataset.hl;pic.dataset.turn=m;if(cap)cap.textContent=lnTurnText(m);
+  lnTurn.on=true;lnTurn.m=m;
+  const rest=()=>{lnTurn.raf=0;draw(c1);lnTurn.t=setTimeout(lnRestoreGoal,lnTurn.rest);};
+  if(reducedMotion()||typeof requestAnimationFrame!=='function'){rest();return;}
+  const t0=performance.now();
+  const step=()=>{if(!lnTurn.on)return;const x=Math.min(1,(performance.now()-t0)/lnTurn.ms);
+    if(x<1){draw(c0,0.5-0.5*Math.cos(Math.PI*x));lnTurn.raf=requestAnimationFrame(step);}else rest();};
+  step();
 }
-function lnRestoreGoal(){if(!lnView.turnT)return;clearTimeout(lnView.turnT);lnView.turnT=0;
+// Stop a turn where it is. The picture stays as it is; lnRestoreGoal puts the goal back.
+function lnTurnStop(){clearTimeout(lnTurn.t);if(lnTurn.raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(lnTurn.raf);lnTurn.on=false;lnTurn.raf=0;lnTurn.t=0;}
+function lnRestoreGoal(){if(!lnTurn.on)return;lnTurnStop();
   const svg=$('#lnGoalSvg'),cap=$('#lnGoalCap'),pic=$('#tab-learn .ln-pic');if(!svg||lnView.n==null)return;
-  svg.innerHTML=lnGoalSVG(lnView.n);delete pic.dataset.turn;if(cap)cap.textContent=lnGoalCap(lnView.n);}
+  svg.innerHTML=lnGoalSVG(lnView.n);if(pic)delete pic.dataset.turn;if(cap)cap.textContent=lnGoalCap(lnView.n);}
 
 // ---------- the goal, made: the moves of a step's demo play on the goal picture ----------
 // The picture starts on the goal with the demo moves undone and turns one move every two
@@ -199,7 +212,7 @@ function lnUses(s){return s.algs?s.algs.map(a=>begPack().algs[a].name).join(' ·
 function lnTag(st){return `<span class="tag ln-tag ${esc(st)}">${esc(st||'unlearned')}</span>`;}
 
 // ---------- the Learn home: the nine steps ----------
-const lnView={n:null,why:new Set(),hlT:0,turnT:0}; // n: the open lesson, or null for the step list
+const lnView={n:null,why:new Set(),hlT:0}; // n: the open lesson, or null for the step list
 // Up next and the way a real cube gets in live above the tabs, in the beginner home (js/beghome.js).
 function lnHomeHTML(){
   const pk=begPack();const nx=begProgress.next();
@@ -256,7 +269,7 @@ function lnLessonHTML(n){
 
 // ---------- render and actions ----------
 function lnRender(){
-  const t=$('#tab-learn');if(!t)return;lnDemoStop();clearTimeout(lnView.hlT);clearTimeout(lnView.turnT);lnView.turnT=0;
+  const t=$('#tab-learn');if(!t)return;lnDemoStop();lnTurnStop();clearTimeout(lnView.hlT);
   if(lnView.n==null){t.innerHTML=lnHomeHTML();delete document.body.dataset.lesson;}
   else{t.innerHTML=lnLessonHTML(lnView.n);document.body.dataset.lesson='1';}
 }
