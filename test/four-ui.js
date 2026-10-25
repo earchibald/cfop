@@ -38,7 +38,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   w.openLesson(1);assert.ok(/Step 1 of 10/.test($('#tab-learn .ln-of').textContent));assert.ok(/Rr/.test($('#tab-learn .ln-algs').textContent));
   click($$('#tab-learn [data-ln="alg"]')[0]);assert.ok(/Lesson/.test(w.seqState.drill));w.seqGo(w.seqState.moves.length);assert.ok(w.fourSolved(w.cubeAtSeq(w.seqState.moves.length).toFacelets()),'the algorithm drill ends on the solved cube');
   w.openLesson(0);assert.strictEqual($$('#tab-learn [data-ln="hl"]').length,3,'corners, center tiles and edge pieces light up');
-  click($('#tab-learn [data-ln="face"][data-m="R"]'));assert.ok($('#tab-learn .turn-ring'),'a ring shows the turn on the 4×4 goal cube');
+  click($('#tab-learn [data-ln="face"][data-m="R"]'));assert.ok(w.lnTurn.on&&$('#tab-learn .ln-pic').dataset.turn==='R','a letter turns the layer on the 4×4 goal cube');w.lnRestoreGoal();
   w.openLesson(7);assert.ok(/parity/i.test($('#tab-learn').textContent),'the yellow cross lesson teaches the parity');
   // the guided solve, part by part to the end
   w.startGuide();assert.strictEqual(ev('guideState').view,'guide');assert.strictEqual($$('#gdBar .stage').length,10);assert.ok(/Stage 1 of 10/.test($('#gdWhere').textContent));

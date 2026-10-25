@@ -160,29 +160,6 @@ function polyLabel(p){const P=p.pts;let a=0,x=0,y=0;
   return stickerLabel(p.ci,x/P.length,y/P.length,0.62*Math.sqrt(Math.abs(a)/2),p.faded||p.op?+((p.faded?0.22:1)*(p.op||1)).toFixed(3):0);}
 // The kind of piece a facelet belongs to: 'center', 'edge' or 'corner'.
 function pieceKind(idx,n){n=n||3;const p=idx%(n*n),i=Math.floor(p/n),j=p%n;const e=x=>x===0||x===n-1;return e(i)&&e(j)?'corner':e(i)||e(j)?'edge':'center';}
-// A ring of three curved arrows in the plane of a face, the way the move turns it: clockwise
-// as you look at that face for a plain move, counterclockwise for a prime. Projected with the
-// same camera as cubePolys (yaw, pitch, scale, cx, cy), so it sits on the face in the picture.
-// By default the ring floats just above the face center. Pass at:[x,y,z] to put its center
-// somewhere else in space, for example beside the cube when the face is hidden; the ring
-// keeps the plane of the face, so the arrows still show the true turn from this camera.
-// Pass r for a wider ring where the camera sees the plane at a slant.
-function turnRing(move,opts={}){
-  const yaw=opts.yaw??-32,pitch=opts.pitch??28;const S=opts.scale||52;const cx=opts.cx??200,cy=opts.cy??185;
-  const g=FACE_GEOM['URFDLB'.indexOf(move[0])];if(!g)return '';
-  const proj=p=>{const q=rot3(p,yaw,pitch);return [cx+q[0]*S,cy-q[1]*S];};
-  const dir=move.endsWith("'")?-1:1,r=opts.r||0.95,span=78,N=12;const f=n=>n.toFixed(1);
-  const at=opts.at||g.n.map(v=>v*1.66);
-  let out='';
-  for(let k=0;k<3;k++){const a0=-90+k*120-dir*span/2;const pts=[];
-    for(let i=0;i<=N;i++){const a=(a0+dir*span*i/N)*Math.PI/180;pts.push(proj([0,1,2].map(t=>at[t]+g.r[t]*r*Math.cos(a)+g.d[t]*r*Math.sin(a))));}
-    const [x1,y1]=pts[N-1],[x2,y2]=pts[N];let dx=x2-x1,dy=y2-y1;const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
-    const head=s=>{const c=Math.cos(s),sn=Math.sin(s);return [x2-0.26*S*(dx*c-dy*sn),y2-0.26*S*(dx*sn+dy*c)];};
-    const [hx1,hy1]=head(0.55),[hx2,hy2]=head(-0.55);
-    out+=`<polyline points="${pts.map(p=>f(p[0])+','+f(p[1])).join(' ')}"/><polyline points="${f(hx1)},${f(hy1)} ${f(x2)},${f(y2)} ${f(hx2)},${f(hy2)}"/>`;}
-  // A dark halo under a white stroke: the ring reads on every sticker color, in both themes.
-  return `<g class="turn-ring" fill="none" stroke-linecap="round" stroke-linejoin="round"><g stroke="rgba(0,0,0,.78)" stroke-width="${(0.2*S).toFixed(1)}">${out}</g><g stroke="#fff" stroke-width="${(0.09*S).toFixed(1)}">${out}</g></g>`;
-}
 // The box round the polygons, with a margin, as a viewBox string.
 function polysViewBox(polys,margin=0){const xs=polys.flatMap(p=>p.pts.map(q=>q[0])),ys=polys.flatMap(p=>p.pts.map(q=>q[1]));
   const x0=Math.min(...xs)-margin,y0=Math.min(...ys)-margin,x1=Math.max(...xs)+margin,y1=Math.max(...ys)+margin;return [x0,y0,x1-x0,y1-y0].map(v=>v.toFixed(2)).join(' ');}
