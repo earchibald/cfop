@@ -104,10 +104,15 @@ read; the sixth is asked for only when it would settle something.
 | One | The cube. `deduced` names the face; the net shows it dashed, and it takes no paint. |
 | Several that differ on the sixth face, however it is turned | `need` names the face; the status asks for it. Two or more unseen edge pieces could sit in each other's slots with the same color out, and parity leaves more than one way. |
 | Several that agree on the sixth face | The five faces fit together more than one way. The sixth face would not settle it, so the fits go to the user as with six faces: the first is shown, Next fit cycles. |
-| None | A misread. `need` names the face: six faces carry the redundancy the repairs lean on, so no repair runs on five. |
+| None | A misread. The repairs run as on six faces: the joint color read (at most eight stickers per color, the color not read anchored at the mean of its stickers), one sticker flipped to its usual confusion, one face with red/orange or white/yellow swapped, two stickers. On five faces a wrong repair fits more easily, as the face not read takes up any color count: one sticker goes before one face, and when both kinds fit the sixth face is asked for. If nothing fits, `need` names the face. |
 
 About 88 random cubes in 100 settle from five faces, and about 87 in 100 of
 cubes a few moves from solved (`test/scan-assemble.js` prints the counts).
+With one sticker misread, about 70 in 100 are repaired, 20 ask for the
+sixth face, and about 6 fit a legal cube as read, which only the sixth face
+would show: the card asks the user to check the net. The first five-face
+scan on a phone (2026-10-24) read one orange sticker as red; it is the
+fixed case in the test.
 The 2x2 and the 4x4 need all six faces: without centers the 4x4's hidden
 center tiles and wing pairs have no fixed place.
 
