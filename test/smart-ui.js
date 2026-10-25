@@ -96,7 +96,12 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.ok(/solved/.test($('#smartStatus').textContent));
   assert.ok(!JSON.parse(w.localStorage.getItem('cw:ganFix'))['GAN12uiM_A1B2'],'My cube is solved drops the saved fix');
   assert.ok($('#smartFixNote').classList.contains('hidden'),'and the note');assert.strictEqual(w.eval('smartConn').fix,null);
-  click($('#smartUse'));assert.ok($('#smartBg'),'a solved cube is not used');assert.ok(/Mix it up first/.test($('#smartStatus').textContent));
+  // ----- Use this cube on a solved cube: an empty scramble, the solved cube on the player -----
+  click($('#smartUse'));await sleep(50);
+  assert.ok(!$('#smartBg'),'a solved cube is used: the dialog closes');
+  assert.strictEqual(w.scr.moves.length,0,'the scramble is empty');assert.ok(w.scr.cube.isSolved(),'the cube on the player is solved');
+  assert.ok(/^smart-/.test(w.scr.seed),'the empty scramble is named after the smart cube');
+  click($('#smartBtn'));await sleep(20);assert.ok(await until(()=>!$('#smartUse').disabled),'the dialog opens again on the live link');
   // ----- Use this cube -----
   set(c2);dev.notify(mv);
   assert.ok(await until(()=>netColors().join()===colorsOf(c2).join()));
