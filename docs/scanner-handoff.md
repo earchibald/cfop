@@ -80,6 +80,36 @@ Each stage must be testable on its own with synthetic frames.
 - If still illegal, try the two usual color confusions, red/orange and
   white/yellow, as whole-face swaps.
 - Report what was changed on the status line. Then call `scrambleFromCube`.
+- Every fit goes back in `fits`, the first one shown. Faces read at unknown
+  turns can make more than one legal cube (one move from solved, U and D'
+  show the same six faces, each turned half way round). Next fit cycles.
+
+#### Five faces of the 3x3 (`fillFace`)
+
+Five faces are enough in most cases. Stage 5 runs as soon as five faces are
+read; the sixth is asked for only when it would settle something.
+
+- The sixth face's center is the missing color.
+- Each of its four corners shows two stickers on the faces beside it. Two
+  stickers of a corner in their order name one corner (the two corners that
+  share a pair of colors carry them in opposite order), so each hidden
+  corner sticker follows.
+- Each of its four edges shows one sticker. The four edge pieces not seen
+  whole must fill those four slots, each with its shown color out. Every
+  placement that makes a legal cube (`fromFacelets`: edge flips even,
+  permutation parity as the corners) is a fit.
+
+| Fits | Result |
+|---|---|
+| One | The cube. `deduced` names the face; the net shows it dashed, and it takes no paint. |
+| Several that differ on the sixth face, however it is turned | `need` names the face; the status asks for it. Two or more unseen edge pieces could sit in each other's slots with the same color out, and parity leaves more than one way. |
+| Several that agree on the sixth face | The five faces fit together more than one way. The sixth face would not settle it, so the fits go to the user as with six faces: the first is shown, Next fit cycles. |
+| None | A misread. `need` names the face: six faces carry the redundancy the repairs lean on, so no repair runs on five. |
+
+About 88 random cubes in 100 settle from five faces, and about 87 in 100 of
+cubes a few moves from solved (`test/scan-assemble.js` prints the counts).
+The 2x2 and the 4x4 need all six faces: without centers the 4x4's hidden
+center tiles and wing pairs have no fixed place.
 
 ## The 2x2 and the 4x4
 
@@ -120,6 +150,12 @@ engine's corner and edge tables, which `test/scan-assemble.js` checks.
   lattice and the current color read for each cell, a 2D net that fills in
   as faces lock, a status line, and a "Use this cube" button that enables when
   the cube is legal.
+- Once a cube is read, a card comes up over the dialog (`scanConfirm`): "Is
+  this your cube?", the net again, Use this cube (Enter), Back (Escape) to
+  the dialog as it stands, and Next fit when more than one cube fits. On a
+  phone the dialog's own button sits under the net and is easy to miss; the
+  card is not. It comes up on every read from the camera, and on a paint
+  only when the cube read is new.
 - Clicking a net sticker lets the user correct a color by cycling through the
   six. A corrected sticker is pinned and not overwritten by votes.
 - Keep the camera stream running until the modal closes. Stop all tracks on

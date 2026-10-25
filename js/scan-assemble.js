@@ -6,8 +6,9 @@
 // A scanned face is {stickers:[n*n color indices], margins?:[numbers], pinned?:[bools]}.
 // stickers read left to right, top to bottom, as the camera saw them. The face may be
 // turned by any multiple of 90 degrees. On the 3x3 the center color says which face it is
-// (assembleScan). The 2x2 and the 4x4 have no fixed centers: any reading can be any side of
-// the cube, and the pieces decide where each one goes (assembleFree).
+// (assembleScan), and five faces are enough when the sixth follows from them (fillFace). The
+// 2x2 and the 4x4 have no fixed centers: any reading can be any side of the cube, and the
+// pieces decide where each one goes (assembleFree); they need all six faces.
 
 // Turn an n×n face reading 90 degrees clockwise, k times. n follows from the length.
 function rotateFace(s,k){
@@ -18,15 +19,20 @@ function rotateFace(s,k){
 
 // Every legal color tuple for a corner (in the engine's facelet order for that corner, so any
 // of its three cyclic turns) or for an edge (either way round).
-const SCAN_CORNER_SET=new Set(),SCAN_EDGE_SET=new Set(),SCAN_CORNER_ID=new Map();
-cornerColor.forEach((cc,id)=>{for(let o=0;o<3;o++){const key=[0,1,2].map(n=>cc[(n+o)%3]).join();SCAN_CORNER_SET.add(key);SCAN_CORNER_ID.set(key,id);}});
+// SCAN_CORNER_PART: the same triples with one sticker unknown (-1). Two stickers of a corner in
+// their order name it, so each pattern comes from one corner; SCAN_CORNER_FILL gives that corner's
+// third sticker.
+const SCAN_CORNER_SET=new Set(),SCAN_EDGE_SET=new Set(),SCAN_CORNER_ID=new Map(),SCAN_CORNER_PART=new Set(),SCAN_CORNER_FILL=new Map();
+cornerColor.forEach((cc,id)=>{for(let o=0;o<3;o++){const t=[0,1,2].map(n=>cc[(n+o)%3]),key=t.join();SCAN_CORNER_SET.add(key);SCAN_CORNER_ID.set(key,id);
+  for(let h=0;h<3;h++){const part=t.map((x,n)=>n===h?-1:x).join();SCAN_CORNER_PART.add(part);SCAN_CORNER_FILL.set(part,t[h]);}}});
 for(const ec of edgeColor){SCAN_EDGE_SET.add(ec.join());SCAN_EDGE_SET.add([ec[1],ec[0]].join());}
 
 const SCAN_PIECES=(()=>{
-  // Each slot is checked once all of its faces have a rotation.
+  // Each slot is checked once all of its faces have a rotation. With a face missing, a corner
+  // with one sticker unknown must match a pattern; an edge with one unknown fits anything.
   const slots=[];
-  for(const fl of cornerFacelet)slots.push({fl,legal:SCAN_CORNER_SET,last:Math.max(...fl.map(i=>Math.floor(i/9)))});
-  for(const fl of edgeFacelet)slots.push({fl,legal:SCAN_EDGE_SET,last:Math.max(...fl.map(i=>Math.floor(i/9)))});
+  for(const fl of cornerFacelet)slots.push({fl,legal:SCAN_CORNER_SET,part:SCAN_CORNER_PART,last:Math.max(...fl.map(i=>Math.floor(i/9)))});
+  for(const fl of edgeFacelet)slots.push({fl,legal:SCAN_EDGE_SET,part:null,last:Math.max(...fl.map(i=>Math.floor(i/9)))});
   return slots;
 })();
 
@@ -70,23 +76,58 @@ function scanSize(n){
 function applyPerm(s,perm){const out=new Array(perm.length);for(let j=0;j<perm.length;j++)out[j]=s[perm[j]];return out;}
 
 // All facelet arrays that come from some rotation of each face and pass fromFacelets.
-// byFace: 6 arrays of 9 colors, indexed by face (center color). Returns [{facelets,rotations}].
+// byFace: 6 arrays of 9 colors, indexed by face (center color). One entry may be null: that face
+// was not read, and every way to fill it from the other five (fillFace) is tried. Returns
+// [{facelets,rotations}]; the rotation of a face not read is 0.
 function legalRotations(byFace,limit){
   limit=limit||8;const out=[],seen=new Set();
-  const f=new Array(54),rot=new Array(6);
-  const turned=byFace.map(s=>[0,1,2,3].map(k=>rotateFace(s,k)));
+  const f=new Array(54),rot=new Array(6),miss=byFace.findIndex(s=>!s);
+  const turned=byFace.map((s,c)=>s?[0,1,2,3].map(k=>rotateFace(s,k)):[new Array(9).fill(-1).map((x,p)=>p===4?c:x)]); // a face not read: its center, the rest unknown
+  const fits=sl=>{const st=sl.fl.map(i=>f[i]);return st.includes(-1)?!sl.part||sl.part.has(st.join()):sl.legal.has(st.join());};
   (function place(face){
     if(out.length>=limit)return;
     if(face===6){
-      const key=f.join();if(seen.has(key))return;seen.add(key);
-      const res=fromFacelets(f.slice());if(res.ok)out.push({facelets:f.slice(),rotations:rot.slice(),cube:res.cube});
+      for(const g of miss<0?[f.slice()]:fillFace(f,miss)){
+        const key=g.join();if(seen.has(key))continue;seen.add(key);
+        const res=fromFacelets(g);if(res.ok)out.push({facelets:g,rotations:rot.slice(),cube:res.cube});
+        if(out.length>=limit)return;
+      }
       return;
     }
-    for(let k=0;k<4;k++){
+    for(let k=0;k<turned[face].length;k++){
       const t=turned[face][k];for(let p=0;p<9;p++)f[9*face+p]=t[p];rot[face]=k;
       let good=true;
-      for(const sl of SCAN_PIECES)if(sl.last===face&&!sl.legal.has(sl.fl.map(i=>f[i]).join())){good=false;break;}
+      for(const sl of SCAN_PIECES)if(sl.last===face&&!fits(sl)){good=false;break;}
       if(good)place(face+1);
+    }
+  })(0);
+  return out;
+}
+// The face m of a 3x3 from the other five, in f (its stickers -1, its center set). Its four
+// corners show two stickers each on the faces beside them, and two stickers of a corner in their
+// order name it, so each hidden corner sticker follows. Its four edges show one sticker each.
+// The four edge pieces not seen whole must fill those four slots, each with its shown color out.
+// Returns every such filling as a 54-sticker array; the caller keeps the legal ones. The true
+// cube is always among them, so one legal filling is the cube, and more than one means the
+// face must be read.
+function fillFace(f,m){
+  const g=f.slice();
+  for(const fl of cornerFacelet){
+    const st=fl.map(i=>g[i]),h=st.indexOf(-1);if(h<0)continue;
+    const fill=SCAN_CORNER_FILL.get(st.join());if(fill==null)return [];
+    g[fl[h]]=fill;
+  }
+  const open=[],seen=new Set();
+  edgeFacelet.forEach((fl,i)=>{const a=g[fl[0]],b=g[fl[1]];if(a<0||b<0)open.push(i);else seen.add(Math.min(a,b)+','+Math.max(a,b));});
+  const left=edgeColor.map((ec,j)=>j).filter(j=>!seen.has(Math.min(...edgeColor[j])+','+Math.max(...edgeColor[j])));
+  if(left.length!==open.length)return [];
+  const out=[],used=new Array(left.length).fill(false);
+  (function place(k){
+    if(k===open.length){out.push(g.slice());return;}
+    const fl=edgeFacelet[open[k]],h=g[fl[0]]<0?0:1,shown=g[fl[1-h]];
+    for(let t=0;t<left.length;t++){
+      if(used[t])continue;const ec=edgeColor[left[t]],o=ec.indexOf(shown);if(o<0)continue;
+      used[t]=true;g[fl[h]]=ec[1-o];place(k+1);g[fl[h]]=-1;used[t]=false;
     }
   })(0);
   return out;
@@ -95,8 +136,9 @@ function legalRotations(byFace,limit){
 const SCAN_CONFUSE=[[1,4],[0,3]]; // red/orange, white/yellow
 function confusePartner(c){for(const [a,b] of SCAN_CONFUSE){if(c===a)return b;if(c===b)return a;}return -1;}
 
-// faces: array of scanned faces in any order. Returns
-// {ok, facelets, cube, rotations, changes:[text], errors:[text], ambiguous}.
+// faces: five or six scanned faces in any order. Returns
+// {ok, facelets, cube, rotations, fits:[{facelets, cube, rotations}], changes:[text], errors:[text],
+//  ambiguous, deduced?, need?}: deduced is the face worked out from five, need the face to read next.
 function assembleScan(faces){
   const byFace=new Array(6).fill(null),src=new Array(6).fill(null);
   for(const fc of faces){
@@ -106,11 +148,26 @@ function assembleScan(faces){
     byFace[c]=fc.stickers.slice();src[c]=fc;
   }
   const missing=[0,1,2,3,4,5].filter(c=>!byFace[c]);
-  if(missing.length)return {ok:false,errors:['Scan the '+missing.map(c=>COLOR_NAMES_E[c]).join(', ')+' face'+(missing.length>1?'s':'')+'.'],changes:[]};
+  if(missing.length>1)return {ok:false,errors:['Scan the '+missing.map(c=>COLOR_NAMES_E[c]).join(', ')+' faces.'],changes:[]};
+  // Every fit goes back in `fits`, the first one shown. Faces read at unknown turns can make more
+  // than one legal cube (one move from solved, say: U and D' show the same six faces, each turned
+  // half way round); the user checks the net and takes the next fit.
   const done=(sols,changes)=>{
     const s=sols[0];
-    return {ok:true,facelets:s.facelets,cube:s.cube,rotations:s.rotations,changes,errors:[],ambiguous:sols.length>1};
+    return {ok:true,facelets:s.facelets,cube:s.cube,rotations:s.rotations,fits:sols.map(x=>({facelets:x.facelets,cube:x.cube,rotations:x.rotations})),changes,errors:[],ambiguous:sols.length>1};
   };
+  // Five faces: the sixth follows from them in most cases (fillFace), and the result names it as
+  // `deduced`. Fits that differ on that face, however it is turned, are told apart by reading it:
+  // `need` names it. Fits that agree there differ only in how the five faces are turned, and the
+  // sixth face would not settle that, so they go to the user as fits, as six faces do. No repair
+  // runs on five faces; six faces carry the redundancy the repairs lean on.
+  if(missing.length===1){
+    const m=missing[0],sols=legalRotations(byFace);
+    if(!sols.length)return {ok:false,need:m,errors:[`Show the ${COLOR_NAMES_E[m]} face too: the other five do not fit together as one cube by themselves.`],changes:[]};
+    const faceKey=s=>{let best=null;for(let k=0;k<4;k++){const key=rotateFace(s.facelets.slice(9*m,9*m+9),k).join();if(best===null||key<best)best=key;}return best;};
+    if(new Set(sols.map(faceKey)).size>1)return {ok:false,need:m,errors:[`Show the ${COLOR_NAMES_E[m]} face too: more than one cube fits the other five.`],changes:[]};
+    return Object.assign(done(sols,[]),{deduced:m});
+  }
   // The count read, on every read: all stickers again against this cube's own center colors,
   // nine per color. This settles red/orange and white/yellow when the light leans warm, before
   // the plain read is trusted. A joint read that differs and makes a legal cube wins; else the

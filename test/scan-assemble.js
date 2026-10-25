@@ -63,10 +63,43 @@ assert.ok(joint>=J-1,'joint read failed');
 
 // Errors in plain words.
 const c=randomCube(),faces=scanOf(c);
-assert.match(T.assembleScan(faces.slice(0,5)).errors[0],/^Scan the \w+ face\.$/);
+assert.match(T.assembleScan(faces.slice(0,4)).errors[0],/^Scan the \w+, \w+ faces\.$/);
 faces[1]={stickers:faces[0].stickers.slice()};
 assert.match(T.assembleScan(faces).errors[0],/^Two faces have a \w+ center\.$/);
 console.log('scan-assemble: ok');
+
+// ----- five faces of the 3x3 -----
+// The sixth face follows from the other five in most cases: the result names it as deduced, and
+// the cube is among the fits. Where the fits differ on that face, the face is asked for (need),
+// and six faces then give the cube. The fits that agree on it only turn the faces read another
+// way, as six faces can: the first is shown and the cube is among them.
+let five=0,ask=0,lost=0;const V=300;
+for(let n=0;n<V;n++){
+  const c=randomCube(),faces=scanOf(c),m=rnd(6),r=T.assembleScan(faces.filter(fc=>fc.stickers[4]!==m));
+  if(r.ok){
+    five++;assert.strictEqual(r.deduced,m,'the face worked out is the one not given');assert.strictEqual(r.changes.length,0);
+    assert.strictEqual(r.facelets[9*m+4],m,'the face worked out has its center');
+    if(!r.fits.some(f=>f.cube.equals(c)))lost++;
+  }else{
+    ask++;assert.strictEqual(r.need,m,'the face to show is the one not given');assert.match(r.errors[0],/^Show the \w+ face too: /);
+    const r6=T.assembleScan(faces);assert.ok(r6.ok&&r6.fits.some(f=>f.cube.equals(c)),'six faces give the cube');
+  }
+}
+console.log(`five faces: ${five}/${V} worked out, ${ask} asked for the sixth, ${lost} without the cube among the fits`);
+assert.ok(five>=V*0.8,'five faces settle too few cubes');assert.ok(ask>0,'no cube asked for the sixth face');assert.strictEqual(lost,0);
+// A solved cube from any five faces. One move from solved, the faces fit more than one way (U and
+// D' show the same six faces, each turned half way round): the cube is among the fits.
+for(let m=0;m<6;m++){const r=T.assembleScan(scanOf(new T.Cube()).filter(fc=>fc.stickers[4]!==m));assert.ok(r.ok&&r.cube.equals(new T.Cube())&&r.deduced===m,'a solved cube from five faces');}
+for(const mv of ['R','U',"F'"]){const c1=T.applyAlg(new T.Cube(),[mv]);for(let m=0;m<6;m++){const r=T.assembleScan(scanOf(c1).filter(fc=>fc.stickers[4]!==m));assert.ok(r.ok&&r.fits.some(f=>f.cube.equals(c1)),`${mv} with face ${m} hidden`);}}
+// The edge case: L D2 B with the red face hidden leaves three cubes that differ on that face.
+const cN=T.applyAlg(new T.Cube(),['L','D2','B']),rN=T.assembleScan(scanOf(cN).filter(fc=>fc.stickers[4]!==1));
+assert.ok(!rN.ok&&rN.need===1&&/more than one cube fits the other five/.test(rN.errors[0]),'the red face is asked for: '+rN.errors);
+// A misread on five faces that fits no cube asks for the sixth face too.
+const cB=randomCube(),fB=scanOf(cB).filter(fc=>fc.stickers[4]!==3);
+const k=fB.findIndex(fc=>fc.stickers.some((x,p)=>p!==4&&x===0));fB[k].stickers=fB[k].stickers.map((x,p)=>p!==4&&x===0?2:x);
+const rB=T.assembleScan(fB);assert.ok(!rB.ok||rB.fits.length,'a misread gives a fit or asks for the face');
+if(!rB.ok)assert.ok(rB.need===3&&/Show the yellow face too/.test(rB.errors[0]),'the yellow face is asked for: '+rB.errors);
+console.log('scan-assemble: five faces ok');
 
 // ----- faces with no center: the 2x2 and the 4x4 -----
 // Any reading can be any side, at any turn. The right cube must be among the fits, however
