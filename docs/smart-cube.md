@@ -290,7 +290,7 @@ of the app, plus
 
 | Part | What |
 |---|---|
-| Run it | `lab/run.sh` builds the macOS app if needed (ad hoc), starts it with `--root` on this checkout and `--no-open`, and opens `http://127.0.0.1:27272/lab/`. The bridge takes that origin, so Safari reaches a cube. A running app that serves twistwright.com has no `/lab/`: `lab/run.sh --restart` quits it first. Chrome at the same address uses Web Bluetooth; `?bridge=1` takes the bridge instead, so the app reads the address. |
+| Run it | `lab/run.sh` builds the macOS app if needed (ad hoc), starts it with `--root` on this checkout and `--no-open`, and opens `http://127.0.0.1:27272/lab/`. The bridge takes that origin, so Safari reaches a cube. A running app that serves the built-in pages or twistwright.com does not serve this checkout (`/bridge/info` says `"site"` is not `root`): `lab/run.sh --restart` quits it first. Chrome at the same address uses Web Bluetooth; `?bridge=1` takes the bridge instead, so the app reads the address. |
 | Version | `LAB_VERSION` in `lab/version.js`, shown in the bar with the app's version when the bridge serves the page, and in the window title. Raise it with any change a user of the lab can see; the site's `APP_VERSION` stays as it is, since the lab is not part of the site. |
 | Connect | The lab opens as if Connect were pressed. Over the bridge the list comes up at once. A cube that once connected is remembered in `cw:labCubes` (by name: the address, the link's id, the time) and is taken as soon as the scan hears it, with no click; the status names the cubes the lab looks for. After the link drops (the cube went to sleep) the look starts again; Disconnect by hand does not. Connect during a look ends it and opens the chooser. With Web Bluetooth the chooser needs a click, so the look with no click goes through `navigator.bluetooth.getDevices` (the cubes this page was once allowed; Chrome has it behind a flag) and `watchAdvertisements`; where the browser has neither, the status asks for Connect. The address goes to `cw:ganMac` as well, the site's map. |
 | The address | While a cube is connected, its MAC address sits in the bar after its name, with a copy button (two pages). The button puts the address on the clipboard, turns to a check for a moment and logs the copy. Where the browser gives the page no clipboard, it selects the address and uses the old copy command; where that fails too, the status asks the user to copy by hand. |
@@ -391,9 +391,33 @@ It does three things:
 
 | Part | Where | What |
 |---|---|---|
-| Site | `mac/Sources/Site.swift` | Serves the page at `http://127.0.0.1:27272/`. The pages come from `https://www.twistwright.com` through a proxy with no cache of its own, so the app needs no new build when the site changes and a reload shows a new deploy at once. `--root DIR` serves a checkout instead, for work on the site. `/bridge/info` answers `{app, version, ws}`, which is how the page knows the app is there. |
+| Site | `mac/Sources/Site.swift` | Serves the page at `http://127.0.0.1:27272/`, from one of two sources (see below): the built-in pages, or the live pages of `https://www.twistwright.com` through a proxy. `--root DIR` serves a checkout instead of both, for work on the site. `/bridge/info` answers `{app, version, ws, site, builtin}`, which is how the page knows the app is there; `site` is `builtin`, `live` or `root`, and `builtin` is the `APP_VERSION` of the built-in pages. |
 | Bridge | `mac/Sources/Bridge.swift` | A WebSocket on `ws://127.0.0.1:27273/` that carries JSON between the page and CoreBluetooth. The page keeps the GAN protocol and the cipher; the app moves bytes. The handshake accepts only the `Origin` of the page the app serves. The messages are listed at the top of the file. |
-| App | `mac/Sources/App.swift` | The menu bar item (Open Twistwright, the Bluetooth state, the connected cube, Copy the address, Quit) and the `twistwright://` scheme. `twistwright://smart` opens the page with `?smart=1`, and the page opens the Smart cube dialog itself. |
+| App | `mac/Sources/App.swift` | The menu bar item (Open Twistwright, the two page sources, the Bluetooth state, the connected cube, Copy the address, Quit) and the `twistwright://` scheme. `twistwright://smart` opens the page with `?smart=1`, and the page opens the Smart cube dialog itself. |
+
+### The pages: built-in or live
+
+From 0.2.0 the app carries a copy of the site. `mac/build.sh` takes the files
+from a git commit (`index.html`, `css/`, `js/`, `assets/`, `lab/`), not from the
+working tree, and puts them in `Contents/Resources/site/`. `site.json` beside
+that folder names the ref, the commit and the site's `APP_VERSION`. The copy is
+about 1.2 MB; the zip grows from 80 KB to about 530 KB.
+
+| Source | Menu item | What the app serves |
+|---|---|---|
+| `builtin` (the default) | Built-in pages 1.40.1 | The copy in the app. It works with no internet connection and does not change until the next release of the app. |
+| `live` | Live pages from twistwright.com | The proxy, with no cache of its own, as before 0.2.0. A reload shows a new deploy at once. With no answer from twistwright.com (10 s), each file comes from the built-in copy instead, so the app works offline. |
+
+The choice is saved in the app's defaults (`site`). A reload of the page shows
+the change. Both sources have the one origin, `http://127.0.0.1:27272`, so the
+`cw:` history is the same in both. `--site builtin` or `--site live` sets the
+source for one launch and does not save it. A build with `--no-site` has no
+copy: the menu item for it is gray and the app serves the live pages. The
+page needs no change for either source; Settings shows the `APP_VERSION` of
+the pages in use.
+
+The built-in pages still load the fonts from Google Fonts. With no connection
+the page uses the system fonts.
 
 CoreBluetooth starts on the first scan, so macOS asks for Bluetooth permission
 when the user presses Connect, not when the app opens.
@@ -419,14 +443,34 @@ Web Bluetooth or a bridge. `smartMode()` in `smart-ui.js` names the path:
 mac/build.sh                   # Developer ID signed app in mac/build/, plus Twistwright-mac.zip
 mac/build.sh --adhoc           # a build that stays on this Mac
 mac/build.sh --notarize NAME   # also notarize with the notarytool keychain profile NAME, and staple
+mac/build.sh --site REF        # build in the site at REF (tag, branch, commit); HEAD when not given
+mac/build.sh --no-site         # build in no copy of the site: live pages only
+mac/release.sh [--notarize NAME]   # tag HEAD mac-vX.Y.Z, build with the site at that tag
 mac/build/Twistwright.app/Contents/MacOS/Twistwright --root . --no-open   # serve this checkout
+mac/build/Twistwright.app/Contents/MacOS/Twistwright --port 27300 --no-open --site live   # a second app beside the first
 ```
+
+`--port N` serves the page on `N` and the bridge on `N+1`, so a test build can
+run while the installed app keeps 27272.
 
 Releases live on GitHub Releases of this repo, tagged `mac-vX.Y.Z` after
 `CFBundleShortVersionString` in `mac/Info.plist`. The page links
 `releases/latest/download/Twistwright-mac.zip`, so a new release is live as soon
 as it is published, and GitHub releases are for the Mac app only. The site
 itself deploys from `main`.
+
+The tag also chooses the built-in pages: the app carries the site as it is at
+the tagged commit. To release:
+
+1. Check out the commit of `main` whose site the app is to carry, and raise
+   the version in `mac/Info.plist` if the last release used it.
+2. Run `mac/release.sh --notarize twistwright`. It needs a clean tree. It
+   makes the tag on this Mac, builds, and takes the tag back if the build fails.
+3. Open `mac/build/Twistwright.app` and check Built-in pages in the menu.
+4. Run the `git push` and `gh release create` lines that the script prints.
+
+An app built with no tag (`mac/build.sh`) carries the site at HEAD, and
+`site.json` says `HEAD` with the commit.
 
 Until a release is notarized, macOS blocks the first open ("Apple could not
 verify") and the user has to press Open Anyway in System Settings › Privacy &
@@ -441,3 +485,12 @@ app-specific password), then build with `--notarize twistwright`.
   link and shows the download button; a reload finds the app again.
 - A `localhost` history is not the `twistwright.com` history. `cw:` data is per
   origin.
+- A release built by GitHub Actions on the push of a `mac-v*` tag. It needs the
+  Developer ID certificate and the notarytool credentials as repository
+  secrets. An ad hoc build from CI is worse than none: macOS calls a
+  downloaded app with no Developer ID "damaged".
+- A page that says the built-in pages are older than the live site. The page
+  could compare `builtin` in `/bridge/info` with the `js/version.js` of
+  twistwright.com and offer the switch.
+- With Live pages and a connection that drops part way through a load, one
+  page can mix live files and built-in files. A reload puts it right.
