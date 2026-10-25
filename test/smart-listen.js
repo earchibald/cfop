@@ -59,6 +59,17 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.match(cmd('top white front yellow').msg,/^Yellow cannot face you with white on top\./);
   assert.match(cmd('bottom white front yellow').msg,/^Yellow cannot face you with yellow on top\./);
   assert.match(cmd('top white top yellow').msg,/^Two colors for the top\./);
+  // The top and the front, the way the hints say it.
+  for(const [t,up,front] of [['top yellow front green',3,2],['Top yellow, front green.',3,2],['yellow on top green in front',3,2],['top white front red',0,1],['front blue top orange',4,5]])
+    assert.deepStrictEqual(cmd(t),{cmd:'hold',up,front},`"${t}" is up ${up}, front ${front}`);
+  // ----- the words of a turn of the whole cube -----
+  for(const [t,m,sure] of [['x','x',false],['X.','x',false],['y','y',false],['why','y',false],['z','z',false],['zee','z',false],['ex','x',false],
+    ['x prime','x\'',true],["x'","x'",true],["X’","x'",true],['x counter-clockwise',"x'",true],['x counterclockwise',"x'",true],['x counter clockwise',"x'",true],['x anticlockwise',"x'",true],
+    ['back x',"x'",true],['x back',"x'",true],['y prime',"y'",true],['back y',"y'",true],['z counter-clockwise',"z'",true],['back z',"z'",true],['why prime',"y'",true],
+    ['x clockwise','x',true],['turn x','x',false],['rotate the cube y','y',false],['x two','x2',true],['y2','y2',true],['double z','z2',true]])
+    assert.deepStrictEqual(cmd(t),{cmd:'turn',m,sure},`"${t}" is ${m}`);
+  for(const t of ['x y','Y perm','Z perm','x marks the spot','why not','back','prime','clockwise','the x factor','back up'])
+    assert.ok(!cmd(t)||cmd(t).cmd!=='turn',`no turn: "${t}"`);
   // ----- the words of a card command -----
   const cc=t=>w.smartCardCommand(t);
   for(const t of ['reveal moves','reveal','show all moves','uncover','Reveal the moves, please'])assert.strictEqual(cc(t),'reveal',`"${t}" is reveal`);
@@ -93,18 +104,20 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   const card=()=>$('#smartCard'),cardName=()=>card()&&card().querySelector('.sc-head .nm').textContent,onCount=()=>$$('#smartCard .algbig .sp-m.on').length,allCount=()=>$$('#smartCard .algbig .sp-m').length;
   assert.ok(btn()&&btn().closest('.cw-side')&&btn().previousElementSibling===$('#cubeWinHidden'),'Listen sits with Clear moves and Hidden faces');
   assert.ok(btn().closest('.cw-aside')&&$('#cubeWinSvg').closest('.cw-main'),'beside the picture, not under it');
-  assert.ok(/"reset"/.test(btn().title)&&/top yellow, bottom white/.test(btn().title)&&/T perm/.test(btn().title),'the button says what to say: '+btn().title);
+  assert.ok(/"reset"/.test(btn().title)&&/top yellow, front green/.test(btn().title)&&/x prime/.test(btn().title)&&/T perm/.test(btn().title),'the button says what to say: '+btn().title);
   assert.ok(row().classList.contains('hidden'),'nothing heard yet: no line');assert.strictEqual(row().getAttribute('role'),'status');
   assert.ok(hints().classList.contains('hidden'),'no hints until it listens');
   assert.ok(d.body.classList.contains('can-listen')&&!btn().disabled);
   // A click listens until Stop. The hints show.
   click(btn());const rec=recs[recs.length-1];assert.ok(rec&&rec.started===1&&rec.continuous===true,'the recognizer starts, continuous');
   assert.strictEqual(btn().textContent,'Stop');assert.ok(btn().classList.contains('on')&&row().classList.contains('on'));assert.strictEqual(btn().getAttribute('aria-pressed'),'true');
-  assert.ok(!row().classList.contains('hidden')&&/^Listening\. Say "reset", "top yellow, bottom white", or a case name such as "T perm"\./.test(txt()),txt());
+  assert.ok(!row().classList.contains('hidden')&&txt()==='Listening. Say one of these.',txt());
   assert.ok(!hints().classList.contains('hidden'),'the hints show while it listens');
-  assert.strictEqual($$('#cubeWinHints .hint').length,5,'five things to say');
-  assert.deepStrictEqual($$('#cubeWinHints .hint b').map(b=>b.textContent),['Reset','Top yellow, bottom white','T perm · Sune · F2L 12','Reveal moves · Hide moves','Play · Stop · Close']);
-  assert.ok($$('#cubeWinHints .hint > span').every(s=>s.textContent.length>20),'each with what it does');
+  assert.deepStrictEqual($$('#cubeWinHints .hint .hd').map(b=>b.textContent),['Cube','Turn','Case','Card'],'four groups');
+  assert.deepStrictEqual($$('#cubeWinHints .hint').map(h=>[...h.querySelectorAll('.says q')].map(q=>q.textContent)),
+    [['Reset','Top yellow, front green'],['x','x prime','back x','y','z'],['T perm','Sune','F2L 12'],['Reveal','Hide','Play','Stop','Close']],'the things to say');
+  assert.ok($$('#cubeWinHints .what').every(s=>s.textContent.length>20&&s.textContent.length<50),'each line on what they do is short');
+  assert.ok($('#cubeWin').classList.contains('listening'),'the long note goes while it listens');
   assert.ok(hints().closest('.cw-aside'),'beside the picture');
   // Moves on the list, then "reset": the list is emptied, the stage read again. The hold stays.
   run("cubeTab.moves=['R','U'];cubeTabMovesDraw()");assert.strictEqual(readout(),'R U');
@@ -126,7 +139,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.strictEqual(ev('cubeTab.hold'),null,'white up, green in front');assert.strictEqual(readout(),'R z2','the turn is on the list');
   // A pair that is no pair: the line says so, nothing changes.
   rec.say(4,'top white bottom red',true);
-  assert.strictEqual(txt(),'Listening. White and red are not opposite faces. Say the top color and the one under it.');
+  assert.strictEqual(txt(),'Listening. White and red are not opposite faces. Say the top color and the front color.');
   assert.strictEqual(ev('cubeTab.hold'),null);assert.strictEqual(readout(),'R z2');
   // The front alone: red toward me is y.
   rec.say(5,'red toward me',true);assert.strictEqual(ev('cubeTab.hold'),holdOf(['y']));assert.match(txt(),/Held white up, red in front\./);assert.strictEqual(readout(),'R z2 y');
@@ -134,7 +147,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   rec.say(6,'front white',true);assert.strictEqual(txt(),'Listening. White cannot face you with white on top.');assert.strictEqual(ev('cubeTab.hold'),holdOf(['y']));
   // Talk is no command, and no case.
   rec.say(7,'I think the top of the hill is green',true);
-  assert.strictEqual(txt(),'Listening. No command heard. Say "reset", "top yellow, bottom white", or a case name such as "T perm".');assert.strictEqual(heard(),'Heard: think the top of the hill is green','the last eight words show');
+  assert.strictEqual(txt(),'Listening. No command heard. Say "reset", "top yellow, front green", "x prime", or a case name such as "T perm".');assert.strictEqual(heard(),'Heard: think the top of the hill is green','the last eight words show');
   assert.strictEqual(ev('cubeTab.hold'),holdOf(['y']));assert.ok(!card(),'no card');
   // An early guess acts when the same command comes twice in a row; the final guess of the same words acts no more.
   rec.say(8,'top yellow',false);assert.strictEqual(ev('cubeTab.hold'),holdOf(['y']),'one early guess: nothing yet');assert.strictEqual(txt(),'Listening. Heard so far.');assert.strictEqual(heard(),'Heard: top yellow');
@@ -187,14 +200,25 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   rec.say(26,'reveal moves',true);assert.strictEqual(txt(),'Listening. Say a case name first, then "reveal moves".');
   // A color word is never a case: the tab's own commands come first.
   rec.say(27,'top yellow bottom white',true);assert.ok(!card());assert.match(txt(),/^Listening\. Held yellow up/);
+  // A turn said is a press of its button: the turn goes on the list and the hold moves on.
+  run("cubeTab.moves=['R'];cubeTabMovesDraw()");const h0=ev('cubeTab.hold'),after=ms=>ev('CUBE_TAB_HOLD_BY').get(w.applyAlg(h0.cube,ms).center.join());
+  rec.say(28,'x',false);rec.say(28,'x',false);assert.strictEqual(ev('cubeTab.hold'),h0,'a letter alone waits for the final guess');assert.strictEqual(readout(),'R');
+  rec.say(28,'x prime',false);rec.say(28,'x prime',false);assert.strictEqual(readout(),"R x'",'x prime: two early guesses in a row act');
+  assert.strictEqual(ev('cubeTab.hold'),after(["x'"]));assert.match(txt(),/^Listening\. Turned x'\. Held /);
+  rec.say(28,'x prime',true);assert.strictEqual(readout(),"R x'",'the final guess acts no more');
+  rec.say(29,'back y',true);assert.strictEqual(readout(),"R x' y'");assert.strictEqual(ev('cubeTab.hold'),after(["x'","y'"]));
+  rec.say(30,'why',true);assert.strictEqual(readout(),"R x'",'y after y\' takes both off, as the buttons do');
+  rec.say(31,'z counter-clockwise',true);assert.strictEqual(readout(),"R x' z'");
+  click($('#cubeWinTurns button[data-turn="z"]'));assert.strictEqual(readout(),"R x'",'the button and the voice are one list');
+  rec.say(32,'x',true);assert.strictEqual(readout(),'R');assert.strictEqual(ev('cubeTab.hold'),h0,'back to the hold');assert.ok(!card(),'no card for a turn');
   // The recognizer stops on its own after a quiet spell: it starts again.
   rec.end();await sleep(300);assert.strictEqual(rec.started,2,'started again');
   // Stop: the line keeps the last outcome, without the word Listening. The hints go.
   click(btn());assert.ok(!ev('SMART_LISTEN.on')&&rec.stopped===1,'Stop stops the recognizer');assert.strictEqual(btn().textContent,'Listen');assert.strictEqual(btn().getAttribute('aria-pressed'),'false');
-  assert.match(txt(),/^Held yellow up/);assert.ok(hints().classList.contains('hidden'),'the hints go with the listening');
+  assert.match(txt(),/^Turned x\. Held yellow up/);assert.ok(hints().classList.contains('hidden'),'the hints go with the listening');
   // A hold of the button listens once; let go, and the recognizer stops and gives its sentence. The hints show meanwhile.
   ptr(btn(),'pointerdown');await sleep(350);const rec2=recs[recs.length-1];assert.ok(rec2!==rec&&rec2.started===1&&rec2.continuous===false,'a hold listens once');
-  assert.strictEqual(btn().textContent,'Let go when done');assert.strictEqual(txt(),'Say "reset", "top yellow, bottom white", or a case name such as "T perm", then let go.');
+  assert.strictEqual(btn().textContent,'Let go when done');assert.strictEqual(txt(),'Say one of these, then let go.');
   assert.ok(!hints().classList.contains('hidden'),'the hints show while the button is held');
   ptr(btn(),'pointerup');click(btn());assert.strictEqual(rec2.stopped,1,'let go: the recognizer stops');assert.ok(ev('SMART_LISTEN.hold'),'still the hold until the sentence comes');
   run("cubeTab.moves=['R'];cubeTabMovesDraw()");
@@ -203,7 +227,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.ok(hints().classList.contains('hidden'),'the hints go when the hold ends');
   // A hold that hears nothing says so.
   ptr(btn(),'pointerdown');await sleep(350);const rec3=recs[recs.length-1];ptr(btn(),'pointerup');click(btn());rec3.end();
-  assert.strictEqual(txt(),'Nothing heard. Hold the button and say "reset", "top yellow, bottom white", or a case name.');
+  assert.strictEqual(txt(),'Nothing heard. Hold the button and say "reset", "top yellow, front green", "x prime", or a case name.');
   // A hold can name a case too.
   ptr(btn(),'pointerdown');await sleep(350);const rec3b=recs[recs.length-1];ptr(btn(),'pointerup');click(btn());rec3b.say(0,'Y perm',true);rec3b.end();
   assert.strictEqual(cardName(),'Y perm','a held sentence opens the card');assert.strictEqual(txt(),'Showing Y perm.');

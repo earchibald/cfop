@@ -238,6 +238,23 @@ everything inside scales (0.7 to 2.6, no wider than the screen); the place and
 the zoom are kept in `cw:smartCard`. Esc closes the card; a modal takes Esc
 first. `test/cubetab.js`, `test/smart-listen.js`, `test/smart-card.js`.
 
+Version 1.37.0 adds the whole-cube turns by voice and puts the hold in terms
+of the top and the front. "X", "x prime", "x counterclockwise", "back x" and
+"x two", and the same for y and z, press the turn button under the picture
+(`smartTurn`, then `cubeTabTurn`): the turn goes on the list, the hold moves on,
+and a turn back takes both off, as the buttons do. The recognizer gives "why"
+for y and "zee" for z, so each letter has its words (`SMART_AXIS_WORDS`). A
+letter alone acts only on the final guess, because an early "x" may yet become
+"x prime"; a turn with its word ("prime", "back", "two") acts on two early
+guesses in a row. "Y perm" and "Z perm" stay case names: "perm" is no part of
+a turn. The hold is now said as "top yellow, front green" (the hints, the
+prompts, the phrase boosts); "bottom white" still parses, as the top's opposite.
+The hints while the tab listens are four groups (Cube, Turn, Case, Card), each a
+row of chips with one short line under it, and the long note under them goes
+while it listens, so the hints fit beside the cube with no scroll. In one
+column (960px and narrower) the picture gives way to 40vh while it listens, and
+the groups sit two to a row where the width allows.
+
 ## The lab
 
 `lab/` is a page of its own for work on the smart cube, without the rest of the

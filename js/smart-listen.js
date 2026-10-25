@@ -1,14 +1,17 @@
 // ================= Voice commands for the Smart cube tab =================
-// The Smart cube tab (cubetab.js) listens for three kinds of thing.
+// The Smart cube tab (cubetab.js) listens for four kinds of thing.
 // "Reset", or "reset cube": the list of moves is emptied, the picture is lined up with the cube in
 // the hands (as Reset view does, once the tilt is live) and the stage is read again. The hold stays.
-// "Top yellow, bottom white": the hold, how the cube sits in the hands, so the moves and the stage
-// read as held. The top color sets the hold. The bottom must be the color under it, or the line
-// says so and nothing changes. The front stays where it was when it can ("top yellow" from white
-// up, green in front is z2: green stays in front), else the hold the fewest turns away is taken;
-// "front green" or "green toward me" in the same breath sets it. A hold said with moves on the list
-// puts the whole-cube turn on the list, as the turn buttons do, so the moves before it still read
-// right; an empty list takes none.
+// "Top yellow, front green": the hold, how the cube sits in the hands, so the moves and the stage
+// read as held. The top color and the front color name it. Either one alone keeps the other where
+// it can: the front stays where it was ("top yellow" from white up, green in front is z2: green
+// stays in front), else the hold the fewest turns away is taken. "Green toward me" is the front
+// too. A bottom color ("bottom white") is taken as the top's opposite, and must be one, or the line
+// says so and nothing changes. A hold said with moves on the list puts the whole-cube turn on the
+// list, as the turn buttons do, so the moves before it still read right; an empty list takes none.
+// "X", "x prime", "x counterclockwise", "back x", "x two", and the same for y and z: a press of
+// the turn button under the picture (cubeTabTurn), so the turn goes on the list and the hold moves
+// on. A letter alone acts only on the final guess: an early "x" may yet become "x prime".
 // A case name ("T perm", "Sune", "F2L 12"): the reference card (smart-card.js) opens beside the
 // cube with that case, its moves covered and uncovered one per second. The names go through the
 // Reference's matcher (listen.js: listenCatalog, listenRankAll, listenDecide): a sure winner shows;
@@ -29,7 +32,7 @@
 // color word inside talk is no command. The tab's own commands are read first, so a color word is
 // never taken for a case. As in listen.js, an action comes on two early guesses in a row, or on the
 // final one, and only the new end of a long result is read.
-// Pure (no DOM): smartWords, smartCommand, smartHoldFor, smartCardCommand.
+// Pure (no DOM): smartWords, smartTurn, smartCommand, smartHoldFor, smartCardCommand.
 
 const SMART_COLOR_NAMES=['white','red','green','yellow','orange','blue'];
 // The words a recognizer gives for each color.
@@ -52,18 +55,39 @@ const SMART_RESET_WORDS=new Set(['reset','reseat']);
 const SMART_RESET_AROUND=new Set(['the','my','cube','view','it','please','now','position','orientation','q','cue','queue','you','everything','all','moves','move','list','ok','okay','hey']);
 // Lower case, letters and digits only, "re set" as one word.
 function smartWords(text){
-  const ws=String(text).toLowerCase().replace(/[’']/g,'').replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(Boolean),out=[];
+  const ws=String(text).toLowerCase().replace(/\b([xyz])\s*['’′]/g,'$1 prime').replace(/[’']/g,'').replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(Boolean),out=[];
   for(let i=0;i<ws.length;i++){if(ws[i]==='re'&&ws[i+1]==='set'){out.push('reset');i++;}else out.push(ws[i]);}
   return out;}
 const smartCap=s=>s[0].toUpperCase()+s.slice(1);
-// What a sentence asks for: {cmd:'reset'}, {cmd:'hold', up, front} (a color index, or null for
-// unsaid), {cmd:'error', msg} for a hold that cannot be, or null for no command. A sentence is a
-// command only when every word of it is part of one: a place word with its color ("top yellow",
-// "yellow on top", "green toward me"), "reset", and the small words around them.
+// A turn of the whole cube: the words a recognizer gives for each letter, the words that make it a
+// prime ("x prime", "x counterclockwise", "back x") or a double ("x two"), and the small words around.
+const SMART_AXIS_WORDS={x:'x',ex:'x',ecks:'x',eks:'x',x2:'x2',y:'y',why:'y',wye:'y',y2:'y2',z:'z',zee:'z',zed:'z',z2:'z2'};
+const SMART_PRIME_WORDS=new Set(['prime','primed','prim','counter','counterclockwise','anticlockwise','anti','back','backward','backwards','reverse','inverse','inverted','minus']);
+const SMART_DOUBLE_WORDS=new Set(['two','2','double','twice','half']);
+const SMART_TURN_AROUND=new Set(['turn','rotate','rotation','the','whole','cube','a','do','please','now','ok','okay','hey','so','then','it','clockwise','way','one','time']);
+// {cmd:'turn', m, sure} for a sentence that is one turn of the whole cube, else null. `sure` is
+// false for a letter alone: more words may yet come ("x" then "x prime").
+function smartTurn(ws){
+  let axis=null,prime=false,dbl=false,sure=false;
+  for(const w of ws){
+    const a=SMART_AXIS_WORDS[w];
+    if(a){if(axis)return null;axis=a[0];if(a[1]){dbl=sure=true;}continue;}
+    if(SMART_PRIME_WORDS.has(w)){prime=sure=true;continue;}
+    if(SMART_DOUBLE_WORDS.has(w)){dbl=sure=true;continue;}
+    if(w==='clockwise'){sure=true;continue;}
+    if(!SMART_TURN_AROUND.has(w))return null;}
+  if(!axis)return null;
+  return {cmd:'turn',m:axis+(dbl?'2':prime?"'":''),sure};}
+// What a sentence asks for: {cmd:'reset'}, {cmd:'turn', m, sure} (smartTurn), {cmd:'hold', up,
+// front} (a color index, or null for unsaid), {cmd:'error', msg} for a hold that cannot be, or null
+// for no command. A sentence is a command only when every word of it is part of one: a place word
+// with its color ("top yellow", "yellow on top", "green toward me"), "reset", a turn ("x prime"),
+// and the small words around them.
 function smartCommand(text){
   const ws=smartWords(text);if(!ws.length)return null;
   const rest=ws.filter(w=>!SMART_RESET_AROUND.has(w));
   if(rest.length&&rest.every(w=>SMART_RESET_WORDS.has(w)))return {cmd:'reset'};
+  const turn=smartTurn(ws);if(turn)return turn;
   const items=[];
   for(const w of ws){
     if(SMART_FILLER.has(w))continue;
@@ -81,7 +105,7 @@ function smartCommand(text){
   if(!pairs||items.some(x=>!x.used))return null;
   const opp=c=>(c+3)%6,N=SMART_COLOR_NAMES;
   let up=at.up==null?null:at.up;const down=at.down==null?null:at.down,front=at.front==null?null:at.front;
-  if(up!=null&&down!=null&&opp(up)!==down)return {cmd:'error',msg:`${smartCap(N[up])} and ${N[down]} are not opposite faces. Say the top color and the one under it.`};
+  if(up!=null&&down!=null&&opp(up)!==down)return {cmd:'error',msg:`${smartCap(N[up])} and ${N[down]} are not opposite faces. Say the top color and the front color.`};
   if(up==null&&down!=null)up=opp(down);
   if(front!=null&&up!=null&&(front===up||front===opp(up)))return {cmd:'error',msg:`${smartCap(N[front])} cannot face you with ${N[up]} on top.`};
   return {cmd:'hold',up,front};}
@@ -118,6 +142,7 @@ function smartListenApply(cmd){
     cubeTabStageReset();if(cubeTab.target)cubeTabSettle();
     cubeTabWindow();
     return cubeTab.raw?'Reset. The moves are cleared and the picture is lined up with your cube.':'Reset. The moves are cleared.';}
+  if(cmd.cmd==='turn'){cubeTabTurn(cmd.m);return `Turned ${cmd.m}. Held ${cubeTabHoldWords(cubeTab.hold)}.`;}
   const cur=cubeTab.hold||CUBE_TAB_HOLDS[0],h=smartHoldFor(cmd,cur);
   if(!h){const up=cmd.up==null?cur.cube.center[0]:cmd.up;return `${smartCap(COLOR_NAMES[cmd.front])} cannot face you with ${COLOR_NAMES[up]} on top.`;}
   const turns=cubeTabHoldDelta(cur,h);
@@ -140,14 +165,14 @@ function smartCardVoice(c){
 // ----- the microphone -----
 const SMART_LISTEN={on:false,hold:false,rec:null,used:{},pend:null,catalog:null,choices:null};
 const SMART_RECENT=8;
-const SMART_SAY='Say "reset", "top yellow, bottom white", or a case name such as "T perm".';
-// The hints while the tab listens: each thing to say, and what it does.
+const SMART_SAY='Say "reset", "top yellow, front green", "x prime", or a case name such as "T perm".';
+// The hints while the tab listens: four groups, each with the things to say and one short line on
+// what they do. Short, so the hints fit beside the cube with no scroll.
 const SMART_HINTS=[
-  ['Reset','Clear the moves. With the tilt live, line the picture up with your cube.'],
-  ['Top yellow, bottom white','How you hold the cube. Add "front green" or "green toward me" for the front.'],
-  ['T perm · Sune · F2L 12','A case name opens its card beside the cube, with the moves covered.'],
-  ['Reveal moves · Hide moves','In the card: every move at once, or all of them covered again.'],
-  ['Play · Stop · Close','In the card: the moves on the small cube, over and over; the still picture; the card closed.']];
+  {head:'Cube',say:['Reset','Top yellow, front green'],what:'Clear the moves. Say how you hold the cube.'},
+  {head:'Turn',say:['x','x prime','back x','y','z'],what:'Turn the whole cube, as the buttons do.'},
+  {head:'Case',say:['T perm','Sune','F2L 12'],what:'Open its card, with the moves covered.'},
+  {head:'Card',say:['Reveal','Hide','Play','Stop','Close'],what:'Show, cover or play the moves. Close the card.'}];
 function smartListenSupported(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition);}
 const smartListenPre=()=>SMART_LISTEN.on?'Listening. ':'';
 // The hints: drawn once, shown while the tab listens.
@@ -155,9 +180,17 @@ function smartListenHintsDraw(){
   const el=$('#cubeWinHints');if(!el)return;
   if(!el.childElementCount){
     const lbl=document.createElement('div');lbl.className='lbl';lbl.textContent='You can say';el.appendChild(lbl);
-    for(const [say,what] of SMART_HINTS){const row=document.createElement('div');row.className='hint';
-      const b=document.createElement('b');b.textContent=say;const s=document.createElement('span');s.textContent=what;row.append(b,s);el.appendChild(row);}}
-  el.classList.toggle('hidden',!(SMART_LISTEN.on||SMART_LISTEN.hold));}
+    for(const g of SMART_HINTS){const row=document.createElement('div');row.className='hint';
+      const h=document.createElement('span');h.className='hd';h.textContent=g.head;
+      const body=document.createElement('div');body.className='bd';
+      const says=document.createElement('div');says.className='says';
+      for(const t of g.say){const q=document.createElement('q');q.textContent=t;says.appendChild(q);}
+      body.appendChild(says);
+      if(g.what){const s=document.createElement('div');s.className='what';s.textContent=g.what;body.appendChild(s);}
+      row.append(h,body);el.appendChild(row);}}
+  const on=SMART_LISTEN.on||SMART_LISTEN.hold;
+  el.classList.toggle('hidden',!on);
+  const w=$('#cubeWin');if(w)w.classList.toggle('listening',on);} // the long note under the hints goes while it listens
 // The button: Listen, Stop while it listens, Let go when done while it is held.
 function smartListenButton(){
   const b=$('#cubeWinListen');if(!b)return;
@@ -193,9 +226,10 @@ function smartListenAction(fresh){
   SMART_LISTEN.catalog=SMART_LISTEN.catalog||listenCatalog();
   return listenDecide(listenRankAll(fresh,SMART_LISTEN.catalog,smartListenSection()))||{};}
 // The key of an action an early guess may act on, when it comes twice in a row: a command, a card
-// command, a pick, a strong name. Null for the rest (a hold that cannot be waits for the final guess).
+// command, a pick, a strong name. Null for the rest: a hold that cannot be, and a turn letter alone
+// ("x" may yet become "x prime"), wait for the final guess.
 function smartListenKey(a){
-  if(a.cmd)return a.cmd.cmd==='error'?null:JSON.stringify(a.cmd);
+  if(a.cmd)return a.cmd.cmd==='error'||(a.cmd.cmd==='turn'&&!a.cmd.sure)?null:JSON.stringify(a.cmd);
   if(a.card)return 'card:'+a.card;
   if(a.pick)return 'p:'+a.pick.kind+':'+a.pick.id;
   if(a.hit&&a.strong)return 'h:'+a.hit.kind+':'+a.hit.id;
@@ -238,7 +272,9 @@ function smartListenBias(rec){
   const local=typeof LISTEN!=='undefined'&&LISTEN.local;
   if(!local||typeof window.SpeechRecognitionPhrase!=='function'||!('phrases' in rec))return;
   try{const ph=[new SpeechRecognitionPhrase('reset',3),new SpeechRecognitionPhrase('reset cube',3)];
-    SMART_COLOR_NAMES.forEach((c,i)=>{ph.push(new SpeechRecognitionPhrase(`top ${c} bottom ${SMART_COLOR_NAMES[(i+3)%6]}`,3),new SpeechRecognitionPhrase(`front ${c}`,2));});
+    SMART_COLOR_NAMES.forEach((c,i)=>{ph.push(new SpeechRecognitionPhrase(`top ${c}`,2),new SpeechRecognitionPhrase(`front ${c}`,2));
+      SMART_COLOR_NAMES.forEach((f,j)=>{if(j!==i&&j!==(i+3)%6)ph.push(new SpeechRecognitionPhrase(`top ${c} front ${f}`,3));});});
+    for(const a of ['x','y','z'])for(const s of [a,a+' prime','back '+a,a+' counterclockwise',a+' two'])ph.push(new SpeechRecognitionPhrase(s,3));
     for(const s of ['reveal moves','hide moves','play','stop','close'])ph.push(new SpeechRecognitionPhrase(s,3));
     SMART_LISTEN.catalog=SMART_LISTEN.catalog||listenCatalog();
     for(const c of SMART_LISTEN.catalog){if(c.set==='f2l')continue;for(const s of c.say)ph.push(new SpeechRecognitionPhrase(c.set==='pll'?s+' perm':s,3));}
@@ -255,11 +291,11 @@ function smartListenStart(once){
   rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){smartListenStop();smartListenSay('The microphone is blocked. Allow it for this site in the browser settings.');}};
   rec.onend=()=>{if(SMART_LISTEN.rec!==rec)return;
     if(once){SMART_LISTEN.rec=null;SMART_LISTEN.hold=false;smartListenButton();
-      const row=$('#cubeWinListenRow');if(row&&/^Say /.test(row.querySelector('.txt').textContent))smartListenSay('Nothing heard. Hold the button and say "reset", "top yellow, bottom white", or a case name.');return;}
+      const row=$('#cubeWinListenRow');if(row&&/^Say /.test(row.querySelector('.txt').textContent))smartListenSay('Nothing heard. Hold the button and say "reset", "top yellow, front green", "x prime", or a case name.');return;}
     if(SMART_LISTEN.on)setTimeout(()=>{if(SMART_LISTEN.on&&SMART_LISTEN.rec===rec)try{SMART_LISTEN.used={};SMART_LISTEN.pend=null;rec.start();}catch(e){}},250);}; // the browser stops on its own after a quiet spell
   try{rec.start();}catch(e){SMART_LISTEN.on=SMART_LISTEN.hold=false;SMART_LISTEN.rec=null;smartListenButton();smartListenSay('The microphone did not start. Try again.');return;}
   smartListenButton();
-  smartListenSay(once?SMART_SAY.replace(/\.$/,', then let go.'):'Listening. '+SMART_SAY);}
+  smartListenSay(once?'Say one of these, then let go.':'Listening. Say one of these.');} // the hints under the line list them
 // Stop. The last outcome stays on the line, without the word Listening.
 function smartListenStop(){
   const rec=SMART_LISTEN.rec;SMART_LISTEN.on=SMART_LISTEN.hold=false;SMART_LISTEN.rec=null;SMART_LISTEN.pend=null;
