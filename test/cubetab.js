@@ -27,7 +27,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
 (async()=>{try{
   let dev=null;const cube={};
   const set=c=>Object.assign(cube,{cp:[...c.cp],co:[...c.co],ep:[...c.ep],eo:[...c.eo]});
-  const bt={requestDevice:async()=>{if(!dev)throw Object.assign(new Error('cancelled'),{name:'NotFoundError'});return dev;}};
+  let picks=0;const bt={requestDevice:async()=>{picks++;if(!dev)throw Object.assign(new Error('cancelled'),{name:'NotFoundError'});return dev;}};
   const {w,d,errs}=await boot({},bt);
   const $=s=>d.querySelector(s),$$=s=>[...d.querySelectorAll(s)];
   const click=el=>{assert.ok(el,'element to click');el.dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true}));};
@@ -53,7 +53,9 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.ok(win().hidden&&!home().hidden,'the Connect card shows, the live panel is hidden');
   click(tab());assert.strictEqual(ev('curTab'),'smart','the tab opens');assert.ok($('#tab-smart').classList.contains('on'));
   assert.strictEqual($('#smartHome h2').textContent,'Smart cube');
-  click($('#smartTabConnect'));assert.ok($('#smartBg'),'Connect a smart cube opens the Smart cube window');esc();assert.ok(!$('#smartBg'));
+  assert.strictEqual(picks,0,'no known cube, no getDevices: the tab does not look by itself');
+  click($('#smartTabConnect'));assert.ok(!$('#smartBg'),'Connect a smart cube opens no dialog');assert.strictEqual(picks,1,'it opens the browser\'s chooser at once');
+  assert.ok(await until(()=>/No cube was chosen/.test($('#smartTabStatus').textContent)),'no cube chosen: the card says so: '+$('#smartTabStatus').textContent);
   d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'7',bubbles:true}));assert.strictEqual(ev('curTab'),'smart','the 7 key is the tab');
   w.goTab('solve');assert.strictEqual(ev('curTab'),'solve');
   // ----- connect: the page goes to the tab; the panel carries the name and the charge -----
@@ -429,14 +431,14 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.ok(/no longer connected/.test($('#cubeWinNote').textContent));
   assert.ok($$('#cubeWinTurns button').every(b=>b.disabled),'the turn buttons wait for the link');
   assert.ok(!$('#cubeWinAgain').classList.contains('hidden'),'Connect again shows');
-  click($('#cubeWinConnect'));assert.ok($('#smartBg')&&!win().hidden,'Connect again opens the dialog over the tab');
+  assert.ok(ev('smartLook')===null,'no getDevices: no look by itself');
   dev=fakeDevice(4,MAC,cube,{mfData:mfDataFor(MAC),name:'GAN12uiM_A1B2'});
-  click($('#smartConnect'));assert.ok(await until(()=>!$('#smartUse').disabled),'connected again');
+  click($('#cubeWinConnect'));assert.ok(!$('#smartBg'),'Connect again opens no dialog');
+  assert.ok(await until(()=>!!ev('smartConn')),'the chooser, then connected again');assert.ok(!$('#smartBg')&&ev('curTab')==='smart','on the tab, with no dialog');
   assert.ok(!tab().classList.contains('off'),'the dot is live again');
   assert.ok(await until(()=>!$('#cubeWinBatt').hidden&&$('#cubeWinBatt').textContent==='77%'),'and the charge is read again');
   assert.strictEqual(ev('cubeTab.moves').length,0,'a new connection starts the move list again');
   assert.ok(!ev('cubeTab.hold')&&!ev('cubeTab.gyro'),'and holds the cube white up, green front, with the tilt to come');
-  esc();
   // ----- Disconnect puts the Connect card back -----
   click($('#smartBtn'));await sleep(20);click($('#smartDisconnect'));
   assert.ok(win().hidden&&!home().hidden,'Disconnect: the Connect card is back');assert.ok(!tab().classList.contains('live'),'and the dot goes');

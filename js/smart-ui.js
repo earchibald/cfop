@@ -18,7 +18,7 @@
 // The charge: the link asks the cube for it on connect and once a minute (gan.js), and the dialog
 // shows it by the cube's name as a small battery with the percent, smartBatteryDraw. The cube tab
 // and the lab draw theirs the same way.
-let smartConn=null,smartCube=null,smartBusy=false,smartTimer=0,smartMacWait=null,smartListEnd=null;
+let smartConn=null,smartCube=null,smartBusy=false,smartTimer=0,smartMacWait=null;
 function smartNotify(detail){if(typeof document!=='undefined')document.dispatchEvent(new CustomEvent('cw:smart',{detail}));}
 const MAC_APP_URL='https://github.com/earchibald/cfop/releases/latest/download/Twistwright-mac.zip';
 // How this page can reach a cube: 'bt' (Web Bluetooth), 'bridge' (the app serves the page),
@@ -85,7 +85,7 @@ function openSmart(note){
   document.body.appendChild(bg);
   bg.addEventListener('click',e=>{if(e.target===bg)closeSmart();});
   $('#smartClose').onclick=closeSmart;
-  $('#smartConnect').onclick=smartConnect;
+  $('#smartConnect').onclick=()=>smartConnect();
   $('#smartDisconnect').onclick=smartDisconnect;
   $('#smartRead').onclick=()=>smartRead();
   $('#smartSolved').onclick=smartSolved;
@@ -127,7 +127,7 @@ function openSmartDownload(){
 function closeSmart(){
   document.removeEventListener('keydown',smartKeys,true);clearTimeout(smartTimer);
   if(smartMacWait){const w=smartMacWait;smartMacWait=null;w(null);}
-  if(smartListEnd)smartListEnd(null);
+  if(smartLook&&smartLook.where==='dialog')smartLook.end(null);
   const b=$('#smartBg');if(b)b.remove();
   smartNotify({type:'close'});
 }
@@ -208,31 +208,60 @@ function smartMacGo(){
   $('#smartMacRow').classList.add('hidden');
   if(smartMacWait){const w=smartMacWait;smartMacWait=null;w(mac);}
 }
-// The chooser: the browser's own with Web Bluetooth, a list in the dialog over the bridge.
-async function smartPick(){
-  if(navigator.bluetooth)return ganPick();
+// The cubes this browser has connected, by name: {mac, id, at}. The lab keeps the same map
+// (cw:labCubes), so a cube connected in one connects by itself in the other.
+function smartKnown(){return store.get('labCubes',{});}
+function smartRemember(name,d){const m=smartKnown();m[name]=Object.assign(m[name]||{},d,{at:Date.now()});store.set('labCubes',m);}
+function smartIsKnown(d,known){return !!(known[d.name]||Object.values(known).some(k=>k.id&&k.id===d.id));}
+// The look for a cube, as the lab does it: the chooser (the browser's own with Web Bluetooth, a
+// list over the bridge), or, with `known`, the look with no click, where a known cube is taken as
+// soon as it is heard. `where` is the place that shows the look: 'dialog' (this dialog) or 'tab'
+// (the Smart cube tab, cubetab.js). One look at a time: smartLook {where, why, end}. `why` is
+// 'show' for the look that the tab starts when it opens (it ends when the user leaves the tab) and
+// 'drop' for the one after the link drops (it goes on wherever the user is).
+let smartLook=null,smartPickSeq=0;
+async function smartPick(known,where,why,seq){
+  if(navigator.bluetooth)return known?smartPickKnown(known,where,why,seq):ganPick();
   const link=BRIDGE||await bridgeStart();
   if(!link)throw new Error('The Twistwright app is not running. Open it, then press Connect again.');
   if(link.bluetooth==='unauthorized')throw new Error('macOS did not allow Bluetooth for Twistwright. Allow it in System Settings › Privacy & Security › Bluetooth, then press Connect again.');
   if(link.bluetooth==='poweredOff')throw new Error('Bluetooth is off on this Mac. Turn it on, then press Connect again.');
-  return smartList(link);
+  return smartList(link,known,where,why,seq);
 }
-// Show the cubes that the app sees and wait for a choice. Resolves the device, or rejects with
-// NotFoundError when the user cancels or the dialog closes.
-function smartList(link){
-  const row=$('#smartList'),items=$('#smartListItems'),note=$('#smartListNote');
-  row.classList.remove('hidden');items.innerHTML='';
-  note.textContent='Looking for cubes. Turn a face to wake the cube up.';
-  const seen=new Map();
+// The row of the look: a note, the cubes found as buttons (over the bridge) and Cancel, in the
+// dialog (#smartList) or the tab (#smartTabList). start(end, p) begins the look and returns what
+// stops it; end(dev) ends the look with that device. Cancel, or the link closing, ends it with
+// none: the promise rejects with NotFoundError, as it does at once when a newer look has begun
+// (seq is not smartPickSeq).
+function smartRow(note,where,why,seq,start){
+  if(seq!==smartPickSeq)return Promise.reject(Object.assign(new Error('cancelled'),{name:'NotFoundError'}));
+  const p=where==='tab'?'#smartTabList':'#smartList';
+  const row=$(p);row.classList.remove('hidden');$(p+'Items').textContent='';$(p+'Note').textContent=note;
   return new Promise((res,rej)=>{
-    const end=dev=>{stop();link.off(onEv);smartListEnd=null;if($('#smartList'))row.classList.add('hidden');
+    let stop=null,ended=false;
+    const end=dev=>{if(ended)return;ended=true;if(stop)stop();if(smartLook&&smartLook.end===end)smartLook=null;if($(p))row.classList.add('hidden');
       if(dev)res(dev);else rej(Object.assign(new Error('cancelled'),{name:'NotFoundError'}));};
+    $(p+'Cancel').onclick=()=>end(null);smartLook={where,why,end};
+    stop=start(end,p);if(ended)stop();
+  });
+}
+function smartLookNote(names){return `Looking for ${names.map(smartNiceName).join(', ')}. Turn a face to wake the cube up.`;}
+// End the look that `why` started (any look with no `why`), if it runs.
+function smartLookStop(why){if(smartLook&&(!why||smartLook.why===why))smartLook.end(null);}
+// The list over the bridge. A known cube ends the look as soon as the scan hears it, with the
+// address the scan carries or the one saved; any other cube is a button.
+function smartList(link,known,where,why,seq){
+  const names=known?Object.keys(known):[];if(!names.length)known=null;
+  const seen=new Map();
+  return smartRow(known?smartLookNote(names):'Looking for cubes. Turn a face to wake the cube up.',where,why,seq,(end,p)=>{
+    const items=$(p+'Items'),note=$(p+'Note');
     const stop=link.scan(d=>{
+      if(known&&smartIsKnown(d,known)){end(bridgeDevice(link,{id:d.id,name:d.name,mac:d.mac||(known[d.name]||{}).mac||smartMacs()[d.name]||null}));return;}
       let b=seen.get(d.id);
       if(!b){b=document.createElement('button');b.className='small';items.appendChild(b);seen.set(d.id,b);}
       b.textContent=d.name;b.dataset.mac=d.mac||'';b.title='Connect to '+d.name;
       b.onclick=()=>end(bridgeDevice(link,{id:d.id,name:d.name,mac:b.dataset.mac||null}));
-      note.textContent='Choose your cube.';
+      if(!known)note.textContent='Choose your cube.';
     });
     const onEv=e=>{
       if(e.ev==='bluetooth'&&e.state==='unauthorized')note.textContent='macOS did not allow Bluetooth for Twistwright. Allow it in System Settings › Privacy & Security › Bluetooth.';
@@ -240,40 +269,84 @@ function smartList(link){
       if(e.ev==='closed')end(null);
     };
     link.on(onEv);
-    $('#smartListCancel').onclick=()=>end(null);
-    smartListEnd=end;
+    return()=>{stop();link.off(onEv);};
   });
 }
-async function smartConnect(){
+// Web Bluetooth with no click: of the cubes this page was once allowed (getDevices, where the
+// browser has it), the known ones; the first heard advertising is taken. Where the browser cannot
+// listen, the first known one is taken at once and the link tried. null where the browser has no
+// getDevices or none of its cubes is known: then only Connect, a click, can open the chooser.
+async function smartPickKnown(known,where,why,seq){
+  const bt=navigator.bluetooth;
+  if(typeof bt.getDevices!=='function')return null;
+  const devs=(await bt.getDevices()).filter(d=>smartIsKnown(d,known));
+  if(!devs.length)return null;
+  if(devs.some(d=>typeof d.watchAdvertisements!=='function'))return devs[0];
+  return smartRow(smartLookNote(devs.map(d=>d.name)),where,why,seq,end=>{
+    const ab=new AbortController();
+    const ons=devs.map(d=>{const f=()=>end(d);d.addEventListener('advertisementreceived',f);d.watchAdvertisements({signal:ab.signal}).catch(()=>{});return [d,f];});
+    return()=>{ab.abort();for(const [d,f] of ons)d.removeEventListener('advertisementreceived',f);};
+  });
+}
+// Can the page look for a cube with no click? Over the bridge, always: the list comes up at once.
+// With Web Bluetooth only for a known cube, through getDevices: the chooser needs a click.
+function smartCanLook(){
+  if(smartConn||smartBusy||smartLook||!ganAvailable())return false;
+  if(smartMode()==='bridge')return true;
+  return smartMode()==='bt'&&!!Object.keys(smartKnown()).length&&typeof navigator.bluetooth.getDevices==='function';
+}
+// The look with no click: when the Smart cube tab opens with no cube ('show'), and when the link
+// drops ('drop'). What it says goes to the tab.
+function smartAuto(why){if(smartCanLook())smartConnect({auto:true,where:'tab',why:why||'show'});}
+// What a look says: in the dialog, its status line; on the tab, a cw:smart 'look' event.
+function smartSay(where,t){if(where==='dialog')smartStatus(t);else smartNotify({type:'look',text:t});}
+// o.where: the place that shows the look ('dialog' by default, or 'tab'). o.auto: the look with no
+// click (smartAuto). A press of Connect while a look runs ends that look and starts the chooser.
+async function smartConnect(o){
+  o=o||{};const auto=!!o.auto;let where=o.where||'dialog';
   if(smartBusy||smartConn||!ganAvailable())return;
+  smartLookStop();
+  const seq=++smartPickSeq,why=o.why||'show';
+  // The look holds its place from the start: a second look cannot begin while getDevices or the
+  // bridge is still on its way. The row takes the place over (smartRow); an end before it drops
+  // this look.
+  const hold={where,why,end:()=>{if(smartLook===hold)smartLook=null;smartPickSeq++;}};smartLook=hold;
   let device;
-  try{device=await smartPick();}
-  catch(e){smartStatus(e.name==='NotFoundError'?'No cube was chosen. Turn the cube to wake it up, then press Connect again.':'Bluetooth did not start: '+e.message);return;}
+  try{device=await smartPick(auto?smartKnown():null,where,why,seq);}
+  catch(e){if(smartLook===hold)smartLook=null;if(seq===smartPickSeq)smartSay(where,e.name==='NotFoundError'?(auto?'Press Connect to look for your cube again.':'No cube was chosen. Turn the cube to wake it up, then press Connect again.'):'Bluetooth did not start: '+e.message);return;}
+  if(smartLook===hold)smartLook=null;
+  if(seq!==smartPickSeq||smartConn||smartBusy)return;
+  if(!device){smartSay(where,'Press Connect, then choose your cube in the list that the browser shows.');return;}
   const name=device.name||'GAN cube';
   smartBusy=true;smartButtons();
   // The app reads the address from the advertisement (device.mac); a saved one is the next best.
-  let mac=device.mac||smartMacs()[name],typed=false;const fix=smartLoadFix(name);
-  if(!mac){smartStatus(`Looking for the address of ${name}. Turn a face now and then to keep the cube awake.`);mac=await ganWatchMac(device,8000);}
+  let mac=device.mac||smartMacs()[name]||(smartKnown()[name]||{}).mac,typed=false;const fix=smartLoadFix(name);
+  if(!mac){smartSay(where,`Looking for the address of ${name}. Turn a face now and then to keep the cube awake.`);mac=await ganWatchMac(device,8000);}
   for(;;){
     if(!mac){
-      if(!$('#smartBg')){smartBusy=false;return;}
       smartBusy=false;smartButtons();
+      // The address is typed in the dialog. The look with no click does not open it.
+      if(auto){smartSay(where,`Press Connect to connect ${smartNiceName(name)}.`);return;}
+      if(where==='tab'){where='dialog';openSmart();}
+      if(!$('#smartBg'))return;
       mac=await smartAskMac(name);typed=true;
       if(!mac)return;
       smartBusy=true;smartButtons();
     }
-    smartStatus(`Connecting to ${name}.`);
+    smartSay(where,`Connecting to ${name}.`);
     let conn=null;
     try{conn=await ganOpen(device,mac,ev=>smartEvent(ev,conn),{fix});}
-    catch(e){smartBusy=false;smartButtons();smartStatus(e.code==='model'?e.message:'The connection did not start. Turn the cube to wake it up, then press Connect again.');return;}
+    catch(e){smartBusy=false;smartButtons();smartSay(where,e.code==='model'?e.message:'The connection did not start. Turn the cube to wake it up, then press Connect again.');return;}
     try{
       const cube=await conn.readState(3000);
-      smartSaveMac(name,conn.mac);smartConn=conn;smartBusy=false;smartGot(cube);smartNotify({type:'connect',conn,cube});return;
+      smartSaveMac(name,conn.mac);smartRemember(name,{mac:conn.mac,id:device.id||null});
+      smartConn=conn;smartBusy=false;smartGot(cube);smartNotify({type:'connect',conn,cube,auto});return;
     }catch(e){
       conn.close();
-      if(e.code!=='badmac'&&e.code!=='timeout'){smartBusy=false;smartButtons();smartStatus('The cube did not answer: '+e.message);return;}
-      smartSaveMac(name,null);
-      smartStatus(typed?'The cube did not answer. Check the MAC address, then try again.':`The cube did not answer. Type the MAC address of ${name}.`);
+      if(e.code!=='badmac'&&e.code!=='timeout'){smartBusy=false;smartButtons();smartSay(where,'The cube did not answer: '+e.message);return;}
+      smartSaveMac(name,null);smartRemember(name,{mac:null});
+      if(auto){smartBusy=false;smartButtons();smartSay(where,`${smartNiceName(name)} did not answer. Press Connect to try again.`);return;}
+      smartSay(where,typed?'The cube did not answer. Check the MAC address, then try again.':`The cube did not answer. Type the MAC address of ${name}.`);
       mac=null; // ask for it
     }
   }
@@ -281,7 +354,7 @@ async function smartConnect(){
 // Events from a link that is not the current one (a failed try, or one that was closed) are dropped.
 function smartEvent(ev,conn){
   if(!conn||conn!==smartConn)return;
-  if(ev.type==='gone'){smartConn=null;smartBusy=false;smartButtons();smartStatus('The cube is no longer connected. Press Connect to connect again.');smartNotify({type:'gone',conn});return;}
+  if(ev.type==='gone'){smartConn=null;smartBusy=false;smartButtons();smartStatus('The cube is no longer connected. Press Connect to connect again.');smartNotify({type:'gone',conn});smartAuto('drop');return;}
   if(ev.type==='move'||ev.type==='state'||ev.type==='gyro'||ev.type==='battery')smartNotify(Object.assign({conn},ev));
   if(ev.type==='battery')smartBatteryDraw($('#smartBatt'),ev.level);
   if(ev.type==='off'){conn.close();return;}

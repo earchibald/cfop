@@ -302,14 +302,21 @@
             <div class="cw-listen hidden" id="cubeWinListenRow" role="status"><span class="listen-dot" aria-hidden="true"></span><span class="txt"></span><span class="heard"></span><span class="ask listen-ask"></span></div>
             <div class="cw-hints hidden" id="cubeWinHints" aria-label="What you can say"></div>
             <p class="muted cw-note" id="cubeWinNote"></p>
-            <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect" title="Open the Smart cube window and connect the cube again">Connect again</button></div>
+            <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect" title="Look for your cube and connect it again">Connect again</button></div>
           </div>
         </div>
       </div>
       <div class="panel" id="smartHome">
         <h2>Smart cube</h2>
         <p class="muted">Connect a GAN smart cube with Bluetooth. Each turn of your cube turns the layer here, large. The page names the stage of your solve and the case on the cube. It listens for your voice: a reset, how you hold the cube, or a case name, which opens a small reference card beside the cube.</p>
-        <div class="row"><button class="primary" id="smartTabConnect" title="Open the Smart cube window and connect your cube">Connect a smart cube</button></div>
+        <p class="muted">A cube that you connected before connects by itself when you open this tab. Turn a face to wake it up.</p>
+        <div class="row"><button class="primary" id="smartTabConnect" title="Look for your cube and connect it">Connect a smart cube</button></div>
+        <p class="muted" id="smartTabStatus" role="status"></p>
+        <div id="smartTabList" class="hidden smart-look">
+          <p class="muted" id="smartTabListNote"></p>
+          <div class="scan-row" id="smartTabListItems"></div>
+          <div class="scan-row"><button class="small ghost" id="smartTabListCancel" title="Stop the search and choose no cube">Cancel</button></div>
+        </div>
       </div>
     </section>
     <!-- BEGINNER: Learn (js/learn.js) -->
