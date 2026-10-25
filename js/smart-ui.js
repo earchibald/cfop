@@ -370,7 +370,7 @@ async function smartRead(quiet){
 }
 function smartGot(cube){
   smartCube=cube;smartDraw();smartButtons();
-  smartStatus(cube.isSolved()?'The cube is solved. Mix it up: the net follows each turn. Then press Use this cube.'
+  smartStatus(cube.isSolved()?'The cube is solved. Press Use this cube to start from here, or mix it up first: the net follows each turn.'
     :'Check the net against your cube: white up, green front. If it matches, press Use this cube.');
 }
 async function smartSolved(){
@@ -381,8 +381,7 @@ async function smartSolved(){
   await new Promise(r=>setTimeout(r,100));await smartRead();
 }
 function smartUse(){
-  if(!smartCube)return;
-  if(smartCube.isSolved()){smartStatus('The cube is solved. Mix it up first.');return;}
+  if(!smartCube)return; // a solved cube loads too: an empty scramble, as the scanner and the painter give one
   const r=scrambleFromCube(smartCube,customName('smart'));
   if(r.ok)closeSmart();else smartStatus(r.errors.join(' '));
 }
