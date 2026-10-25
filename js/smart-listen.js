@@ -1,7 +1,10 @@
 // ================= Voice commands for the Smart cube tab =================
-// The Smart cube tab (cubetab.js) listens for four kinds of thing.
+// The Smart cube tab (cubetab.js) listens for five kinds of thing.
 // "Reset", or "reset cube": the list of moves is emptied, the picture is lined up with the cube in
-// the hands (as Reset view does, once the tilt is live) and the stage is read again. The hold stays.
+// the hands (as Reset view does, while the picture follows the tilt: Lock off) and the stage is
+// read again. The hold stays.
+// "Clear moves", or "clear": the list of moves is emptied, as the Clear moves button does. Nothing
+// else changes.
 // "Top yellow, front green": the hold, how the cube sits in the hands, so the moves and the stage
 // read as held. The top color and the front color name it. Either one alone keeps the other where
 // it can: the front stays where it was ("top yellow" from white up, green in front is z2: green
@@ -50,6 +53,9 @@ const SMART_PLACE_NAMES={up:'top',down:'bottom',front:'front'};
 // The small words around a command.
 const SMART_FILLER=new Set(['the','a','an','is','are','on','at','in','of','to','my','me','with','and','then','cube','side','face','color','colour','colors',
   'has','its','it','please','now','put','hold','holding','held','i','im','am','ok','okay','hey','so','um','uh','twistwright','orientation','position','set','goes','go']);
+// "Clear" with the words that may go with it: "clear moves", "clear the list", "clear them please".
+const SMART_CLEAR_WORDS=new Set(['clear','clean','empty']);
+const SMART_CLEAR_AROUND=new Set(['the','my','moves','move','list','history','it','them','all','please','now','ok','okay','hey','out','up']);
 // "Reset" with the words that may go with it: "reset the cube", "reset view", "reset it please".
 const SMART_RESET_WORDS=new Set(['reset','reseat']);
 const SMART_RESET_AROUND=new Set(['the','my','cube','view','it','please','now','position','orientation','q','cue','queue','you','everything','all','moves','move','list','ok','okay','hey']);
@@ -78,15 +84,17 @@ function smartTurn(ws){
     if(!SMART_TURN_AROUND.has(w))return null;}
   if(!axis)return null;
   return {cmd:'turn',m:axis+(dbl?'2':prime?"'":''),sure};}
-// What a sentence asks for: {cmd:'reset'}, {cmd:'turn', m, sure} (smartTurn), {cmd:'hold', up,
+// What a sentence asks for: {cmd:'reset'}, {cmd:'clear'}, {cmd:'turn', m, sure} (smartTurn), {cmd:'hold', up,
 // front} (a color index, or null for unsaid), {cmd:'error', msg} for a hold that cannot be, or null
 // for no command. A sentence is a command only when every word of it is part of one: a place word
-// with its color ("top yellow", "yellow on top", "green toward me"), "reset", a turn ("x prime"),
+// with its color ("top yellow", "yellow on top", "green toward me"), "reset", "clear moves", a turn ("x prime"),
 // and the small words around them.
 function smartCommand(text){
   const ws=smartWords(text);if(!ws.length)return null;
   const rest=ws.filter(w=>!SMART_RESET_AROUND.has(w));
   if(rest.length&&rest.every(w=>SMART_RESET_WORDS.has(w)))return {cmd:'reset'};
+  const clr=ws.filter(w=>!SMART_CLEAR_AROUND.has(w));
+  if(clr.length===1&&SMART_CLEAR_WORDS.has(clr[0]))return {cmd:'clear'};
   const turn=smartTurn(ws);if(turn)return turn;
   const items=[];
   for(const w of ws){
@@ -138,10 +146,11 @@ function smartListenApply(cmd){
   if(!cubeTab.conn)return 'The cube is not connected.';
   if(cmd.cmd==='reset'){
     cubeTab.moves=[];
-    if(cubeTab.raw)cubeTabKeep();
+    const live=cubeTabLive();if(live)cubeTabKeep();
     cubeTabStageReset();if(cubeTab.target)cubeTabSettle();
     cubeTabWindow();
-    return cubeTab.raw?'Reset. The moves are cleared and the picture is lined up with your cube.':'Reset. The moves are cleared.';}
+    return live?'Reset. The moves are cleared and the picture is lined up with your cube.':'Reset. The moves are cleared.';}
+  if(cmd.cmd==='clear')return cubeTabClear()?'The moves are cleared.':'No moves to clear.';
   if(cmd.cmd==='turn'){cubeTabTurn(cmd.m);return `Turned ${cmd.m}. Held ${cubeTabHoldWords(cubeTab.hold)}.`;}
   const cur=cubeTab.hold||CUBE_TAB_HOLDS[0],h=smartHoldFor(cmd,cur);
   if(!h){const up=cmd.up==null?cur.cube.center[0]:cmd.up;return `${smartCap(COLOR_NAMES[cmd.front])} cannot face you with ${COLOR_NAMES[up]} on top.`;}
@@ -149,7 +158,7 @@ function smartListenApply(cmd){
   if(!turns.length)return `Already held ${cubeTabHoldWords(h)}.`;
   if(cubeTab.moves.length)for(const m of turns)cubeTab.moves=cubeTabMerge(cubeTab.moves,m);
   cubeTab.hold=h.moves.length?h:null;
-  if(cubeTab.gyro&&cubeTab.raw){cubeTabKeep();cubeTabAwayCheck();} // the cube sits as said: the heading lines the picture up with it; a cube that sits otherwise brings the band
+  if(cubeTabLive()){cubeTabKeep();cubeTabAwayCheck();} // the cube sits as said: the heading lines the picture up with it; a cube that sits otherwise brings the band
   else{if(!cubeTab.q)cubeTab.q=[0,0,0,1];cubeTab.qTo=h.q;cubeTabTurnView();}
   if(!cubeTab.stillTimer&&cubeTab.target)cubeTabSettle();
   cubeTabWindow();
@@ -165,11 +174,11 @@ function smartCardVoice(c){
 // ----- the microphone -----
 const SMART_LISTEN={on:false,hold:false,rec:null,used:{},pend:null,catalog:null,choices:null};
 const SMART_RECENT=8;
-const SMART_SAY='Say "reset", "top yellow, front green", "x prime", or a case name such as "T perm".';
+const SMART_SAY='Say "reset", "clear moves", "top yellow, front green", "x prime", or a case name such as "T perm".';
 // The hints while the tab listens: four groups, each with the things to say and one short line on
 // what they do. Short, so the hints fit beside the cube with no scroll.
 const SMART_HINTS=[
-  {head:'Cube',say:['Reset','Top yellow, front green'],what:'Clear the moves. Say how you hold the cube.'},
+  {head:'Cube',say:['Reset','Clear moves','Top yellow, front green'],what:'Start over, clear the list, or set the hold.'},
   {head:'Turn',say:['x','x prime','back x','y','z'],what:'Turn the whole cube, as the buttons do.'},
   {head:'Case',say:['T perm','Sune','F2L 12'],what:'Open its card, with the moves covered.'},
   {head:'Card',say:['Reveal','Hide','Play','Stop','Close'],what:'Show, cover or play the moves. Close the card.'}];
@@ -271,7 +280,7 @@ function smartListenResult(ev){
 function smartListenBias(rec){
   const local=typeof LISTEN!=='undefined'&&LISTEN.local;
   if(!local||typeof window.SpeechRecognitionPhrase!=='function'||!('phrases' in rec))return;
-  try{const ph=[new SpeechRecognitionPhrase('reset',3),new SpeechRecognitionPhrase('reset cube',3)];
+  try{const ph=[new SpeechRecognitionPhrase('reset',3),new SpeechRecognitionPhrase('reset cube',3),new SpeechRecognitionPhrase('clear moves',3),new SpeechRecognitionPhrase('clear',2)];
     SMART_COLOR_NAMES.forEach((c,i)=>{ph.push(new SpeechRecognitionPhrase(`top ${c}`,2),new SpeechRecognitionPhrase(`front ${c}`,2));
       SMART_COLOR_NAMES.forEach((f,j)=>{if(j!==i&&j!==(i+3)%6)ph.push(new SpeechRecognitionPhrase(`top ${c} front ${f}`,3));});});
     for(const a of ['x','y','z'])for(const s of [a,a+' prime','back '+a,a+' counterclockwise',a+' two'])ph.push(new SpeechRecognitionPhrase(s,3));
@@ -291,7 +300,7 @@ function smartListenStart(once){
   rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){smartListenStop();smartListenSay('The microphone is blocked. Allow it for this site in the browser settings.');}};
   rec.onend=()=>{if(SMART_LISTEN.rec!==rec)return;
     if(once){SMART_LISTEN.rec=null;SMART_LISTEN.hold=false;smartListenButton();
-      const row=$('#cubeWinListenRow');if(row&&/^Say /.test(row.querySelector('.txt').textContent))smartListenSay('Nothing heard. Hold the button and say "reset", "top yellow, front green", "x prime", or a case name.');return;}
+      const row=$('#cubeWinListenRow');if(row&&/^Say /.test(row.querySelector('.txt').textContent))smartListenSay('Nothing heard. Hold the button and say "reset", "clear moves", "top yellow, front green", "x prime", or a case name.');return;}
     if(SMART_LISTEN.on)setTimeout(()=>{if(SMART_LISTEN.on&&SMART_LISTEN.rec===rec)try{SMART_LISTEN.used={};SMART_LISTEN.pend=null;rec.start();}catch(e){}},250);}; // the browser stops on its own after a quiet spell
   try{rec.start();}catch(e){SMART_LISTEN.on=SMART_LISTEN.hold=false;SMART_LISTEN.rec=null;smartListenButton();smartListenSay('The microphone did not start. Try again.');return;}
   smartListenButton();

@@ -830,6 +830,16 @@ nav.rail button.warn .dot{background:var(--warn);box-shadow:0 0 0 0 color-mix(in
 .cubewin .cw-warn{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:10px;padding:8px 10px;font-size:13px;line-height:1.35;border:1px solid var(--warn);border-radius:var(--rb);background:color-mix(in srgb,var(--warn) 12%,var(--panel))}
 .cubewin .cw-warn .txt{flex:1 1 180px}
 .cubewin .cw-warn .btns{display:inline-flex;gap:6px;margin-left:auto}
+/* The hold row (cubetab.js): a tile for each top color and each front color, the hold's pressed. One row under the picture. */
+.cubewin .cw-hold{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin-top:10px}
+.cubewin .cw-hold .lbl{font-size:13px;color:var(--muted);cursor:help}
+.cubewin .cw-hold .lbl+.grp+.lbl{margin-left:10px}
+.cubewin .cw-hold .grp{display:inline-flex;gap:5px}
+.cubewin .cw-hold .ht{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border-radius:6px;border:1px solid var(--sticker-line);background:var(--c)}
+.cubewin .cw-hold .ht:hover{border-color:var(--muted)}
+.cubewin .cw-hold .ht[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:2px}
+body.cba .cubewin .cw-hold .ht::after{content:attr(data-cb);font:700 12px/1 var(--mono,ui-monospace,monospace);color:#15161a}
+body.cba .cubewin .cw-hold .ht[data-cb="R"]::after,body.cba .cubewin .cw-hold .ht[data-cb="B"]::after{color:#fff}
 .cubewin .cw-turns{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin-top:10px}
 .cubewin .cw-turns .lbl{font-size:13px;color:var(--muted);margin-right:2px;cursor:help}
 .cubewin .cw-turns .grp{display:inline-flex;gap:4px}

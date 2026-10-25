@@ -4,7 +4,8 @@
 // alone), the hold a command names from the hold now (the front stays when it can, else the
 // fewest turns), and the tab: the Listen button with Clear moves and Hidden faces, beside the
 // picture, a click listens until Stop, a hold of the button listens once, the hints while it
-// listens, "reset" empties the list and takes the heading again with the tilt live, a hold goes
+// listens, "reset" empties the list and takes the heading again with the tilt live (Lock off),
+// "clear moves" empties the list alone, a hold goes
 // on the list only with moves on it, an early guess acts on two in a row, a case name opens the
 // reference card (close calls as chips, a pick by click or by the next sentence, a weak name asks
 // while a card is open, the stage breaks a tie), the card commands, the Reference's Listen and
@@ -46,6 +47,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   const cmd=t=>{const c=w.smartCommand(t);return c&&JSON.parse(JSON.stringify(c));};
   assert.deepStrictEqual([...w.smartWords('Re-set the Cube!')],['reset','the','cube']);
   for(const t of ['reset','Reset.','reset cube','reset the cube','Reset it, please','re set','reset view','reset everything','okay reset'])assert.deepStrictEqual(cmd(t),{cmd:'reset'},`"${t}" is reset`);
+  for(const t of ['clear','Clear moves.','clear the moves','clear the list','clear move list','clear them please','okay clear it','empty the list','clean up the moves'])assert.deepStrictEqual(cmd(t),{cmd:'clear'},`"${t}" is clear`);
   for(const [t,up,front] of [['top yellow bottom white',3,null],['Top yellow, bottom white.',3,null],['yellow top white bottom',3,null],
     ['the top is yellow and the bottom is white',3,null],['yellow up white down',3,null],['top yellow',3,null],['bottom white',3,null],
     ['top white bottom yellow',0,null],['top red bottom orange',1,null],['top blue bottom green',5,null],['top orange bottom red',4,null],
@@ -53,7 +55,8 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
     ['I am holding it yellow up, green facing me',3,2],['wait on top, read in front',0,1],['top is yella bottom is wide',3,null],['top blew bottom grain',5,null]])
     assert.deepStrictEqual(cmd(t),{cmd:'hold',up,front},`"${t}" is up ${up}, front ${front}`);
   for(const t of ['','hello','top','yellow','yellow white','top yellow white','I think the top of the hill is green','the green light is on','reset the thing',
-    'so I reset my password','put the kettle on','white and red','T perm','top of the morning','top yellow bottom white I think','the bottom line'])
+    'so I reset my password','put the kettle on','white and red','T perm','top of the morning','top yellow bottom white I think','the bottom line',
+    'the coast is clear','clear skies today','clear clear','clear the cube','is that clear'])
     assert.strictEqual(cmd(t),null,`no command: "${t}"`);
   assert.strictEqual(cmd('top white bottom red').cmd,'error');assert.match(cmd('top white bottom red').msg,/^White and red are not opposite faces\./);
   assert.match(cmd('top white front yellow').msg,/^Yellow cannot face you with white on top\./);
@@ -115,7 +118,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.ok(!hints().classList.contains('hidden'),'the hints show while it listens');
   assert.deepStrictEqual($$('#cubeWinHints .hint .hd').map(b=>b.textContent),['Cube','Turn','Case','Card'],'four groups');
   assert.deepStrictEqual($$('#cubeWinHints .hint').map(h=>[...h.querySelectorAll('.says q')].map(q=>q.textContent)),
-    [['Reset','Top yellow, front green'],['x','x prime','back x','y','z'],['T perm','Sune','F2L 12'],['Reveal','Hide','Play','Stop','Close']],'the things to say');
+    [['Reset','Clear moves','Top yellow, front green'],['x','x prime','back x','y','z'],['T perm','Sune','F2L 12'],['Reveal','Hide','Play','Stop','Close']],'the things to say');
   assert.ok($$('#cubeWinHints .what').every(s=>s.textContent.length>20&&s.textContent.length<50),'each line on what they do is short');
   assert.ok($('#cubeWin').classList.contains('listening'),'the long note goes while it listens');
   assert.ok(hints().closest('.cw-aside'),'beside the picture');
@@ -125,6 +128,11 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.strictEqual(readout(),'');assert.ok($('#cubeWinMoves .none'),'reset empties the list');
   assert.strictEqual(txt(),'Listening. Reset. The moves are cleared.');assert.strictEqual(heard(),'Heard: reset');
   assert.strictEqual(ev('cubeTab.hold'),null);
+  // "Clear moves": the list is emptied, and nothing else changes. An empty list says so.
+  run("cubeTab.moves=['R','U'];cubeTabMovesDraw()");
+  rec.say(40,'clear moves',true);
+  assert.strictEqual(readout(),'');assert.strictEqual(txt(),'Listening. The moves are cleared.');assert.strictEqual(heard(),'Heard: clear moves');
+  rec.say(41,'clear',true);assert.strictEqual(txt(),'Listening. No moves to clear.');
   // "Top yellow, bottom white": the hold is yellow up, green in front (z2). The list was empty: no turn goes on it.
   rec.say(1,['top yellow bottom white','top yellow bottom wait'],true);
   assert.strictEqual(ev('cubeTab.hold'),holdOf(['z2']),'yellow up, green in front');
@@ -147,7 +155,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   rec.say(6,'front white',true);assert.strictEqual(txt(),'Listening. White cannot face you with white on top.');assert.strictEqual(ev('cubeTab.hold'),holdOf(['y']));
   // Talk is no command, and no case.
   rec.say(7,'I think the top of the hill is green',true);
-  assert.strictEqual(txt(),'Listening. No command heard. Say "reset", "top yellow, front green", "x prime", or a case name such as "T perm".');assert.strictEqual(heard(),'Heard: think the top of the hill is green','the last eight words show');
+  assert.strictEqual(txt(),'Listening. No command heard. Say "reset", "clear moves", "top yellow, front green", "x prime", or a case name such as "T perm".');assert.strictEqual(heard(),'Heard: think the top of the hill is green','the last eight words show');
   assert.strictEqual(ev('cubeTab.hold'),holdOf(['y']));assert.ok(!card(),'no card');
   // An early guess acts when the same command comes twice in a row; the final guess of the same words acts no more.
   rec.say(8,'top yellow',false);assert.strictEqual(ev('cubeTab.hold'),holdOf(['y']),'one early guess: nothing yet');assert.strictEqual(txt(),'Listening. Heard so far.');assert.strictEqual(heard(),'Heard: top yellow');
@@ -227,7 +235,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.ok(hints().classList.contains('hidden'),'the hints go when the hold ends');
   // A hold that hears nothing says so.
   ptr(btn(),'pointerdown');await sleep(350);const rec3=recs[recs.length-1];ptr(btn(),'pointerup');click(btn());rec3.end();
-  assert.strictEqual(txt(),'Nothing heard. Hold the button and say "reset", "top yellow, front green", "x prime", or a case name.');
+  assert.strictEqual(txt(),'Nothing heard. Hold the button and say "reset", "clear moves", "top yellow, front green", "x prime", or a case name.');
   // A hold can name a case too.
   ptr(btn(),'pointerdown');await sleep(350);const rec3b=recs[recs.length-1];ptr(btn(),'pointerup');click(btn());rec3b.say(0,'Y perm',true);rec3b.end();
   assert.strictEqual(cardName(),'Y perm','a held sentence opens the card');assert.strictEqual(txt(),'Showing Y perm.');
@@ -237,8 +245,9 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   click(btn());assert.ok(ev('SMART_LISTEN.on')&&!ev('LISTEN.on'),'the tab takes the microphone');
   click($('#listenBtn'));assert.ok(ev('LISTEN.on')&&!ev('SMART_LISTEN.on'),'and gives it back');assert.strictEqual(btn().textContent,'Listen');
   w.listenStop();
-  // The tilt live: "reset" takes the heading again, as Reset view does, and the band goes. The hold stays.
+  // The tilt live (Lock off): "reset" takes the heading again, as Reset view does, and the band goes. The hold stays.
   click(btn());const rec4=recs[recs.length-1];
+  assert.ok(ev('cubeTab.lock'),'Lock is on by default');run('cubeTabSetLock(false)');
   const rawOf=q=>({x:q[0],y:-q[2],z:q[1],w:q[3]}),tilt=q=>dev.notify(gyroMsg(4,rawOf(w.quatMul(w.quatConj(ev('cubeTab.basis')||[0,0,0,1]),q))));
   const hy=ev('cubeTab.hold');assert.ok(hy&&hy.cube.center[0]===3,'yellow up from the last hold');
   tilt(hy.q);await sleep(30);assert.ok(ev('cubeTab.gyro'),'the tilt is on');assert.ok(!warnOn());
