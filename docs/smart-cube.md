@@ -238,6 +238,22 @@ everything inside scales (0.7 to 2.6, no wider than the screen); the place and
 the zoom are kept in `cw:smartCard`. Esc closes the card; a modal takes Esc
 first. `test/cubetab.js`, `test/smart-listen.js`, `test/smart-card.js`.
 
+Version 1.39.0 makes the tab connect as the lab does (`smartAuto`,
+`smartConnect` in `js/smart-ui.js`). Connect on the tab opens the chooser at
+once: the browser's own, or the list over the bridge, on the Connect card. No
+dialog comes between; the dialog is still behind Options and the Smart cube
+button, for Scan, Paint, Use this cube and Disconnect. When the tab opens with
+no cube, the page looks for one with no click. Over the bridge the list comes
+up at once. A cube that connected before is taken as soon as it is heard: the
+site and the lab share `cw:labCubes`, so a cube known to one connects by itself
+in the other. With Web Bluetooth the look goes through `getDevices` and
+`watchAdvertisements`, as in the lab; with no known cube the tab waits for a
+press. Leaving the tab ends the look that the tab began. When the link drops,
+the page looks for the cube again by itself, on any tab, and the reconnect does
+not move the page. Disconnect by hand stops this. The look's row moves to the
+dimmed panel while the link is down. Where the address is unknown, a press
+opens the dialog to ask for it; a look with no click does not. `test/smart-auto.js`.
+
 Version 1.37.0 adds the whole-cube turns by voice and puts the hold in terms
 of the top and the front. "X", "x prime", "x counterclockwise", "back x" and
 "x two", and the same for y and z, press the turn button under the picture
