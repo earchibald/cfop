@@ -6,8 +6,9 @@
 // A scanned face is {stickers:[n*n color indices], margins?:[numbers], pinned?:[bools]}.
 // stickers read left to right, top to bottom, as the camera saw them. The face may be
 // turned by any multiple of 90 degrees. On the 3x3 the center color says which face it is
-// (assembleScan). The 2x2 and the 4x4 have no fixed centers: any reading can be any side of
-// the cube, and the pieces decide where each one goes (assembleFree).
+// (assembleScan), and five faces are enough when the sixth follows from them (fillFace). The
+// 2x2 and the 4x4 have no fixed centers: any reading can be any side of the cube, and the
+// pieces decide where each one goes (assembleFree); they need all six faces.
 
 // Turn an n×n face reading 90 degrees clockwise, k times. n follows from the length.
 function rotateFace(s,k){
@@ -18,15 +19,20 @@ function rotateFace(s,k){
 
 // Every legal color tuple for a corner (in the engine's facelet order for that corner, so any
 // of its three cyclic turns) or for an edge (either way round).
-const SCAN_CORNER_SET=new Set(),SCAN_EDGE_SET=new Set(),SCAN_CORNER_ID=new Map();
-cornerColor.forEach((cc,id)=>{for(let o=0;o<3;o++){const key=[0,1,2].map(n=>cc[(n+o)%3]).join();SCAN_CORNER_SET.add(key);SCAN_CORNER_ID.set(key,id);}});
+// SCAN_CORNER_PART: the same triples with one sticker unknown (-1). Two stickers of a corner in
+// their order name it, so each pattern comes from one corner; SCAN_CORNER_FILL gives that corner's
+// third sticker.
+const SCAN_CORNER_SET=new Set(),SCAN_EDGE_SET=new Set(),SCAN_CORNER_ID=new Map(),SCAN_CORNER_PART=new Set(),SCAN_CORNER_FILL=new Map();
+cornerColor.forEach((cc,id)=>{for(let o=0;o<3;o++){const t=[0,1,2].map(n=>cc[(n+o)%3]),key=t.join();SCAN_CORNER_SET.add(key);SCAN_CORNER_ID.set(key,id);
+  for(let h=0;h<3;h++){const part=t.map((x,n)=>n===h?-1:x).join();SCAN_CORNER_PART.add(part);SCAN_CORNER_FILL.set(part,t[h]);}}});
 for(const ec of edgeColor){SCAN_EDGE_SET.add(ec.join());SCAN_EDGE_SET.add([ec[1],ec[0]].join());}
 
 const SCAN_PIECES=(()=>{
-  // Each slot is checked once all of its faces have a rotation.
+  // Each slot is checked once all of its faces have a rotation. With a face missing, a corner
+  // with one sticker unknown must match a pattern; an edge with one unknown fits anything.
   const slots=[];
-  for(const fl of cornerFacelet)slots.push({fl,legal:SCAN_CORNER_SET,last:Math.max(...fl.map(i=>Math.floor(i/9)))});
-  for(const fl of edgeFacelet)slots.push({fl,legal:SCAN_EDGE_SET,last:Math.max(...fl.map(i=>Math.floor(i/9)))});
+  for(const fl of cornerFacelet)slots.push({fl,legal:SCAN_CORNER_SET,part:SCAN_CORNER_PART,last:Math.max(...fl.map(i=>Math.floor(i/9)))});
+  for(const fl of edgeFacelet)slots.push({fl,legal:SCAN_EDGE_SET,part:null,last:Math.max(...fl.map(i=>Math.floor(i/9)))});
   return slots;
 })();
 
@@ -70,23 +76,58 @@ function scanSize(n){
 function applyPerm(s,perm){const out=new Array(perm.length);for(let j=0;j<perm.length;j++)out[j]=s[perm[j]];return out;}
 
 // All facelet arrays that come from some rotation of each face and pass fromFacelets.
-// byFace: 6 arrays of 9 colors, indexed by face (center color). Returns [{facelets,rotations}].
+// byFace: 6 arrays of 9 colors, indexed by face (center color). One entry may be null: that face
+// was not read, and every way to fill it from the other five (fillFace) is tried. Returns
+// [{facelets,rotations}]; the rotation of a face not read is 0.
 function legalRotations(byFace,limit){
   limit=limit||8;const out=[],seen=new Set();
-  const f=new Array(54),rot=new Array(6);
-  const turned=byFace.map(s=>[0,1,2,3].map(k=>rotateFace(s,k)));
+  const f=new Array(54),rot=new Array(6),miss=byFace.findIndex(s=>!s);
+  const turned=byFace.map((s,c)=>s?[0,1,2,3].map(k=>rotateFace(s,k)):[new Array(9).fill(-1).map((x,p)=>p===4?c:x)]); // a face not read: its center, the rest unknown
+  const fits=sl=>{const st=sl.fl.map(i=>f[i]);return st.includes(-1)?!sl.part||sl.part.has(st.join()):sl.legal.has(st.join());};
   (function place(face){
     if(out.length>=limit)return;
     if(face===6){
-      const key=f.join();if(seen.has(key))return;seen.add(key);
-      const res=fromFacelets(f.slice());if(res.ok)out.push({facelets:f.slice(),rotations:rot.slice(),cube:res.cube});
+      for(const g of miss<0?[f.slice()]:fillFace(f,miss)){
+        const key=g.join();if(seen.has(key))continue;seen.add(key);
+        const res=fromFacelets(g);if(res.ok)out.push({facelets:g,rotations:rot.slice(),cube:res.cube});
+        if(out.length>=limit)return;
+      }
       return;
     }
-    for(let k=0;k<4;k++){
+    for(let k=0;k<turned[face].length;k++){
       const t=turned[face][k];for(let p=0;p<9;p++)f[9*face+p]=t[p];rot[face]=k;
       let good=true;
-      for(const sl of SCAN_PIECES)if(sl.last===face&&!sl.legal.has(sl.fl.map(i=>f[i]).join())){good=false;break;}
+      for(const sl of SCAN_PIECES)if(sl.last===face&&!fits(sl)){good=false;break;}
       if(good)place(face+1);
+    }
+  })(0);
+  return out;
+}
+// The face m of a 3x3 from the other five, in f (its stickers -1, its center set). Its four
+// corners show two stickers each on the faces beside them, and two stickers of a corner in their
+// order name it, so each hidden corner sticker follows. Its four edges show one sticker each.
+// The four edge pieces not seen whole must fill those four slots, each with its shown color out.
+// Returns every such filling as a 54-sticker array; the caller keeps the legal ones. The true
+// cube is always among them, so one legal filling is the cube, and more than one means the
+// face must be read.
+function fillFace(f,m){
+  const g=f.slice();
+  for(const fl of cornerFacelet){
+    const st=fl.map(i=>g[i]),h=st.indexOf(-1);if(h<0)continue;
+    const fill=SCAN_CORNER_FILL.get(st.join());if(fill==null)return [];
+    g[fl[h]]=fill;
+  }
+  const open=[],seen=new Set();
+  edgeFacelet.forEach((fl,i)=>{const a=g[fl[0]],b=g[fl[1]];if(a<0||b<0)open.push(i);else seen.add(Math.min(a,b)+','+Math.max(a,b));});
+  const left=edgeColor.map((ec,j)=>j).filter(j=>!seen.has(Math.min(...edgeColor[j])+','+Math.max(...edgeColor[j])));
+  if(left.length!==open.length)return [];
+  const out=[],used=new Array(left.length).fill(false);
+  (function place(k){
+    if(k===open.length){out.push(g.slice());return;}
+    const fl=edgeFacelet[open[k]],h=g[fl[0]]<0?0:1,shown=g[fl[1-h]];
+    for(let t=0;t<left.length;t++){
+      if(used[t])continue;const ec=edgeColor[left[t]],o=ec.indexOf(shown);if(o<0)continue;
+      used[t]=true;g[fl[h]]=ec[1-o];place(k+1);g[fl[h]]=-1;used[t]=false;
     }
   })(0);
   return out;
@@ -95,8 +136,9 @@ function legalRotations(byFace,limit){
 const SCAN_CONFUSE=[[1,4],[0,3]]; // red/orange, white/yellow
 function confusePartner(c){for(const [a,b] of SCAN_CONFUSE){if(c===a)return b;if(c===b)return a;}return -1;}
 
-// faces: array of scanned faces in any order. Returns
-// {ok, facelets, cube, rotations, changes:[text], errors:[text], ambiguous}.
+// faces: five or six scanned faces in any order. Returns
+// {ok, facelets, cube, rotations, fits:[{facelets, cube, rotations}], changes:[text], errors:[text],
+//  ambiguous, deduced?, need?}: deduced is the face worked out from five, need the face to read next.
 function assembleScan(faces){
   const byFace=new Array(6).fill(null),src=new Array(6).fill(null);
   for(const fc of faces){
@@ -106,59 +148,83 @@ function assembleScan(faces){
     byFace[c]=fc.stickers.slice();src[c]=fc;
   }
   const missing=[0,1,2,3,4,5].filter(c=>!byFace[c]);
-  if(missing.length)return {ok:false,errors:['Scan the '+missing.map(c=>COLOR_NAMES_E[c]).join(', ')+' face'+(missing.length>1?'s':'')+'.'],changes:[]};
+  if(missing.length>1)return {ok:false,errors:['Scan the '+missing.map(c=>COLOR_NAMES_E[c]).join(', ')+' faces.'],changes:[]};
+  const m=missing.length?missing[0]:-1; // the face not read, on five faces
+  // Every fit goes back in `fits`, the first one shown. Faces read at unknown turns can make more
+  // than one legal cube (one move from solved, say: U and D' show the same six faces, each turned
+  // half way round); the user checks the net and takes the next fit.
   const done=(sols,changes)=>{
     const s=sols[0];
-    return {ok:true,facelets:s.facelets,cube:s.cube,rotations:s.rotations,changes,errors:[],ambiguous:sols.length>1};
+    return {ok:true,facelets:s.facelets,cube:s.cube,rotations:s.rotations,fits:sols.map(x=>({facelets:x.facelets,cube:x.cube,rotations:x.rotations})),changes,errors:[],ambiguous:sols.length>1};
   };
+  // Five faces: the sixth follows from them in most cases (fillFace), and the result names it as
+  // `deduced`. Fits that differ on that face, however it is turned, are told apart by reading it:
+  // `need` names it. Fits that agree there differ only in how the five faces are turned, and the
+  // sixth face would not settle that, so they go to the user as fits, as six faces do. The repairs
+  // below run on five faces as on six: a camera misreads a sticker now and then, and one misread
+  // must not cost the user the sixth face. A repair's fits go through the same rule.
+  const need=text=>({ok:false,need:m,errors:[`Show the ${COLOR_NAMES_E[m]} face too: ${text}`],changes:[]});
+  const differ=sols=>{
+    const faceKey=s=>{let best=null;for(let k=0;k<4;k++){const key=rotateFace(s.facelets.slice(9*m,9*m+9),k).join();if(best===null||key<best)best=key;}return best;};
+    return new Set(sols.map(faceKey)).size>1;
+  };
+  const finish=(sols,changes)=>m<0?done(sols,changes):differ(sols)?need('more than one cube fits the other five.'):Object.assign(done(sols,changes),{deduced:m});
   // The count read, on every read: all stickers again against this cube's own center colors,
-  // nine per color. This settles red/orange and white/yellow when the light leans warm, before
-  // the plain read is trusted. A joint read that differs and makes a legal cube wins; else the
-  // plain read stands, and the repairs below follow it.
+  // nine per color (at most nine on five faces). This settles red/orange and white/yellow when the
+  // light leans warm, before the plain read is trusted. A joint read that differs and makes a
+  // legal cube wins; else the plain read stands, and the repairs below follow it.
   const joint=jointColors(faces.map(fc=>fc));
   if(joint){
-    const trial=new Array(6);for(const fc of faces)trial[fc.stickers[4]]=joint.get(fc);
-    let n=0;for(let c=0;c<6;c++)for(let p=0;p<9;p++)if(trial[c][p]!==byFace[c][p])n++;
+    const trial=new Array(6).fill(null);for(const fc of faces)trial[fc.stickers[4]]=joint.get(fc);
+    let n=0;for(let c=0;c<6;c++)if(c!==m)for(let p=0;p<9;p++)if(trial[c][p]!==byFace[c][p])n++;
     if(n){const js=legalRotations(trial);
-      if(js.length){const r=done(js,[`I read ${n} sticker${n===1?'':'s'} again against the center colors.`]);r.joint=true;return r;}}
+      if(js.length){const r=finish(js,[`I read ${n} sticker${n===1?'':'s'} again against the center colors.`]);r.joint=true;return r;}}
   }
   let sols=legalRotations(byFace);
-  if(sols.length)return done(sols,[]);
+  if(sols.length)return finish(sols,[]);
 
-  // Repair 1: one face read with red/orange or white/yellow swapped throughout.
+  // The repairs: one face read with red/orange or white/yellow swapped throughout (swaps), one
+  // sticker misread as its usual confusion (ones), two such stickers (twos); least sure stickers
+  // go first. On six faces the first repair that fits stands, the swaps first: nine of each color
+  // leave a wrong one little room. On five faces a wrong repair fits more easily, the face not
+  // read taking up the slack, so when one sticker and one face both fit the sixth face is asked
+  // for; else the first of each kind stands, the ones before the swaps, the twos last.
+  const swaps=[],ones=[],twos=[];
   for(let face=0;face<6;face++)for(const [a,b] of SCAN_CONFUSE){
-    const s=byFace[face];if(!s.some((x,p)=>p!==4&&(x===a||x===b)))continue;
-    const t=s.map((x,p)=>p===4||(src[face].pinned&&src[face].pinned[p])?x:x===a?b:x===b?a:x);
-    const trial=byFace.slice();trial[face]=t;
-    sols=legalRotations(trial);
-    if(sols.length)return done(sols,[`On the ${COLOR_NAMES_E[face]} face, I swapped ${COLOR_NAMES_E[a]} and ${COLOR_NAMES_E[b]}.`]);
+    const s=byFace[face];if(!s||!s.some((x,p)=>p!==4&&(x===a||x===b)))continue;
+    const trial=byFace.slice();trial[face]=s.map((x,p)=>p===4||(src[face].pinned&&src[face].pinned[p])?x:x===a?b:x===b?a:x);
+    swaps.push({kind:'swap',trial,changes:[`On the ${COLOR_NAMES_E[face]} face, I swapped ${COLOR_NAMES_E[a]} and ${COLOR_NAMES_E[b]}.`]});
   }
-
-  // Repair 2: one or two stickers misread as their usual confusion. Least sure stickers go first.
   const cand=[];
   for(let face=0;face<6;face++)for(let p=0;p<9;p++){
-    if(p===4)continue;const fc=src[face];if(fc.pinned&&fc.pinned[p])continue;
+    if(p===4||!byFace[face])continue;const fc=src[face];if(fc.pinned&&fc.pinned[p])continue;
     const to=confusePartner(byFace[face][p]);if(to<0)continue;
     cand.push({face,p,to,m:fc.margins?fc.margins[p]:0});
   }
   cand.sort((x,y)=>x.m-y.m);
-  const counts=[0,0,0,0,0,0];for(const s of byFace)for(const x of s)counts[x]++;
-  const fits=flips=>{
-    const c=counts.slice();for(const fl of flips){c[byFace[fl.face][fl.p]]--;c[fl.to]++;}
-    return c.every(n=>n===9);
+  const counts=[0,0,0,0,0,0];for(const s of byFace)if(s)for(const x of s)counts[x]++;
+  const flips=(list,...fl)=>{
+    const c=counts.slice();for(const x of fl){c[byFace[x.face][x.p]]--;c[x.to]++;}
+    if(!(m<0?c.every(k=>k===9):c.every((k,i)=>k<=(i===m?8:9))))return; // five faces: no color over nine, the one not read at most eight
+    const trial=byFace.map(s=>s&&s.slice());for(const x of fl)trial[x.face][x.p]=x.to;
+    list.push({kind:fl.length===1?'one':'two',trial,changes:fl.map(x=>`One ${COLOR_NAMES_E[byFace[x.face][x.p]]} sticker on the ${COLOR_NAMES_E[x.face]} face is now ${COLOR_NAMES_E[x.to]}.`)});
   };
-  const tryFlips=flips=>{
-    if(!fits(flips))return null;
-    const trial=byFace.map(s=>s.slice());for(const fl of flips)trial[fl.face][fl.p]=fl.to;
-    const r=legalRotations(trial);return r.length?r:null;
-  };
-  const describe=flips=>flips.map(fl=>`One ${COLOR_NAMES_E[byFace[fl.face][fl.p]]} sticker on the ${COLOR_NAMES_E[fl.face]} face is now ${COLOR_NAMES_E[fl.to]}.`);
-  for(const a of cand){const r=tryFlips([a]);if(r)return done(r,describe([a]));}
-  for(let i=0;i<cand.length;i++)for(let j=i+1;j<cand.length;j++){
-    const fl=[cand[i],cand[j]];const r=tryFlips(fl);if(r)return done(r,describe(fl));
+  for(const a of cand)flips(ones,a);
+  for(let i=0;i<cand.length;i++)for(let j=i+1;j<cand.length;j++)flips(twos,cand[i],cand[j]);
+  if(m<0){for(const rep of [...swaps,...ones,...twos]){const r=legalRotations(rep.trial);if(r.length)return finish(r,rep.changes);}}
+  else{
+    let hit=null;
+    for(const rep of [...ones,...swaps]){
+      const r=legalRotations(rep.trial);if(!r.length)continue;
+      if(!hit)hit={r,rep};else if(hit.rep.kind!==rep.kind)return need('more than one cube fits the other five.');
+    }
+    if(hit)return finish(hit.r,hit.rep.changes);
+    for(const rep of twos){const r=legalRotations(rep.trial);if(r.length)return finish(r,rep.changes);}
   }
 
-  // No repair worked. Report the errors for the reading as scanned, at the best guess of rotations.
+  // No repair worked. On five faces, the sixth is asked for. On six, report the errors for the
+  // reading as scanned.
+  if(m>=0)return need('the other five do not fit together as one cube by themselves.');
   const f=[];for(let face=0;face<6;face++)f.push(...byFace[face]);
   const bad=[0,1,2,3,4,5].filter(c=>counts[c]!==9);
   const errors=bad.length?['Each color must appear 9 times: '+bad.map(c=>`${COLOR_NAMES_E[c]} ${counts[c]}`).join(', ')+'.']
@@ -309,13 +375,15 @@ function assembleFree(faces,n){
 }
 
 // Assign the stickers to the six colors, the same number each, by distance in Lab. On the
-// 3x3 the 48 non-center stickers go eight per color, each color anchored at its center.
-// On the 2x2 and the 4x4 all stickers go n*n per color, anchored at the mean of the stickers
-// first read as that color, then settled over a few rounds. faces need .lab (one Lab value
-// per cell). Pinned stickers keep their color. Returns a Map face -> colors, or null.
+// 3x3 the 48 non-center stickers go eight per color, each color anchored at its center; from
+// five faces, forty stickers go at most eight per color, the color not read anchored at the
+// mean of the stickers read as it. On the 2x2 and the 4x4 all stickers go n*n per color,
+// anchored at the mean of the stickers first read as that color, then settled over a few
+// rounds. faces need .lab (one Lab value per cell). Pinned stickers keep their color. Returns a
+// Map face -> colors, or null.
 function jointColors(faces,n){
   n=n||3;const cells=n*n,center=n===3;
-  if(faces.length!==6||!faces.every(f=>f.lab))return null;
+  if(!(faces.length===6||center&&faces.length===5)||!faces.every(f=>f.lab))return null;
   const dist=(a,b)=>Math.sqrt(0.35*(a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2);
   const slots=new Array(6).fill(center?8:cells),items=[],out=new Map();
   for(const f of faces){
@@ -327,10 +395,18 @@ function jointColors(faces,n){
     }
   }
   if(slots.some(k=>k<0))return null;
-  const cols=[];for(let c=0;c<6;c++)for(let k=0;k<slots[c];k++)cols.push(c);
-  if(cols.length!==items.length)return null;
   let anchor;
-  if(center){anchor=[];for(const f of faces)anchor[f.stickers[4]]=f.lab[4];}
+  if(center){
+    anchor=[];for(const f of faces)anchor[f.stickers[4]]=f.lab[4];
+    for(let c=0;c<6;c++){if(anchor[c])continue; // a face not read
+      const sum=[0,0,0,0];for(const f of faces)f.stickers.forEach((x,p)=>{if(x===c){for(let i=0;i<3;i++)sum[i]+=f.lab[p][i];sum[3]++;}});
+      if(sum[3])anchor[c]=[sum[0]/sum[3],sum[1]/sum[3],sum[2]/sum[3]];else slots[c]=0;
+    }
+  }
+  const cols=[];for(let c=0;c<6;c++)for(let k=0;k<slots[c];k++)cols.push(c);
+  // Slots left over (eight, from five faces) go to blank rows at no cost.
+  if(cols.length<items.length)return null;
+  const blank=cols.length-items.length;
   for(let round=0;round<(center?1:3);round++){
     if(!center){
       // The mean Lab of the stickers now labeled with each color.
@@ -340,6 +416,7 @@ function jointColors(faces,n){
       anchor=sum.map(a=>[a[0]/a[3],a[1]/a[3],a[2]/a[3]]);
     }
     const cost=items.map(it=>cols.map(c=>dist(it.f.lab[it.p],anchor[c])));
+    for(let i=0;i<blank;i++)cost.push(cols.map(()=>0));
     const asg=hungarian(cost);
     items.forEach((it,i)=>{out.get(it.f)[it.p]=cols[asg[i]];});
   }

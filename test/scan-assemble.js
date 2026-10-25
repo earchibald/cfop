@@ -63,10 +63,82 @@ assert.ok(joint>=J-1,'joint read failed');
 
 // Errors in plain words.
 const c=randomCube(),faces=scanOf(c);
-assert.match(T.assembleScan(faces.slice(0,5)).errors[0],/^Scan the \w+ face\.$/);
+assert.match(T.assembleScan(faces.slice(0,4)).errors[0],/^Scan the \w+, \w+ faces\.$/);
 faces[1]={stickers:faces[0].stickers.slice()};
 assert.match(T.assembleScan(faces).errors[0],/^Two faces have a \w+ center\.$/);
 console.log('scan-assemble: ok');
+
+// ----- five faces of the 3x3 -----
+// The sixth face follows from the other five in most cases: the result names it as deduced, and
+// the cube is among the fits. Where the fits differ on that face, the face is asked for (need),
+// and six faces then give the cube. The fits that agree on it only turn the faces read another
+// way, as six faces can: the first is shown and the cube is among them.
+let five=0,ask=0,lost=0;const V=300;
+for(let n=0;n<V;n++){
+  const c=randomCube(),faces=scanOf(c),m=rnd(6),r=T.assembleScan(faces.filter(fc=>fc.stickers[4]!==m));
+  if(r.ok){
+    five++;assert.strictEqual(r.deduced,m,'the face worked out is the one not given');assert.strictEqual(r.changes.length,0);
+    assert.strictEqual(r.facelets[9*m+4],m,'the face worked out has its center');
+    if(!r.fits.some(f=>f.cube.equals(c)))lost++;
+  }else{
+    ask++;assert.strictEqual(r.need,m,'the face to show is the one not given');assert.match(r.errors[0],/^Show the \w+ face too: /);
+    const r6=T.assembleScan(faces);assert.ok(r6.ok&&r6.fits.some(f=>f.cube.equals(c)),'six faces give the cube');
+  }
+}
+console.log(`five faces: ${five}/${V} worked out, ${ask} asked for the sixth, ${lost} without the cube among the fits`);
+assert.ok(five>=V*0.8,'five faces settle too few cubes');assert.ok(ask>0,'no cube asked for the sixth face');assert.strictEqual(lost,0);
+// A solved cube from any five faces. One move from solved, the faces fit more than one way (U and
+// D' show the same six faces, each turned half way round): the cube is among the fits.
+for(let m=0;m<6;m++){const r=T.assembleScan(scanOf(new T.Cube()).filter(fc=>fc.stickers[4]!==m));assert.ok(r.ok&&r.cube.equals(new T.Cube())&&r.deduced===m,'a solved cube from five faces');}
+for(const mv of ['R','U',"F'"]){const c1=T.applyAlg(new T.Cube(),[mv]);for(let m=0;m<6;m++){const r=T.assembleScan(scanOf(c1).filter(fc=>fc.stickers[4]!==m));assert.ok(r.ok&&r.fits.some(f=>f.cube.equals(c1)),`${mv} with face ${m} hidden`);}}
+// The edge case: L D2 B with the red face hidden leaves three cubes that differ on that face.
+const cN=T.applyAlg(new T.Cube(),['L','D2','B']),rN=T.assembleScan(scanOf(cN).filter(fc=>fc.stickers[4]!==1));
+assert.ok(!rN.ok&&rN.need===1&&/more than one cube fits the other five/.test(rN.errors[0]),'the red face is asked for: '+rN.errors);
+// A misread on five faces that fits no cube asks for the sixth face too.
+const cB=randomCube(),fB=scanOf(cB).filter(fc=>fc.stickers[4]!==3);
+const k=fB.findIndex(fc=>fc.stickers.some((x,p)=>p!==4&&x===0));fB[k].stickers=fB[k].stickers.map((x,p)=>p!==4&&x===0?2:x);
+const rB=T.assembleScan(fB);assert.ok(!rB.ok||rB.fits.length,'a misread gives a fit or asks for the face');
+if(!rB.ok)assert.ok(rB.need===3&&/Show the yellow face too/.test(rB.errors[0]),'the yellow face is asked for: '+rB.errors);
+// Repairs on five faces. The net a phone read (2026-10-24): the top-right sticker of the white
+// face read red, and is orange. One flip gives one fit.
+const PHONE=[[0,1,1,0,0,3,3,3,2],[5,2,1,0,4,1,1,4,1],[0,3,0,5,2,2,2,1,0],[3,4,3,5,1,0,4,2,5],[2,3,2,1,5,2,3,4,5]];
+const rP=T.assembleScan(PHONE.map(st=>({stickers:st,margins:new Array(9).fill(10)})));
+assert.ok(rP.ok&&rP.deduced===3&&rP.fits.length===1,'the phone net is read from five faces: '+rP.errors);
+assert.strictEqual(rP.changes.join(),'One red sticker on the white face is now orange.');
+assert.strictEqual(rP.facelets.slice(0,9).filter(x=>x===4).length,1,'one orange sticker on the white face');
+// Random cubes with one face not read and one red or orange sticker misread (a low margin), or a
+// whole face read with white and yellow swapped: the repair finds the cube or asks for the sixth
+// face. A misread can leave five faces that fit a legal cube as they stand, which only the sixth
+// face would show: that is the wrong count, kept small.
+let fix5=0,ask5=0,wrong5=0,swap5=0,swapAsk5=0,swapWrong5=0;const W=150;
+for(let n=0;n<W;n++){
+  const c=randomCube(),m=rnd(6),faces=scanOf(c).filter(fc=>fc.stickers[4]!==m);
+  const spots=[];faces.forEach((fc,fi)=>fc.stickers.forEach((x,p)=>{if(p!==4&&(x===1||x===4))spots.push([fi,p]);}));
+  const [fi,p]=spots[rnd(spots.length)];faces[fi].stickers[p]=5-faces[fi].stickers[p];faces[fi].margins[p]=1;
+  const r=T.assembleScan(faces);
+  if(r.ok){assert.strictEqual(r.deduced,m);if(r.fits.some(f=>f.cube.equals(c)))fix5++;else wrong5++;}else{ask5++;assert.strictEqual(r.need,m);}
+  const c3=randomCube(),m3=rnd(6),f3=scanOf(c3).filter(fc=>fc.stickers[4]!==m3);
+  const k3=f3.findIndex(fc=>fc.stickers[4]!==0&&fc.stickers[4]!==3&&fc.stickers.some(x=>x===0||x===3));
+  if(k3<0){swap5++;continue;}
+  f3[k3].stickers=f3[k3].stickers.map((x,p)=>p===4?x:x===0?3:x===3?0:x);
+  const r3=T.assembleScan(f3);
+  if(r3.ok){if(r3.fits.some(f=>f.cube.equals(c3)))swap5++;else swapWrong5++;}else{swapAsk5++;assert.strictEqual(r3.need,m3);}
+}
+console.log(`five faces, one sticker misread: ${fix5}/${W} repaired, ${ask5} asked for the sixth, ${wrong5} wrong; a face swapped: ${swap5} repaired, ${swapAsk5} asked, ${swapWrong5} wrong`);
+assert.ok(fix5>=W*0.6&&wrong5<=W*0.1,'one sticker on five faces');assert.ok(swap5>=W*0.5&&swapWrong5<=W*0.05,'a face swapped on five faces');
+// The joint read on five faces: five reds that read as orange come back, at most eight stickers
+// per color, the color not read anchored at the mean of its stickers.
+let joint5=0,jointAsk5=0;
+for(let n=0;n<J;n++){
+  const c=randomCube(),m=rnd(6),faces=scanOf(c).filter(fc=>fc.stickers[4]!==m);
+  for(const fc of faces)fc.lab=fc.stickers.map(x=>LAB[x].map(v=>v+(rnd(7)-3)));
+  const reds=[];faces.forEach((fc,fi)=>fc.stickers.forEach((x,p)=>{if(x===1&&p!==4)reds.push([fi,p]);}));
+  for(const [fi,p] of reds.slice(0,5)){faces[fi].stickers[p]=4;faces[fi].lab[p]=[55,56,55];}
+  const r=T.assembleScan(faces);if(r.ok&&r.joint&&r.fits.some(f=>f.cube.equals(c)))joint5++;else if(!r.ok&&r.need===m)jointAsk5++;
+}
+console.log(`five faces, joint read: ${joint5}/${J} recovered, ${jointAsk5} asked for the sixth`);
+assert.ok(joint5>=J*0.55&&joint5+jointAsk5>=J-1,'joint read on five faces');
+console.log('scan-assemble: five faces ok');
 
 // ----- faces with no center: the 2x2 and the 4x4 -----
 // Any reading can be any side, at any turn. The right cube must be among the fits, however

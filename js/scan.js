@@ -367,6 +367,12 @@ function voteDrop(v,id){delete v.faces[id];v.order=v.order.filter(x=>x!==id);if(
 // dialog's markup is built from this module's own fixed strings, the face size and the color
 // names; nothing from outside goes into it.
 //
+// On the 3x3 five faces go to stage 5 as soon as they are read (assembleScan works the sixth out
+// where it can, and names the face to show where it cannot); the 2x2 and the 4x4 need all six.
+// A cube read puts a card over the dialog (scanConfirm): the net again, Use this cube on Enter,
+// Back on Escape to the dialog as it stands, Next fit when more than one cube fits. On a phone
+// the dialog's own button sits under the net and is easy to miss; the card is not.
+//
 // A refresh scan (opts.resync, from the F2L guide): the net starts as the state the guide expects
 // (the first base), dimmed. The user shows a face, or paints the stickers that differ. Each face
 // read or touched goes to resyncFind over the bases; one candidate left is the cube found. Set up
@@ -398,7 +404,7 @@ function openScan(opts){
    <button class="close small ghost" id="scanClose" aria-label="Close" title="Close this window (Esc)">✕</button>
    <h2>${re?'Read my cube':'Scan cube'}</h2>
    <p class="muted" style="margin-top:0">${re?'The net shows the cube the guide expects. Show the camera a face that differs, or pick a color and paint the stickers that differ. Two or three faces are usually enough; start with the top.'
-     :`Hold one face of the ${scanN}×${scanN} to the camera and keep it still. When the face is read, turn the cube to show the next face. You can show the faces in any order and at any angle.${free?` A ${scanN}×${scanN} has no fixed centers, so I work out where each face goes once all six are read.`:''}`} A glossy cube reflects the screen. If the read jumps, tilt the cube a little or dim the screen.</p>
+     :`Hold one face of the ${scanN}×${scanN} to the camera and keep it still. When the face is read, turn the cube to show the next face. You can show the faces in any order and at any angle.${free?` A ${scanN}×${scanN} has no fixed centers, so I work out where each face goes once all six are read.`:' Five faces are usually enough: I work out the sixth from them, and I ask for it when they do not settle it.'}`} A glossy cube reflects the screen. If the read jumps, tilt the cube a little or dim the screen.</p>
    <div class="scan-grid">
     <div><div class="scan-view mirror" id="scanView"><video id="scanVideo" autoplay playsinline muted></video><canvas id="scanOverlay"></canvas></div>
      <div class="scan-row"><label title="Flip the camera preview left to right, as a mirror does"><input type="checkbox" id="scanMirror" checked> Mirror</label><span class="muted" style="font-size:13px">Mirror flips the preview only.</span></div>
@@ -429,7 +435,7 @@ function openScan(opts){
 }
 // Start again: an empty net, or the expected state again on a refresh scan.
 function scanRestart(){
-  scanVoter=makeVoter({n:scanN});scanRes=null;if(scanResync)scanResync.full=false;
+  scanVoter=makeVoter({n:scanN});scanRes=null;if(scanResync)scanResync.full=false;scanConfirmClose();
   $('#scanUse').disabled=true;$('#scanReturn').disabled=true;$('#scanNextFit').classList.add('hidden');
   if(scanResync){scanExpect();$('#scanUse').textContent='Set up from current';scanStatus('The net shows the cube the guide expects again. Show a face, or paint the stickers that differ.');}
   else scanStatus('Show a face to the camera.');
@@ -461,9 +467,14 @@ async function startCamera(){
   }
 }
 function stopCamera(){clearTimeout(scanTimer);scanTimer=0;if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null;}}
-function closeScan(){document.removeEventListener('keydown',scanKeys,true);stopCamera();scanOnCube=null;scanResync=null;const b=$('#scanBg');if(b)b.remove();const f=scanOnClose;scanOnClose=null;if(f)f();}
+function closeScan(){document.removeEventListener('keydown',scanKeys,true);stopCamera();scanConfirmClose();scanOnCube=null;scanResync=null;const b=$('#scanBg');if(b)b.remove();const f=scanOnClose;scanOnClose=null;if(f)f();}
 function scanKeys(e){
   if(!$('#scanBg'))return;
+  if($('#scanOkBg')){ // the card: Enter uses the cube, Escape goes back to the dialog
+    e.stopPropagation();
+    if(e.key==='Escape'){e.preventDefault();scanConfirmClose();}else if(e.key==='Enter'){e.preventDefault();scanConfirmYes();}
+    return;
+  }
   if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeScan();return;}
   const k=+e.key;
   if(Number.isInteger(k)&&k>=1&&k<=6&&!e.metaKey&&!e.ctrlKey&&!e.altKey){e.preventDefault();e.stopPropagation();scanPick(SCAN_PALETTE[k-1].c);return;}
@@ -506,8 +517,8 @@ function scanStep(r){
     flashNet(ev.center);drawNet();
     if(scanResync)return scanRefresh(`${cap(name(ev.center))} is read.`);
     const count=scanFaceIds().length;
-    if(count>6)return scanAssemble(`Another face is read: that makes ${count}, but a cube has six. One of them was misread, so I use the six that fit together.`);
-    if(count===6)return scanAssemble(ev.retake?`${cap(name(ev.center))} is read again.`:'');
+    if(count>6)return scanAssemble(`Another face is read: that makes ${count}, but a cube has six. One of them was misread, so I use the six that fit together.`,true);
+    if(count===6||(count===5&&scanN===3))return scanAssemble(ev.retake?`${cap(name(ev.center))} is read again.`:'',true);
     const left=scanN===3?` Still to scan: ${[0,1,2,3,4,5].filter(c=>!scanFaceGiven(scanVoter.faces[c])).map(c=>COLOR_NAMES_E[c]).join(', ')}.`:` ${count} of 6 faces read.`;
     scanStatus(`${cap(name(ev.center))} is read${ev.retake?' again':''}. Turn the cube to show the next face.${left}${scanStyleNote(r)}`);
   }else if(ev.event==='conflict'){
@@ -515,11 +526,13 @@ function scanStep(r){
   }else if(ev.event==='reading'){
     scanStatus(`Hold still. Reading ${scanN===3?name(ev.center):'a face'}: ${ev.tally.n} of ${scanVoter.opts.window}.${scanStyleNote(r)}`);
   }else if(ev.event==='held'){
-    if(nLocked<6&&!scanResync)scanStatus(`${cap(name(ev.center))} is read. Turn the cube to show the next face.`);
-  }else if(!r.ok&&nLocked<6&&!scanVoter.run.length&&!(scanResync&&nLocked)){
-    scanStatus(r.reason==='cover'?'I can see part of a face. Show the whole face, closer to the camera.':scanResync?'Show a face to the camera, or paint the stickers that differ. Keep your fingers off the stickers.':'Show a face to the camera. Keep your fingers off the stickers.');
+    if(nLocked<6&&!scanResync&&!scanRead())scanStatus(scanRes&&scanRes.need!=null?`${cap(name(ev.center))} is read. Show the ${COLOR_NAMES_E[scanRes.need]} face.`:`${cap(name(ev.center))} is read. Turn the cube to show the next face.`);
+  }else if(!r.ok&&nLocked<6&&!scanVoter.run.length&&!(scanResync&&nLocked)&&!scanRead()){
+    scanStatus(r.reason==='cover'?'I can see part of a face. Show the whole face, closer to the camera.':scanRes&&scanRes.need!=null?`Show the ${COLOR_NAMES_E[scanRes.need]} face to the camera.`:scanResync?'Show a face to the camera, or paint the stickers that differ. Keep your fingers off the stickers.':'Show a face to the camera. Keep your fingers off the stickers.');
   }
 }
+// A cube is read and can be used: the status stays with it while the camera sees nothing new.
+function scanRead(){return !!(scanRes&&scanRes.ok&&scanRes.cube);}
 // A refresh scan: the faces given so far against the states the guide expects. Fills scanRes with
 // {ok, cube, found:{off, at, moves}} when one candidate is left.
 function scanRefresh(prefix){
@@ -540,18 +553,21 @@ function scanRefresh(prefix){
     const k=r.candidates.length;
     return scanStatus(pre+`${k} states fit so far. ${r.ask!=null?`Show the ${COLOR_NAMES_E[r.ask]} face.`:'Show another face.'}`);
   }
-  if(given===6){scanResync.full=true;$('#scanUse').textContent='Use this cube';return scanAssemble(pre+'No state near the hint fits these faces, so I read the whole cube.');}
-  scanStatus(pre+`No state within ${r.depth} moves of the hint fits these faces. Show another face; with all six, I read the whole cube.`);
+  if(given>=5){scanResync.full=true;$('#scanUse').textContent='Use this cube';return scanAssemble(pre+'No state near the hint fits these faces, so I read the whole cube.');}
+  scanStatus(pre+`No state within ${r.depth} moves of the hint fits these faces. Show another face; with five, I read the whole cube.`);
 }
-// Stage 5 on the locked faces. Fills scanRes: {ok, cube, facelets, slots:[{id,k}] per side,
-// fits:[{cube, facelets, slots}], pick, changes, errors, ambiguous}.
-function scanAssemble(prefix){
-  const ids=scanFaceIds(),faces=ids.map(id=>scanVoter.faces[id]);
-  if(faces.length<6){scanRes=null;$('#scanUse').disabled=true;$('#scanNextFit').classList.add('hidden');drawNet();return;}
+// Stage 5 on the locked faces: six of them, or five of a 3x3. Fills scanRes: {ok, cube, facelets,
+// slots:[{id,k}] per side, fits:[{cube, facelets, slots}], pick, changes, errors, ambiguous,
+// deduced (the face worked out from five), need (the face to show next)}.
+// A cube read brings the card up (scanConfirm): always from the camera (cam), and from a paint
+// on the net only when the cube read is new.
+function scanAssemble(prefix,cam){
+  const ids=scanFaceIds(),faces=ids.map(id=>scanVoter.faces[id]),was=scanRead()?scanRes.facelets.join():'';
+  if(faces.length<(scanN===3?5:6)){scanRes=null;$('#scanUse').disabled=true;$('#scanNextFit').classList.add('hidden');scanConfirmClose();drawNet();return;}
   if(scanN===3){
-    const r=assembleScan(faces);
-    scanRes=Object.assign(r,{slots:r.ok?r.rotations.map((k,c)=>({id:c,k})):null,pick:0});
-    scanRes.fits=r.ok?[{cube:r.cube,facelets:r.facelets,slots:scanRes.slots}]:[];
+    const r=assembleScan(faces),toFit=f=>({cube:f.cube,facelets:f.facelets,slots:f.rotations.map((k,c)=>({id:c,k}))});
+    scanRes=Object.assign(r,{pick:0,fits:r.ok?r.fits.map(toFit):[]});
+    if(r.ok)Object.assign(scanRes,scanRes.fits[0]);else scanRes.slots=null;
   }else{
     const r=assembleFree(faces,scanN),toIds=f=>({cube:f.cube,facelets:f.facelets,slots:f.slots.map(s=>s&&{id:ids[s.face],k:s.k})});
     scanRes=Object.assign(r,{pick:0,fits:r.ok?r.fits.map(toIds):[]});
@@ -562,21 +578,47 @@ function scanAssemble(prefix){
     }
   }
   $('#scanNextFit').classList.toggle('hidden',scanRes.fits.length<2);
-  $('#scanUse').disabled=!(scanRes.ok&&scanRes.cube);$('#scanReturn').disabled=!(scanRes.ok&&scanRes.cube);drawNet();
+  $('#scanUse').disabled=!scanRead();$('#scanReturn').disabled=!scanRead();drawNet();
   const pre=prefix?prefix+' ':'';
-  if(!scanRes.ok)return scanStatus(pre+scanRes.errors.join(' ')+(faces.length===6?' Click a sticker on the net to fix it, or show a face again to rescan it.':''));
-  let t=pre+'All six faces are read and the cube fits together. '+(scanRes.changes.length?scanRes.changes.join(' ')+' Check the net. ':'');
+  if(!scanRes.ok){scanConfirmClose();return scanStatus(pre+scanRes.errors.join(' ')+(faces.length>=6?' Click a sticker on the net to fix it, or show a face again to rescan it.':''));}
+  let t=scanRes.deduced!=null?`Five faces are read. I worked out the ${COLOR_NAMES_E[scanRes.deduced]} face from them: check it on the net. If it is wrong, show it to the camera. `:'All six faces are read and the cube fits together. ';
+  if(scanRes.changes.length)t+=scanRes.changes.join(' ')+' Check the net. ';
   if(scanRes.fits.length>1)t+=`${scanRes.fits.length} different cubes fit these faces. Check the net against your cube. If it is not your cube, press Next fit. `;
   else if(scanRes.ambiguous)t+='More than one reading fits. Check the net. ';
-  scanStatus(t+(scanRes.cube?'Press Use this cube.':`Twistwright cannot load a ${scanN}×${scanN} yet.`));
+  scanStatus(pre+t+(scanRes.cube?'Press Use this cube.':`Twistwright cannot load a ${scanN}×${scanN} yet.`));
+  if(scanRead()&&(cam||scanRes.facelets.join()!==was))scanConfirm(t.trim());
 }
 // Show the next of several cubes that fit the same faces.
 function scanNextFit(){
   if(!scanRes||!scanRes.ok||scanRes.fits.length<2)return;
   scanRes.pick=(scanRes.pick+1)%scanRes.fits.length;Object.assign(scanRes,scanRes.fits[scanRes.pick]);
   $('#scanUse').disabled=!scanRes.cube;drawNet();
-  scanStatus(`Fit ${scanRes.pick+1} of ${scanRes.fits.length}. Check the net against your cube.${scanRes.cube?' If it is your cube, press Use this cube.':''}`);
+  const t=`Fit ${scanRes.pick+1} of ${scanRes.fits.length}. Check the net against your cube.`;
+  scanStatus(t+(scanRes.cube?' If it is your cube, press Use this cube.':''));
+  const card=$('#scanOkText');if(card)card.textContent=t+' If it is not, press Next fit.';
 }
+// The card over the dialog once a cube is read: the net again, so the cube can be checked where
+// the card is, Use this cube (Enter), Back (Escape) to the dialog as it stands, and Next fit when
+// more than one cube fits. The text is the status line's: this module's fixed strings, color
+// names and counts.
+function scanConfirm(text){
+  scanConfirmClose();
+  if(!scanRead())return;
+  const bg=document.createElement('div');bg.className='modal-bg ask-bg scan-ok';bg.id='scanOkBg';
+  bg.innerHTML=`<div class="modal ask" role="alertdialog" aria-modal="true" aria-labelledby="scanOkTitle" aria-describedby="scanOkText">
+   <h2 id="scanOkTitle">Is this your cube?</h2>
+   <p id="scanOkText" class="muted">${text}</p>
+   <div class="scan-net scan-oknet" id="scanOkNet"></div>
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button id="scanOkBack" title="Back to the scan: paint a sticker, or show a face again">Back<span class="hk">Esc</span></button><button class="small ghost${scanRes.fits.length>1?'':' hidden'}" id="scanOkNext" title="The faces fit together another way: show the next one">Next fit</button><button class="primary" id="scanOkYes" title="${scanResync&&!scanResync.full?'Your cube as it is becomes the scramble':'Load a scramble that gives the cube as the net shows it'}">Use this cube<span class="hk">Enter</span></button></div>
+  </div>`;
+  document.body.appendChild(bg);
+  bg.addEventListener('click',e=>{if(e.target===bg)scanConfirmClose();});
+  $('#scanOkBack').onclick=scanConfirmClose;$('#scanOkNext').onclick=scanNextFit;$('#scanOkYes').onclick=scanConfirmYes;
+  drawNet();
+  setTimeout(()=>{const b=$('#scanOkYes');if(b)b.focus();},20);
+}
+function scanConfirmClose(){const e=$('#scanOkBg');if(e)e.remove();}
+function scanConfirmYes(){scanConfirmClose();scanUse(scanResync&&!scanResync.full?'setup':'use');}
 // how: 'use' (a full read), 'setup' or 'return' (a refresh scan). opts.onCube gets (cube, how, info):
 // info.off is the moves off the hint when the resync found the cube, info.full says a full read.
 function scanUse(how){
@@ -588,31 +630,39 @@ function scanUse(how){
 // The net: U on top, L F R B across, D below. Before all six faces fit, each face shows as read:
 // at its center's side on the 3x3, in the order read otherwise. Once the cube fits (or is found),
 // the net shows the cube itself, so a repaired sticker shows repaired.
+// A face worked out from the other five (scanRes.deduced) has no reading behind it: it shows the
+// cube's stickers, dashed, and takes no paint (`worked`). On a refresh scan the face the guide
+// expected stands behind it and still takes paint.
 function netSlot(slot){
   let id,k=0;
   if(scanRes&&scanRes.ok){const s=scanRes.slots?scanRes.slots[slot]:{id:slot,k:0};if(!s)return null;id=s.id;k=s.k;}
   else id=scanN===3?slot:scanVoter.order[slot];
-  const f=id==null?null:scanVoter.faces[id];if(!f)return null;
+  const f=id==null?null:scanVoter.faces[id],worked=!!(scanRes&&scanRes.ok&&scanRes.deduced===id);
+  if(!f&&!worked)return null;
   const cells=scanN*scanN,shown=scanRes&&scanRes.ok&&scanRes.facelets?scanRes.facelets.slice(cells*slot,cells*slot+cells):rotateFace(f.stickers,k);
-  return {id,stickers:shown,pinned:rotateFace(f.pinned,k),k,given:scanFaceGiven(f)||!!(scanRes&&scanRes.ok)};
+  return {id,stickers:shown,pinned:f?rotateFace(f.pinned,k):new Array(cells).fill(false),k,given:!!(f&&scanFaceGiven(f))||!!(scanRes&&scanRes.ok),worked,paint:!!f};
 }
+// The net in the dialog, and in the card over it while that is up. Only the dialog's takes a click.
 function drawNet(){
-  const el=$('#scanNet');if(!el)return;
+  const el=$('#scanNet'),card=$('#scanOkNet');if(!el)return;
+  el.innerHTML=netMarkup(true);if(card)card.innerHTML=netMarkup(false);
+}
+function netMarkup(live){
   const n=scanN,s=Math.round((70-(n-1)*2)/n),g=2,fw=n*s+(n-1)*g+6;
-  let out=`<svg viewBox="0 0 ${4*fw} ${3*fw}" role="img" aria-label="${scanResync?'The cube the guide expects, and the faces read':'Scanned faces'}">`;
+  let out=`<svg viewBox="0 0 ${4*fw} ${3*fw}" role="img" aria-label="${scanResync?'The cube the guide expects, and the faces read':live?'Scanned faces':'The cube read'}">`;
   // The places come from netCells in js/draw.js, the one net layout of the app.
   const cells=netCells(n,{tile:s,gap:g,pad:3});
   for(let slot=0;slot<6;slot++){
-    const nf=netSlot(slot);
-    out+=`<g data-slot="${slot}"${nf?` data-id="${nf.id}"`:''}${nf&&!nf.given?' class="expect"':''}>`;
+    const nf=netSlot(slot),cls=[nf&&!nf.given?'expect':'',nf&&nf.worked?'worked':''].filter(Boolean).join(' ');
+    out+=`<g data-slot="${slot}"${nf?` data-id="${nf.id}"`:''}${cls?` class="${cls}"`:''}>`;
     for(const {p,x,y} of cells.filter(c=>c.f===slot)){
-      const center=n===3&&p===4,ci=nf?nf.stickers[p]:center?slot:-1;
-      const attrs=`${nf?`data-id="${nf.id}" data-pos="${p}" `:''}rx="3" stroke="${nf&&nf.pinned[p]?'var(--accent)':'var(--sticker-line,#111)'}" stroke-width="${nf&&nf.pinned[p]?2.5:1}" style="${nf&&!center?'cursor:pointer':''}"${nf?(center?' title="The center: fixed"':` title="Click to paint this sticker ${SCAN_PALETTE.find(q=>q.c===scanColor).label}"`):''}`;
+      const center=n===3&&p===4,ci=nf?nf.stickers[p]:center?slot:-1,paint=live&&nf&&nf.paint&&!center;
+      const attrs=`${paint?`data-id="${nf.id}" data-pos="${p}" `:''}rx="3" stroke="${nf&&nf.pinned[p]?'var(--accent)':'var(--sticker-line,#111)'}" stroke-width="${nf&&nf.pinned[p]?2.5:1}" style="${paint?'cursor:pointer':''}"${!live?'':nf&&nf.worked&&!nf.paint?' title="Worked out from the other faces"':nf?(center?' title="The center: fixed"':` title="Click to paint this sticker ${SCAN_PALETTE.find(q=>q.c===scanColor).label}"`):''}`;
       out+=ci<0?`<rect x="${x}" y="${y}" width="${s}" height="${s}" fill="var(--panel2)" ${attrs}/>`:netRect(ci,x,y,s,s,attrs);
     }
     out+='</g>';
   }
-  el.innerHTML=out+'</svg>';
+  return out+'</svg>';
 }
 function flashNet(id){setTimeout(()=>{const h=$(`#scanNet g[data-id="${id}"]`);if(h){h.classList.add('flash');setTimeout(()=>h.classList.remove('flash'),600);}},0);}
 // A click paints the chosen color on the sticker and pins it.
@@ -622,7 +672,7 @@ function scanNetClick(e){
   // Map the shown position back to the stored reading, which may be turned.
   const slot=+r.closest('g').dataset.slot,nf=netSlot(slot),k=nf?nf.k:0,idx=rotateFace([...Array(scanN*scanN).keys()],k)[p];
   f.stickers[idx]=scanColor;f.pinned[idx]=true;
-  if(scanResync)scanRefresh('');else if(scanFaceIds().length>=6)scanAssemble('');else drawNet();
+  if(scanResync)scanRefresh('');else if(scanFaceIds().length>=(scanN===3?5:6))scanAssemble('');else drawNet();
 }
 // Overlay: the fitted lattice and the color read at each cell. Drawn in frame pixels.
 function drawOverlay(img,r){
