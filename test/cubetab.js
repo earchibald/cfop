@@ -118,7 +118,8 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   const fixed=(c,o)=>polysOf(new w.DOMParser().parseFromString('<svg>'+w.renderCube3D(c.toFacelets(),Object.assign({yaw:-32,pitch:28,n:3},o||{}))+'</svg>','text/html'));
   const readout=()=>$$('#cubeWinMoves .mv').map(s=>s.textContent).join(' ');
   const turnBtn=m=>$('#cubeWinTurns button[data-turn="'+m+'"]');
-  const turns=$('#cubeWinTurns');assert.ok(turns&&turns.previousElementSibling===$('#cubeWinWarn')&&$('#cubeWinWarn').previousElementSibling===$('#cubeWinSvg'),'the turn buttons sit under the picture, with the band between');
+  const turns=$('#cubeWinTurns'),holdRow=$('#cubeWinHold');
+  assert.ok(turns&&turns.previousElementSibling===holdRow&&holdRow.previousElementSibling===$('#cubeWinWarn')&&$('#cubeWinWarn').previousElementSibling===$('#cubeWinSvg'),'the hold row and the turn buttons sit under the picture, with the band between');
   assert.deepStrictEqual($$('#cubeWinTurns button').map(b=>b.textContent),['x',"x'",'y',"y'",'z',"z'"],'six turns');
   assert.strictEqual($$('#cubeWinTurns .grp').length,3,'in three pairs');
   for(const b of $$('#cubeWinTurns button')){assert.ok(/turn the whole cube/.test(b.title),b.title);assert.ok(!b.disabled);}
@@ -189,6 +190,33 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   let cc=w.applyAlg(c7,['R','U',"R'","U'"]);set(cc);dev.notify(mv);
   assert.ok(await until(()=>readout()==="R U R' U'",1500),'four moves: '+readout());
   assert.ok(!$('#cubeWinClear').disabled,'Clear moves is live again');
+  // The hold row: a tile for each top (white, yellow) and each front (green, orange, blue, red).
+  // A tile sets the hold and turns the picture, and no turn goes on the list.
+  {const tiles=place=>$$(`#cubeWinHold .grp[data-place="${place}"] .ht`),on=place=>tiles(place).filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.dataset.cb).join();
+    const tile=(place,cb)=>tiles(place).find(b=>b.dataset.cb===cb);
+    assert.deepStrictEqual(tiles('up').map(b=>b.dataset.cb),['W','Y'],'two tops');assert.deepStrictEqual(tiles('front').map(b=>b.dataset.cb),['G','O','B','R'],'four fronts');
+    assert.deepStrictEqual($$('#cubeWinHold .lbl').map(l=>l.textContent),['Top','Front'],'one row: Top, then Front');
+    assert.strictEqual(tile('up','Y').getAttribute('aria-label'),'Yellow on top');assert.strictEqual(tile('front','O').getAttribute('aria-label'),'Orange in front');
+    assert.ok(/No turn goes on the list/.test(tile('front','R').title),tile('front','R').title);
+    assert.strictEqual(tile('front','B').style.getPropertyValue('--c'),'var(--sticker-B)','the tile is the sticker color');
+    assert.strictEqual(on('up')+'/'+on('front'),'W/G','white on top, green in front pressed');
+    click(tile('up','Y'));
+    assert.strictEqual(ev('cubeTab.hold'),ev('CUBE_TAB_HOLDS').find(h=>h.moves.join(' ')==='z2'),'yellow on top: z2, green stays in front');
+    assert.strictEqual(on('up')+'/'+on('front'),'Y/G');assert.strictEqual(readout(),"R U R' U'",'no turn goes on the list');
+    assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),fixed(w.applyAlg(cc,['z2']))),1500),'the picture turns to the hold');
+    click(tile('front','R'));
+    assert.deepStrictEqual([...ev('cubeTab.hold').cube.center.slice(0,3)],[3,2,1],'yellow on top, red in front');
+    assert.strictEqual(on('up')+'/'+on('front'),'Y/R');assert.strictEqual(readout(),"R U R' U'");
+    click(tile('up','W'));assert.strictEqual(on('up')+'/'+on('front'),'W/R','a top keeps the front');
+    click(tile('front','G'));assert.ok(!ev('cubeTab.hold'),'white on top, green in front: the cube\'s own frame');
+    assert.strictEqual(readout(),"R U R' U'",'the list never changed');
+    assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),fixed(cc)),1500),'the picture is back');
+    // After x (green on top), a front tile that cannot sit with green on top puts white on top.
+    click(turnBtn('x'));assert.strictEqual(on('up'),'','green on top: no top tile pressed');
+    click(tile('front','B'));assert.strictEqual(on('up')+'/'+on('front'),'W/B','white goes on top');
+    click(turnBtn("x'"));click(tile('front','G'));assert.ok(!ev('cubeTab.hold'));
+    assert.strictEqual(readout(),"R U R' U'",'x then x\' leaves the list as it was');
+    await until(()=>!ev('cubeTab.qraf'),1500);}
   cc=w.applyAlg(cc,['U','R']);set(cc);dev.notify(mv);
   assert.ok(await until(()=>readout()==="R U",1500),'two turns back: '+readout());
   cc=w.applyAlg(cc,["U'"]);set(cc);dev.notify(mv);
@@ -345,10 +373,30 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   run('cubeTab.awayMs=60');
   assert.ok(!ev('cubeTab.gyro')&&!warnOn(),'no tilt yet, no band');
   assert.ok($('#cubeWinReset').classList.contains('hidden'),'no tilt yet: no Reset view');
-  // The first reading: the heading lines the cube up with the hold (z2). Held as the hold says:
-  // no band, and the picture is the cube held z2.
+  const lockB=$('#cubeWinLock');assert.ok(lockB.classList.contains('hidden'),'no tilt yet: no Lock');
+  assert.ok(ev('cubeTab.lock'),'Lock is on by default');
+  const z2y=HOLDS.find(h=>h.cube.equals(w.applyAlg(holdOf('z2').cube,['y'])));
+  // Locked: the first reading shows Lock and Reset view, Reset view off. The picture stays on the
+  // hold, and a cube turned in the hands brings no band.
   tilt(holdOf('z2').q);await sleep(30);
-  assert.ok(ev('cubeTab.gyro'),'the tilt is on');assert.ok(/tilts with the cube/.test($('#cubeWinNote').textContent),'the note says so');
+  assert.ok(ev('cubeTab.gyro'),'the tilt is on');
+  assert.ok(!lockB.classList.contains('hidden')&&lockB.getAttribute('aria-pressed')==='true','Lock shows, pressed');
+  assert.ok(lockB.closest('.cw-side')&&lockB.nextElementSibling===$('#cubeWinReset'),'Lock sits before Reset view');
+  assert.ok(!$('#cubeWinReset').classList.contains('hidden')&&$('#cubeWinReset').disabled,'Reset view shows, off while locked');
+  assert.ok(/Turn Lock off first/.test($('#cubeWinReset').title));
+  assert.ok(!/tilts with the cube/.test($('#cubeWinNote').textContent)&&/Pick the top and the front/.test($('#cubeWinNote').textContent),'the note: '+$('#cubeWinNote').textContent);
+  tilt(z2y.q);await sleep(150);
+  assert.ok(!warnOn()&&!ev('cubeTab.away')&&!tab().classList.contains('warn'),'locked: a turn in the hands brings no band');
+  assert.ok(w.quatAngle(ev('cubeTab.qTo'),holdOf('z2').q)<1,'the picture stays on the hold');
+  assert.ok(same(winPolys(),fixed(w.applyAlg(cur,['z2']))),'the picture is the cube held z2');
+  // Lock off: kept, Reset view live, and the heading is taken from the cube as it sits, so the
+  // picture lines up with the hold and follows the cube from there.
+  click(lockB);
+  assert.ok(!ev('cubeTab.lock')&&lockB.getAttribute('aria-pressed')==='false','Lock off');
+  assert.strictEqual(w.localStorage.getItem('cw:smartLock'),'false','kept in cw:smartLock');
+  assert.ok(w.quatAngle(ev('cubeTab.qTo'),holdOf('z2').q)<1,'the picture lines up with the hold');
+  assert.ok(/tilts with the cube/.test($('#cubeWinNote').textContent),'the note says the picture tilts');
+  tilt(holdOf('z2').q);await sleep(30);
   assert.ok(!$('#cubeWinReset').classList.contains('hidden')&&!$('#cubeWinReset').disabled,'the tilt is live: Reset view shows');
   assert.ok($('#cubeWinReset').closest('.cw-side')&&$('#cubeWinReset').nextElementSibling===$('#cubeWinClear'),'beside Clear moves');
   assert.strictEqual($('#cubeWinReset').title,'Hold the cube with yellow up, green in front, then press. The picture lines up with your cube.');
@@ -360,7 +408,6 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   await sleep(100);assert.ok(!warnOn()&&!ev('cubeTab.away'),'a lean is not a turn');assert.strictEqual(ev('cubeTab.hold'),holdOf('z2'),'the hold stays');
   // The cube turned y in the hands, the button not pressed: after awayMs the band says how the
   // cube sits and how the moves read. The picture shows the cube as it sits; the hold stays.
-  const z2y=HOLDS.find(h=>h.cube.equals(w.applyAlg(holdOf('z2').cube,['y'])));
   tilt(z2y.q);
   assert.ok(await until(()=>ev('cubeTab.away')===z2y,500),'away: the hold the cube sits in');
   assert.ok(!warnOn(),'the band waits');
@@ -373,7 +420,8 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),fixed(w.applyAlg(cur,z2y.moves))),1500),'the picture shows the cube as it sits');
   // Read as held: y is pressed for the user. The hold is z2 then y, the turn is on the list, and
   // the band goes.
-  click($('#cubeWinClear'));click($('#cubeWinMatch'));
+  d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'c',bubbles:true}));assert.ok(!readout(),'the C key clears the moves');
+  click($('#cubeWinMatch'));
   assert.strictEqual(ev('cubeTab.hold'),z2y,'the hold matches the cube');assert.strictEqual(readout(),'y','the turn is on the list');
   assert.ok(!warnOn()&&!ev('cubeTab.away'),'the band goes');assert.ok(!tab().classList.contains('warn'));
   assert.ok(await until(()=>!ev('cubeTab.qraf'),1500));assert.ok(same(winPolys(),fixed(w.applyAlg(cur,z2y.moves))),'the picture did not move: the cube did not');
@@ -420,6 +468,12 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.ok(w.quatAngle(ev('cubeTab.basis'),basis1)>80,'the heading moved a quarter turn');
   assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),fixed(w.applyAlg(cur,['z2']))),1500),'the picture lines up with the hold');
   tilt(holdOf('z2').q);await sleep(100);assert.ok(!warnOn(),'the cube as the hold says: no band');
+  // Lock on again: the band goes, the picture goes back to the hold, and Reset view is off.
+  tilt(z2y.q);assert.ok(await until(()=>warnOn(),500),'unlocked: the band');
+  click(lockB);assert.ok(ev('cubeTab.lock')&&!warnOn()&&!tab().classList.contains('warn'),'Lock: the band goes');
+  assert.strictEqual(w.localStorage.getItem('cw:smartLock'),'true');assert.ok($('#cubeWinReset').disabled,'Reset view is off');
+  assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),fixed(w.applyAlg(cur,['z2']))),1500),'the picture is back on the hold');
+  tilt(HOLDS[0].q);await sleep(150);assert.ok(!warnOn()&&!ev('cubeTab.away'),'locked: no band');
   // ----- a modal takes Esc; the tab has no Esc of its own -----
   click($('#smartBtn'));await sleep(20);assert.ok($('#smartBg'));
   esc();assert.ok(!$('#smartBg')&&!win().hidden&&ev('curTab')==='smart','Esc closes the dialog; the tab stays');
@@ -430,6 +484,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.strictEqual(ev('cubeTab.hold'),holdOf('z2'),'the hold stays while the link is down');
   assert.ok(/no longer connected/.test($('#cubeWinNote').textContent));
   assert.ok($$('#cubeWinTurns button').every(b=>b.disabled),'the turn buttons wait for the link');
+  assert.ok($$('#cubeWinHold .ht').every(b=>b.disabled)&&$('#cubeWinLock').disabled,'so do the hold tiles and Lock');
   assert.ok(!$('#cubeWinAgain').classList.contains('hidden'),'Connect again shows');
   assert.ok(ev('smartLook')===null,'no getDevices: no look by itself');
   dev=fakeDevice(4,MAC,cube,{mfData:mfDataFor(MAC),name:'GAN12uiM_A1B2'});
@@ -446,7 +501,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   esc();assert.strictEqual(ev('curTab'),'smart','the tab stays');
   assert.deepStrictEqual(errs,[],'no script errors');
   // ----- a second page: the beginner method keeps its tabs; CFOP goes to the Smart cube tab -----
-  const b2=await boot({},bt);const d2=b2.d,w2=b2.w,ev2=s=>new w2.Function('return ('+s+')')(),run2=s=>new w2.Function(s)();
+  const b2=await boot({'cw:smartLock':'false'},bt); /* Lock off: the picture follows the tilt */const d2=b2.d,w2=b2.w,ev2=s=>new w2.Function('return ('+s+')')(),run2=s=>new w2.Function(s)();
   const click2=el=>el.dispatchEvent(new w2.MouseEvent('click',{bubbles:true}));
   w2.setMethod('beginner');assert.strictEqual(ev2('curTab'),'learn');
   set(c1);dev=fakeDevice(4,MAC,cube,{mfData:mfDataFor(MAC),name:'GAN356iC_0001'});

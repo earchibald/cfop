@@ -271,6 +271,14 @@ while it listens, so the hints fit beside the cube with no scroll. In one
 column (960px and narrower) the picture gives way to 40vh while it listens, and
 the groups sit two to a row where the width allows.
 
+Version 1.40.0 adds Lock, the hold row and a key and a voice command for Clear moves.
+
+| Part | What |
+|---|---|
+| Lock | A button before Reset view. It shows while the tilt is live. It is on by default and kept in `cw:smartLock`. Locked, the picture stays on the hold and the tilt is not used: no band, no orange dot, and Reset view is off. Unlocked, the picture follows the tilt as before, and Reset view lines it up. The readings still come while it is locked, so Lock off takes the heading from the cube as it sits then (`cubeTabKeep`). `cubeTabLive()` is true only while the picture follows the tilt. |
+| Hold row | One row under the picture, above the turn buttons: Top with a tile for white and yellow, Front with a tile for green, orange, blue and red. The tiles of the hold are pressed. A tile sets the hold and turns the picture (`cubeTabSetHold`), and no turn goes on the list: the moves made so far keep their names. A top keeps the front where it can. A front keeps the top where it can, else white goes on top (`cubeTabHoldPick`, `cubeTabHoldNear`). The turn buttons stay for a turn in the middle of a solve, which the list must show. The voice hold ("top yellow, front green") still puts the turn on the list when the list has moves. |
+| Clear moves | The C key on the tab, while the live panel is in view (`cubeTabKeys`, asked by the page's key handler before the timer's C). The button carries the badge. By voice: "clear moves", "clear", "clear the list", "empty the list". It empties the list alone; "reset" also reads the stage again and lines up the picture. |
+
 ## The lab
 
 `lab/` is a page of its own for work on the smart cube, without the rest of the
