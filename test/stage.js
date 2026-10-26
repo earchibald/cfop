@@ -17,6 +17,14 @@ for(const r of ['','x',"y'",'z2',"x y"]){const st=cfopStage(r?applyAlg(S,r):S);a
   const y=applyAlg(S,invertAlg(ALG_DB.co[0].alg)); // only the top layer is loose: the engine's cross (yellow, on D) is whole
   assert.strictEqual(cfopStage(y,'white').down,'yellow');assert.ok(['f2l','eo','co','cp','ep','auf'].includes(cfopStage(y,'white').stage));
 }
+// Cross edges right against one another but a turn of the layer away from their centers count.
+// Reported on a real cube: three white edges on top, a U turn off, read as 0 of 4.
+assert.strictEqual(cfopStage(applyAlg(S,'F U')).sub,'3 of 4 white edges');
+{const c=applyAlg(S,randomMoveScramble('stage-cross-turn',22));
+  const c1=applyAlg(c,parseAlg(solveCross(c,0,4).solutions[0]));
+  const t=cfopStage(applyAlg(c1,'D'),'yellow');assert.strictEqual(t.stage,'cross');assert.strictEqual(t.sub,'4 of 4 yellow edges: turn the yellow layer to match the centers');
+  assert.strictEqual(cfopStage(applyAlg(c1,"D' F"),'yellow').sub,'3 of 4 yellow edges');
+}
 // The pairs: a cross, then the pairs one by one. The engine's cross is yellow.
 {const c=applyAlg(S,randomMoveScramble('stage-f2l',22));
   const cr=solveCross(c,0,4);const c1=applyAlg(c,parseAlg(cr.solutions[0]));
