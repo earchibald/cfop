@@ -64,6 +64,18 @@ aside section{margin-bottom:18px}
 aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-bottom:6px}
 .log div.smack{color:var(--text)}.log div.series{color:var(--warn);font-weight:600}.log div.solved{color:var(--text)}
 .note{color:var(--muted);font-size:12.5px;margin:6px 0 0}
+/* Experiment 4: fat moves. The trace and the strip are numbers only. */
+aside h2 .count{font-family:var(--mono);font-size:12px;text-transform:none;letter-spacing:0;color:var(--faint);margin-left:6px}
+.fat-said{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:2px 0 8px}
+.fat-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.fat-btns button{padding:3px 10px;font-size:12.5px}
+#fatTrace{width:100%;height:120px;background:var(--panel2);border-radius:8px;display:block}
+#fatStrip{width:100%;height:70px;background:var(--panel2);border-radius:8px;display:block;margin-top:6px}
+#fatTrace .win{fill:var(--accent);opacity:.12}#fatTrace .zero{stroke:var(--faint);stroke-width:1}
+#fatTrace .min,#fatStrip .min{stroke:var(--warn);stroke-dasharray:3 3;stroke-width:1}
+#fatTrace polyline{fill:none;stroke-width:1.4;opacity:.8}#fatTrace polyline.fat{stroke:var(--warn)}#fatTrace polyline.face{stroke:var(--sticker-B)}
+#fatTrace polyline.wrong{stroke:#ff3b5c;stroke-width:2;opacity:1}
+#fatStrip circle.fat{fill:var(--warn)}#fatStrip circle.face{fill:var(--sticker-B)}#fatStrip text{fill:var(--faint);font:10px var(--mono)}
+.log div.fat{color:var(--warn);font-weight:600}.log div.fatno{color:var(--text)}
 .patwin{position:fixed;top:calc(var(--barh,52px) + 12px);left:16px;width:400px;max-height:calc(100% - 80px);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.5);z-index:6}
 .patwin .head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
 .patwin.drag .head{cursor:grabbing}
@@ -177,6 +189,22 @@ body.cba .pt-tile{display:flex;align-items:center;justify-content:center}
   <div class="row" id="macRow" hidden><p>This browser cannot read the cube's address. Type it.</p><input type="text" id="mac" placeholder="AB:12:34:56:78:9A" spellcheck="false" autocomplete="off" size="20"><button class="primary" id="macGo">Use this address</button></div>
 </main>
 <aside id="side">
+  <section id="fatSec">
+    <h2>Fat moves <span class="count" id="fatCount"></span></h2>
+    <label class="chk" title="Read a fat move as one: r, not L. The list waits a moment for the tilt after each move, then shows r, and the hold follows the turn of the core."><input type="checkbox" id="fatOn" checked> Read fat moves</label>
+    <div class="fat-said">You do now <span class="seg" role="group" aria-label="What you do now: each move goes in the data with it"><button id="fatTruthAny" aria-pressed="true" title="Any moves: they go in the data unlabeled">Anything</button><button id="fatTruthFat" aria-pressed="false" title="Only fat moves, such as r and r'. Each move goes in the data as fat">Fat turns</button><button id="fatTruthFace" aria-pressed="false" title="Only face turns, such as L and L'. Each move goes in the data as a face turn">Face turns</button></span></div>
+    <div class="meter"><div>last<b id="fatLastMv">–</b></div><div>twist<b id="fatLastDeg">–</b></div><div>swing<b id="fatLastSw">–</b></div><div>readings<b id="fatLastN">–</b></div></div>
+    <svg id="fatTrace" viewBox="0 0 320 120" preserveAspectRatio="none" aria-label="The twist of the core about each recent move, from 800 ms before the cube reports it to 800 ms after"></svg>
+    <svg id="fatStrip" viewBox="0 0 320 70" preserveAspectRatio="none" aria-label="The twist of each move recorded, by what you said you did"></svg>
+    <p class="note" id="fatStats" aria-live="polite"></p>
+    <div class="knob fknob"><label for="fatPre">before ms</label><input type="range" id="fatPre" data-k="pre" min="0" max="800" step="10"><output></output></div>
+    <div class="knob fknob"><label for="fatPost">after ms</label><input type="range" id="fatPost" data-k="post" min="0" max="800" step="10"><output></output></div>
+    <div class="knob fknob"><label for="fatMin">least deg</label><input type="range" id="fatMin" data-k="min" min="10" max="90" step="1"><output></output></div>
+    <div class="knob fknob"><label for="fatSwing">swing deg</label><input type="range" id="fatSwing" data-k="swing" min="5" max="90" step="1"><output></output></div>
+    <label class="chk" title="Take the twist of the core the other way. Use it if your fat moves all show below the zero line."><input type="checkbox" id="fatFlip"> Flip the twist</label>
+    <div class="fat-btns"><button id="fatUse" disabled title="Set the knobs to the best ones the data gives">Use best knobs</button><button id="fatSave" disabled title="Save the moves recorded, with their tilt readings and the knobs, as a JSON file">Save data</button><button class="ghost" id="fatClear" disabled title="Delete the moves recorded">Clear data</button></div>
+    <p class="note">The cube reports r as L, and the core turns x with it. A fat move twists the core a quarter turn against the face the cube names. In the trace, each line is one move, from 800 ms before the report to 800 ms after. Orange lines read as fat, blue as face turns, red as the opposite of what you said. The shaded part is the window; the dashed line is the least twist for a fat move.</p>
+  </section>
   <section>
     <h2>Smack the right face three times</h2>
     <div class="dots" id="dots" aria-label="Smacks counted"><span></span><span></span><span></span></div>
