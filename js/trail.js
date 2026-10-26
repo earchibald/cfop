@@ -1,6 +1,6 @@
 // The move trail (1.42.0): the last moves of a smart cube, on the Smart cube tab (cubeTabMovesDraw)
 // and in the lab (labMovesDraw). Three zones, each over a segment of one line with its label under
-// it: Now (the last move, a large tile in the color of the face it turned), Recent (the four moves
+// it: Now (the last move, a tile filled with the color of the face it turned; every tile is one size), Recent (the four moves
 // before it, a bar of the face color under each) and Earlier (the moves before those, gray). Each
 // move carries its number in the list over it. The moves that do not fit show as a range, "1–13",
 // at the old end, on a dashed segment. An arrow on the old end of the line points to where the
