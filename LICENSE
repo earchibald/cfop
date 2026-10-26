@@ -23,6 +23,10 @@ GitHub's Terms of Service let GitHub users view and fork a public repository
 on GitHub. That right is GitHub's, not a license from the copyright holder,
 and it does not extend past GitHub.
 
+Third-party code: the site and the app load libraries that are not part of
+this repository, such as cubing.js for scrambles. Each one keeps its own
+license, and this notice does not cover them. THIRD-PARTY.md lists them.
+
 Names and trademarks: Rubik's and Rubik's Cube are trademarks of their owner.
 GAN is a trademark of its owner. Other product names belong to their owners.
 Twistwright is not affiliated with, sponsored by or endorsed by any of them.

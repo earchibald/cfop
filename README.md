@@ -13,6 +13,13 @@ npm run serve        # then open http://localhost:8000
 
 The site deploys to GitHub Pages on every push to `main`.
 
+Scrambles are random-state, from [cubing.js](https://github.com/cubing/cubing.js).
+The library is not in git. `scripts/vendor.js` fetches the version pinned in
+`package.json` into `vendor/` and checks it. `npm run serve`, `npm test` and the
+Pages workflow run it, and a second run uses the copy already in `vendor/`.
+To fetch again, run `NOCACHE=1 npm run vendor`. Without `vendor/`, the page uses
+random moves.
+
 ## Layout
 
 | Path | Contents |
@@ -32,7 +39,8 @@ The scripts share one global scope and load in the order above.
 ## License
 
 All rights reserved. You may read the source and use the site, but you may not
-copy, change or reuse it. See [`LICENSE`](LICENSE).
+copy, change or reuse it. See [`LICENSE`](LICENSE). The libraries in `vendor/`
+keep their own licenses: see [`THIRD-PARTY.md`](THIRD-PARTY.md).
 
 ## Test
 

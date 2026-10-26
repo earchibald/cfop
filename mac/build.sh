@@ -34,11 +34,20 @@ printf 'APPL????' > "$APP/Contents/PkgInfo"
 if [ -n "$SITE_REF" ]; then
   COMMIT=$(git rev-parse --verify --quiet "$SITE_REF^{commit}") || { echo "no git ref $SITE_REF" >&2; exit 2; }
   PATHS=""
-  for p in index.html css js assets lab; do
+  for p in index.html css js assets lab THIRD-PARTY.md; do
     if git cat-file -e "$COMMIT:$p" 2>/dev/null; then PATHS="$PATHS $p"; fi
   done
   mkdir -p "$APP/Contents/Resources/site"
   git -C .. archive "$COMMIT" -- $PATHS ':(exclude)lab/run.sh' | tar -x -C "$APP/Contents/Resources/site"
+  # The libraries the page loads at run time, as pinned at SITE_REF. git ignores vendor/, so they
+  # come from the cache in vendor/ when its pins match, else from npm (NOCACHE=1 forces npm).
+  if git cat-file -e "$COMMIT:scripts/vendor.js" 2>/dev/null; then
+    TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
+    git show "$COMMIT:package.json" > "$TMP/package.json"; git show "$COMMIT:scripts/vendor.js" > "$TMP/vendor.js"
+    VDIR="$(pwd)/../vendor"
+    node "$TMP/vendor.js" --pkg "$TMP/package.json" --out "$VDIR"
+    cp -R "$VDIR" "$APP/Contents/Resources/site/vendor"
+  fi
   VERSION=$(git show "$COMMIT:js/version.js" | sed -n "s/^const APP_VERSION='\(.*\)';.*/\1/p")
   printf '{"ref":"%s","commit":"%s","version":"%s"}\n' "$SITE_REF" "$COMMIT" "$VERSION" > "$APP/Contents/Resources/site.json"
   echo "Built in the site at $SITE_REF ($(echo "$COMMIT" | cut -c1-7)), version ${VERSION:-unknown}"

@@ -22,13 +22,13 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.deepStrictEqual($$('#methodPop .mcard').map(c=>c.dataset.method),['beginner','cfop','mini','speed2','master','speed4']);
   assert.strictEqual($('#puzzleName').textContent,'3×3 ·');
   const scr3=w.scr.moves.join(' ');assert.strictEqual(stickers(),27,'a 3×3 shows 27 stickers');
-  assert.deepStrictEqual($$('#scrLen option').map(o=>o.textContent),['20','22','25']);
+  assert.deepStrictEqual($$('#scrLen option').map(o=>o.textContent),['Random state','20','22','25']);
   // ----- 2×2 beginner -----
   click($('#methodPop .mcard[data-method="mini"]'));
   assert.strictEqual(d.body.dataset.method,'mini');assert.strictEqual(d.body.dataset.kind,'beg');assert.strictEqual(d.body.dataset.puzzle,'2x2');
   assert.strictEqual($('#methodName').textContent,'Beginner');assert.strictEqual($('#puzzleName').textContent,'2×2 ·');
   assert.strictEqual(d.body.dataset.tab,'learn','Learn is the beginner home');
-  assert.deepStrictEqual($$('#scrLen option').map(o=>o.textContent),['9','11','13'],'2×2 scramble lengths');
+  assert.deepStrictEqual($$('#scrLen option').map(o=>o.textContent),['Random state','9','11','13'],'2×2 scramble lengths');
   assert.ok(w.scr.moves.length===11&&w.scr.moves.every(m=>/^[RUF]['2]?$/.test(m)),'a 2×2 scramble: 11 moves of R U F: '+w.scr.moves.join(' '));
   assert.notStrictEqual(w.scr.moves.join(' '),scr3,'a new scramble for the new puzzle');
   const scr2=w.scr.moves.join(' ');
