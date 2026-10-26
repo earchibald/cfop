@@ -7,7 +7,7 @@
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
   /* light: GAN stickerless */
   --bg:#e2e3e8;--panel:#f5f5f7;--panel2:#e4e6eb;--panel3:#d6d8df;--line:#b4b8c2;--text:#121316;--muted:#676a76;--faint:#a3a6b0;--top-bg:#d2d4db;
-  --sticker-W:#fcfcfc;--sticker-Y:#f8d000;--sticker-R:#e3262b;--sticker-O:#fb8500;--sticker-G:#25b83c;--sticker-B:#1e78e6;--sticker-X:#c6c8cf;--sticker-line:#dfe1e6;
+  --sticker-W:#fcfcfc;--sticker-Y:#f8d000;--sticker-R:#e3262b;--sticker-O:#fb8500;--sticker-G:#25b83c;--sticker-B:#1e78e6;--sticker-X:#c6c8cf;--sticker-line:#dfe1e6;--sticker-W-edge:#9a9ea9;
   --primary:#121316;--primary-ink:#ffffff;--accent:#f8d000;--accent-ink:#121316;--good:#1a9e37;--warn:#dd6a14;--bad:#d4262b;--link:#1f6fd6;--mod:#d4480c;
   --mk-top:var(--sticker-Y);--mk-side:var(--sticker-O);--mk-bottom:var(--sticker-W);--mk-body:#7d8089;
   --cube-bg:#c3c6cf;--sheen:rgba(255,255,255,.95);--shadow:0 12px 32px rgba(20,22,30,.18);--scrim:rgba(20,22,30,.45);
@@ -16,12 +16,12 @@
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0b0b0d;--panel:#151517;--panel2:#1e1e22;--panel3:#27272c;--line:#2a2a30;--text:#f1f0ea;--muted:#8f8f97;--faint:#5a5a62;
-  --sticker-W:#f3f2ec;--sticker-Y:#ffd21e;--sticker-R:#d8283b;--sticker-O:#ff6a1c;--sticker-G:#14a85f;--sticker-B:#2c6fdc;--sticker-X:#36363c;--sticker-line:#0b0b0d;
+  --sticker-W:#f3f2ec;--sticker-Y:#ffd21e;--sticker-R:#d8283b;--sticker-O:#ff6a1c;--sticker-G:#14a85f;--sticker-B:#2c6fdc;--sticker-X:#36363c;--sticker-line:#0b0b0d;--sticker-W-edge:transparent;
   --primary:#f3f2ec;--primary-ink:#0b0b0d;--accent:#ffd21e;--accent-ink:#0b0b0d;--good:#1cb86b;--warn:#ff6a1c;--bad:#e8404f;--link:#5b93ee;--mod:#ff8f3c;
   --mk-top:var(--sticker-W);--mk-side:var(--sticker-R);--mk-bottom:var(--sticker-Y);--mk-body:var(--sticker-line);--top-bg:var(--bg);--cube-bg:var(--panel);--sheen:rgba(255,255,255,.05);--shadow:0 12px 32px rgba(0,0,0,.5);--scrim:rgba(0,0,0,.6);}}
 :root[data-theme="dark"]{
   --bg:#0b0b0d;--panel:#151517;--panel2:#1e1e22;--panel3:#27272c;--line:#2a2a30;--text:#f1f0ea;--muted:#8f8f97;--faint:#5a5a62;
-  --sticker-W:#f3f2ec;--sticker-Y:#ffd21e;--sticker-R:#d8283b;--sticker-O:#ff6a1c;--sticker-G:#14a85f;--sticker-B:#2c6fdc;--sticker-X:#36363c;--sticker-line:#0b0b0d;
+  --sticker-W:#f3f2ec;--sticker-Y:#ffd21e;--sticker-R:#d8283b;--sticker-O:#ff6a1c;--sticker-G:#14a85f;--sticker-B:#2c6fdc;--sticker-X:#36363c;--sticker-line:#0b0b0d;--sticker-W-edge:transparent;
   --primary:#f3f2ec;--primary-ink:#0b0b0d;--accent:#ffd21e;--accent-ink:#0b0b0d;--good:#1cb86b;--warn:#ff6a1c;--bad:#e8404f;--link:#5b93ee;--mod:#ff8f3c;
   --mk-top:var(--sticker-W);--mk-side:var(--sticker-R);--mk-bottom:var(--sticker-Y);--mk-body:var(--sticker-line);--top-bg:var(--bg);--cube-bg:var(--panel);--sheen:rgba(255,255,255,.05);--shadow:0 12px 32px rgba(0,0,0,.5);--scrim:rgba(0,0,0,.6);}
 html{scroll-padding-top:env(safe-area-inset-top,0px);}
@@ -116,12 +116,15 @@ body.cube-drag,body.cube-drag *{user-select:none!important;-webkit-user-select:n
 .scramble .m.rot{font-style:italic;border:1px dashed var(--line);background:transparent}
 .scramble .m.rot.cur{background:var(--accent);color:var(--accent-ink);border-style:solid;border-color:transparent}
 /* The face color of each move, as the move trail codes it (css/trail.css): a bar under the tile,
-   apart from the fill by a hair, so a yellow bar still shows under the current (yellow) tile. A thin
-   edge under the bar keeps white in view on the light page. Played moves keep a softer bar. */
-.scramble{row-gap:8px}
-.scramble .m.fc{background-clip:padding-box;box-shadow:0 4px 0 -1px var(--face),0 5px 0 -1px color-mix(in srgb,var(--text) 22%,transparent)}
-.scramble .m.fc.done{box-shadow:0 4px 0 -1px color-mix(in srgb,var(--face) 55%,transparent)}
-.scramble .m.c0{--face:var(--sticker-W)}.scramble .m.c1{--face:var(--sticker-R)}.scramble .m.c2{--face:var(--sticker-G)}
+   apart from the fill by a hair, so a yellow bar still shows under the current (yellow) tile. The
+   white bar has a gray ring all round (--sticker-W-edge), as a sticker sits in its frame: on the
+   light page white is no color at all without it. Played moves keep a softer bar. */
+.scramble{row-gap:9px}
+.scramble .mt{gap:7px}
+.scramble .m.fc{position:relative}
+.scramble .m.fc::after{content:"";position:absolute;left:0;right:0;bottom:-6px;height:3px;border-radius:2px;background:var(--face);box-shadow:0 0 0 1px var(--edge,transparent);pointer-events:none}
+.scramble .m.fc.done::after{background:color-mix(in srgb,var(--face) 55%,transparent)}
+.scramble .m.c0{--face:var(--sticker-W);--edge:var(--sticker-W-edge)}.scramble .m.c1{--face:var(--sticker-R)}.scramble .m.c2{--face:var(--sticker-G)}
 .scramble .m.c3{--face:var(--sticker-Y)}.scramble .m.c4{--face:var(--sticker-O)}.scramble .m.c5{--face:var(--sticker-B)}
 .scrub{display:flex;align-items:center;gap:6px;margin-top:8px}
 .scrub input[type=range]{flex:1;accent-color:var(--accent)}
