@@ -49,6 +49,8 @@ body.cube-drag,body.cube-drag *{user-select:none!important;-webkit-user-select:n
 /* One height, empty or full: the height of a row of moves (the number, the tile, the line and the label). The cube
    above takes the rest of the column, so a box that grew at the first move and shrank at Clear would bounce it. */
 .moves.trail{height:75px;min-height:0}
+/* "No moves yet" in the place of the first tile: its height, on its line, so the text and the tile do not jump. */
+.moves.trail .none{align-self:flex-end;display:flex;align-items:center;height:30px;margin-bottom:25px}
 .kbhelp{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;margin:0 16px 2px;color:var(--muted);font-size:13px}.kbhelp kbd{margin:0 2px 0 0;color:var(--text)}.kbhelp .mods{color:var(--faint)}
 kbd.gone{display:none}
 .status{margin:8px 16px 14px;color:var(--muted);font-size:14px;text-align:center;max-width:720px;min-height:22px}
