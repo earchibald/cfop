@@ -1,6 +1,6 @@
 /* The move trail (js/trail.js), on the Smart cube tab and in the lab: zones over one line, Now, Recent
-   and Earlier, the number of each move over it, the face color on Now and under Recent. The document
-   is oldest first; .rtl turns the row round, so Now sits on the left. The newest end stays in place
+   and Earlier, each tile one size, the number of each move over it, the face color on Now and under
+   Recent. The document is oldest first; .rtl turns the row round, so Now sits on the left. The newest end stays in place
    and the old end runs out of the box. Shared by index.html and lab/index.html, so it uses only the
    tokens both pages define. */
 .trail{display:flex;align-items:flex-end;justify-content:flex-end;gap:12px;min-height:62px;padding:4px 10px 2px;overflow:hidden;white-space:nowrap;font-family:var(--mono)}
@@ -13,15 +13,17 @@
 .trail .c0{--face:var(--sticker-W);--ink:#15161a}.trail .c1{--face:var(--sticker-R);--ink:#fff}.trail .c2{--face:var(--sticker-G);--ink:#15161a}
 .trail .c3{--face:var(--sticker-Y);--ink:#15161a}.trail .c4{--face:var(--sticker-O);--ink:#15161a}.trail .c5{--face:var(--sticker-B);--ink:#fff}
 .trail .num{font-size:10px;line-height:1;font-weight:500;color:var(--muted)}
-.trail .mv{box-sizing:border-box;min-width:28px;padding:2px 5px;text-align:center;border-radius:5px;font-size:15px;font-weight:500;line-height:1.3}
+/* Every tile is one size, Now too: the zones differ in fill and color only, so a move keeps its size
+   as it goes from Now to Recent to Earlier, and the row does not jump. */
+.trail .mv,.trail .more .tile{box-sizing:border-box;display:flex;align-items:center;justify-content:center;height:30px;min-width:30px;padding:0 5px;border:1px solid transparent;border-bottom-width:3px;border-radius:5px;font-size:15px;font-weight:500;line-height:1}
 .trail .mv.rot{font-style:italic}
-.trail .rec .mv{background:var(--panel2);border:1px solid var(--line);border-bottom:3px solid var(--face);color:var(--text)}
+.trail .rec .mv{background:var(--panel2);border-color:var(--line);border-bottom-color:var(--face);color:var(--text)}
 .trail .rec.rot .mv{border-style:dashed;color:var(--muted)}
-.trail .ear .mv{min-width:24px;padding:2px 3px;border-bottom:2px solid var(--line);border-radius:0;color:var(--muted);font-size:13px}
-.trail .now .num{font-size:11px;font-weight:700;color:var(--text)}
-.trail .now .mv{min-width:46px;padding:5px 10px;border:1px solid color-mix(in srgb,var(--text) 22%,transparent);border-radius:7px;background:var(--face);color:var(--ink);font-size:20px;font-weight:700}
-.trail .now.rot .mv{background:var(--panel2);border:2px dashed var(--muted);color:var(--text)}
-.trail .more .tile{padding:3px 7px;border:1px dashed var(--muted);border-radius:5px;font-family:var(--sans);font-size:12px;line-height:1.3;color:var(--muted);cursor:help}
+.trail .ear .mv{border-bottom-color:var(--line);color:var(--muted)}
+.trail .now .num{font-weight:700;color:var(--text)}
+.trail .now .mv{background:var(--face);border-color:color-mix(in srgb,var(--text) 22%,transparent);border-bottom-color:var(--face);color:var(--ink);font-weight:700}
+.trail .now.rot .mv{background:var(--panel2);border-color:var(--muted);border-style:dashed;color:var(--text)}
+.trail .more .tile{border:1px dashed var(--muted);font-family:var(--sans);font-size:12px;color:var(--muted);cursor:help}
 /* The line: a segment under each zone, brightest at Now; the hidden range dashed. The arrow sits on the
    old end of the oldest solid segment and points away from Now, to where the moves trail off. */
 .trail .seg{position:relative;height:2px;border-radius:1px;background:currentColor;color:var(--line)}
@@ -33,6 +35,7 @@
 .trail.rtl .arrow .seg::after{left:auto;right:-8px;border-right:0;border-left:9px solid currentColor}
 .trail .zl{min-height:11px;font-family:var(--sans);font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;line-height:1;color:var(--muted)}
 .trail .z-now .zl{color:var(--text)}
-@keyframes trailPop{from{transform:scale(1.25)}to{transform:none}}
-.trail .now.pop .mv{animation:trailPop .26s ease-out}
+/* A new move: Now lights up for a moment, with no change of size. */
+@keyframes trailPop{from{filter:brightness(1.6)}to{filter:none}}
+.trail .now.pop .mv{animation:trailPop .3s ease-out}
 @media (prefers-reduced-motion:reduce){.trail .now.pop .mv{animation:none}}
