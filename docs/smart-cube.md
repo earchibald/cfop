@@ -217,7 +217,7 @@ the callout. Before a cube connects the tab is a Connect card; when one
 connects in CFOP the page goes to the tab, so the live cube is there when the
 dialog closes. The live panel puts the picture large on the left, with the band
 and the turn buttons under it, and everything else beside it: the stage, the
-moves, then Reset view, Clear moves, Hidden faces and Listen with its line, so
+moves, then Reset view, Clear moves, Front view, Hidden faces and Listen with its line, so
 no control needs a scroll away from the cube. On the desktop the tab scrolls
 its section under the top bar, as the Reference does. The rail button carries
 the live dot (green; orange while the cube is held unlike the hold; gray while
@@ -278,6 +278,13 @@ Version 1.40.0 adds Lock, the hold row and a key and a voice command for Clear m
 | Lock | A button before Reset view. It shows while the tilt is live. It is on by default and kept in `cw:smartLock`. Locked, the picture stays on the hold and the tilt is not used: no band, no orange dot, and Reset view is off. Unlocked, the picture follows the tilt as before, and Reset view lines it up. The readings still come while it is locked, so Lock off takes the heading from the cube as it sits then (`cubeTabKeep`). `cubeTabLive()` is true only while the picture follows the tilt. |
 | Hold row | One row under the picture, above the turn buttons: Top with a tile for white and yellow, Front with a tile for green, orange, blue and red. The tiles of the hold are pressed. A tile sets the hold and turns the picture (`cubeTabSetHold`), and no turn goes on the list: the moves made so far keep their names. A top keeps the front where it can. A front keeps the top where it can, else white goes on top (`cubeTabHoldPick`, `cubeTabHoldNear`). The turn buttons stay for a turn in the middle of a solve, which the list must show. The voice hold ("top yellow, front green") still puts the turn on the list when the list has moves. |
 | Clear moves | The C key on the tab, while the live panel is in view (`cubeTabKeys`, asked by the page's key handler before the timer's C). The button carries the badge. By voice: "clear moves", "clear", "clear the list", "empty the list". It empties the list alone; "reset" also reads the stage again and lines up the picture. |
+
+Version 1.41.0 adds Front view.
+
+| Part | What |
+|---|---|
+| Front view | A button between Clear moves and Hidden faces, and the V key on the tab (`cubeTabKeys`). Off (the default), the camera looks from above and to the right, with three faces in view. On, it looks at the cube straight on, larger, so a cube on the hold shows the front face alone (`CUBE_TAB_CAMS`, `cubeTabSetFront`). Kept in `cw:smartFront`. The lab's Isometric box is the same choice. |
+| Hidden faces in Front view | Straight on, the faces turned away sit behind the cube or edge on, so the mirrors would show nothing. In Front view the picture draws them only while it follows the tilt (Lock off and a reading in, `cubeTabMirrors`); otherwise the Hidden faces button is off, and its tooltip says to turn Front view off. The site's `cw:hidden` setting does not change. |
 
 ## The lab
 
