@@ -54,7 +54,7 @@ function trailDraw(el,moves,o){
   for(const z of trailZones(moves,o.shown,o.colors,o.colorOf)){
     const zd=add(el,'zone z-'+z.zone+(z.arrow?' arrow':'')),row=add(zd,'zm');
     if(z.hid){
-      const r=add(row,'it more');r.title=`${N} moves in all. Moves 1 to ${z.hid} do not show.`;r.setAttribute('aria-label',`${z.hid} more`);
+      const r=add(row,'it more');r.title=`${N} moves in all`;r.setAttribute('aria-label',`${z.hid} more`);
       add(r,'num',' ');add(r,'tile',z.hid===1?'1':'1–'+z.hid);
     }
     for(const m of z.moves){

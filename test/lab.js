@@ -191,7 +191,7 @@ async function page(){
   assert.ok(await until(()=>L().target&&L().target.equals(c1)),'the picture heads for the cube after R');
   assert.ok(await until(()=>!L().anim&&L().shown.equals(c1)),'the layer turned');
   assert.strictEqual(L().moves.join(),'R','the move is on the list');assert.strictEqual($('#moves .mv').textContent,'R');
-  assert.ok($('#moves .mv').classList.contains('head'),'the one move is the head');
+  assert.ok($('#moves .mv').closest('.now'),'the one move is Now');
   // the box of its own: the count in the head, Clear moves, the triangle past ten moves
   assert.ok($('#movesBox')&&$('#movesBox').contains($('#moves'))&&$('#movesBox').contains($('#movesClear')),'the moves sit in a box with Clear moves');
   assert.strictEqual($('#movesCount').textContent,'1 move','the head counts the moves');assert.ok(!$('#movesClear').disabled,'Clear moves is on');
@@ -199,7 +199,7 @@ async function page(){
   for(let i=0;i<10;i++){cN=w.applyAlg(cN,[faces[i%6]]);set(cN);dev.notify(Uint8Array.from([0x01,...Array(19).fill(0)]));
     assert.ok(await until(()=>L().target&&L().target.equals(cN)),'move '+(i+2)+' is heard');}
   assert.ok(await until(()=>L().moves.length===11),'eleven moves: '+L().moves.join(' '));
-  assert.strictEqual($$('#moves .mv').length,10,'the last ten show');assert.strictEqual($$('#moves .mv.head').length,1,'one head move');assert.ok($$('#moves .mv')[9].classList.contains('head')&&$$('#moves .mv')[9].title==='Your last move','the newest move is the head');assert.strictEqual($$('#moves .mv')[0].textContent,'U','the first move fell off the readout');
+  assert.strictEqual($$('#moves .mv').length,10,'the last ten show');assert.strictEqual($$('#moves .now .mv').length,1,'one move is Now');assert.ok($$('#moves .mv')[9].closest('.now')&&$$('#moves .mv')[9].closest('.now').title==='Your last move: move 11','the newest move is Now');assert.strictEqual($$('#moves .mv')[0].textContent,'U','the first move fell off the readout');
   assert.ok($('#moves .more'),'the triangle says there are more');assert.strictEqual($('#moves .more').getAttribute('aria-label'),'1 more');assert.strictEqual($('#moves .more').title,'11 moves in all');
   assert.strictEqual($('#movesCount').textContent,'11 moves');
   // Clear last (Shift+C): the last move alone comes off; the button does the same; the log stays
@@ -608,7 +608,7 @@ async function page(){
   for(let i=0;i<9;i++){send(page(rawFor(target)));await sleep(45);}
   assert.ok($('#log .tmove'),'turn finish with a move is logged: '+$('#log').textContent);
   assert.ok(/turn finish: x, [89]\d\.\d° in \d+ ms, axis .* → x, \d+° off\. Hold: green up, yellow toward you\./.test($('#log .tmove').textContent),'the finish names the turn and the new hold: '+$('#log .tmove').textContent);
-  assert.strictEqual($('#holdUp').value+'/'+$('#holdFront').value,'2/3','the hold followed the turn');assert.strictEqual(L().moves.join(' '),'x','the turn is on the list');assert.ok($('#moves .mv.rot.head'),'dashed, and the head');
+  assert.strictEqual($('#holdUp').value+'/'+$('#holdFront').value,'2/3','the hold followed the turn');assert.strictEqual(L().moves.join(' '),'x','the turn is on the list');assert.ok($('#moves .now.rot .mv.rot'),'dashed, and Now');
   assert.strictEqual($$('#log .reset').length,1,'a detected turn is no Reset cube (the one reset is the key press above)');
   const n1=$('#log').children.length;for(let i=0;i<8;i++){send(page(rawFor(target)));await sleep(45);}assert.strictEqual($('#log').children.length,n1,'at rest: no more events');
   // a turn that comes back, and one that rests between holds, change nothing
