@@ -1239,8 +1239,8 @@ function labClear(){labMovesClear();$('#log').textContent='';}
 // A cube with no smart cube: the keys turn the cube on the screen. The Cube select in the bar picks
 // Smart cube or one of the layouts (cw:labKeys). Each layout puts six keys in a cross: the keys
 // for the left, up, right and down faces sit around the key for the front face, and the back
-// face's key sits up and to the right. The key alone turns its face counterclockwise (the letter
-// in lower case); Shift, or Caps Lock on a letter, turns it clockwise. Option (Alt) turns two
+// face's key sits up and to the right. The key alone turns its face clockwise (the letter in
+// lower case); Shift, or Caps Lock on a letter, turns it counterclockwise. Option (Alt) turns two
 // layers, with or without Shift. The keys are read by their place on the keyboard (e.code), so
 // Option, which types another character on a Mac, does not change them. The faces are named as
 // held: W turns the face on top in the hold of the bar. A two-layer turn is a face turn and a turn
@@ -1263,7 +1263,7 @@ function labKbChar(code){return code.startsWith('Key')?code.slice(3):{Comma:',',
 function labKeyMove(id,code,shift,alt,caps){
   const map=LAB_KEYMAPS[id];if(!map)return null;
   const i=map.codes.indexOf(code);if(i<0)return null;
-  const cw=!!shift!==(!!caps&&/^Key/.test(code)),f=LAB_KEY_FACES[i];
+  const cw=!!shift===(!!caps&&/^Key/.test(code)),f=LAB_KEY_FACES[i];
   return (alt?f.toLowerCase():f)+(cw?'':"'");
 }
 // A two-layer turn as held: the face turn of the far layer, and the whole-cube turn (r is L x).
@@ -1300,13 +1300,13 @@ function labKbFill(){
   sel.textContent='';opt('','Smart cube');for(const [id,m] of Object.entries(LAB_KEYMAPS))opt(id,'Keyboard '+m.name);
 }
 function labKbMac(){return /Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent||'');}
-function labKbStatus(){return `Keyboard cube. A key turns its face counterclockwise, Shift with the key clockwise. ${labKbMac()?'Option':'Alt'} with the key turns two layers.`;}
+function labKbStatus(){return `Keyboard cube. A key turns its face clockwise, Shift with the key counterclockwise. ${labKbMac()?'Option':'Alt'} with the key turns two layers.`;}
 // The line under the moves: the six keys of the layout and the face each one turns.
 function labKbHelp(){
   const el=$('#kbHelp'),map=LAB_KEYMAPS[lab.keys];el.hidden=!map;el.textContent='';if(!map)return;
   const words={U:'up',L:'left',F:'front',R:'right',D:'down',B:'back'};
   for(const f of ['U','L','F','R','D','B']){const s=document.createElement('span'),k=document.createElement('kbd');k.textContent=labKbChar(map.codes[LAB_KEY_FACES.indexOf(f)]);s.appendChild(k);s.appendChild(document.createTextNode(' '+words[f]));el.appendChild(s);}
-  const t=document.createElement('span');t.className='mods';t.textContent=`Shift: clockwise · ${labKbMac()?'Option':'Alt'}: two layers`;el.appendChild(t);
+  const t=document.createElement('span');t.className='mods';t.textContent=`Shift: counterclockwise · ${labKbMac()?'Option':'Alt'}: two layers`;el.appendChild(t);
 }
 // The badges of the lab's own keys that the layout takes are hidden while it is on.
 function labKbBadges(){
