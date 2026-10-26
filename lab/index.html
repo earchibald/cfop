@@ -64,6 +64,8 @@ aside section{margin-bottom:18px}
 aside .chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-bottom:6px}
 .log div.smack{color:var(--text)}.log div.series{color:var(--warn);font-weight:600}.log div.solved{color:var(--text)}
 .note{color:var(--muted);font-size:12.5px;margin:6px 0 0}
+.meter div.hit b{color:var(--accent)}.log div.click{color:var(--text)}
+.hear{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 2px;font-size:13px;color:var(--muted)}.hear button{padding:3px 9px;font-size:13px}
 .patwin{position:fixed;top:calc(var(--barh,52px) + 12px);left:16px;width:400px;max-height:calc(100% - 80px);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.5);z-index:6}
 .patwin .head{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
 .patwin.drag .head{cursor:grabbing}
@@ -200,6 +202,17 @@ body.cba .pt-tile{display:flex;align-items:center;justify-content:center}
     <label class="chk" title="Turn one face and turn it back, three times over. The lab then does Reset cube, as if R were pressed."><input type="checkbox" id="twistOn" checked> Reset cube after six twists of one face</label>
     <div class="knob"><label for="twistMs">after ms</label><input type="range" id="twistMs" min="0" max="1000" step="5"><output></output></div>
     <p class="note">R R' R R' R R', or U' U U' U U' U: six quarter turns of one face, each one undone by the next. They leave the cube, and the list, as they were. Another face, a half turn, or the same turn twice starts the count over. The lab waits the time set, then does Reset cube.</p>
+  </section>
+  <section>
+    <h2>Turn clicks</h2>
+    <label class="chk" title="Play a click for each quarter turn of a face: slow or fast, single or double"><input type="checkbox" id="clickOn" checked> Click on each turn</label>
+    <div class="meter" id="clickMeter" aria-label="Turns counted by kind"><div data-kind="slow">slow<b>0</b></div><div data-kind="fast">fast<b>0</b></div><div data-kind="slow2">slow ×2<b>0</b></div><div data-kind="fast2">fast ×2<b>0</b></div></div>
+    <div class="knob cknob"><label for="cSlow">slow ms</label><input type="range" id="cSlow" data-k="slow" min="50" max="1000" step="10" title="A quarter turn this long or longer after the turn before it is slow. A sooner one is fast."><output></output></div>
+    <div class="knob cknob"><label for="cWithin">double ms</label><input type="range" id="cWithin" data-k="within" min="50" max="1500" step="10" title="The same quarter turn again within this time is the second half of a double turn."><output></output></div>
+    <div class="knob cknob"><label for="cDslow">slow ×2 ms</label><input type="range" id="cDslow" data-k="dslow" min="20" max="800" step="5" title="A double turn whose two halves are this far apart or more is slow. A sooner one is fast."><output></output></div>
+    <div class="knob cknob"><label for="cVol">volume</label><input type="range" id="cVol" data-k="vol" min="0" max="1" step="0.05" title="The loudness of the clicks"><output></output></div>
+    <div class="hear" id="clickHear">Hear<button data-kind="slow" title="Play the slow turn click">Slow</button><button data-kind="fast" title="Play the fast turn click">Fast</button><button data-kind="slow2" title="Play the slow double turn click">Slow ×2</button><button data-kind="fast2" title="Play the fast double turn click">Fast ×2</button></div>
+    <p class="note">The cube reports a quarter turn when it is made, not as it starts. So the speed of a turn is the time since the turn before it, on any face, by the cube's own clock. The first half of a double turn clicks as a single; the double sound follows it on the second half. R R R is a single after the double. <span id="clickSound"></span></p>
   </section>
   <section>
     <h2>Smack tuning</h2>

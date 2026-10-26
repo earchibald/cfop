@@ -169,3 +169,33 @@ function twistDetector(opts){
   }
   return {feed,reset,state:st,opts:o,set(k,v){o[k]=v;}};
 }
+// Experiment 5: a click for each quarter turn, by its speed and its motion. The cube reports a
+// quarter turn when it is made, with the time by its own clock; it does not report a turn as it
+// starts. So the speed of a turn is the gap since the turn before it, on any face. Fed each quarter
+// turn ("R", "R'") and that gap in ms (null for the first one):
+//   slow   a quarter turn `slow` ms or more after the one before, or the first
+//   fast   a quarter turn sooner than that
+//   slow2  the same quarter turn again within `within` ms, the second half of a double turn,
+//          `dslow` ms or more after the first half
+//   fast2  the second half of a double turn, sooner than `dslow`
+// The first half of a double has already clicked as a single when the second half comes, so the
+// double sound follows it. A third same quarter turn is a single again (R R R is R', not a double).
+// R then R' is no double: each is a single. Returns {kind, ms}, or null for a move that is not a
+// quarter turn.
+const CLICK_DEFAULTS={slow:300,dslow:150,within:500};
+const CLICK_KINDS={slow:'slow turn',fast:'fast turn',slow2:'slow double',fast2:'fast double'};
+function clickClassifier(opts){
+  const o=Object.assign({},CLICK_DEFAULTS,opts);
+  const st={last:null,half:false,counts:{slow:0,fast:0,slow2:0,fast2:0}};
+  function reset(){st.last=null;st.half=false;}
+  function feed(m,ms){
+    if(!/^[URFDLB]'?$/.test(m||''))return null;
+    const gap=ms==null||!isFinite(ms)||ms<0?null:ms;
+    let kind;
+    if(gap!=null&&st.last===m&&!st.half&&gap<o.within){kind=gap<o.dslow?'fast2':'slow2';st.half=true;}
+    else{kind=gap==null||gap>=o.slow?'slow':'fast';st.half=false;}
+    st.last=m;st.counts[kind]++;
+    return {kind,ms:gap};
+  }
+  return {feed,reset,state:st,opts:o,set(k,v){o[k]=v;}};
+}

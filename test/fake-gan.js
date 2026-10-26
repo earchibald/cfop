@@ -29,6 +29,16 @@ function gyroMsg(gen,q){const w=writer(20),at=gen===2?4:16;if(gen===2)w.put(0,4,
 function batteryMsg(gen,level){const w=writer(gen===3?16:20);
   if(gen===2){w.put(0,4,9);w.put(8,8,level);}if(gen===3){w.put(0,8,0x55);w.put(8,8,0x10);w.put(16,8,1);w.put(24,8,level);}
   if(gen===4){w.put(0,8,0xEF);w.put(8,8,1);w.put(16,8,level);}return w.bytes();}
+// A move message. moves: the quarter turns, newest first ("R", "U'"), each with `elapsed`, the ms
+// since the move before (gen 2 keeps seven). serial: the cube's count. ts: the cube's clock in ms
+// (gen 3 and 4). Gen 2 numbers the face URFDLB; gen 3 and 4 set one bit of six.
+function moveMsg(gen,{moves,serial,ts}){
+  const w=writer(gen===3?16:20),face=m=>'URFDLB'.indexOf(m[0]),dir=m=>m.endsWith("'")?1:0,bit=m=>[2,32,8,1,16,4][face(m)];
+  if(gen===2){w.put(0,4,2);w.put(4,8,serial&0xff);moves.slice(0,7).forEach((x,i)=>{w.put(12+5*i,4,face(x.move));w.put(16+5*i,1,dir(x.move));w.put(47+16*i,16,x.elapsed||0);});}
+  if(gen===3){const m=moves[0].move;w.put(0,8,0x55);w.put(8,8,0x01);w.put(16,8,9);w.put(24,32,ts,true);w.put(56,16,serial,true);w.put(72,2,dir(m));w.put(74,6,bit(m));}
+  if(gen===4){const m=moves[0].move;w.put(0,8,0x01);w.put(8,8,10);w.put(16,32,ts,true);w.put(48,16,serial,true);w.put(64,2,dir(m));w.put(66,6,bit(m));}
+  return w.bytes();
+}
 // A device for navigator.bluetooth. cube: {cp,co,ep,eo}, changed by the test as it likes.
 // opts.mfData: the advertisement's manufacturer data; opts.silent: never answer; opts.chatter:
 // send a battery message every 10 ms, as a real cube sends messages nobody asked for.
@@ -55,4 +65,4 @@ function fakeDevice(gen,mac,cube,opts={}){
 }
 // Manufacturer data as a GAN cube sends it: nine bytes, the MAC address reversed at the end.
 function mfDataFor(mac,cic){const b=new Uint8Array(9);b.set([0x12,0x34,0x56]);mac.split(':').map(x=>parseInt(x,16)).reverse().forEach((x,i)=>b[3+i]=x);return new Map([[cic||0x0501,new DataView(b.buffer)]]);}
-module.exports={encrypt,decrypt,stateMsg,batteryMsg,gyroMsg,fakeDevice,mfDataFor,UUID};
+module.exports={encrypt,decrypt,stateMsg,batteryMsg,gyroMsg,moveMsg,fakeDevice,mfDataFor,UUID};
