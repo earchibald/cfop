@@ -819,11 +819,7 @@ nav.rail button.warn .dot{background:var(--warn);box-shadow:0 0 0 0 color-mix(in
 .cubewin #cubeWinSvg{width:100%;height:auto;max-height:min(72vh,680px);display:block;background:var(--cube-bg);border-radius:var(--rb)}
 .cubewin .cw-aside{display:flex;flex-direction:column;gap:10px;min-width:0}
 .cubewin .cw-note{font-size:13px;margin:0}
-.cubewin .cw-moves{display:flex;align-items:center;gap:5px;min-height:26px;font-family:var(--mono);font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden}
-.cubewin .cw-moves .mv{flex:none;min-width:26px;padding:2px 4px;text-align:center;border:1px solid var(--line);border-radius:5px;background:var(--panel2)}
-.cubewin .cw-moves .none{color:var(--muted);font-family:inherit;font-weight:400}
-.cubewin .cw-moves .more{flex:none;display:inline-flex;width:8px;height:10px;margin-left:2px;color:var(--muted)}
-.cubewin .cw-moves .more svg{width:8px;height:10px;display:block;fill:currentColor}
+.cubewin .cw-moves{margin:0 -10px} /* the trail (css/trail.css); its padding leaves room for the arrow */
 .cubewin .cw-row{display:flex;align-items:flex-start;gap:8px}
 .cubewin .cw-side{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .cubewin .cw-side .small[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--panel))}

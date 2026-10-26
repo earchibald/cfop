@@ -252,7 +252,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.strictEqual(readout(),want.slice(-10).join(' '),'the last ten show: '+readout());
   const more=$('#cubeWinMoves .more');assert.ok(more,'the triangle says there are more');
   assert.strictEqual(more.getAttribute('aria-label'),'1 more');assert.strictEqual(more.title,'11 moves in all');
-  assert.ok(more.querySelector('svg polygon'),'a plain triangle');assert.ok(!more.onclick,'nothing happens on a click yet');
+  assert.strictEqual(more.textContent.trim(),'1','the hidden move as a range');assert.ok($('#cubeWinMoves .z-now .mv'),'the last move in the Now zone');assert.ok(!more.onclick,'nothing happens on a click yet');
   // ----- another tab: the turns stop and the picture lands; the moves still count -----
   w.goTab('solve');assert.strictEqual(ev('curTab'),'solve');assert.ok(!ev('cubeTabShown()'));
   cc=w.applyAlg(cc,['B']);set(cc);dev.notify(mv);
