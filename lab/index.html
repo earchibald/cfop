@@ -46,6 +46,8 @@ body.cube-drag,body.cube-drag *{user-select:none!important;-webkit-user-select:n
 .movebox .head .count{font-family:var(--mono);font-size:12px}.movebox .head .grow{flex:1}
 .movebox .head button{padding:3px 9px;font-size:12.5px}
 .moves{margin:0 -10px} /* the trail (../css/trail.css) */
+.kbhelp{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;margin:0 16px 2px;color:var(--muted);font-size:13px}.kbhelp kbd{margin:0 2px 0 0;color:var(--text)}.kbhelp .mods{color:var(--faint)}
+kbd.gone{display:none}
 .status{margin:8px 16px 14px;color:var(--muted);font-size:14px;text-align:center;max-width:720px;min-height:22px}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin:0 16px 12px}
 .row p{width:100%;margin:0;text-align:center;color:var(--muted);font-size:13px}
@@ -161,13 +163,14 @@ body.cba .pt-tile{display:flex;align-items:center;justify-content:center}
   <span class="mac" id="macShow" hidden title="The MAC address of the cube. The GAN cipher takes it as its salt."><code id="macText"></code><button class="ghost" id="macCopy" title="Copy the MAC address" aria-label="Copy the MAC address"><svg class="pages" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg><svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></span>
   <button class="primary" id="connect">Connect</button>
   <button id="disconnect" hidden>Disconnect</button>
+  <label title="Smart cube, or turn the cube on the screen with the keyboard. A layout puts six keys in a cross: left, up, right and down around the front key, and back up to the right of it. The key alone turns counterclockwise, Shift clockwise, Option (Alt) two layers.">Cube <select id="keysSel" aria-label="Smart cube or a keyboard layout"></select></label>
   <span class="hold" id="hold" title="How you hold the cube. The moves read this way, and Reset cube takes the cube as held like this.">I hold it <select id="holdUp" aria-label="The color on top"></select> up, <select id="holdFront" aria-label="The color toward you"></select> toward me</span>
   <label title="Watch the tilt for a turn of the whole cube in your hands: a turn that rests near another hold goes on the list and moves the hold. Off when you keep one face toward you, so a tip to look at a slot moves nothing."><input type="checkbox" id="turnOn"> Turn with the tilt</label>
   <button id="reset" disabled title="Hold the cube white up, green toward you, then press. The picture takes that as its facing.">Reset cube<kbd>R</kbd></button>
   <label title="Yaw only keeps the tilt gravity gives. Full takes the whole reading as square."><input type="checkbox" id="full"> Full reset</label>
   <label title="Look at the cube from a little to the right and above, so three faces show. Off: straight on, as the cube sits in space."><input type="checkbox" id="iso"> Isometric<kbd>I</kbd></label>
   <label title="Show the hidden faces: the faces turned away from you, as in a mirror behind the cube. Best with Isometric on: straight on, the back face sits behind the front."><input type="checkbox" id="hiddenFaces"> Hidden faces<kbd>H</kbd></label>
-  <button id="solved" disabled title="The cube counts its own turns and can lose count. Solve your cube, then press: the cube takes its state as solved.">My cube is solved<kbd>S</kbd></button>
+  <button id="solved" disabled title="The cube counts its own turns and can lose count. Solve your cube, then press: the cube takes its state as solved."><span id="solvedText">My cube is solved</span><kbd>S</kbd></button>
   <button id="scan" disabled title="Ask the cube for its state, as the lab does when it connects. The picture jumps there: no moves are added.">Scan my cube</button>
   <button id="paint" disabled title="Paint the colors of your cube by hand, as it is. The picture then follows your cube from that state.">Paint my cube</button>
   <button id="copyState" disabled title="Copy the state of the cube as 54 letters, face by face. Paste it on the site, or into its Enter a scramble dialog, to load the cube there.">Copy state</button>
@@ -184,6 +187,7 @@ body.cba .pt-tile{display:flex;align-items:center;justify-content:center}
     <div class="head"><b>Moves</b><span class="count" id="movesCount"></span><span class="grow"></span><button class="ghost" id="movesLast" title="Take the last move off the list. The cube and the rest of the list stay as they are." disabled>Clear last<kbd>⇧C</kbd></button><button class="ghost" id="movesClear" title="Empty the list of moves" disabled>Clear moves</button></div>
     <div class="moves" id="moves" aria-label="Your last moves"></div>
   </section>
+  <p class="kbhelp" id="kbHelp" hidden aria-label="The keys of the layout"></p>
   <p class="status" id="status" role="status"></p>
   <div class="row" id="list" hidden><p id="listNote"></p><span id="listItems"></span><button class="ghost" id="listCancel">Cancel</button></div>
   <div class="row" id="macRow" hidden><p>This browser cannot read the cube's address. Type it.</p><input type="text" id="mac" placeholder="AB:12:34:56:78:9A" spellcheck="false" autocomplete="off" size="20"><button class="primary" id="macGo">Use this address</button></div>

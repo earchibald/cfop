@@ -106,7 +106,7 @@
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,patOpen:{},
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,hidden:false,view:{yaw:0,pitch:0},drag:null,
-  battLogged:null,holdSrc:'load',busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,f2l:null,f2lPos:null,winTop:'pat',copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false,
+  battLogged:null,keys:'',holdSrc:'load',busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,f2l:null,f2lPos:null,winTop:'pat',copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false,
   fat:null,fatQ:[],fatV:new Map(),fatAts:[],askAt:0,fatRecs:[],fatTruth:'any',fatLast:null,fatRaf:0};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200,LAB_CROSS_MAX=7,LAB_SOLS_SHOWN=3;
 const LAB_PAT_STEPS={eo:'OLL edges',co:'OLL corners',cp:'PLL corners',ep:'PLL edges'};
@@ -118,8 +118,11 @@ function labButtons(){
   const on=!!lab.conn;
   $('#connect').hidden=on;$('#disconnect').hidden=!on;
   $('#connect').disabled=lab.busy||!ganAvailable();
-  $('#reset').disabled=!on;$('#solved').disabled=!on||lab.busy;
-  $('#scan').disabled=!on||lab.busy;$('#paint').disabled=!on||lab.busy||typeof openPaint!=='function';
+  $('#reset').disabled=!on;$('#solved').disabled=!(on||lab.keys)||lab.busy;
+  $('#scan').disabled=!on||lab.busy;$('#paint').disabled=!(on||lab.keys)||lab.busy||typeof openPaint!=='function';
+  $('#solvedText').textContent=lab.keys?'Solved':'My cube is solved';
+  $('#solved').title=lab.keys?'Put the cube on the screen back to solved. No moves are added.':'The cube counts its own turns and can lose count. Solve your cube, then press: the cube takes its state as solved.';
+  $('#paint').title=lab.keys?'Paint the colors of your cube by hand, as it is. The keys then turn the cube from that state.':'Paint the colors of your cube by hand, as it is. The picture then follows your cube from that state.';
   $('#name').textContent=on?lab.conn.name:'';
   labBatteryDraw($('#batt'),on?lab.conn.battery:null);
   $('#macShow').hidden=!(on&&lab.conn.mac);$('#macText').textContent=on&&lab.conn.mac?lab.conn.mac:'';
@@ -185,7 +188,7 @@ function labVersion(){
 function labDraw(){
   const cam=lab.iso?LAB_ISO:LAB_FLAT,svg=$('#cube'),a=lab.anim,o={n:3,scale:lab.hidden?46:60,cx:200,cy:185,yaw:cam.yaw+lab.view.yaw,pitch:Math.max(-80,Math.min(80,cam.pitch+lab.view.pitch))};
   if(lab.hidden)o.hidden=true;
-  o.rot=quatMat(lab.q||lab.hold.q);
+  o.rot=quatMat(lab.q||(a&&a.t<1&&a.hold||lab.hold).q); // a keyed move turns in the hold it was made in
   if(a&&a.t<1)svg.innerHTML=renderCube3D(a.from.toFacelets(),Object.assign(o,{move:a.move,t:Math.max(a.t,0.01)}));
   else{const f=lab.shown?lab.shown.toFacelets():Array.from({length:54},(_,i)=>i%9===4?(i-4)/9:-1);svg.innerHTML=renderCube3D(f,o);}
   $('#copyState').disabled=!(lab.target||lab.shown);
@@ -344,15 +347,19 @@ function labHoldPick(){
 // A select keeps the focus after a choice, and then a key goes to it (R picks red) and not to the
 // page. Let it go.
 function labBlur(){const a=document.activeElement;if(a&&a!==document.body&&a.blur)a.blur();}
+// The hold is h now: kept, and shown in the bar. Nothing goes on the list.
+function labHoldKeep(h,src){
+  lab.hold=h;lab.holdSrc=src;
+  try{localStorage.setItem('cw:labHold',JSON.stringify({up:h.cube.center[0],front:h.cube.center[2]}));}catch(e){}
+  labHoldFill();
+  $('#reset').title=`Hold the cube ${labHoldWords(h)}, then press. The picture takes that as its facing.`;
+}
 // Set the hold. From the user: the turn from the old hold to the new goes on the list, so the
 // moves before it still read right, the log says so, and the cube as held now is the reference
 // pose (Reset cube) when there is a tilt reading. From a detected turn: the turn goes on the list
 // and comes back as words; the picture already shows the cube as held, so no Reset cube.
 function labSetHold(h,src){
-  const old=lab.hold;lab.hold=h;lab.holdSrc=src;
-  try{localStorage.setItem('cw:labHold',JSON.stringify({up:h.cube.center[0],front:h.cube.center[2]}));}catch(e){}
-  labHoldFill();
-  $('#reset').title=`Hold the cube ${labHoldWords(h)}, then press. The picture takes that as its facing.`;
+  const old=lab.hold;labHoldKeep(h,src);
   if(src==='load')return '';
   let turn='';
   if(old&&old!==h&&src!=='fat'){const d=LAB_HOLD_BY.get(old.cube.inverse().mul(h.cube).center.join());if(d){for(const m of d.moves)labAdd(m);turn=d.moves.join(' ');}labMovesDraw();}
@@ -383,11 +390,11 @@ function labShow(cube,askedAt){
 }
 function labDur(move,n){return Math.max(90,Math.round((move.endsWith('2')?360:260)*[1,0.65,0.5][Math.min(n,2)]*(n>2?0.8:1)));}
 function labNext(){
-  const m=lab.queue.shift();
-  if(!m){lab.raf=0;lab.anim=null;labDraw();return;}
-  const from=lab.shown;lab.shown=applyAlg(from,[m]);
+  const it=lab.queue.shift();
+  if(!it){lab.raf=0;lab.anim=null;labDraw();return;}
+  const m=typeof it==='string'?it:it.move,from=lab.shown;lab.shown=typeof it==='string'?applyAlg(from,[m]):it.after;
   const dur=labDur(m,lab.queue.length),t0=performance.now();
-  lab.anim={from,move:m,t:0};
+  lab.anim={from,move:m,t:0,hold:typeof it==='string'?null:it.hold};
   const step=()=>{const x=Math.min(1,(performance.now()-t0)/dur);lab.anim.t=x<1?0.5-0.5*Math.cos(Math.PI*x):1;
     if(x>=1){labNext();return;}
     labDraw();lab.raf=requestAnimationFrame(step);};
@@ -401,6 +408,7 @@ function labJump(cube){labStopAnim();lab.shown=lab.target=cube;lab.goal=null;lab
 // My cube is solved: the reset command, then the state read again. The cube's count was off, so
 // the moves between the old picture and solved are not turns; the picture jumps.
 async function labSolved(){
+  if(lab.keys&&!lab.busy){labJump(new Cube());labF2LReset();labLog('solved','The keyboard cube is solved again.');labStatus(labKbStatus());return;}
   if(!lab.conn||lab.busy)return;
   const conn=lab.conn;lab.busy=true;labButtons();
   try{
@@ -434,6 +442,14 @@ async function labRead(){
 // back is the real state, and the picture jumps to it. The state the cube reports is not the real
 // one, so the moves between the two are not turns: nothing goes on the list.
 function labPaint(){
+  if(lab.keys&&!lab.busy&&typeof openPaint==='function'){
+    lab.busy=true;labButtons();
+    labStatus('Paint the colors of your cube as it is, yellow up and green toward you.');
+    openPaint({go:'Use this cube',
+      onCube:cube=>{lab.busy=false;lab.jump=true;labShow(cube);labButtons();labLog('fix','The keyboard cube is set from the colors painted: '+labFaceletText(cube)+(cube.isSolved()?' (solved)':''));labStatus('The picture now shows your cube as painted. '+labKbStatus());},
+      onClose:()=>{lab.busy=false;labButtons();labStatus(labKbStatus());}});
+    return;
+  }
   if(!lab.conn||lab.busy)return;
   const conn=lab.conn,name=conn.name;
   if(typeof openPaint!=='function')return;
@@ -690,7 +706,7 @@ function labF2LRead(cube){
   const hold=labF2LHold(),held=labHeldIn(cube,hold),X=reframe(held),hk=held.center.join(),X0=f.X;
   f.held=held;f.X=X;
   if(hold===lab.hold){if(f.step||crossSolved(X))f.hold=hold;}
-  else if(f.noted!==lab.hold){f.noted=lab.hold;labLog('f2l',`F2L guide: the tilt moved the hold to ${labHoldWords(lab.hold)}. The guide keeps the ${LAB_COLORS[held.center[3]]} cross on the bottom and reads as held ${labHoldWords(hold)}.`);}
+  else if(f.noted!==lab.hold){f.noted=lab.hold;labLog('f2l',`F2L guide: ${lab.keys?"a two-layer turn":"the tilt"} moved the hold to ${labHoldWords(lab.hold)}. The guide keeps the ${LAB_COLORS[held.center[3]]} cross on the bottom and reads as held ${labHoldWords(hold)}.`);}
   // A new hold renames the places: the pairs solved now are the solved list, and the step starts over.
   if(f.holdKey!==hk){if(f.holdKey!=null){f.done=f2lStatus(X,[]).solved;f.target=null;f.step=null;f.cross=null;f.at=lab.moves.length;f.broke='';}f.holdKey=hk;}
   const s=f.step;let n=-1;
@@ -1202,6 +1218,8 @@ function labKeys(e){
   if(lab.confirmOpen){if(e.key==='Escape'){e.preventDefault();labConfirmEnd(false);}if(e.key==='Enter'){e.preventDefault();labConfirmEnd(true);}return;}
   if(e.key==='Escape'){const open=['pat','f2l'].filter(id=>!$('#'+id).hidden);
     if(open.length){e.preventDefault();const id=open.includes(lab.winTop)?lab.winTop:open[0];if(id==='pat')labPatShow(false);else labF2LShow(false);return;}}
+  if(lab.keys&&!e.metaKey&&!e.ctrlKey){const m=labKeyMove(lab.keys,e.code,e.shiftKey,e.altKey,!!(e.getModifierState&&e.getModifierState('CapsLock')));
+    if(m){e.preventDefault();if(!e.repeat&&!lab.busy)labKeyTurn(m);return;}} // the layout's keys turn faces before any other key
   if(e.metaKey||e.ctrlKey||e.altKey)return;
   const k=e.key.toLowerCase();
   if(k==='p'){e.preventDefault();labPatShow($('#pat').hidden);}
@@ -1217,6 +1235,102 @@ function labKeys(e){
 // Clear all (C): the moves and the log. Clear moves in the box empties the moves alone, and Clear
 // last (Shift+C) takes the last move off.
 function labClear(){labMovesClear();$('#log').textContent='';}
+// ----- the keyboard cube -----
+// A cube with no smart cube: the keys turn the cube on the screen. The Cube select in the bar picks
+// Smart cube or one of the layouts (cw:labKeys). Each layout puts six keys in a cross: the keys
+// for the left, up, right and down faces sit around the key for the front face, and the back
+// face's key sits up and to the right. The key alone turns its face counterclockwise (the letter
+// in lower case); Shift, or Caps Lock on a letter, turns it clockwise. Option (Alt) turns two
+// layers, with or without Shift. The keys are read by their place on the keyboard (e.code), so
+// Option, which types another character on a Mac, does not change them. The faces are named as
+// held: W turns the face on top in the hold of the bar. A two-layer turn is a face turn and a turn
+// of the whole cube (r is L x), so the state keeps its centers home, as a smart cube reports it,
+// and the hold moves on, as a whole-cube turn the tilt finds moves it. The picture turns the two
+// layers in the old hold, then shows the new hold. With LAB_KEY_QUEUE turns still to show, a new
+// key skips them: the picture keeps up with fast keys. While a layout is on, the lab looks for no
+// smart cube, and Connect goes back to the smart cube. The layout's keys come before the lab's
+// own keys (S is My cube is solved with a smart cube), and the bar hides the badges they take.
+const LAB_KEY_FACES=['L','U','R','D','F','B'],LAB_KEY_QUEUE=3;
+const LAB_KEYMAPS={
+  awdx:{name:'A W D X · S E',codes:['KeyA','KeyW','KeyD','KeyX','KeyS','KeyE']},
+  sefc:{name:'S E F C · D R',codes:['KeyS','KeyE','KeyF','KeyC','KeyD','KeyR']},
+  jil:{name:'J I L , · K O',codes:['KeyJ','KeyI','KeyL','Comma','KeyK','KeyO']},
+  kol:{name:'K O ; . · L P',codes:['KeyK','KeyO','Semicolon','Period','KeyL','KeyP']}};
+const LAB_WIDE={r:['L','x'],l:['R',"x'"],u:['D','y'],d:['U',"y'"],f:['B','z'],b:['F',"z'"]};
+function labKbChar(code){return code.startsWith('Key')?code.slice(3):{Comma:',',Semicolon:';',Period:'.'}[code]||code;}
+// The move a key makes in the layout `id`, as held ("R", "R'", "r", "r'"), or null for a key that
+// makes none. Caps Lock counts on a letter only, as it types a capital only there.
+function labKeyMove(id,code,shift,alt,caps){
+  const map=LAB_KEYMAPS[id];if(!map)return null;
+  const i=map.codes.indexOf(code);if(i<0)return null;
+  const cw=!!shift!==(!!caps&&/^Key/.test(code)),f=LAB_KEY_FACES[i];
+  return (alt?f.toLowerCase():f)+(cw?'':"'");
+}
+// A two-layer turn as held: the face turn of the far layer, and the whole-cube turn (r is L x).
+function labWideParts(m){
+  const w=LAB_WIDE[m[0]],s=m.slice(1),inv=t=>t.endsWith("'")?t[0]:t+"'";
+  if(s==='2')return [w[0]+'2',w[1][0]+'2'];
+  return s==="'"?[w[0]+"'",inv(w[1])]:w.slice();
+}
+// A move as held, named as the cube names it (its white face is U): the inverse of labRelabel. A
+// two-layer turn keeps its lower case.
+function labUnlabel(m,h){
+  const i=FACE_NAMES.indexOf(m[0].toUpperCase());if(i<0||!h)return m;
+  const c=FACE_NAMES[h.cube.center[i]];
+  return (m[0]===m[0].toUpperCase()?c:c.toLowerCase())+m.slice(1);
+}
+// A key's move: the state turns at once (the readers see it now), the picture turns the layers in a
+// queue, and the move goes on the list as typed.
+function labKeyTurn(m){
+  const h=lab.hold,from=lab.target||lab.shown||new Cube();
+  let face=m,next=h;
+  if(/^[urfdlb]/.test(m)){const p=labWideParts(m);face=p[0];next=LAB_HOLD_BY.get(applyAlg(h.cube,[p[1]]).center.join())||h;}
+  const to=applyAlg(from,[labUnlabel(face,h)]);
+  if(lab.queue.length>=LAB_KEY_QUEUE)labStopAnim(); // keys faster than the turns: the picture skips to now
+  if(!lab.shown)lab.shown=from;
+  lab.target=to;lab.queue.push({move:labUnlabel(m,h),hold:h,after:to});
+  if(next!==h)labHoldKeep(next,'turn'); // as a turn the tilt finds: the F2L guide keeps its cross down
+  labAdd(m);labMovesDraw();
+  labPatRead(to);labF2LRead(to);
+  if(!lab.anim)labNext();
+}
+function labKbLoad(){try{return localStorage.getItem('cw:labKeys')||'';}catch(e){return '';}}
+function labKbFill(){
+  const sel=$('#keysSel'),opt=(v,t)=>{const o=document.createElement('option');o.value=v;o.textContent=t;sel.appendChild(o);};
+  sel.textContent='';opt('','Smart cube');for(const [id,m] of Object.entries(LAB_KEYMAPS))opt(id,'Keyboard '+m.name);
+}
+function labKbMac(){return /Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent||'');}
+function labKbStatus(){return `Keyboard cube. A key turns its face counterclockwise, Shift with the key clockwise. ${labKbMac()?'Option':'Alt'} with the key turns two layers.`;}
+// The line under the moves: the six keys of the layout and the face each one turns.
+function labKbHelp(){
+  const el=$('#kbHelp'),map=LAB_KEYMAPS[lab.keys];el.hidden=!map;el.textContent='';if(!map)return;
+  const words={U:'up',L:'left',F:'front',R:'right',D:'down',B:'back'};
+  for(const f of ['U','L','F','R','D','B']){const s=document.createElement('span'),k=document.createElement('kbd');k.textContent=labKbChar(map.codes[LAB_KEY_FACES.indexOf(f)]);s.appendChild(k);s.appendChild(document.createTextNode(' '+words[f]));el.appendChild(s);}
+  const t=document.createElement('span');t.className='mods';t.textContent=`Shift: clockwise · ${labKbMac()?'Option':'Alt'}: two layers`;el.appendChild(t);
+}
+// The badges of the lab's own keys that the layout takes are hidden while it is on.
+function labKbBadges(){
+  const ks=lab.keys?LAB_KEYMAPS[lab.keys].codes.map(labKbChar):[];
+  for(const k of $$('.bar kbd,.movebox kbd,.patwin kbd'))k.classList.toggle('gone',ks.includes(k.textContent.replace('⇧','').trim().toUpperCase()));
+}
+// Smart cube ('') or a layout. A layout stops the look for a cube and drops the link; the cube on the
+// screen starts from the state the picture shows, or solved.
+function labKeysSet(id,src){
+  id=LAB_KEYMAPS[id]?id:'';const was=lab.keys;lab.keys=id;$('#keysSel').value=id;
+  try{localStorage.setItem('cw:labKeys',id);}catch(e){}
+  document.body.classList.toggle('kb',!!id);
+  labKbBadges();labKbHelp();
+  if(id&&!was){
+    lab.pickSeq++;if(lab.listEnd)lab.listEnd(null);
+    if(lab.conn)labDisconnect();
+    labStopView();lab.q=lab.qTo=null; // no tilt: the picture sits on the hold
+    if(!lab.target)lab.shown=lab.target=new Cube();
+    labDraw();
+  }
+  if(src!=='load'&&id!==was)labLog('link',id?'Keyboard cube: '+LAB_KEYMAPS[id].name+'.':'Smart cube.');
+  if(id)labStatus(labKbStatus());else if(was)labStatus('Press Connect to connect a smart cube.');
+  labButtons();labBlur();
+}
 // ----- the cubes this browser knows -----
 // cw:labCubes, by name: the address, the id the link gave, and when it last connected. A cube in
 // it connects by itself when the lab opens, and again when the link drops.
@@ -1306,12 +1420,15 @@ async function labPickKnown(known){
 // while a look runs ends that look and starts the chooser.
 async function labConnect(auto){
   auto=auto===true;
+  if(auto&&lab.keys)return; // the keyboard cube: no look for a smart cube
+  if(!auto&&lab.keys)labKeysSet('');
   if(lab.busy||lab.conn||!ganAvailable())return;
   if(lab.listEnd)lab.listEnd(null);
   const seq=++lab.pickSeq;
   let device;
   try{device=await labPick(auto?labKnown():null);}
   catch(e){if(seq===lab.pickSeq)labStatus(e.name==='NotFoundError'?(auto?'Press Connect to look for your cube again.':'No cube was chosen. Turn the cube to wake it up, then press Connect again.'):e.message);return;}
+  if(lab.keys)return; // the keyboard cube was chosen during the look
   if(!device){labStatus('Press Connect, then choose your cube in the list that the browser shows.');return;}
   const name=device.name||'GAN cube';
   lab.busy=true;labButtons();
@@ -1362,6 +1479,7 @@ function labStart(){
   labSetHold(labHoldLoad(),'load');$('#holdUp').onchange=labHoldPick;$('#holdFront').onchange=labHoldPick;
   lab.iso=labIsoLoad();$('#iso').checked=lab.iso;$('#iso').onchange=e=>labIso(e.target.checked);
   lab.hidden=labHiddenLoad();$('#hiddenFaces').checked=lab.hidden;$('#hiddenFaces').onchange=e=>labHidden(e.target.checked);labViewDrag();
+  labKbFill();$('#keysSel').onchange=e=>{labKeysSet(e.target.value);if(!lab.keys)labConnect(true);};labKeysSet(labKbLoad(),'load');
   $('#turnOn').checked=labTurnLoad();$('#turnOn').onchange=e=>labTurnOn(e.target.checked);
   labKnobs();labMovesDraw();labDraw();labButtons();
   $('#connect').onclick=labConnect;$('#disconnect').onclick=labDisconnect;$('#reset').onclick=labReset;$('#solved').onclick=labSolved;$('#scan').onclick=labRead;$('#paint').onclick=labPaint;$('#clear').onclick=labClear;$('#movesClear').onclick=labMovesClear;$('#movesLast').onclick=labMovesLast;
@@ -1380,6 +1498,7 @@ function labStart(){
   if(typeof requestIdleCallback==='function')requestIdleCallback(()=>buildCrossTable());
   // Open as if Connect were pressed: the list over the bridge, or the look for a known cube.
   const ready=()=>{labButtons();
+    if(lab.keys)return;
     const wb=navigator.bluetooth&&!/[?&]bridge=1/.test(location.search),known=Object.keys(labKnown());
     if(!wb&&!BRIDGE){labStatus('No way to a cube: this browser has no Bluetooth and the Twistwright app is not serving this page. Run lab/run.sh, then open http://127.0.0.1:27272/lab/.');return;}
     if(wb&&!(known.length&&typeof navigator.bluetooth.getDevices==='function')){labStatus('Press Connect, then choose your cube in the list that the browser shows.');return;}
