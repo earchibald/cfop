@@ -973,3 +973,8 @@ body.cba .pt-tile{display:flex;align-items:center;justify-content:center}
 .modal .picbar .savebtn{display:inline-flex;align-items:center;gap:5px}
 .flatlbl{font-family:var(--mono,ui-monospace,monospace)}
 .loopbox{display:contents}
+
+/* ?onboard: the first-visit strip at the foot of the page */
+.onboard-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:60;display:flex;align-items:center;gap:8px;padding:6px 6px 6px 14px;max-width:calc(100vw - 32px);box-sizing:border-box;background:var(--accent);color:var(--accent-ink);border-radius:999px;box-shadow:var(--shadow);font-size:13px;white-space:nowrap}
+.onboard-bar span{overflow:hidden;text-overflow:ellipsis}
+.onboard-bar button{font:inherit;font-weight:500;padding:4px 12px;border-radius:999px;border:0;background:var(--accent-ink);color:var(--accent);cursor:pointer}

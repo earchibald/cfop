@@ -172,3 +172,14 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&methodPopOpen()){cl
 const begFirstVisit=store.get('method',null)==null;
 setMethod(method,{force:true});
 if(begFirstVisit)setTimeout(openMethodPop,300);
+
+// ?onboard: a strip at the foot of the page says that this is a first visit and nothing is saved.
+// Start over loads the page again as a new visitor; Leave goes back to the page with the saved history.
+if(ONBOARD){document.body.classList.add('onboard');
+  const bar=document.createElement('div');bar.id='onboardBar';bar.className='onboard-bar';bar.setAttribute('role','status');
+  const note=document.createElement('span'),b=document.createElement('b');b.textContent='First visit';note.append(b,' · nothing is saved');bar.append(note);
+  const btn=(id,label,title,fn)=>{const x=document.createElement('button');x.type='button';x.id=id;x.textContent=label;x.title=title;x.onclick=fn;bar.append(x);};
+  btn('onboardAgain','Start over','Load the page again as a new visitor',()=>location.reload());
+  btn('onboardLeave','Leave','Go back to the page with your saved history',()=>{const q=location.search.replace(/[?&]onboard(=[^&]*)?/,'').replace(/^&/,'?');location.href=location.pathname+q+location.hash;});
+  document.body.appendChild(bar);
+}

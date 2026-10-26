@@ -1,7 +1,12 @@
 // ===================== APP =====================
 const $=s=>document.querySelector(s);const $$=s=>[...document.querySelectorAll(s)];
 const COLOR_NAMES=['white','red','green','yellow','orange','blue'];
-const store={get(k,d){try{const v=localStorage.getItem('cw:'+k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem('cw:'+k,JSON.stringify(v));}catch(e){}}};
+// ?onboard (or /onboard/) plays a first visit: the store starts empty and lives in memory only, so
+// every load is a new visitor and the saved history in localStorage is never read or changed.
+const ONBOARD=typeof location!=='undefined'&&/[?&]onboard(=|&|$)/.test(location.search);
+const onboardMem=new Map();
+const store=ONBOARD?{get(k,d){return onboardMem.has(k)?JSON.parse(onboardMem.get(k)):d;},set(k,v){onboardMem.set(k,JSON.stringify(v));}}
+  :{get(k,d){try{const v=localStorage.getItem('cw:'+k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem('cw:'+k,JSON.stringify(v));}catch(e){}}};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // format a move: a prime move (letter and prime) gets the prime color; plain and 2 moves keep the text color
 const fmtMove=m=>{const t=esc(m);return t.includes("'")?`<span class="mod">${t}</span>`:t;};
