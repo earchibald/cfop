@@ -40,8 +40,9 @@ A face move carries the color of the face it turns. The move trail
 (`css/trail.css`) fills its Now tile with that color and puts a bar of it
 under each Recent tile. The player's move tiles (`#scramble`) take the bar.
 A hair of the page shows between the fill and the bar, so a yellow face
-stays in view under the yellow current tile. A thin edge under the bar keeps
-white in view on the light page. A played move keeps a softer bar. The color
+stays in view under the yellow current tile. On the light page the white bar
+has a gray ring all round (`--sticker-W-edge`, none in dark mode), as a
+sticker sits in its frame. A played move keeps a softer bar. The color
 comes from the center at that place before the move (`seqFaceColors` in
 `js/app.js`), so a `z2` or a `y` earlier in the list changes it. A
 whole-cube turn and a middle slice (`M`, `E`, `S`) carry no color. The 4x4
