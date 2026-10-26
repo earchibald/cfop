@@ -3,7 +3,7 @@
 const assert=require('assert');const crypto=require('crypto');
 const run=require('./vm-load')('js/engine.js','js/gan.js');
 Object.assign(run('this'),{setTimeout,clearTimeout,AbortController}); // the Bluetooth part waits on timers
-const {encrypt,stateMsg,batteryMsg,gyroMsg,fakeDevice,mfDataFor}=require('./fake-gan');
+const {encrypt,stateMsg,batteryMsg,gyroMsg,moveMsg,fakeDevice,mfDataFor}=require('./fake-gan');
 const Cube=run('Cube'),applyAlg=run('applyAlg'),randomMoveScramble=run('randomMoveScramble');
 const aesExpand=run('aesExpand'),aesEncrypt=run('aesEncrypt'),aesDecrypt=run('aesDecrypt');
 const ganCipher=run('ganCipher'),ganDecode=run('ganDecode'),ganCommand=run('ganCommand'),ganMacFromData=run('ganMacFromData'),ganParseMac=run('ganParseMac');
@@ -50,6 +50,18 @@ for(const gen of [2,4]){
   [-0.25,-1,-0.75,0.5].forEach((v,i)=>assert.ok(Math.abs(ev.q[i]-v)<1e-4,'gen '+gen+' q['+i+']='+ev.q[i]));
 }
 assert.strictEqual(ganDecode(3,gyroMsg(3,{w:1,x:0,y:0,z:0})),null,'gen 3: no such message');
+// ----- a move: the quarter turn, the cube's count and its clock, all three protocols -----
+for(const gen of [3,4])for(const [m,i] of [['U',0],["R'",1],['F',2],["D'",3],['L',4],["B'",5]]){
+  const ev=ganDecode(gen,ci.decrypt(encrypt(MAC,moveMsg(gen,{moves:[{move:m}],serial:300+i,ts:123456+i}))));
+  assert.deepStrictEqual({...ev},{type:'move',move:m,serial:300+i,ts:123456+i},'gen '+gen+' reads '+m);
+}
+{
+  const ms=["R'",'R','U','F',"L'",'B','D'],el=[85,240,1200,60,9,700,33];
+  const ev=ganDecode(2,ci.decrypt(encrypt(MAC,moveMsg(2,{moves:ms.map((move,i)=>({move,elapsed:el[i]})),serial:261}))));
+  assert.strictEqual(ev.type,'move');assert.strictEqual(ev.move,"R'",'gen 2 reads the newest move');assert.strictEqual(ev.elapsed,85,'with the ms since the one before');assert.strictEqual(ev.serial,5,'an 8-bit count');
+  assert.strictEqual(JSON.stringify(ev.past.map(p=>p.move)),JSON.stringify(ms.slice(1)),'and the six before it, newest first');assert.strictEqual(ev.past.map(p=>p.elapsed).join(),el.slice(1).join());
+}
+assert.strictEqual(ganDecode(4,Uint8Array.from([0x01,...Array(19).fill(0)])).move,null,'no face bit: no move named');
 // ----- the MAC address from manufacturer data -----
 assert.strictEqual(ganMacFromData(mfDataFor(MAC)),MAC);assert.strictEqual(ganMacFromData(mfDataFor(MAC,0xFF01)),MAC);
 assert.strictEqual(ganMacFromData(new Map()),null);assert.strictEqual(ganMacFromData(new Map([[0x004C,new DataView(new ArrayBuffer(9))]])),null,'another company is not a GAN cube');

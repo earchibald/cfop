@@ -121,15 +121,28 @@ function ganGyro(bits,at){
   const w=f(0),x=f(1),y=f(2),z=f(3);
   return {type:'gyro',q:[x,z,-y,w]};
 }
+// A quarter turn in a move message, as the cube names it (white up, green front): "R" or "R'",
+// or null for a face the protocol does not name. Gen 2 numbers the face URFDLB; gen 3 and 4 set
+// one bit of six (GAN_MOVE_BITS, in the order URFDLB). The direction is 0 clockwise, 1 counter.
+const GAN_MOVE_BITS=[2,32,8,1,16,4];
+function ganMove(face,dir){return face>=0&&face<6&&dir<2?'URFDLB'[face]+(dir?"'":''):null;}
 // Decode a decrypted message. Returns {type:'state',cube}, {type:'move'}, {type:'gyro',q},
 // {type:'battery',level}, {type:'off'}, {type:'bad'} for a state that is not a cube, or null for
-// anything else. The gen 3 cube (i Carry 2) has no gyro.
+// anything else. The gen 3 cube (i Carry 2) has no gyro. A move carries the quarter turn (`move`,
+// see ganMove), the cube's count of its moves (`serial`, 8 bits in gen 2, 16 in gen 3 and 4) and
+// the time by the cube's own clock: gen 3 and 4 give `ts`, milliseconds since the cube woke; gen 2
+// gives `elapsed`, the milliseconds since the move before (0 when its 16-bit clock ran over), and
+// `past`, the six moves before it, newest first, each {move, elapsed}.
 function ganDecode(gen,msg){
   const bits=ganBits(msg);let type;
   if(gen===2){
     type=bits(0,4);
     if(type===0x04){const cube=ganState(bits,GAN_STATE_AT[2]);return cube?{type:'state',cube}:{type:'bad'};}
-    if(type===0x02)return {type:'move'};
+    if(type===0x02){
+      const at=i=>({move:ganMove(bits(12+5*i,4),bits(16+5*i,1)),elapsed:bits(47+16*i,16)});
+      const past=[];for(let i=1;i<7;i++)past.push(at(i));
+      return Object.assign({type:'move',serial:bits(4,8)},at(0),{past});
+    }
     if(type===0x01)return ganGyro(bits,4);
     if(type===0x09)return {type:'battery',level:Math.min(bits(8,8),100)};
     if(type===0x0D)return {type:'off'};
@@ -139,14 +152,14 @@ function ganDecode(gen,msg){
     if(bits(0,8)!==0x55||!bits(16,8))return null;
     type=bits(8,8);
     if(type===0x02){const cube=ganState(bits,GAN_STATE_AT[3]);return cube?{type:'state',cube}:{type:'bad'};}
-    if(type===0x01)return {type:'move'};
+    if(type===0x01)return {type:'move',move:ganMove(GAN_MOVE_BITS.indexOf(bits(74,6)),bits(72,2)),serial:bits(56,16,true),ts:bits(24,32,true)};
     if(type===0x10)return {type:'battery',level:Math.min(bits(24,8),100)};
     if(type===0x11)return {type:'off'};
     return null;
   }
   type=bits(0,8);
   if(type===0xED){const cube=ganState(bits,GAN_STATE_AT[4]);return cube?{type:'state',cube}:{type:'bad'};}
-  if(type===0x01)return {type:'move'};
+  if(type===0x01)return {type:'move',move:ganMove(GAN_MOVE_BITS.indexOf(bits(66,6)),bits(64,2)),serial:bits(48,16,true),ts:bits(16,32,true)};
   if(type===0xEC)return ganGyro(bits,16);
   if(type===0xEF){const n=bits(8,8);return 8+n*8+8<=msg.length*8?{type:'battery',level:Math.min(bits(8+n*8,8),100)}:null;}
   if(type===0xEA)return {type:'off'};

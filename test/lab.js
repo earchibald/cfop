@@ -5,7 +5,7 @@
 // move box: the count, the last ten with a triangle for more, Clear moves, and the hold (yellow up,
 // green toward you: the moves read as held, Reset cube takes the cube as held that way).
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
-const {fakeDevice,gyroMsg,mfDataFor}=require('./fake-gan');
+const {fakeDevice,gyroMsg,moveMsg,mfDataFor}=require('./fake-gan');
 const {fakeBridge,bridgeInfo}=require('./fake-bridge');
 const MAC='AB:12:34:5C:9D:E1';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -82,6 +82,16 @@ function pure(){
   assert.deepStrictEqual(twf("R R' R R' R2 R R' R R' R R'"),[false,false,false,false,false,false,false,false,false,false,true],'a half turn starts over');
   assert.deepStrictEqual(twf("R R' R U U' U U' U U'"),[false,false,false,false,false,false,false,false,true],'another face starts over');
   assert.deepStrictEqual(twf("R R' R R' R x R' R R' R R' R"),[false,false,false,false,false,false,false,false,false,false,false,true],'a whole-cube turn starts over');
+  // turn clicks: the gap since the turn before names a single slow or fast; the same quarter turn
+  // again within `within` is the second half of a double, slow or fast by `dslow`
+  const cc=run('clickClassifier')({}),ck=seq=>seq.map(([m,ms])=>{const r=cc.feed(m,ms);return r&&r.kind;}).join(' ');
+  assert.deepStrictEqual({...cc.opts},{slow:300,dslow:150,within:500},'300 ms for a slow turn to start');
+  assert.strictEqual(ck([['R',null],['U',120],['U',60],['U',60]]),'slow fast fast2 fast','the first is slow; U U fast is a fast double; a third U is a single');
+  assert.strictEqual(ck([["F'",300],["F'",299],['F',200],['F',600],['F',100]]),'slow slow2 fast slow fast2','300 ms is slow; a double 299 ms apart is slow; out of the window, a single');
+  assert.strictEqual(ck([['R',50],["R'",50],['R',50]]),'fast fast fast','R then R\' is no double');
+  assert.strictEqual(cc.feed('R2',50),null,'a half turn is not a quarter turn');assert.strictEqual(cc.feed('x',50),null,'nor a whole-cube turn');
+  cc.set('slow',100);cc.set('dslow',40);assert.strictEqual(ck([['D',150],['D',45],['B',90]]),'slow slow2 fast','the knobs move the lines');
+  assert.deepStrictEqual({...cc.state.counts},{slow:4,fast:7,slow2:2,fast2:2},'each kind is counted');
   // crossSolutions (js/engine.js): every solution of the D cross up to a length, each counted once,
   // against a brute force with the same rules (no face twice, commuting moves in one order, no move
   // that leaves the cross as it was, stop where the cross is solved)
@@ -104,10 +114,21 @@ const html=fs.readFileSync(path.join(__dirname,'..','lab','index.html'),'utf8');
 function fakeStorage(){const m=new Map();return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear()};}
 // opts.storage: a localStorage to keep between two boots. opts.bluetooth: a navigator.bluetooth,
 // for the Web Bluetooth path; the bridge is then absent (no /bridge/info).
+// A Web Audio context that only counts the sounds started: w.__plays, one entry per click part.
+function fakeAudio(w){
+  const plays=w.__plays=[],node=x=>Object.assign({connect:n=>n},x),param=()=>({value:0,setValueAtTime(){},exponentialRampToValueAtTime(){}});
+  w.AudioContext=class{constructor(){this.state='suspended';this.sampleRate=8000;this.currentTime=0;this.destination={};}
+    resume(){this.state='running';return Promise.resolve();}
+    createBuffer(c,n){return {getChannelData:()=>new Float32Array(n)};}
+    createBufferSource(){return node({start(){plays.push('noise');},stop(){}});}
+    createBiquadFilter(){return node({frequency:param(),Q:param()});}
+    createGain(){return node({gain:param()});}
+    createOscillator(){return node({frequency:param(),start(){plays.push('tone');},stop(){}});}};
+}
 function boot(bridge,opts={}){
   const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
   const dom=new JSDOM(html,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,url:'file://'+path.join(__dirname,'..','lab','index.html'),virtualConsole:vc,
-    beforeParse(w){w.matchMedia=q=>({matches:false,addEventListener(){},addListener(){}});w.scrollTo=()=>{};Object.defineProperty(w,'localStorage',{value:opts.storage||fakeStorage()});
+    beforeParse(w){w.matchMedia=q=>({matches:false,addEventListener(){},addListener(){}});w.scrollTo=()=>{};fakeAudio(w);Object.defineProperty(w,'localStorage',{value:opts.storage||fakeStorage()});
       if(opts.bluetooth){Object.defineProperty(w.navigator,'bluetooth',{value:opts.bluetooth});w.fetch=async()=>({ok:false});return;}
       w.BRIDGE_LOCAL=true;w.WebSocket=bridge.FakeWebSocket;w.fetch=async u=>u==='/bridge/info'?{ok:true,json:async()=>bridgeInfo()}:{ok:false};}});
   const w=dom.window;
@@ -192,6 +213,27 @@ async function page(){
   assert.ok(await until(()=>!L().anim&&L().shown.equals(c1)),'the layer turned');
   assert.strictEqual(L().moves.join(),'R','the move is on the list');assert.strictEqual($('#moves .mv').textContent,'R');
   assert.ok($('#moves .mv').closest('.now'),'the one move is Now');
+  // turn clicks: each move message names its quarter turn and the cube's clock; the gap picks the click
+  assert.ok($('#clickOn').checked,'clicks are on');assert.strictEqual($('#cSlow').value,'300','slow from 300 ms');assert.strictEqual($('#cSlow').parentNode.querySelector('output').value,'300');
+  L().audio=null;w.eval('labClickNote()'); // the keys pressed above let the sound play: start again from a page not clicked
+  assert.ok(/Click the page once/.test($('#clickSound').textContent),'the page asks for a click before sound: '+$('#clickSound').textContent);
+  const mv=(m,serial,ts)=>dev.notify(moveMsg(4,{moves:[{move:m}],serial,ts})),clickLog=()=>$$('#log .click').map(e=>e.textContent.slice(13));
+  mv('R',1000,5000);assert.ok(await until(()=>clickLog().length===1),'the turn is logged');
+  assert.strictEqual(clickLog()[0],'R slow turn (the first) (no sound yet)','the first turn is slow; no click before the page was clicked: '+clickLog()[0]);
+  assert.strictEqual(w.__plays.length,0,'no sound yet');
+  click($('#clickHear [data-kind=fast2]'));assert.ok(await until(()=>w.__plays.length===2),'Hear plays the fast double: two parts: '+w.__plays.join());
+  assert.strictEqual($('#clickSound').textContent,'','the page may play sound now');
+  w.__plays.length=0;
+  for(const [m,n,t] of [['U',1001,5100],['U',1002,5180],['U',1003,5250],["F'",1004,5700],["F'",1005,6000],["F'",1005,6000]])mv(m,n,t);
+  assert.ok(await until(()=>clickLog().length===6),'five more turns; the same count twice is one turn: '+clickLog().join(' | '));
+  assert.deepStrictEqual(clickLog().reverse().slice(1),['U fast turn, 100 ms','U fast double, 80 ms','U fast turn, 70 ms',"F' slow turn, 450 ms","F' slow double, 300 ms"],'the gaps come from the cube clock');
+  assert.ok(w.__plays.length>=5,'each turn clicked: '+w.__plays.join());
+  assert.strictEqual($$('#clickMeter b').map(b=>b.textContent).join(),'2,2,1,1','the meter counts each kind');
+  const sl=$('#cSlow');sl.value='500';sl.dispatchEvent(new w.Event('input'));assert.strictEqual(L().clicks.opts.slow,500,'the knob sets the line');
+  assert.strictEqual(JSON.parse(storage.getItem('cw:labClicks')).slow,500,'and is kept');
+  click($('#clickOn'));assert.ok(!L().clickSet.on,'the box turns the clicks off');w.__plays.length=0;mv('D',1006,6900);
+  assert.ok(await until(()=>clickLog().length===7));assert.strictEqual(clickLog()[0],'D slow turn, 900 ms','off: still counted and logged, with no note');assert.strictEqual(w.__plays.length,0,'off: no sound');
+  click($('#clickOn'));
   // the box of its own: the count in the head, Clear moves, the triangle past ten moves
   assert.ok($('#movesBox')&&$('#movesBox').contains($('#moves'))&&$('#movesBox').contains($('#movesClear')),'the moves sit in a box with Clear moves');
   assert.strictEqual($('#movesCount').textContent,'1 move','the head counts the moves');assert.ok(!$('#movesClear').disabled,'Clear moves is on');

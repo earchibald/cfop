@@ -42,6 +42,10 @@
 // Experiment 3: one face turned and turned back, three times over (R R' R R' R R'), is a gesture
 // (twistDetector, fed each move before the list merges it): the lab waits `twistMs`, then does
 // Reset cube, as if R were pressed. The six quarter turns leave the cube, and the list, as they were.
+// Experiment 5: turn clicks. Each move message carries its quarter turn and the cube's clock
+// (ganDecode), so a click plays as the turn is made, before the state is read. clickClassifier
+// (smack.js) names it slow, fast, slow double or fast double from the gap since the turn before;
+// the panel sets the three times and the volume, counts each kind and plays each sound on a click.
 // Patterns (P): each state the cube reports is read as the CFOP stage of the cube as held
 // (cfopStage, js/stage.js), with the color on the bottom as held as the cross. A two-look OLL or
 // PLL case goes in the Patterns window with the moves that solve it as held, newest first, the same
@@ -95,7 +99,8 @@
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,patOpen:{},
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,hidden:false,view:{yaw:0,pitch:0},drag:null,
-  battLogged:null,holdSrc:'load',busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,f2l:null,f2lPos:null,winTop:'pat',copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
+  battLogged:null,holdSrc:'load',busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,f2l:null,f2lPos:null,winTop:'pat',copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false,
+  clicks:null,clickSet:null,click:{at:null,ts:null,serial:null,hitTimer:0},audio:null,noise:null};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200,LAB_CROSS_MAX=7,LAB_SOLS_SHOWN=3;
 const LAB_PAT_STEPS={eo:'OLL edges',co:'OLL corners',cp:'PLL corners',ep:'PLL edges'};
 // The cameras: straight on, the cube as it sits in space; and isometric, a little from the right
@@ -946,6 +951,108 @@ function labTwist(m){
   labLog('twist',`${m[0]} turned and turned back six times: Reset cube in ${lab.twistMs} ms`);
   clearTimeout(lab.twistTimer);lab.twistTimer=setTimeout(()=>{lab.twistTimer=0;labReset();},lab.twistMs);
 }
+// ----- experiment 5: turn clicks -----
+// Each quarter turn the cube reports plays a short click, picked by clickClassifier (smack.js):
+// slow, fast, slow double, fast double. The sounds are made in the page (Web Audio: a burst of
+// noise through a band filter, with a falling tone for the slow ones); there are no sound files.
+// A browser plays sound only after a click or a key on the page: the first one makes the audio
+// context (labAudio). The settings, and On, are kept in cw:labClicks.
+const LAB_CLICK_SOUNDS={
+  slow:[{at:0,f:1400,q:4,dur:0.035,g:0.6,tone:560}],
+  fast:[{at:0,f:4200,q:2.5,dur:0.014,g:0.7}],
+  slow2:[{at:0,f:950,q:5,dur:0.06,g:0.7,tone:340},{at:0.05,f:700,q:5,dur:0.05,g:0.45}],
+  fast2:[{at:0,f:3400,q:3,dur:0.012,g:0.6},{at:0.024,f:5400,q:3,dur:0.014,g:0.6}],
+};
+function labClickLoad(){
+  const o={on:true,vol:0.6,...CLICK_DEFAULTS};
+  try{const s=JSON.parse(localStorage.getItem('cw:labClicks')||'null');if(s)for(const k of Object.keys(o))if(typeof s[k]===typeof o[k])o[k]=s[k];}catch(e){}
+  return o;
+}
+function labClickSave(){try{localStorage.setItem('cw:labClicks',JSON.stringify(lab.clickSet));}catch(e){}}
+function labAudio(){
+  if(lab.audio)return lab.audio;
+  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
+  try{lab.audio=new AC();}catch(e){return null;}
+  const a=lab.audio,n=Math.round(a.sampleRate*0.1),b=a.createBuffer(1,n,a.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<n;i++)d[i]=Math.random()*2-1;
+  lab.noise=b;return a;
+}
+// A click or a key on the page lets the sound play. Resolves when it can.
+function labUnlock(){
+  const a=labAudio();if(!a){labClickNote();return Promise.resolve(false);}
+  const p=a.state==='running'?Promise.resolve():a.resume();
+  return p.then(()=>{labClickNote();return a.state==='running';},()=>false);
+}
+function labClickNote(){
+  const el=$('#clickSound');if(!el)return;
+  const a=lab.audio,AC=window.AudioContext||window.webkitAudioContext;
+  el.textContent=!AC?'This browser cannot play the clicks.':a&&a.state==='running'?'':'Click the page once to let it play sound.';
+}
+function labClickPlay(kind){
+  const a=lab.audio,vol=lab.clickSet.vol,parts=LAB_CLICK_SOUNDS[kind];
+  if(!a||a.state!=='running'||!parts||!(vol>0))return false;
+  const t0=a.currentTime+0.002;
+  for(const p of parts){
+    const t=t0+p.at,src=a.createBufferSource(),bp=a.createBiquadFilter(),g=a.createGain();
+    src.buffer=lab.noise;bp.type='bandpass';bp.frequency.value=p.f;bp.Q.value=p.q;
+    g.gain.setValueAtTime(p.g*vol,t);g.gain.exponentialRampToValueAtTime(0.0001,t+p.dur);
+    src.connect(bp);bp.connect(g);g.connect(a.destination);src.start(t);src.stop(t+p.dur+0.01);
+    if(p.tone){
+      const o=a.createOscillator(),og=a.createGain(),end=t+p.dur*1.6;
+      o.frequency.setValueAtTime(p.tone,t);o.frequency.exponentialRampToValueAtTime(p.tone*0.6,end);
+      og.gain.setValueAtTime(p.g*vol*0.5,t);og.gain.exponentialRampToValueAtTime(0.0001,end);
+      o.connect(og);og.connect(a.destination);o.start(t);o.stop(end+0.01);
+    }
+  }
+  return true;
+}
+// The gap since the quarter turn before, in ms: by the cube's clock where it has one (gen 3 and 4
+// give a time, gen 2 the gap itself), else by the time the message came. A cube clock that went
+// back, or runs far past the page's (the cube slept), gives way to the page's.
+function labClickGap(ev){
+  const c=lab.click,now=performance.now();let gap=null;
+  if(c.at!=null){
+    const local=now-c.at;gap=local;
+    if(ev.ts!=null&&c.ts!=null&&ev.ts>=c.ts&&ev.ts-c.ts<local+1000)gap=ev.ts-c.ts;
+    else if(ev.elapsed>0&&ev.elapsed<local+1000)gap=ev.elapsed;
+  }
+  c.at=now;c.ts=ev.ts!=null?ev.ts:null;
+  return gap;
+}
+// A move message. The same count twice is the same turn sent again. Gen 2 carries the moves
+// before it: a gap of more than one in its count feeds the ones the page missed first, silent.
+function labClickMove(ev){
+  const c=lab.click;if(!ev.move)return;
+  if(ev.serial!=null&&c.serial===ev.serial)return;
+  if(ev.past&&c.serial!=null){const n=Math.min((ev.serial-c.serial)&0xff,7)-1;for(let i=n-1;i>=0;i--)if(ev.past[i]&&ev.past[i].move)lab.clicks.feed(ev.past[i].move,ev.past[i].elapsed);}
+  if(ev.serial!=null)c.serial=ev.serial;
+  const r=lab.clicks.feed(ev.move,labClickGap(ev));if(!r)return;
+  const played=lab.clickSet.on&&labClickPlay(r.kind);
+  labClickMeter(r.kind);
+  labLog('click',`${labRelabel(ev.move)} ${CLICK_KINDS[r.kind]}${r.ms==null?' (the first)':`, ${Math.round(r.ms)} ms`}${played||!lab.clickSet.on?'':' (no sound yet)'}`);
+}
+// A new link: the cube's clock and count start over, and the first turn after it is slow.
+function labClickReset(){lab.click.at=lab.click.ts=lab.click.serial=null;if(lab.clicks)lab.clicks.reset();}
+function labClickMeter(hit){
+  for(const d of $$('#clickMeter [data-kind]')){
+    d.querySelector('b').textContent=lab.clicks.state.counts[d.dataset.kind];
+    d.classList.toggle('hit',d.dataset.kind===hit);
+  }
+  clearTimeout(lab.click.hitTimer);if(hit)lab.click.hitTimer=setTimeout(()=>labClickMeter(null),250);
+}
+function labClickStart(){
+  lab.clickSet=labClickLoad();lab.clicks=clickClassifier(lab.clickSet);
+  $('#clickOn').checked=lab.clickSet.on;
+  $('#clickOn').onchange=e=>{lab.clickSet.on=e.target.checked;labClickSave();if(e.target.checked)labUnlock();labBlur();};
+  for(const inp of $$('.cknob input[type=range]')){
+    const k=inp.dataset.k,out=inp.parentNode.querySelector('output');
+    inp.value=lab.clickSet[k];out.value=inp.value;
+    inp.oninput=()=>{const v=parseFloat(inp.value);lab.clickSet[k]=v;if(k!=='vol')lab.clicks.set(k,v);out.value=inp.value;labClickSave();};
+  }
+  $('#clickHear').onclick=e=>{const b=e.target.closest('button');if(!b)return;labUnlock().then(ok=>{if(ok)labClickPlay(b.dataset.kind);});labBlur();};
+  for(const t of ['pointerdown','keydown'])document.addEventListener(t,()=>{if(!lab.audio||lab.audio.state!=='running')labUnlock();},true);
+  labClickNote();labClickMeter(null);
+}
 // ----- the experiment: the panel -----
 function labEvent(ev){
   const f=v=>v.toFixed(2);
@@ -991,7 +1098,7 @@ function labTraceDraw(){
   svg.innerHTML=`<line x1="0" x2="320" y1="${y(lab.det.opts.jolt)}" y2="${y(lab.det.opts.jolt)}"/><polyline points="${pts}"/>`;
 }
 function labKnobs(){
-  for(const inp of $$('.knob input[type=range]')){
+  for(const inp of $$('.knob:not(.tknob):not(.cknob) input[type=range]')){
     const k=inp.dataset.k,out=inp.parentNode.querySelector('output');if(!k)continue;
     inp.value=lab.det.opts[k];out.value=inp.value;
     inp.oninput=()=>{lab.det.set(k,parseFloat(inp.value));out.value=inp.value;};
@@ -1146,7 +1253,7 @@ async function labConnect(auto){
     catch(e){lab.busy=false;labButtons();labStatus(e.code==='model'?e.message:'The connection did not start. Turn the cube to wake it up, then press Connect again.');return;}
     try{
       const cube=await conn.readState(3000);
-      labSaveMac(name,conn.mac);labRemember(name,{mac:conn.mac,id:device.id||null});lab.conn=conn;lab.busy=false;
+      labSaveMac(name,conn.mac);labRemember(name,{mac:conn.mac,id:device.id||null});lab.conn=conn;labClickReset();lab.busy=false;
       lab.battLogged=null;lab.moves=[];if(lab.goal)lab.goal.at=0;labF2LMovesGone();lab.shown=lab.target=null;lab.asked=false;lab.want=false;lab.gyro=false;lab.raw=lab.basis=lab.q=lab.qTo=null;lab.det.reset();lab.twist.reset();clearTimeout(lab.twistTimer);lab.twistTimer=0;lab.trace=[];lab.times=[];
       labButtons();labMovesDraw();labDots();labShow(cube);
       labStatus((conn.gen===3?'Live. Each turn of your cube turns the layer. This cube has no tilt sensor.':'Live. Each turn of your cube turns the layer. Waiting for the first tilt reading: move the cube.')+labSolvedHint(cube));
@@ -1164,9 +1271,9 @@ async function labConnect(auto){
 }
 function labLink(ev,conn){
   if(!conn||conn!==lab.conn)return;
-  if(ev.type==='gone'){lab.conn=null;lab.asked=false;lab.want=false;labStopView();labButtons();labStatus('The cube is no longer connected. Turn a face to wake it up.');labLog('link','The link dropped.');labConnect(true);return;}
+  if(ev.type==='gone'){lab.conn=null;lab.asked=false;lab.want=false;labClickReset();labStopView();labButtons();labStatus('The cube is no longer connected. Turn a face to wake it up.');labLog('link','The link dropped.');labConnect(true);return;}
   if(ev.type==='off'){conn.close();return;}
-  if(ev.type==='move')labAsk();
+  if(ev.type==='move'){labClickMove(ev);labAsk();}
   if(ev.type==='gyro')labGyro(ev.q);
   if(ev.type==='battery'){labBatteryDraw($('#batt'),ev.level);if(ev.level!==lab.battLogged){lab.battLogged=ev.level;labLog('link',`Charge ${ev.level}%.`);}}
   if(ev.type==='state'){lab.asked=false;if(lab.want){lab.want=false;labAsk();}if(!lab.reading)labShow(ev.cube);} // a read for a correction shows nothing: labReadColors jumps to the corrected state
@@ -1182,7 +1289,7 @@ function labStart(){
   lab.iso=labIsoLoad();$('#iso').checked=lab.iso;$('#iso').onchange=e=>labIso(e.target.checked);
   lab.hidden=labHiddenLoad();$('#hiddenFaces').checked=lab.hidden;$('#hiddenFaces').onchange=e=>labHidden(e.target.checked);labViewDrag();
   $('#turnOn').checked=labTurnLoad();$('#turnOn').onchange=e=>labTurnOn(e.target.checked);
-  labKnobs();labMovesDraw();labDraw();labButtons();
+  labKnobs();labClickStart();labMovesDraw();labDraw();labButtons();
   $('#connect').onclick=labConnect;$('#disconnect').onclick=labDisconnect;$('#reset').onclick=labReset;$('#solved').onclick=labSolved;$('#scan').onclick=labRead;$('#paint').onclick=labPaint;$('#clear').onclick=labClear;$('#movesClear').onclick=labMovesClear;$('#movesLast').onclick=labMovesLast;
   $('#macGo').onclick=labMacGo;$('#macCopy').onclick=labCopyMac;$('#copyState').onclick=labCopyState;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();labMacGo();}});
   $('#confirmYes').onclick=()=>labConfirmEnd(true);$('#confirmNo').onclick=()=>labConfirmEnd(false);
