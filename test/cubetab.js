@@ -131,6 +131,18 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
     click(hb);assert.strictEqual(hb.getAttribute('aria-pressed'),'true','the button turns it on');assert.strictEqual(w.localStorage.getItem('cw:hidden'),'true','one setting with the site');
     assert.ok(same(winPolys(),fixed(c6,{hidden:true,scale:40})),'the faces turned away show behind the cube');assert.strictEqual(winPolys().length-n0,27);
     w.setHidden(false);assert.strictEqual(hb.getAttribute('aria-pressed'),'false','the site\'s button turns it off here too');assert.ok(same(winPolys(),fixed(c6)),'the fixed view again');}
+  // Front view: a button (and the V key) switches the camera to straight on, kept in cw:smartFront.
+  // Straight on, Hidden faces has nothing to show while the picture stays on the hold: its button is off.
+  {const fb=$('#cubeWinFront'),hb=$('#cubeWinHidden'),key=k=>d.dispatchEvent(new w.KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true}));
+    assert.ok(fb&&fb.previousElementSibling===$('#cubeWinClear')&&fb.nextElementSibling===hb,'Front view sits between Clear moves and Hidden faces');
+    assert.strictEqual(fb.getAttribute('aria-pressed'),'false','off by default: the view from above and to the right');assert.strictEqual(fb.querySelector('.hk').textContent,'V');
+    click(fb);assert.strictEqual(fb.getAttribute('aria-pressed'),'true','the button turns it on');assert.strictEqual(w.localStorage.getItem('cw:smartFront'),'true','kept in cw:smartFront');
+    assert.ok(same(winPolys(),fixed(c6,{yaw:0,pitch:0,scale:80})),'the cube straight on');assert.ok(/straight on/.test(fb.title),fb.title);
+    assert.ok(hb.disabled&&/Turn Front view off/.test(hb.title),'Hidden faces is off in Front view');
+    w.setHidden(true);assert.ok(same(winPolys(),fixed(c6,{yaw:0,pitch:0,scale:80})),'the setting on: the picture is still the front face alone');w.setHidden(false);
+    key('v');assert.strictEqual(fb.getAttribute('aria-pressed'),'false','V turns it off');assert.strictEqual(w.localStorage.getItem('cw:smartFront'),'false');
+    assert.ok(same(winPolys(),fixed(c6)),'the fixed view again');assert.ok(!hb.disabled,'Hidden faces is live again');
+    key('V');assert.strictEqual(fb.getAttribute('aria-pressed'),'true','Shift+V too');click(fb);}
   assert.ok(/press the same turn/.test($('#cubeWinNote').textContent),'the note says to press the turns');
   assert.ok($('#cubeWinWarn').classList.contains('hidden')&&$('#cubeWinWarn').previousElementSibling===$('#cubeWinSvg'),'the band under the picture is hidden until the cube is held unlike the hold');
   assert.ok(!ev('cubeTab.gyro'),'no tilt yet: a press turns the picture');
@@ -396,6 +408,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.strictEqual(w.localStorage.getItem('cw:smartLock'),'false','kept in cw:smartLock');
   assert.ok(w.quatAngle(ev('cubeTab.qTo'),holdOf('z2').q)<1,'the picture lines up with the hold');
   assert.ok(/tilts with the cube/.test($('#cubeWinNote').textContent),'the note says the picture tilts');
+  click($('#cubeWinFront'));assert.ok(!$('#cubeWinHidden').disabled,'Front view with the tilt live: Hidden faces stays on, the turned-away faces show as the cube tilts');click($('#cubeWinFront'));
   tilt(holdOf('z2').q);await sleep(30);
   assert.ok(!$('#cubeWinReset').classList.contains('hidden')&&!$('#cubeWinReset').disabled,'the tilt is live: Reset view shows');
   assert.ok($('#cubeWinReset').closest('.cw-side')&&$('#cubeWinReset').nextElementSibling===$('#cubeWinClear'),'beside Clear moves');

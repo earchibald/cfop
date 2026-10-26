@@ -78,12 +78,21 @@
 // under them for what was heard, and the hints while it listens. The listening ends when the user
 // leaves the tab, and when the link drops. The turns and the tilt draw only while the tab is in
 // view (cubeTabShown); the moves and the stage count all the same.
-const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,yaw:-32,pitch:28,asked:false,want:false,
+const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,
   q:null,qTo:null,qraf:0,qAt:0,moves:[],hold:null,
   gyro:false,raw:null,basis:null,away:null,awayTimer:0,awayMs:500,awayDeg:55,backDeg:40,warn:false,
   stage:null,done:0,revealed:0,stale:false,stillTimer:0,revealTimer:0,stillMs:1200,revealMs:1500,since:0,keepMoves:12,battery:null,look:'',
-  lock:typeof store==='undefined'||store.get('smartLock',true)!==false};
+  lock:typeof store==='undefined'||store.get('smartLock',true)!==false,
+  front:typeof store!=='undefined'&&store.get('smartFront',false)===true};
 const CUBE_TAB_SHOWN=10;
+// The two cameras of the picture (1.41.0): from above and to the right, three faces in view (the
+// default); and straight on, the front face alone until the tilt turns the cube. Front view
+// switches them (`front`, kept in cw:smartFront), the button and the V key. Straight on, the faces
+// turned away sit behind the cube or edge on, so Hidden faces would show nothing: in Front view it
+// draws only while the picture follows the tilt (cubeTabMirrors), and its button is off otherwise.
+const CUBE_TAB_CAMS={iso:{yaw:-32,pitch:28,scale:52},front:{yaw:0,pitch:0,scale:80}};
+// Does the picture show the hidden faces? The site's setting, and in Front view a live tilt too.
+function cubeTabMirrors(){return hiddenOn()&&(!cubeTab.front||cubeTabLive());}
 // The six turns of the whole cube, as buttons, with what each one does in the hands.
 const CUBE_TAB_TURNS=[
   {m:'x',tip:'x: turn the whole cube like R. The front goes to the top.'},
@@ -137,6 +146,7 @@ function cubeTabMount(){
   $('#cubeWinClear').onclick=cubeTabClear;
   $('#cubeWinLock').onclick=()=>cubeTabSetLock(!cubeTab.lock);
   $('#cubeWinHidden').onclick=()=>setHidden(!hiddenOn());
+  $('#cubeWinFront').onclick=()=>cubeTabSetFront(!cubeTab.front);
   $('#cubeWinMatch').onclick=cubeTabMatch;$('#cubeWinKeep').onclick=cubeTabKeep;$('#cubeWinReset').onclick=cubeTabKeep;
   if(typeof smartListenMount==='function')smartListenMount(); // the voice commands (smart-listen.js)
   document.addEventListener('cw:tab',e=>cubeTabTab(e.detail));
@@ -172,6 +182,7 @@ function cubeTabWindow(){
   reset.title=cubeTab.lock?'Turn Lock off first. Then the picture turns with your cube, and Reset view lines it up.':`Hold the cube with ${cubeTabHoldWords(cubeTab.hold)}, then press. The picture lines up with your cube.`;
   cubeTabHoldDraw();
   $('#cubeWinHidden').setAttribute('aria-pressed',String(hiddenOn()));
+  cubeTabFrontDraw();
   cubeTabWarnDraw();
   cubeTabMovesDraw();
   cubeTabStageDraw();
@@ -223,10 +234,30 @@ function cubeTabHoldDraw(){
 }
 // Clear moves: the list is emptied. False when it was empty.
 function cubeTabClear(){if(!cubeTab.moves.length)return false;cubeTab.moves=[];cubeTabMovesDraw();return true;}
-// The tab's keys (app.js asks first): C clears the moves while the live panel is in view.
+// The tab's keys (app.js asks first), while the live panel is in view: C clears the moves, V
+// switches Front view.
 function cubeTabKeys(e){
-  if(!cubeTabShown()||(e.key!=='c'&&e.key!=='C'))return false;
-  cubeTabClear();return true;
+  if(!cubeTabShown())return false;
+  if(e.key==='c'||e.key==='C'){cubeTabClear();return true;}
+  if(e.key==='v'||e.key==='V'){cubeTabSetFront(!cubeTab.front);return true;}
+  return false;
+}
+// Front view on: the picture looks at the cube straight on. Off: from above and to the right.
+function cubeTabSetFront(on){
+  cubeTab.front=!!on;if(typeof store!=='undefined')store.set('smartFront',cubeTab.front);
+  cubeTabFrontDraw();cubeTabDraw();
+}
+// The Front view button: pressed while the picture looks straight on. The Hidden faces button is
+// off in Front view while the picture stays on the hold.
+function cubeTabFrontDraw(){
+  const b=document.getElementById('cubeWinFront');if(!b)return;
+  const h=document.getElementById('cubeWinHidden'),still=cubeTab.front&&!cubeTabLive();
+  // Written only when they change: the panel redraws on every state the cube sends.
+  const put=(el,k,v)=>{if(el.getAttribute(k)!==v)el.setAttribute(k,v);};
+  put(b,'aria-pressed',String(cubeTab.front));
+  put(b,'title',cubeTab.front?'Front view: the cube straight on, the front face alone. Press to see it from above and to the right, with three faces in view':'The cube from above and to the right, with three faces in view. Press to see it straight on, the front face alone');
+  if(h.disabled!==still)h.disabled=still;
+  put(h,'title',still?'Front view shows the front face alone. Turn Front view off to see the hidden faces':'Show the hidden faces: the faces turned away from you, as in a mirror behind the cube');
 }
 // ----- the moves: every turn since the cube connected, merged -----
 // The turn count of a move: R is 1, R2 is 2, R' is 3.
@@ -266,14 +297,15 @@ function cubeTabMovesDraw(){
     svg.setAttribute('viewBox','0 0 8 10');svg.setAttribute('aria-hidden','true');p.setAttribute('points','0,0 8,5 0,10');svg.appendChild(p);more.appendChild(svg);
   }
 }
-// The picture: the cube as the cube names it, turned by the hold (`rot`), seen from the fixed camera.
+// The picture: the cube as the cube names it, turned by the hold (`rot`), seen from the camera
+// that Front view picks (CUBE_TAB_CAMS).
 // With Hidden faces (cw:hidden, the site's setting) the faces turned away show as in a mirror
 // behind the cube, and the cube draws smaller so they fit. Drawn only while the tab is in view;
 // the tab shown draws it afresh. The markup is the renderer's own (draw.js).
 function cubeTabDraw(){
   const svg=$('#cubeWinSvg');if(!svg||!cubeTabShown())return;
-  const a=cubeTab.anim,o={yaw:cubeTab.yaw,pitch:cubeTab.pitch,n:3};
-  if(hiddenOn())Object.assign(o,{hidden:true,scale:40});
+  const a=cubeTab.anim,cam=CUBE_TAB_CAMS[cubeTab.front?'front':'iso'],o={yaw:cam.yaw,pitch:cam.pitch,scale:cam.scale,n:3};
+  if(cubeTabMirrors())Object.assign(o,{hidden:true,scale:40});
   if(cubeTab.q)o.rot=quatMat(cubeTab.q);
   if(a&&a.t<1)svg.innerHTML=renderCube3D(a.from.toFacelets(),Object.assign(o,{move:a.move,t:Math.max(a.t,0.01)}));
   else{const f=cubeTab.shown?cubeTab.shown.toFacelets():Array.from({length:54},(_,i)=>i%9===4?(i-4)/9:-1);svg.innerHTML=renderCube3D(f,o);}
