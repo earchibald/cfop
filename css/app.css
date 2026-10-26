@@ -115,6 +115,14 @@ body.cube-drag,body.cube-drag *{user-select:none!important;-webkit-user-select:n
 .scramble .m.cur{background:var(--accent);color:var(--accent-ink);font-weight:600}
 .scramble .m.rot{font-style:italic;border:1px dashed var(--line);background:transparent}
 .scramble .m.rot.cur{background:var(--accent);color:var(--accent-ink);border-style:solid;border-color:transparent}
+/* The face color of each move, as the move trail codes it (css/trail.css): a bar under the tile,
+   apart from the fill by a hair, so a yellow bar still shows under the current (yellow) tile. A thin
+   edge under the bar keeps white in view on the light page. Played moves keep a softer bar. */
+.scramble{row-gap:8px}
+.scramble .m.fc{background-clip:padding-box;box-shadow:0 4px 0 -1px var(--face),0 5px 0 -1px color-mix(in srgb,var(--text) 22%,transparent)}
+.scramble .m.fc.done{box-shadow:0 4px 0 -1px color-mix(in srgb,var(--face) 55%,transparent)}
+.scramble .m.c0{--face:var(--sticker-W)}.scramble .m.c1{--face:var(--sticker-R)}.scramble .m.c2{--face:var(--sticker-G)}
+.scramble .m.c3{--face:var(--sticker-Y)}.scramble .m.c4{--face:var(--sticker-O)}.scramble .m.c5{--face:var(--sticker-B)}
 .scrub{display:flex;align-items:center;gap:6px;margin-top:8px}
 .scrub input[type=range]{flex:1;accent-color:var(--accent)}
 .autoplay{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;color:var(--muted)}

@@ -34,6 +34,20 @@ tile. The reader must see that a move is prime without reading the mark.
 `R2` is not special: it reads like `R`. The current prime move is a solid
 orange tile with white text, so the signal survives the yellow highlight.
 
+## Face colors on moves
+
+A face move carries the color of the face it turns. The move trail
+(`css/trail.css`) fills its Now tile with that color and puts a bar of it
+under each Recent tile. The player's move tiles (`#scramble`) take the bar.
+A hair of the page shows between the fill and the bar, so a yellow face
+stays in view under the yellow current tile. A thin edge under the bar keeps
+white in view on the light page. A played move keeps a softer bar. The color
+comes from the center at that place before the move (`seqFaceColors` in
+`js/app.js`), so a `z2` or a `y` earlier in the list changes it. A
+whole-cube turn and a middle slice (`M`, `E`, `S`) carry no color. The 4x4
+has no fixed centers: there the letter names the color, turned on by
+whole-cube turns only.
+
 ## Tokens
 
 Sticker colors are `--sticker-W Y R O G B`, with `--sticker-X` for a sticker
