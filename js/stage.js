@@ -30,11 +30,15 @@ const STAGE_ORDER=['cross','f2l','eo','co','cp','ep','auf','solved'];
 // is further back. 'll' (a last layer no algorithm names) stands with the first last-layer step.
 function stageRank(stage){const i=STAGE_ORDER.indexOf(stage);return i<0?STAGE_ORDER.indexOf('eo'):i;}
 // How far X (the engine's frame, cross on D) is along: a score that grows with every step.
+// The cross edges count after the best turn of the cross layer, so edges that sit right against
+// one another but a turn away from their centers still count; `turn` says the layer needs one.
+function crossEdges(X){let n=0;for(let e=4;e<8;e++)if(X.ep[e]===e&&X.eo[e]===0)n++;return n;}
 function stageProgress(X){
-  let edges=0;for(let e=4;e<8;e++)if(X.ep[e]===e&&X.eo[e]===0)edges++;
-  const cross=edges===4;let pairs=0;if(cross)for(const s of SLOTS)if(slotSolved(X,s))pairs++;
+  let edges=crossEdges(X),turn=false;
+  if(edges<4)for(const d of ['D',"D'",'D2']){const n=crossEdges(applyAlg(X,[d]));if(n>edges){edges=n;turn=true;}}
+  const cross=edges===4&&!turn;let pairs=0;if(cross)for(const s of SLOTS)if(slotSolved(X,s))pairs++;
   const f2l=cross&&pairs===4,eo=f2l&&eoSolved(X),co=eo&&ollSolved(X),cp=co&&cpSolvedLL(X),solved=X.isSolved();
-  return {edges,cross,pairs,f2l,eo,co,cp,solved,score:solved?40:cross?10+pairs*4+(eo?1:0)+(co?1:0)+(cp?1:0):edges};
+  return {edges,turn,cross,pairs,f2l,eo,co,cp,solved,score:solved?40:cross?10+pairs*4+(eo?1:0)+(co?1:0)+(cp?1:0):edges};
 }
 function cfopStage(held,prefer){
   const H=reframe(held),want=COLOR_NAMES_E.indexOf(prefer||'white');
@@ -47,7 +51,7 @@ function cfopStage(held,prefer){
   const {r,X,p,down}=best,color=COLOR_NAMES_E[down],turn=r?[r]:[];
   const base={stage:'',name:'',sub:'',moves:[],held,down:color};
   if(p.solved)return {...base,stage:'solved',name:'Solved'};
-  if(!p.cross)return {...base,stage:'cross',name:'Cross',sub:`${p.edges} of 4 ${color} edges`};
+  if(!p.cross)return {...base,stage:'cross',name:'Cross',sub:`${p.edges} of 4 ${color} edges`+(p.edges===4?`: turn the ${color} layer to match the centers`:'')};
   if(!p.f2l)return {...base,stage:'f2l',name:'F2L',sub:`${p.pairs} of 4 pairs`};
   const T=applyAlg(held,turn),up=COLOR_NAMES_E[T.center[0]],front=COLOR_NAMES_E[T.center[2]];
   const sub=(r?`Turn ${r}: `:'')+up[0].toUpperCase()+up.slice(1)+' up, '+front+' in front';
