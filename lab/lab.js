@@ -221,6 +221,7 @@ function labAdd(m){
   const b=Math.max(lab.goal?lab.goal.at:-1,lab.f2l&&lab.f2l.open?lab.f2l.at:-1),ms=lab.moves,last=ms[ms.length-1];
   const undo=!!last&&last[0]===m[0]&&(labTurns(last)+labTurns(m))%4===0;
   lab.moves=ms.length<=b&&!undo?ms.concat(m):labMerge(ms,m);
+  lab.colors=trailNote(lab.colors||[],ms.length,lab.moves.length,trailColor(m,lab.hold));
   labAtClamp(lab.moves.length);
 }
 // The list is n moves long now: a goal or a step that began past the end begins at the end.
@@ -229,20 +230,14 @@ function labAtClamp(n){
   if(lab.goal&&lab.goal.at>n)lab.goal.at=n;
   if(f){if(f.at>n)f.at=n;if(f.step&&f.step.at>n)f.step.at=n;}
 }
-// The box under the picture, as the cube tab's readout (cubeTabMovesDraw): the last LAB_SHOWN moves,
-// a triangle after them when there are more, the count in the head, and Clear moves.
+// The box under the picture, as the cube tab's readout (cubeTabMovesDraw): the last LAB_SHOWN moves as
+// a trail (js/trail.js, the site's cw:trailDir), the count in the head, Clear last and Clear moves.
 function labMovesDraw(){
-  const el=$('#moves'),ms=lab.moves,span=(cls,text)=>{const s=document.createElement('span');s.className=cls;if(text)s.textContent=text;return el.appendChild(s);};
+  const el=$('#moves'),ms=lab.moves;
   $('#movesClear').disabled=!ms.length;$('#movesLast').disabled=!ms.length;
   $('#movesCount').textContent=ms.length?ms.length+(ms.length===1?' move':' moves'):'';
-  el.textContent='';
-  if(!ms.length){span('none','No moves yet');return;}
-  ms.slice(-LAB_SHOWN).forEach((m,i,a)=>{const s=span('mv'+(/^[xyz]/.test(m)?' rot':'')+(i===a.length-1?' head':''),m);if(i===a.length-1)s.title='Your last move';});
-  if(ms.length>LAB_SHOWN){
-    const more=span('more');more.setAttribute('aria-label',`${ms.length-LAB_SHOWN} more`);more.title=`${ms.length} moves in all`;
-    const NS='http://www.w3.org/2000/svg',svg=document.createElementNS(NS,'svg'),p=document.createElementNS(NS,'polygon');
-    svg.setAttribute('viewBox','0 0 8 10');svg.setAttribute('aria-hidden','true');p.setAttribute('points','0,0 8,5 0,10');svg.appendChild(p);more.appendChild(svg);
-  }
+  lab.colors=(lab.colors||[]).slice(0,ms.length);
+  trailDraw(el,ms,{shown:LAB_SHOWN,colors:lab.colors,colorOf:m=>trailColor(m,lab.hold)});
 }
 function labMovesClear(){lab.moves=[];if(lab.goal)lab.goal.at=0;labF2LMovesGone();labMovesDraw();}
 // Clear last (Shift+C): the last move comes off the list, and nothing else changes. A goal or a

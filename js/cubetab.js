@@ -26,7 +26,7 @@
 // `target` the cube at the end of the queue: the real cube, as far as the page knows.
 // `moves` is every move since the cube connected, merged as they come (cubeTabMerge): R then R is
 // R2, R then R' is nothing, so a turn back takes its move off the list. The readout beside the
-// picture shows the last CUBE_TAB_SHOWN of them; a triangle after them says there are more.
+// picture shows the last CUBE_TAB_SHOWN of them as a trail (js/trail.js); a range says there are more.
 // Clear moves empties the list.
 // The hold: the cube names its faces its own way (its white face is U however it sits), and the
 // panel shows it as the user holds it. Six buttons under the picture turn the whole cube: x, y, z
@@ -79,7 +79,7 @@
 // leaves the tab, and when the link drops. The turns and the tilt draw only while the tab is in
 // view (cubeTabShown); the moves and the stage count all the same.
 const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,
-  q:null,qTo:null,qraf:0,qAt:0,moves:[],hold:null,
+  q:null,qTo:null,qraf:0,qAt:0,moves:[],colors:[],hold:null,
   gyro:false,raw:null,basis:null,away:null,awayTimer:0,awayMs:500,awayDeg:55,backDeg:40,warn:false,
   stage:null,done:0,revealed:0,stale:false,stillTimer:0,revealTimer:0,stillMs:1200,revealMs:1500,since:0,keepMoves:12,battery:null,look:'',
   lock:typeof store==='undefined'||store.get('smartLock',true)!==false,
@@ -279,23 +279,21 @@ function cubeTabRelabel(m,hold){
 }
 // Record the moves the cube made between two states, as held.
 function cubeTabRecord(path){
-  for(const m of path)cubeTab.moves=cubeTabMerge(cubeTab.moves,cubeTabRelabel(m,cubeTab.hold));
+  for(const m of path){
+    const before=cubeTab.moves.length,r=cubeTabRelabel(m,cubeTab.hold);
+    cubeTab.moves=cubeTabMerge(cubeTab.moves,r);
+    cubeTab.colors=trailNote(cubeTab.colors,before,cubeTab.moves.length,trailColor(r,cubeTab.hold));
+  }
   cubeTab.since+=path.length;
   cubeTabMovesDraw();
 }
-// The readout: the last CUBE_TAB_SHOWN moves, and a triangle after them when there are more.
+// The readout: the last CUBE_TAB_SHOWN moves as a trail (js/trail.js), Now, Recent and Earlier, each
+// move in the color of the face it turned as the cube was held then (`colors`, kept as the moves come).
 function cubeTabMovesDraw(){
   const el=$('#cubeWinMoves');if(!el)return;
-  const ms=cubeTab.moves,span=(cls,text)=>{const s=document.createElement('span');s.className=cls;if(text)s.textContent=text;return el.appendChild(s);};
-  const clear=$('#cubeWinClear');if(clear)clear.disabled=!ms.length;
-  el.textContent='';
-  if(!ms.length){span('none','No moves yet');return;}
-  for(const m of ms.slice(-CUBE_TAB_SHOWN))span('mv'+(/^[xyz]/.test(m)?' rot':''),m);
-  if(ms.length>CUBE_TAB_SHOWN){
-    const more=span('more');more.setAttribute('aria-label',`${ms.length-CUBE_TAB_SHOWN} more`);more.title=`${ms.length} moves in all`;
-    const NS='http://www.w3.org/2000/svg',svg=document.createElementNS(NS,'svg'),p=document.createElementNS(NS,'polygon');
-    svg.setAttribute('viewBox','0 0 8 10');svg.setAttribute('aria-hidden','true');p.setAttribute('points','0,0 8,5 0,10');svg.appendChild(p);more.appendChild(svg);
-  }
+  const clear=$('#cubeWinClear');if(clear)clear.disabled=!cubeTab.moves.length;
+  cubeTab.colors=cubeTab.colors.slice(0,cubeTab.moves.length);
+  trailDraw(el,cubeTab.moves,{shown:CUBE_TAB_SHOWN,colors:cubeTab.colors,colorOf:m=>trailColor(m,cubeTab.hold)});
 }
 // The picture: the cube as the cube names it, turned by the hold (`rot`), seen from the camera
 // that Front view picks (CUBE_TAB_CAMS).
