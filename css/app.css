@@ -974,6 +974,14 @@ body.cba .pt-tile{display:flex;align-items:center;justify-content:center}
 .flatlbl{font-family:var(--mono,ui-monospace,monospace)}
 .loopbox{display:contents}
 
+/* The footer: one small row at the foot of the page, left-aligned. Chrome, not content, so the link stays muted. */
+.foot{display:flex;align-items:center;gap:12px;padding:6px 2px 0;font-size:12px;line-height:1.4;color:var(--faint)}
+.foot a{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;border-radius:var(--chip);padding:2px 4px;margin-left:-4px}
+.foot a:hover,.foot a:focus-visible{color:var(--text);text-decoration:underline;text-underline-offset:2px}
+.foot svg{width:14px;height:14px;fill:currentColor;flex:none}
+.foot .footver{font-family:var(--mono);font-size:11px}
+body.onboard .foot{padding-bottom:56px}
+
 /* ?onboard: the first-visit strip at the foot of the page */
 .onboard-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:60;display:flex;align-items:center;gap:8px;padding:6px 6px 6px 14px;max-width:calc(100vw - 32px);box-sizing:border-box;background:var(--accent);color:var(--accent-ink);border-radius:999px;box-shadow:var(--shadow);font-size:13px;white-space:nowrap}
 .onboard-bar span{overflow:hidden;text-overflow:ellipsis}
