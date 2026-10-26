@@ -210,6 +210,18 @@ function setSequence(moves,label,base,drill){stopAuto();seqState.shown=-1;seqSta
   seqState.drill=drill||null;$('#drillNote').classList.toggle('hidden',!drill);$('#drillName').textContent=drill||'';
   renderSequence();applySequence();document.dispatchEvent(new CustomEvent('cw:sequence',{detail:{drill:seqState.drill}}));}
 function cubeAtSeq(i){return applyAlg(seqState.base,seqState.moves.slice(0,i));}
+// The color index (0 white .. 5 blue) of the face each move turns, as the move trail codes it
+// (js/trail.js): the center at that place before the move, so a z2 or a y before it counts. -1 for
+// a whole-cube turn or a middle slice. The 4x4 has no fixed centers: only its whole-cube turns count.
+function seqFaceColors(base,moves){
+  const four=!!(base&&base.isFour);let o=!four&&base&&base.center?base:new Cube();
+  return moves.map(m=>{
+    const rot=/^[xyz]/.test(m),p='URFDLB'.indexOf((m.replace(/^\d+/,'')[0]||'').toUpperCase());
+    const c=rot||p<0?-1:o.center[p];
+    if(rot||!four){try{o=applyAlg(o,[m]);}catch(e){}}
+    return c;
+  });
+}
 // seqState.shown is the index the picture showed last. One step away from it turns the layer.
 function applySequence(){const i=seqState.idx,was=seqState.shown;seqState.shown=i;
   if(was===i-1&&i>0)showCubeMoved(cubeAtSeq(i-1),seqState.moves[i-1],cubeAtSeq(i));
@@ -218,8 +230,10 @@ function applySequence(){const i=seqState.idx,was=seqState.shown;seqState.shown=
   $('#scrub').max=seqState.moves.length;$('#scrub').value=seqState.idx;$('#scrubPos').textContent=seqState.idx+' / '+seqState.moves.length;$$('#scramble .m').forEach((el,i)=>{el.classList.toggle('done',i<seqState.idx);el.classList.toggle('cur',i===seqState.idx-1);});}
 // In beginner mode every tile carries a caption in words (beghome.js: moveCaption), wrapped so the
 // tile itself keeps its text and its classes.
+// Each face move carries its face color as classes, fc and c0 to c5: a bar under the tile (css/app.css).
 function renderSequence(){$('#seqLabel').textContent=seqState.label||'';const cap=isBeg()&&typeof moveCaption==='function';
-  $('#scramble').innerHTML=seqState.moves.map((m,i)=>{const t=`<span class="m${/^[xyz]/.test(m)?' rot':''}" data-i="${i}" title="Show the cube after this move">${fmtMove(m)}</span>`;return cap?`<span class="mt">${t}<small>${esc(moveCaption(m))}</small></span>`:t;}).join('');
+  const fc=seqFaceColors(seqState.base,seqState.moves);
+  $('#scramble').innerHTML=seqState.moves.map((m,i)=>{const t=`<span class="m${/^[xyz]/.test(m)?' rot':''}${fc[i]>=0?' fc c'+fc[i]:''}" data-i="${i}" title="Show the cube after this move">${fmtMove(m)}</span>`;return cap?`<span class="mt">${t}<small>${esc(moveCaption(m))}</small></span>`:t;}).join('');
   $$('#scramble .m').forEach(el=>el.onclick=()=>{stopAuto();seqState.idx=+el.dataset.i+1;applySequence();});}
 $('#scrub').oninput=e=>{stopAuto();seqState.idx=+e.target.value;applySequence();};
 function focusPlayer(){const p=$('#player');window.scrollTo({top:0,behavior:'smooth'});p.classList.remove('flash');void p.offsetWidth;p.classList.add('flash');}

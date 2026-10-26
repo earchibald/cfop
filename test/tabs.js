@@ -20,6 +20,16 @@ w.addEventListener('load',async()=>{try{
   const seed=$('#seed').value;assert.ok(seed,'a seed at boot');
   const scr=moves();assert.ok(label().includes('seed '+seed),'Solve shows the scramble');
 
+  // Each face move carries the color of its face, as the move trail codes it; a whole-cube turn none.
+  const FACE_COLOR={U:0,R:1,F:2,D:3,L:4,B:5};
+  $$('#scramble .m').forEach(el=>{const m=el.textContent;
+    if(/^[xyz]/.test(m))assert.ok(!el.classList.contains('fc'),'no face color on a turn: '+m);
+    else assert.ok(el.classList.contains('fc')&&el.classList.contains('c'+FACE_COLOR[m[0]]),'the face color of '+m);});
+  const fcs=(base,ms)=>JSON.stringify([...w.seqFaceColors(base,ms)]);
+  assert.strictEqual(fcs(null,['U','z2','U','R','M']),'[0,-1,3,4,-1]','a turn moves the centers on; a slice has no face');
+  assert.strictEqual(fcs(null,['x','U','y','R']),'[-1,2,-1,0]','each turn counts');
+  assert.strictEqual(fcs({isFour:true},['r','Rw','2R','x','U']),'[1,1,1,-1,2]','the 4x4 counts its whole-cube turns only');
+
   // F2L live works on the same scramble, with the solved part dashed.
   tab('f2l');await until(()=>moves().length>scr.length,'F2L state');
   assert.ok(label().includes('seed '+seed),'F2L keeps the seed');
