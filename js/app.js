@@ -75,7 +75,7 @@ function drawMark(){const el=$('#mark');if(!el)return;
   const polys=cubePolys(new Cube().toFacelets(),{move:'R',t:0.5,scale:10,cx:0,cy:0,body:'var(--mk-body)',color,n:3});
   el.setAttribute('viewBox',MARK_VIEWBOX);el.innerHTML=polysSVG(polys);}
 drawMark();
-// The footer: one link to the source code, with the version a report names.
+// The footer: the version a report names, on the right.
 {const v=$('#footVer');if(v)v.textContent='v'+APP_VERSION;}
 // thumbnails
 let _mk=0;

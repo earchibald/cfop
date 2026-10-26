@@ -16,7 +16,7 @@ The app was called Cubeworks. Keep these old names as they are:
 
 | Path | Contents |
 |---|---|
-| `index.html` | Page shell and markup; the footer (`footer.foot`, one link to the repository with the version, `#footVer`; see `docs/design-language.md`) |
+| `index.html` | Page shell and markup; the footer (`footer.foot`: "on GitHub" on the left, `#footRepo`, the version on the right, `#footVer`, both links to the repository; see `docs/design-language.md`) |
 | `LICENSE` | All rights reserved: the source may be read, the site and the released app used; nothing may be copied or reused. `package.json` says `UNLICENSED` |
 | `css/app.css` | All styles |
 | `js/version.js` | `APP_VERSION`, shown in the Settings window. Loads first |
