@@ -169,3 +169,158 @@ function twistDetector(opts){
   }
   return {feed,reset,state:st,opts:o,set(k,v){o[k]=v;}};
 }
+
+// ----- fat moves -----
+// Experiment 4. The cube counts the turns of its six faces against its core, and the tilt sensor
+// sits in the core. A fat move turns a face and the middle layer next to it together: r is R with
+// the middle layer. The middle layer carries four centers, and the centers are the core, so the
+// core turns with it. Against the core, only the far face moved: the cube reports r as L, and the
+// core (so the tilt) turns a quarter about the same axis, as x. That is the whole signal: r = L x.
+// For each move the cube reports, the detector takes the core's turn from `pre` ms before the
+// report to `post` ms after it, in the cube's own frame, and splits it into the twist about the
+// reported face's axis and the swing off that axis. A face turn leaves the core still. A fat turn
+// twists it the other way from the face's own turn ("against" the face): L turns clockwise as seen
+// from the left, the core of r turns clockwise as seen from the right. Twist against the face past
+// `min` degrees (90 + min for a half turn), with swing under `swing` degrees, is a fat move.
+// pre, post: ms, the window about the report. min: deg, the least twist against the face for a fat
+// move. swing: deg, the most turn off the axis (a cube turned in the hands some other way is not
+// a fat move). flip: take the twist the other way, should the real cube show it with the sign turned.
+const FAT_DEFAULTS={pre:350,post:250,min:45,swing:45,flip:false};
+// FAT_WIDE: ms each side of a report that a record keeps, so a change of the knobs can judge the
+// moves already made again. FAT_KEEP: ms of readings the detector holds.
+const FAT_WIDE=800,FAT_KEEP=2000;
+// The outward axis of each face in the cube's own frame, in the axes of draw.js: white up +y, red
+// right +x, green front +z.
+const FAT_AXES={U:[0,1,0],D:[0,-1,0],R:[1,0,0],L:[-1,0,0],F:[0,0,1],B:[0,0,-1]};
+const FAT_OPP={U:'D',D:'U',R:'L',L:'R',F:'B',B:'F'};
+// The whole-cube turn that goes with a fat turn of each face, the way the fat turn goes: r = L x.
+const FAT_ROT={R:'x',L:"x'",U:'y',D:"y'",F:'z',B:"z'"};
+// The fat move the cube reports as `m` (a face move): the far face, small, the same way round.
+// L is r, R' is l', U2 is d2.
+function fatName(m){return FAT_OPP[m[0]].toLowerCase()+m.slice(1);}
+// The whole-cube turn inside a fat move: r is x, r' is x', l is x', u2 is y2.
+function fatRot(f){const b=FAT_ROT[f[0].toUpperCase()],s=f.slice(1);
+  if(s==='2')return b[0]+'2';if(s==="'")return b.endsWith("'")?b[0]:b+"'";return b;}
+function fatSameAxis(a,b){return a[0]===b[0]||FAT_OPP[a[0]]===b[0];}
+// The turn of the core from q0 to q1 in the cube's own frame, split about `axis`: twist, signed by
+// the right-hand rule (counterclockwise seen from the tip of the axis), and swing, the rest, in degrees.
+function fatTwist(q0,q1,axis){
+  let [x,y,z,w]=quatNorm(quatMul(quatConj(quatNorm(q0)),quatNorm(q1)));
+  if(w<0){x=-x;y=-y;z=-z;w=-w;}
+  const p=x*axis[0]+y*axis[1]+z*axis[2],l=Math.hypot(p,w)||1;
+  const tw=[axis[0]*p/l,axis[1]*p/l,axis[2]*p/l,w/l],s=quatMul([x,y,z,w],quatConj(tw));
+  return {twist:2*Math.atan2(p,w)*180/Math.PI,swing:2*Math.acos(Math.min(1,Math.abs(s[3])))*180/Math.PI};
+}
+// The reading at dt ms from the report, part way between the two readings about it. Before the
+// first reading, the first; after the last, the last.
+function fatAt(samples,dt){
+  if(!samples.length)return null;
+  if(dt<=samples[0][0])return samples[0][1];
+  for(let i=1;i<samples.length;i++)if(samples[i][0]>=dt){const [a,qa]=samples[i-1],[b,qb]=samples[i];return quatSlerp(qa,qb,b>a?(dt-a)/(b-a):1);}
+  return samples[samples.length-1][1];
+}
+// The window of a record under the knobs: from pre before to post after, cut at the half-way
+// point to a move on the same axis before it, or after it when that one came within post. Two
+// fat turns in a row (r r) then each get their own quarter.
+function fatWindow(rec,o){
+  let a=-o.pre,b=o.post;
+  if(rec.prev!=null)a=Math.max(a,rec.prev/2);
+  if(rec.next!=null&&rec.next<=o.post)b=Math.min(b,rec.next/2);
+  return [a,b];
+}
+// The twist against the face: positive the way a fat move turns the core.
+function fatAgainst(m,twist,o){const s=m.slice(1);return s==='2'?Math.abs(twist):twist*(s==="'"?-1:1)*(o.flip?-1:1);}
+// Judge one record: {m, samples:[[dt,q]...], prev, next} where m is the move as the cube names it,
+// dt is ms from the report, prev and next the ms to the moves on the same axis (null for none).
+// Returns {fat, against, swing, n (readings in the window), a, b, name}.
+function fatJudge(rec,opts){
+  const o=Object.assign({},FAT_DEFAULTS,opts),[a,b]=fatWindow(rec,o);
+  const n=rec.samples.filter(s=>s[0]>=a&&s[0]<=b).length;
+  if(!rec.samples.length)return {fat:false,against:null,swing:null,n:0,a,b,name:rec.m};
+  const {twist,swing}=fatTwist(fatAt(rec.samples,a),fatAt(rec.samples,b),FAT_AXES[rec.m[0]]);
+  const against=fatAgainst(rec.m,twist,o),fat=against>=(rec.m.endsWith('2')?90+o.min:o.min)&&swing<=o.swing;
+  return {fat,against,swing,n,a,b,name:fat?fatName(rec.m):rec.m};
+}
+// The twist against the face over the whole record, from the start of the record (or the half-way
+// point to the move before it on the same axis), for the trace: [[dt,deg]...].
+function fatCurve(rec,opts){
+  const o=Object.assign({},FAT_DEFAULTS,opts);
+  const a=rec.prev!=null?Math.max(-FAT_WIDE,rec.prev/2):-FAT_WIDE,q0=fatAt(rec.samples,a);
+  if(!q0)return [];
+  return rec.samples.filter(s=>s[0]>=a).map(([dt,q])=>[dt,fatAgainst(rec.m,fatTwist(q0,q,FAT_AXES[rec.m[0]]).twist,o)]);
+}
+// When the core turns, about the report: the ms at which the curve has made 10%, 50% and 90% of
+// its way. null for a curve that hardly moves (under 30 degrees).
+function fatSpan(curve){
+  if(!curve.length)return null;
+  const end=curve[curve.length-1][1],top=Math.max(...curve.map(c=>c[1])),full=Math.max(end,top*0.9);
+  if(full<30)return null;
+  const at=f=>{const c=curve.find(c=>c[1]>=full*f);return c?c[0]:null;};
+  return {t10:at(0.1),t50:at(0.5),t90:at(0.9),deg:full};
+}
+// The moves the user said were fat and the ones they said were face turns (truth 'fat', 'face'),
+// judged under the knobs: counts, the share judged right, and the knobs that would judge them
+// best: the window that holds the fat turns (from 50 ms before the earliest 10% to 50 ms after
+// the latest 90%), and in it the least twist half-way between the groups (or the one with the
+// fewest wrong when they overlap).
+function fatStats(recs,opts){
+  const o=Object.assign({},FAT_DEFAULTS,opts),g={fat:[],face:[],any:[]};
+  for(const r of recs){const v=fatJudge(r,o);(g[r.truth]||g.any).push({r,v});}
+  const out={fat:g.fat.length,face:g.face.length,any:g.any.length,fatRight:g.fat.filter(x=>x.v.fat).length,faceRight:g.face.filter(x=>!x.v.fat).length,suggest:null,spanFat:null};
+  out.right=out.fatRight+out.faceRight;out.told=out.fat+out.face;
+  const spans=g.fat.map(x=>fatSpan(fatCurve(x.r,o))).filter(Boolean);
+  if(spans.length){
+    const med=a=>{const s=a.filter(v=>v!=null).sort((p,q)=>p-q);return s.length?s[Math.floor(s.length/2)]:null;};
+    out.spanFat={t10:med(spans.map(s=>s.t10)),t50:med(spans.map(s=>s.t50)),t90:med(spans.map(s=>s.t90))};
+  }
+  if(g.fat.length&&g.face.length){
+    const t10=spans.map(s=>s.t10).filter(v=>v!=null),t90=spans.map(s=>s.t90).filter(v=>v!=null);
+    const pre=t10.length?Math.max(0,Math.round((50-Math.min(...t10))/10)*10):o.pre;
+    const post=t90.length?Math.max(0,Math.round((Math.max(...t90)+50)/10)*10):o.post;
+    const o2=Object.assign({},o,{pre:Math.min(FAT_WIDE,pre),post:Math.min(FAT_WIDE,post)});
+    // quarter turns as they are; a half turn needs 90 more, so it counts 90 less
+    const val=x=>{const v=fatJudge(x.r,o2);return v.against==null?null:(x.r.m.endsWith('2')?v.against-90:v.against);};
+    const fv=g.fat.map(val).filter(v=>v!=null),hv=g.face.map(val).filter(v=>v!=null);
+    if(fv.length&&hv.length){
+      let min=o.min;const lo=Math.min(...fv),hi=Math.max(...hv);
+      if(lo>hi)min=(lo+hi)/2;
+      else{let best=Infinity;for(const c of fv.concat(hv)){const wrong=fv.filter(v=>v<c).length+hv.filter(v=>v>=c).length;if(wrong<best){best=wrong;min=c;}}}
+      out.suggest={pre:o2.pre,post:o2.post,min:Math.max(10,Math.min(90,Math.round(min))),apart:lo>hi};
+    }
+  }
+  return out;
+}
+// The live detector. feedGyro(t,q) takes each reading (q as the cube reports it, the turn of the
+// body; any heading, since only the turn between two readings counts), feedMove(t,m,extra) each
+// move as the cube names it, at the time of its move message, and gives back an id (extra goes
+// on the record: the truth, the lag). feedGyro, poll(t) and flush() return the events that are due:
+//   {type:'verdict',id,m,t,fat,against,swing,n,name}  post ms after a move: fat or not
+//   {type:'record',rec}                                 FAT_WIDE ms after it: the readings about it, for the data
+// reset() drops what is open.
+function fatDetector(opts){
+  const o=Object.assign({},FAT_DEFAULTS,opts);
+  const st={buf:[],open:[],seq:0};
+  function reset(){st.buf=[];st.open=[];}
+  const verdict=r=>{r.judged=true;r.v=fatJudge(r,o);return Object.assign({type:'verdict',id:r.id,m:r.m,t:r.t},r.v);};
+  function poll(t){
+    const out=[];
+    for(const r of st.open)if(!r.judged&&t>=r.t+o.post)out.push(verdict(r));
+    while(st.open.length&&st.open[0].judged&&t-st.open[0].t>FAT_WIDE)out.push({type:'record',rec:st.open.shift()});
+    return out;
+  }
+  function feedGyro(t,q){
+    q=quatNorm(q);st.buf.push([t,q]);while(st.buf.length&&t-st.buf[0][0]>FAT_KEEP)st.buf.shift();
+    for(const r of st.open)if(t-r.t<=FAT_WIDE)r.samples.push([t-r.t,q]);
+    return poll(t);
+  }
+  function feedMove(t,m,extra){
+    if(!/^[URFDLB]['2]?$/.test(m))return null;
+    const rec=Object.assign({id:++st.seq,t,m,samples:st.buf.filter(s=>t-s[0]<=FAT_WIDE).map(([u,q])=>[u-t,q]),prev:null,next:null,judged:false,v:null},extra);
+    for(const r of st.open)if(fatSameAxis(r.m,m)){if(r.next==null)r.next=t-r.t;rec.prev=r.t-t;}
+    st.open.push(rec);
+    return rec.id;
+  }
+  // Every open move judged now, with the readings there are: for a jump, a clear or a drop.
+  function flush(){return st.open.filter(r=>!r.judged).map(verdict);}
+  return {feedGyro,feedMove,poll,flush,reset,state:st,opts:o,set(k,v){o[k]=v;}};
+}

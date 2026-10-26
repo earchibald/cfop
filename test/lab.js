@@ -82,6 +82,57 @@ function pure(){
   assert.deepStrictEqual(twf("R R' R R' R2 R R' R R' R R'"),[false,false,false,false,false,false,false,false,false,false,true],'a half turn starts over');
   assert.deepStrictEqual(twf("R R' R U U' U U' U U'"),[false,false,false,false,false,false,false,false,true],'another face starts over');
   assert.deepStrictEqual(twf("R R' R R' R x R' R R' R R' R"),[false,false,false,false,false,false,false,false,false,false,false,true],'a whole-cube turn starts over');
+  // experiment 4: fat moves. The cube reports r as L, and the core turns x with it: a quarter twist
+  // of the core against the face the cube names. A face turn leaves the core still.
+  {const fatName=run('fatName'),fatRot=run('fatRot'),fatTwist=run('fatTwist'),fatJudge=run('fatJudge'),fatDetector=run('fatDetector'),fatStats=run('fatStats'),fatCurve=run('fatCurve'),fatSpan=run('fatSpan'),quatConj=run('quatConj');
+    assert.deepStrictEqual(['L',"L'",'L2','R',"R'",'U','D',"F'",'B'].map(fatName),['r',"r'",'r2','l',"l'",'d','u',"b'",'f'],'the fat move for each report');
+    assert.deepStrictEqual(['r',"r'",'r2','l',"l'",'u',"d'",'f','b2'].map(fatRot),['x',"x'",'x2',"x'",'x','y','y','z','z2'],'the whole-cube turn inside each');
+    const X=[-Math.SQRT1_2,0,0,Math.SQRT1_2]; // the core turned x
+    const tw=fatTwist(I,X,[-1,0,0]);assert.ok(Math.abs(tw.twist-90)<1e-6&&tw.swing<1e-3,'x twists the core +90 about the left face: '+JSON.stringify(tw));
+    const tw2=fatTwist(I,quatMul(turn([0,0,1],20),X),[-1,0,0]);assert.ok(Math.abs(tw2.swing-20)<1&&Math.abs(tw2.twist-90)<3,'a lean is swing: '+JSON.stringify(tw2));
+    // a record: readings every 30 ms from -800 to 800 ms; the core turns from `from` to `to` between t0 and t1
+    const rec=(m,end,t0=-150,t1=30,extra={})=>{const s=[];for(let dt=-800;dt<=800;dt+=30){const k=Math.max(0,Math.min(1,(dt-t0)/(t1-t0)));s.push([dt,quatSlerp(I,end,k)]);}return Object.assign({m,samples:s,prev:null,next:null},extra);};
+    let v=fatJudge(rec('L',X),{});assert.ok(v.fat&&v.name==='r'&&Math.abs(v.against-90)<1,'L with the core turned x is r: '+JSON.stringify(v));
+    v=fatJudge(rec('L',I),{});assert.ok(!v.fat&&v.name==='L'&&Math.abs(v.against)<1e-6,'L with the core still is L');
+    v=fatJudge(rec("L'",quatConj(X)),{});assert.ok(v.fat&&v.name==="r'",'L\' with x\' is r\'');
+    v=fatJudge(rec("L'",X),{});assert.ok(!v.fat&&v.against<-80,'L\' with the core turned the wrong way is no fat move: '+v.against);
+    v=fatJudge(rec('L',X),{flip:true});assert.ok(!v.fat&&v.against<-80,'Flip the twist turns the sign');
+    v=fatJudge(rec('R',quatConj(X)),{});assert.ok(v.fat&&v.name==='l','R with x\' is l');
+    v=fatJudge(rec('U',turn([0,1,0],90)),{});assert.ok(v.fat&&v.name==='d','U with the core turned y\' is d');
+    v=fatJudge(rec('L2',quatMul(X,X)),{});assert.ok(v.fat&&v.name==='r2'&&v.against>170,'L2 with x2 is r2: '+v.against);
+    v=fatJudge(rec('L2',X),{});assert.ok(!v.fat,'L2 with only a quarter turn of the core is not');
+    v=fatJudge(rec('L',quatMul(turn([0,1,0],60),X)),{});assert.ok(!v.fat&&v.swing>50,'past the swing: no fat move');
+    v=fatJudge(rec('L',X,-500,-420),{});assert.ok(!v.fat,'a turn before the window is outside it');
+    v=fatJudge(rec('L',X,-500,-420),{pre:600});assert.ok(v.fat,'a wider window takes it');
+    v=fatJudge(rec('L',X,300,380),{});assert.ok(!v.fat&&v.n>0,'a turn after the window is outside it');
+    const span=fatSpan(fatCurve(rec('L',X),{}));assert.ok(span&&span.t10>=-150&&span.t10<=-100&&span.t90>=0&&span.t90<=60&&span.t50<0,'the span of the turn: '+JSON.stringify(span));
+    assert.strictEqual(fatSpan(fatCurve(rec('L',I),{})),null,'no span for a still core');
+    // the live detector: the word comes post ms after the move, the record FAT_WIDE ms after
+    const fd=fatDetector({}),fev=[],ff=evs=>fev.push(...evs);
+    for(let t=0;t<=1000;t+=30)ff(fd.feedGyro(t,I));
+    const id=fd.feedMove(1000,'L',{truth:'fat'});assert.ok(id,'an id for the move');assert.strictEqual(fd.feedMove(1000,'x'),null,'a whole-cube turn is not fed');
+    for(let t=1020;t<=1240;t+=30)ff(fd.feedGyro(t,quatSlerp(I,X,Math.min(1,(t-990)/150))));
+    assert.strictEqual(fev.length,0,'no word before post');
+    ff(fd.feedGyro(1260,X));assert.strictEqual(fev.length,1,'the word at post');assert.ok(fev[0].type==='verdict'&&fev[0].fat&&fev[0].name==='r'&&fev[0].id===id,JSON.stringify(fev[0]));
+    for(let t=1290;t<=1830;t+=30)ff(fd.feedGyro(t,X));
+    const recEv=fev.find(e=>e.type==='record');assert.ok(recEv&&recEv.rec.truth==='fat'&&recEv.rec.samples.length>40,'the record, with what the user said and the readings');
+    assert.strictEqual(fd.state.open.length,0,'nothing open');
+    // r r: two fat turns in a row each get their own quarter (the window stops half-way to the other)
+    fev.length=0;const X2=quatMul(X,X);
+    fd.feedMove(2000,'L');for(let t=1860;t<=2120;t+=20)ff(fd.feedGyro(t,quatSlerp(X,X2,Math.max(0,Math.min(1,(t-1900)/100)))));
+    fd.feedMove(2120,'L');const X3=quatMul(X,X2);
+    for(let t=2140;t<=2500;t+=20)ff(fd.feedGyro(t,quatSlerp(X2,X3,Math.max(0,Math.min(1,(t-2030)/100)))));
+    const vs=fev.filter(e=>e.type==='verdict');assert.strictEqual(vs.length,2);assert.ok(vs.every(e=>e.fat&&e.name==='r'),'both are r: '+JSON.stringify(vs.map(e=>[e.name,Math.round(e.against)])));
+    // flush: every open move judged now
+    fd.feedMove(3000,"R'");const fl=fd.flush();assert.strictEqual(fl.length,1);assert.ok(!fl[0].fat&&fl[0].name==="R'");
+    // the stats: what the user said against what the knobs say, and the best knobs
+    const recs=[];for(let i=0;i<6;i++){recs.push(rec('L',quatMul(turn([0,1,0],i),turn([-1,0,0],70+i*5)),-200,-60,{truth:'fat'}));recs.push(rec('L',turn([-1,0,0],i*3),-200,-60,{truth:'face'}));}
+    recs.push(rec('U',I,0,1));
+    let st=fatStats(recs,{min:80});assert.strictEqual(st.fat+st.face+st.any,13);assert.ok(st.fatRight<6&&st.faceRight===6,'a high least misses the slow fat turns: '+JSON.stringify(st));
+    assert.ok(st.suggest&&st.suggest.apart&&st.suggest.min>15&&st.suggest.min<70,'a least between the groups: '+JSON.stringify(st.suggest));
+    assert.ok(st.suggest.pre>=200&&st.suggest.pre<=300&&st.suggest.post>=0&&st.suggest.post<=60,'a window about the turn: '+JSON.stringify(st.suggest));
+    st=fatStats(recs,Object.assign({},st.suggest));assert.strictEqual(st.right,12,'the best knobs judge all of them right');
+    assert.ok(st.spanFat&&st.spanFat.t50<-100,'the core turns before the report here: '+JSON.stringify(st.spanFat));}
   // crossSolutions (js/engine.js): every solution of the D cross up to a length, each counted once,
   // against a brute force with the same rules (no face twice, commuting moves in one order, no move
   // that leaves the cross as it was, stop where the cross is solved)
@@ -626,6 +677,67 @@ async function page(){
   $('#turnOn').checked=false;$('#turnOn').dispatchEvent(new w.Event('change',{bubbles:true}));assert.strictEqual(storage.getItem('cw:labTurn'),'','off is kept too');$('#turnOn').checked=true;
   $('#holdUp').value='0';$('#holdUp').dispatchEvent(new w.Event('change',{bubbles:true}));$('#holdFront').value='2';$('#holdFront').dispatchEvent(new w.Event('change',{bubbles:true}));
   assert.strictEqual(L().hold,w.eval('LAB_HOLDS')[0],'the plain hold again');
+  // experiment 4: fat moves. The cube reports r as L and its core turns x: the list says r, and the
+  // hold follows the x, so the next move reads as held. Read fat moves is on by default.
+  {$('#turnOn').checked=false;key('c');
+    assert.ok($('#fatOn').checked,'Read fat moves is on by default');assert.ok($('#fatSec')&&$('#side').firstElementChild===$('#fatSec'),'the experiment heads the panel');
+    assert.strictEqual($('#fatTruthAny').getAttribute('aria-pressed'),'true','You do now: Anything');
+    assert.strictEqual(L().fat.opts.pre+'/'+L().fat.opts.post+'/'+L().fat.opts.min,'350/250/45','the knobs start at the defaults');
+    const raw=q=>({w:q[3],x:q[0],y:-q[2],z:q[1]}),I=[0,0,0,1],X=[-Math.SQRT1_2,0,0,Math.SQRT1_2],mv=()=>dev.notify(Uint8Array.from([0x01,...Array(19).fill(0)]));
+    const recs0=L().fatRecs.length;
+    for(let i=0;i<12;i++){send(raw(I));await sleep(40);} // at rest for longer than the window
+    for(let i=1;i<=3;i++){send(raw(w.quatSlerp(I,X,i/3)));await sleep(40);}
+    set(w.applyAlg(cur(),['L']));mv();
+    for(let i=0;i<9;i++){send(raw(X));await sleep(40);}
+    assert.ok(await until(()=>L().moves.join(' ')==='r'),'the cube\'s L with the core turned x reads as r: '+L().moves.join(' ')+' | '+JSON.stringify(L().fatLast));
+    assert.strictEqual(L().hold.cube.center[0]+'/'+L().hold.cube.center[2],'2/3','the hold followed the x: green up, yellow toward you');
+    assert.strictEqual($('#holdUp').value+'/'+$('#holdFront').value,'2/3','the selects say so');
+    assert.ok(!$$('#moves .mv.rot').length,'no whole-cube turn on the list');
+    assert.ok($('#moves .it.now')&&$('#moves .it.now').classList.contains('c1'),'the r tile takes the color of its face, red: '+($('#moves .it.now')||{}).className);
+    assert.ok(/L as the cube names it: the core turned (8\d|9\d)° against it, \d+° off the axis, \d+ readings → r$/.test($('#log .fat').textContent),'the log: '+$('#log .fat').textContent);
+    assert.ok(/r: the cube reported L, and the core turned x with it\. Hold: green up, yellow toward you\./.test($('#log .hold').textContent),'the hold change is logged: '+$('#log .hold').textContent);
+    assert.ok(await until(()=>$('#fatLastMv').textContent==='r'),'the panel shows the last move');
+    // the top layer now has the green center: the cube names it F, and it reads as U
+    set(w.applyAlg(cur(),['F']));mv();for(let i=0;i<9;i++){send(raw(X));await sleep(40);}
+    assert.ok(await until(()=>L().moves.join(' ')==='r U'),'the next move reads as held: '+L().moves.join(' '));
+    // a face turn with the core still stays a face turn
+    set(w.applyAlg(cur(),['L']));mv();for(let i=0;i<9;i++){send(raw(X));await sleep(40);}
+    assert.ok(await until(()=>L().moves.join(' ')==='r U L'),'L with the core still is L: '+L().moves.join(' '));
+    // Read fat moves off: the list shows the move as the cube names it, the log still says what it found
+    $('#fatOn').checked=false;$('#fatOn').dispatchEvent(new w.Event('change',{bubbles:true}));assert.strictEqual(storage.getItem('cw:labFat'),'off','off is kept');
+    const X2=w.quatMul(X,X);
+    for(let i=1;i<=3;i++){send(raw(w.quatSlerp(X,X2,i/3)));await sleep(40);}
+    set(w.applyAlg(cur(),['L']));mv();for(let i=0;i<9;i++){send(raw(X2));await sleep(40);}
+    assert.ok(await until(()=>L().moves.join(' ')==='r U L2'),'off: the cube\'s L goes on the list as L: '+L().moves.join(' '));
+    assert.ok(await until(()=>/→ r \(Read fat moves is off\)$/.test($('#log .fat').textContent)),'the log says what it found: '+$('#log .fat').textContent);
+    assert.strictEqual(L().hold.cube.center[0],2,'the hold stays');
+    // the records: each move with the readings about it, kept; the panel draws them
+    assert.ok(await until(()=>L().fatRecs.length===recs0+4,3000),'four moves recorded: '+L().fatRecs.length);
+    const r0=L().fatRecs[recs0];assert.ok(r0.m==='L'&&r0.held==='L'&&r0.read==='r'&&r0.truth==='any'&&r0.samples.length>5&&typeof r0.lag==='number','the record of the r: '+JSON.stringify(Object.assign({},r0,{samples:r0.samples.length})));
+    assert.strictEqual(L().fatRecs[recs0+1].held,'U','the record of the U, as held');
+    assert.strictEqual(JSON.parse(storage.getItem('cw:labFatData')).length,recs0+4,'kept');
+    assert.ok(await until(()=>$$('#fatTrace polyline').length===recs0+4),'a line per move in the trace');
+    assert.strictEqual($$('#fatTrace polyline.fat').length,2,'two read as fat');assert.strictEqual($$('#fatStrip circle').length,recs0+4,'a dot per move');
+    assert.strictEqual($('#fatCount').textContent,(recs0+4)+' moves');assert.ok(!$('#fatSave').disabled&&!$('#fatClear').disabled);
+    // the knobs judge the records again, and are kept
+    $('#fatFlip').checked=true;$('#fatFlip').dispatchEvent(new w.Event('change',{bubbles:true}));
+    assert.ok(await until(()=>$$('#fatTrace polyline.fat').length===0),'flipped: none reads as fat');assert.strictEqual(JSON.parse(storage.getItem('cw:labFatOpts')).flip,true);
+    $('#fatFlip').checked=false;$('#fatFlip').dispatchEvent(new w.Event('change',{bubbles:true}));
+    $('#fatMin').value='60';$('#fatMin').dispatchEvent(new w.Event('input',{bubbles:true}));assert.strictEqual(L().fat.opts.min,60,'the knob sets the least');assert.strictEqual(JSON.parse(storage.getItem('cw:labFatOpts')).min,60);
+    // what you do now goes in the data; the best knobs come from labeled moves
+    click($('#fatTruthFat'));assert.strictEqual(L().fatTruth,'fat');assert.strictEqual($('#fatTruthFat').getAttribute('aria-pressed'),'true');
+    w.labFatDrawNow();assert.ok($('#fatUse').disabled,'no best knobs without both groups');
+    L().fatRecs[recs0].truth='fat';L().fatRecs[recs0+2].truth='face';w.labFatDrawNow();
+    assert.ok(!$('#fatUse').disabled,'both groups: Use best knobs is on');assert.ok(/You said fat: 1 of 1 read as fat\. You said face: 1 of 1 read as face\./.test($('#fatStats').textContent),$('#fatStats').textContent);
+    click($('#fatUse'));assert.ok(/Fat moves: before \d+ ms, after \d+ ms, least \d+°\./.test($('#log .fat').textContent),'the knobs set are logged: '+$('#log .fat').textContent);
+    const data=w.labFatData();assert.ok(data.lab===ver&&data.cube==='GAN12uiM_A1B2'&&data.recs.length===recs0+4&&data.opts.pre>=0,'Save data holds the records and the knobs');
+    click($('#fatClear'));assert.strictEqual(L().fatRecs.length,0,'Clear data');assert.strictEqual(JSON.parse(storage.getItem('cw:labFatData')).length,0);
+    // the defaults back for the tests after this one
+    click($('#fatTruthAny'));$('#fatOn').checked=true;$('#fatOn').dispatchEvent(new w.Event('change',{bubbles:true}));
+    for(const [k,v] of [['pre',350],['post',250],['min',45]])L().fat.set(k,v);w.labFatOptsSave();w.labFatKnobs();
+    send(rest);await sleep(40);
+    $('#holdUp').value='0';$('#holdUp').dispatchEvent(new w.Event('change',{bubbles:true}));$('#holdFront').value='2';$('#holdFront').dispatchEvent(new w.Event('change',{bubbles:true}));
+    assert.strictEqual(L().hold.cube.center.join(),'0,1,2,3,4,5','the plain hold again');$('#turnOn').checked=true;}
   // keys and buttons
   key('l');assert.ok($('#side').hidden,'L hides the panel');key('l');assert.ok(!$('#side').hidden);
   key('c');assert.strictEqual($('#log').children.length,0,'C clears the log');assert.strictEqual(L().moves.length,0,'and the moves');assert.ok($('#movesClear').disabled);

@@ -42,6 +42,17 @@
 // Experiment 3: one face turned and turned back, three times over (R R' R R' R R'), is a gesture
 // (twistDetector, fed each move before the list merges it): the lab waits `twistMs`, then does
 // Reset cube, as if R were pressed. The six quarter turns leave the cube, and the list, as they were.
+// Experiment 4: fat moves (fatDetector in lab/smack.js). The cube reports r as L: the middle layer
+// carries the core, so against the core only the far face moved, and the core turned x. The tilt
+// sees that turn. Each move goes to the detector at the time of its move message, with the tilt
+// readings about it; post ms later it says fat or not. With Read fat moves on (cw:labFat), the
+// moves wait on the list for that word, in order: a fat one goes on the list as r, and the hold
+// moves by the x inside it with nothing on the list, so the moves after it read as held. The
+// picture does not wait. The panel records each move with the readings about it (cw:labFatData),
+// labeled with what the user said they were doing (Fat turns, Face turns), and shows the twist
+// of the core over time, the twist of each move against the least for a fat one, how many the
+// knobs judge right, and the knobs that would judge them best. Save data writes the records as a
+// JSON file for tuning away from the lab. See docs/lab-fat-moves.md.
 // Patterns (P): each state the cube reports is read as the CFOP stage of the cube as held
 // (cfopStage, js/stage.js), with the color on the bottom as held as the cross. A two-look OLL or
 // PLL case goes in the Patterns window with the moves that solve it as held, newest first, the same
@@ -95,7 +106,8 @@
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,patOpen:{},
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,hidden:false,view:{yaw:0,pitch:0},drag:null,
-  battLogged:null,keys:'',holdSrc:'load',busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,f2l:null,f2lPos:null,winTop:'pat',copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false};
+  battLogged:null,keys:'',holdSrc:'load',busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,f2l:null,f2lPos:null,winTop:'pat',copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false,
+  fat:null,fatQ:[],fatV:new Map(),fatAts:[],askAt:0,fatRecs:[],fatTruth:'any',fatLast:null,fatRaf:0};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200,LAB_CROSS_MAX=7,LAB_SOLS_SHOWN=3;
 const LAB_PAT_STEPS={eo:'OLL edges',co:'OLL corners',cp:'PLL corners',ep:'PLL edges'};
 // The cameras: straight on, the cube as it sits in space; and isometric, a little from the right
@@ -186,7 +198,7 @@ function labDraw(){
 function labAsk(){
   if(!lab.conn)return;
   if(lab.asked){lab.want=true;return;}
-  lab.asked=true;lab.conn.send('state').catch(()=>{lab.asked=false;});
+  lab.asked=true;lab.askAt=performance.now();lab.conn.send('state').catch(()=>{lab.asked=false;});
 }
 const LAB_MOVES=['U',"U'",'U2','R',"R'",'R2','F',"F'",'F2','D',"D'",'D2','L',"L'",'L2','B',"B'",'B2'];
 const labKey=c=>c.cp.join()+'/'+c.co.join()+'/'+c.ep.join()+'/'+c.eo.join();
@@ -224,7 +236,7 @@ function labAdd(m){
   const b=Math.max(lab.goal?lab.goal.at:-1,lab.f2l&&lab.f2l.open?lab.f2l.at:-1),ms=lab.moves,last=ms[ms.length-1];
   const undo=!!last&&last[0]===m[0]&&(labTurns(last)+labTurns(m))%4===0;
   lab.moves=ms.length<=b&&!undo?ms.concat(m):labMerge(ms,m);
-  lab.colors=trailNote(lab.colors||[],ms.length,lab.moves.length,trailColor(m,lab.hold));
+  lab.colors=trailNote(lab.colors||[],ms.length,lab.moves.length,trailColor(m.replace(/^[urfdlb]/,c=>c.toUpperCase()),lab.hold)); // a fat move (r) takes the color of its face
   labAtClamp(lab.moves.length);
 }
 // The list is n moves long now: a goal or a step that began past the end begins at the end.
@@ -242,7 +254,7 @@ function labMovesDraw(){
   lab.colors=(lab.colors||[]).slice(0,ms.length);
   trailDraw(el,ms,{shown:LAB_SHOWN,colors:lab.colors,colorOf:m=>trailColor(m,lab.hold)});
 }
-function labMovesClear(){lab.moves=[];if(lab.goal)lab.goal.at=0;labF2LMovesGone();labMovesDraw();}
+function labMovesClear(){labFatFlush();lab.moves=[];if(lab.goal)lab.goal.at=0;labF2LMovesGone();labMovesDraw();}
 // Clear last (Shift+C): the last move comes off the list, and nothing else changes. A goal or a
 // step that began at the end of the list begins at the new end.
 function labMovesLast(){
@@ -350,20 +362,28 @@ function labSetHold(h,src){
   const old=lab.hold;labHoldKeep(h,src);
   if(src==='load')return '';
   let turn='';
-  if(old&&old!==h){const d=LAB_HOLD_BY.get(old.cube.inverse().mul(h.cube).center.join());if(d){for(const m of d.moves)labAdd(m);turn=d.moves.join(' ');}labMovesDraw();}
+  if(old&&old!==h&&src!=='fat'){const d=LAB_HOLD_BY.get(old.cube.inverse().mul(h.cube).center.join());if(d){for(const m of d.moves)labAdd(m);turn=d.moves.join(' ');}labMovesDraw();}
   if(old!==h&&lab.f2l&&lab.f2l.open&&(lab.target||lab.shown))labF2LRead(lab.target||lab.shown); // the guide names the places anew
-  if(src==='turn')return turn;
+  if(src==='turn'||src==='fat')return turn;
   labLog('hold','Hold: '+labHoldWords(h)+'.');
   if(lab.conn&&lab.raw)labReset();else labDraw();
 }
 // Show the real cube's state: up to four moves past the picture turn their layers in a queue;
 // further away, the picture jumps.
-function labShow(cube){
-  if(lab.jump){lab.jump=false;labJump(cube);labPatRead(cube);labF2LRead(cube);return;}
+// With the tilt live, each move goes to the fat move detector too. With Read fat moves on, the
+// list, Patterns and the F2L guide wait for its word (labFatDrain); the picture does not.
+function labShow(cube,askedAt){
+  if(lab.jump){lab.jump=false;labFatFlush();labJump(cube);labPatRead(cube);labF2LRead(cube);return;}
   const moved=labPath(lab.target||lab.shown,cube);
-  if(moved&&moved.length){for(const m of moved){const r=labRelabel(m);labAdd(r);if($('#twistOn').checked&&lab.twist.feed(r))labTwist(r);}labMovesDraw();}
-  labPatRead(cube); // after the moves, so a cross made lists the moves it took
-  labF2LRead(cube); // the same: a pair solved lists the moves it took
+  if(!moved&&lab.fatQ.length)labFatFlush();
+  const ids=moved&&moved.length&&lab.gyro?labFatFeed(moved,askedAt):null;
+  if(moved&&moved.length)for(const m of moved){const r=labRelabel(m);if($('#twistOn').checked&&lab.twist.feed(r))labTwist(r);}
+  if(labFatOn()&&(ids||lab.fatQ.length)){lab.fatQ.push({moves:moved||[],ids:ids||[],cube});labFatDrain();}
+  else{
+    if(moved&&moved.length){for(const m of moved)labAdd(labRelabel(m));labMovesDraw();}
+    labPatRead(cube); // after the moves, so a cross made lists the moves it took
+    labF2LRead(cube); // the same: a pair solved lists the moves it took
+  }
   if(!moved||!moved.length){labStopAnim();lab.shown=lab.target=cube;labDraw();return;}
   lab.target=cube;lab.queue.push(...moved);
   if(!lab.anim)labNext();
@@ -478,6 +498,7 @@ function labGyro(q){
   const now=performance.now();
   lab.times.push(now);while(lab.times.length&&now-lab.times[0]>1000)lab.times.shift();
   for(const ev of lab.det.feed(now,lab.qTo))labEvent(ev);
+  labFatEvents(lab.fat.feedGyro(now,q));
   if($('#turnOn').checked)for(const ev of lab.turn.feed(now,lab.qTo))labTurnEvent(ev);
   labTurnNow();
   labMeter(now);
@@ -955,6 +976,164 @@ function labF2LDrawAll(){
       if(e.moves)d.appendChild(el('code',null,e.moves));
       dn.appendChild(d);}}
 }
+// ----- experiment 4: fat moves -----
+const LAB_FAT_MAX=150,LAB_FAT_DRAWN=24,LAB_FAT_STALE=1500;
+function labFatOn(){return $('#fatOn').checked;}
+// The moves of one state to the detector, each at the time of its move message, oldest first (the
+// state comes a round trip later). A message from before the ask for this state was answered by
+// it, so one left over is dropped; one after the ask waits for the next state.
+function labFatFeed(moved,askedAt){
+  const now=performance.now();
+  lab.fatAts=lab.fatAts.filter(t=>now-t<LAB_FAT_STALE);
+  const ids=moved.map(m=>{const t=lab.fatAts.length?lab.fatAts.shift():now;
+    const id=lab.fat.feedMove(t,m,{truth:lab.fatTruth,lag:Math.round(now-t)});
+    setTimeout(labFatPoll,lab.fat.opts.post+30);setTimeout(labFatPoll,FAT_WIDE+30);
+    return id;});
+  if(askedAt)lab.fatAts=lab.fatAts.filter(t=>t>askedAt);
+  return ids;
+}
+// The detector's word comes with the next tilt reading, or from these timers when the readings
+// are slow.
+function labFatPoll(){if(lab.fat)labFatEvents(lab.fat.poll(performance.now()));}
+function labFatEvents(evs){
+  if(!evs.length)return;
+  for(const ev of evs){
+    if(ev.type==='verdict'){lab.fatV.set(ev.id,ev);lab.fatLast=ev;
+      if(ev.against!=null&&ev.against>=lab.fat.opts.min/2)labLog(ev.fat?'fat':'fatno',`${ev.m} as the cube names it: the core turned ${ev.against.toFixed(0)}° against it, ${ev.swing.toFixed(0)}° off the axis, ${ev.n} readings → ${ev.fat?ev.name+(labFatOn()?'':' (Read fat moves is off)'):'a face turn'}`);}
+    if(ev.type==='record')labFatRecord(ev.rec);
+  }
+  labFatDrain();labFatDraw();
+}
+// The waiting states, in order, as far as the detector has spoken: each move as held, or the fat
+// move for one the detector found fat. The hold then moves by the whole-cube turn inside the fat
+// move, with nothing on the list, so the next move reads as held. Patterns and the F2L guide read
+// each state after its moves.
+function labFatDrain(){
+  let any=false;
+  while(lab.fatQ.length&&lab.fatQ[0].ids.every(id=>id==null||lab.fatV.has(id))){
+    const e=lab.fatQ.shift();any=true;
+    e.moves.forEach((m,i)=>{
+      const v=lab.fatV.get(e.ids[i]),held=labRelabel(m);lab.fatV.delete(e.ids[i]);
+      const rec=lab.fat.state.open.find(r=>r.id===e.ids[i]);
+      if(!(v&&v.fat&&labFatOn())){labAdd(held);if(rec)rec.held=held;return;}
+      const name=fatName(held),rot=fatRot(name),h=LAB_HOLD_BY.get(applyAlg(lab.hold.cube,[rot]).center.join());
+      if(rec){rec.held=held;rec.read=name;}
+      labAdd(name);
+      if(h&&h!==lab.hold){labSetHold(h,'fat');labLog('hold',`${name}: the cube reported ${held}, and the core turned ${rot} with it. Hold: ${labHoldWords(h)}.`);}
+      if($('#turnOn').checked)lab.turn.reset(); // the turn of the core is spent: not a whole-cube turn as well
+    });
+    labPatRead(e.cube);labF2LRead(e.cube);
+  }
+  if(any)labMovesDraw();
+}
+// Every waiting move judged now, with the readings there are: before a jump, a clear or a new link.
+function labFatFlush(){if(lab.fat&&lab.fatQ.length)labFatEvents(lab.fat.flush());}
+// A move's record, for the data: the move as the cube names it and as held, what the user said
+// they were doing, the readings about it (ms from the report, the quaternion to four places).
+function labFatRecord(r){
+  const q=v=>Math.round(v*1e4)/1e4;
+  lab.fatRecs.push({at:Date.now(),m:r.m,held:r.held||null,read:r.read||null,truth:r.truth||'any',lag:r.lag,prev:r.prev,next:r.next,
+    samples:r.samples.map(([dt,qq])=>[Math.round(dt),qq.map(q)])});
+  if(lab.fatRecs.length>LAB_FAT_MAX)lab.fatRecs.splice(0,lab.fatRecs.length-LAB_FAT_MAX);
+  labFatStore();
+}
+function labFatStore(){try{localStorage.setItem('cw:labFatData',JSON.stringify(lab.fatRecs));}catch(e){}}
+function labFatLoad(){
+  try{const a=JSON.parse(localStorage.getItem('cw:labFatData')||'[]');return Array.isArray(a)?a.filter(r=>r&&r.m&&Array.isArray(r.samples)).slice(-LAB_FAT_MAX):[];}catch(e){return [];}
+}
+function labFatOptsLoad(){try{const o=JSON.parse(localStorage.getItem('cw:labFatOpts')||'{}')||{},out={};for(const k of Object.keys(FAT_DEFAULTS))if(typeof o[k]===typeof FAT_DEFAULTS[k])out[k]=o[k];return out;}catch(e){return {};}}
+function labFatOptsSave(){try{localStorage.setItem('cw:labFatOpts',JSON.stringify(lab.fat.opts));}catch(e){}}
+// What the user says they do now: 'any', 'fat' or 'face'. Each move made goes in the data with it.
+function labFatTruth(t){lab.fatTruth=t;for(const [id,v] of [['fatTruthAny','any'],['fatTruthFat','fat'],['fatTruthFace','face']])$('#'+id).setAttribute('aria-pressed',String(v===t));labFatDraw();}
+// An SVG element with its attributes (numbers and fixed words only), into `parent`.
+function labSvg(parent,tag,attrs,text){
+  const el=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for(const k in attrs)el.setAttribute(k,String(attrs[k]));
+  if(text!=null)el.textContent=text;
+  parent.appendChild(el);return el;
+}
+// The panel, drawn on the next frame: the last move, the twist of the core about each recent move
+// over time, the twist of every move against the least for a fat one, and the counts.
+function labFatDraw(){if(!lab.fatRaf)lab.fatRaf=requestAnimationFrame(()=>{lab.fatRaf=0;labFatDrawNow();});}
+function labFatDrawNow(){
+  const o=lab.fat.opts,recs=lab.fatRecs,f=v=>v.toFixed(0),L=lab.fatLast;
+  $('#fatLastMv').textContent=L?(L.fat?L.name:L.m):'–';
+  $('#fatLastDeg').textContent=L&&L.against!=null?f(L.against)+'°':'–';
+  $('#fatLastSw').textContent=L&&L.swing!=null?f(L.swing)+'°':'–';
+  $('#fatLastN').textContent=L?String(L.n):'–';
+  // the trace: dt -800..800 ms across, -45..200 degrees up; the window shaded, the least as a line
+  const X=dt=>+((dt+FAT_WIDE)/(2*FAT_WIDE)*320).toFixed(1),Y=d=>+(116-(Math.max(-45,Math.min(200,d))+45)/245*112).toFixed(1);
+  const tr=$('#fatTrace');tr.textContent='';
+  labSvg(tr,'rect',{class:'win',x:X(-o.pre),y:4,width:Math.max(0,X(o.post)-X(-o.pre)).toFixed(1),height:112});
+  labSvg(tr,'line',{class:'zero',x1:X(0),x2:X(0),y1:4,y2:116});labSvg(tr,'line',{class:'zero',x1:0,x2:320,y1:Y(0),y2:Y(0)});
+  labSvg(tr,'line',{class:'min',x1:0,x2:320,y1:Y(o.min),y2:Y(o.min)});
+  for(const r of recs.slice(-LAB_FAT_DRAWN)){
+    const v=fatJudge(r,o),c=fatCurve(r,o);if(!c.length)continue;
+    const wrong=(r.truth==='fat'&&!v.fat)||(r.truth==='face'&&v.fat);
+    labSvg(tr,'polyline',{class:(v.fat?'fat':'face')+(wrong?' wrong':''),points:c.map(([dt,d])=>X(dt)+','+Y(d)).join(' ')});
+  }
+  // the strip: one row per group the user named, each move a dot at its twist against the face
+  const SX=d=>((Math.max(-45,Math.min(200,d))+45)/245*320).toFixed(1),rows={fat:14,face:36,any:58};
+  const sp=$('#fatStrip');sp.textContent='';
+  labSvg(sp,'line',{class:'min',x1:SX(o.min),x2:SX(o.min),y1:2,y2:68});
+  for(const [y,t] of [[17,'said fat'],[39,'said face'],[61,'not said']])labSvg(sp,'text',{x:316,y,'text-anchor':'end'},t); // on the right: past 150 degrees, where few dots fall
+  for(const r of recs){const v=fatJudge(r,o);if(v.against==null)continue;const d=r.m.endsWith('2')?v.against-90:v.against;
+    labSvg(sp,'circle',{class:v.fat?'fat':'face',cx:SX(d),cy:rows[r.truth]||rows.any,r:3});}
+  const s=fatStats(recs,o),parts=[];
+  if(!recs.length)parts.push('No moves recorded yet. Pick Fat turns, make r and r\' ten times each, then pick Face turns and make L and L\' ten times each.');
+  if(s.fat)parts.push(`You said fat: ${s.fatRight} of ${s.fat} read as fat.`);
+  if(s.face)parts.push(`You said face: ${s.faceRight} of ${s.face} read as face.`);
+  if(s.any)parts.push(`${s.any} not labeled.`);
+  if(s.spanFat&&s.spanFat.t50!=null)parts.push(`The core turns from ${s.spanFat.t10} ms to ${s.spanFat.t90} ms about the report, half way at ${s.spanFat.t50} ms.`);
+  if(s.suggest)parts.push(`Best knobs: before ${s.suggest.pre} ms, after ${s.suggest.post} ms, least ${s.suggest.min}°`+(s.suggest.apart?' (the two groups are apart).':' (the two groups overlap: some moves stay wrong).'));
+  $('#fatStats').textContent=parts.join(' ');
+  $('#fatUse').disabled=!s.suggest;$('#fatUse').dataset.k=s.suggest?JSON.stringify(s.suggest):'';
+  $('#fatCount').textContent=recs.length?recs.length+(recs.length===1?' move':' moves'):'';
+  $('#fatSave').disabled=$('#fatClear').disabled=!recs.length;
+}
+// The knobs: the detector takes each change at once, the records are judged again, and the knobs are kept.
+function labFatKnobs(){
+  for(const inp of $$('.fknob input[type=range]')){
+    const k=inp.dataset.k,out=inp.parentNode.querySelector('output');
+    inp.value=lab.fat.opts[k];out.value=inp.value;
+    inp.oninput=()=>{lab.fat.set(k,parseFloat(inp.value));out.value=inp.value;labFatOptsSave();labFatDraw();};
+  }
+  $('#fatFlip').checked=!!lab.fat.opts.flip;
+  $('#fatFlip').onchange=e=>{lab.fat.set('flip',e.target.checked);labFatOptsSave();labFatDraw();labBlur();};
+}
+// Use these: the best knobs from the data.
+function labFatUse(){
+  let s=null;try{s=JSON.parse($('#fatUse').dataset.k||'null');}catch(e){}
+  if(!s)return;
+  for(const k of ['pre','post','min'])lab.fat.set(k,s[k]);
+  labFatOptsSave();labFatKnobs();labFatDraw();
+  labLog('fat',`Fat moves: before ${s.pre} ms, after ${s.post} ms, least ${s.min}°.`);
+}
+// Save data: the records and the knobs as a JSON file, for tuning away from the lab.
+function labFatData(){
+  return {what:'Twistwright lab fat moves',lab:LAB_VERSION,app:typeof BRIDGE!=='undefined'&&BRIDGE?BRIDGE.version||null:null,cube:lab.conn?lab.conn.name:null,
+    hold:labHoldWords(lab.hold),opts:Object.assign({},lab.fat.opts),hz:lab.times.length,at:new Date().toISOString(),recs:lab.fatRecs};
+}
+function labFatSaveFile(){
+  if(!lab.fatRecs.length)return;
+  const t=new Date(),p=n=>String(n).padStart(2,'0'),name=`fat-moves-${t.getFullYear()}${p(t.getMonth()+1)}${p(t.getDate())}-${p(t.getHours())}${p(t.getMinutes())}.json`;
+  try{
+    const url=URL.createObjectURL(new Blob([JSON.stringify(labFatData())],{type:'application/json'})),a=document.createElement('a');
+    a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    labLog('fat',`Saved ${lab.fatRecs.length} moves as ${name}.`);
+  }catch(e){labLog('fat','The browser did not save the file: '+e.message);}
+}
+function labFatClear(){lab.fatRecs=[];lab.fatLast=null;labFatStore();labFatDraw();}
+function labFatStart(){
+  lab.fat=fatDetector(labFatOptsLoad());lab.fatRecs=labFatLoad();
+  let on=true;try{on=localStorage.getItem('cw:labFat')!=='off';}catch(e){}
+  $('#fatOn').checked=on;
+  $('#fatOn').onchange=e=>{const v=e.target.checked;try{localStorage.setItem('cw:labFat',v?'on':'off');}catch(_){}
+    if(!v)labFatFlush();labLog('fat',v?'Read fat moves: on. A fat move goes on the list as r, and the hold follows it.':'Read fat moves: off. The list shows the moves as the cube names them; the log still says what the detector finds.');labBlur();};
+  $('#fatTruthAny').onclick=()=>labFatTruth('any');$('#fatTruthFat').onclick=()=>labFatTruth('fat');$('#fatTruthFace').onclick=()=>labFatTruth('face');
+  $('#fatUse').onclick=labFatUse;$('#fatSave').onclick=labFatSaveFile;$('#fatClear').onclick=labFatClear;
+  labFatKnobs();labFatTruth('any');labFatDrawNow();
+}
 // ----- experiment 3: six twists of one face -----
 // The sixth quarter turn: say so, then Reset cube after the wait. A second gesture within the wait
 // starts the wait over.
@@ -1007,7 +1186,7 @@ function labTraceDraw(){
   svg.innerHTML=`<line x1="0" x2="320" y1="${y(lab.det.opts.jolt)}" y2="${y(lab.det.opts.jolt)}"/><polyline points="${pts}"/>`;
 }
 function labKnobs(){
-  for(const inp of $$('.knob input[type=range]')){
+  for(const inp of $$('.knob:not(.tknob):not(.fknob) input[type=range]')){
     const k=inp.dataset.k,out=inp.parentNode.querySelector('output');if(!k)continue;
     inp.value=lab.det.opts[k];out.value=inp.value;
     inp.oninput=()=>{lab.det.set(k,parseFloat(inp.value));out.value=inp.value;};
@@ -1264,7 +1443,7 @@ async function labConnect(auto){
     try{
       const cube=await conn.readState(3000);
       labSaveMac(name,conn.mac);labRemember(name,{mac:conn.mac,id:device.id||null});lab.conn=conn;lab.busy=false;
-      lab.battLogged=null;lab.moves=[];if(lab.goal)lab.goal.at=0;labF2LMovesGone();lab.shown=lab.target=null;lab.asked=false;lab.want=false;lab.gyro=false;lab.raw=lab.basis=lab.q=lab.qTo=null;lab.det.reset();lab.twist.reset();clearTimeout(lab.twistTimer);lab.twistTimer=0;lab.trace=[];lab.times=[];
+      lab.battLogged=null;lab.moves=[];if(lab.goal)lab.goal.at=0;labF2LMovesGone();lab.shown=lab.target=null;lab.asked=false;lab.want=false;lab.gyro=false;lab.raw=lab.basis=lab.q=lab.qTo=null;lab.det.reset();lab.twist.reset();clearTimeout(lab.twistTimer);lab.twistTimer=0;lab.trace=[];lab.times=[];lab.fat.reset();lab.fatQ=[];lab.fatV.clear();lab.fatAts=[];
       labButtons();labMovesDraw();labDots();labShow(cube);
       labStatus((conn.gen===3?'Live. Each turn of your cube turns the layer. This cube has no tilt sensor.':'Live. Each turn of your cube turns the layer. Waiting for the first tilt reading: move the cube.')+labSolvedHint(cube));
       labLog('link',`Connected to ${conn.name} (gen ${conn.gen}).`+(conn.fix?' The state is corrected from the colors read in the Smart cube dialog.':''));
@@ -1281,20 +1460,22 @@ async function labConnect(auto){
 }
 function labLink(ev,conn){
   if(!conn||conn!==lab.conn)return;
-  if(ev.type==='gone'){lab.conn=null;lab.asked=false;lab.want=false;labStopView();labButtons();labStatus('The cube is no longer connected. Turn a face to wake it up.');labLog('link','The link dropped.');labConnect(true);return;}
+  if(ev.type==='gone'){labFatFlush();lab.conn=null;lab.asked=false;lab.want=false;labStopView();labButtons();labStatus('The cube is no longer connected. Turn a face to wake it up.');labLog('link','The link dropped.');labConnect(true);return;}
   if(ev.type==='off'){conn.close();return;}
-  if(ev.type==='move')labAsk();
+  if(ev.type==='move'){lab.fatAts.push(performance.now());if(lab.fatAts.length>32)lab.fatAts.shift();labAsk();} // the time of each move, for the fat move detector
   if(ev.type==='gyro')labGyro(ev.q);
   if(ev.type==='battery'){labBatteryDraw($('#batt'),ev.level);if(ev.level!==lab.battLogged){lab.battLogged=ev.level;labLog('link',`Charge ${ev.level}%.`);}}
-  if(ev.type==='state'){lab.asked=false;if(lab.want){lab.want=false;labAsk();}if(!lab.reading)labShow(ev.cube);} // a read for a correction shows nothing: labReadColors jumps to the corrected state
+  if(ev.type==='state'){const askedAt=lab.askAt;lab.asked=false;if(lab.want){lab.want=false;labAsk();}if(!lab.reading)labShow(ev.cube,askedAt);} // a read for a correction shows nothing: labReadColors jumps to the corrected state
 }
 function labDisconnect(){
+  labFatFlush();
   if(lab.conn){const c=lab.conn;lab.conn=null;c.close();labLog('link','Disconnected.');}
   labStopAnim();labStopView();lab.busy=false;labButtons();labStatus('Disconnected. Press Connect to connect again.');
 }
 // ----- start -----
 function labStart(){
   lab.det=smackDetector({});lab.turn=turnDetector({});lab.twist=twistDetector({});
+  labFatStart();
   labSetHold(labHoldLoad(),'load');$('#holdUp').onchange=labHoldPick;$('#holdFront').onchange=labHoldPick;
   lab.iso=labIsoLoad();$('#iso').checked=lab.iso;$('#iso').onchange=e=>labIso(e.target.checked);
   lab.hidden=labHiddenLoad();$('#hiddenFaces').checked=lab.hidden;$('#hiddenFaces').onchange=e=>labHidden(e.target.checked);labViewDrag();
