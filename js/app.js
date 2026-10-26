@@ -258,12 +258,20 @@ $('#autoSpeed').onchange=()=>{store.set('autoSpeed',autoMs());if(auto.timer){cle
 // scramble state
 var scr={seed:'',moves:[],cube:new Cube()}; // var: tests read it from the window
 let history=store.get('history',[]);
-// The scramble lengths the seed bar offers, per puzzle. A 2×2 mix-up uses R, U and F only.
+// The scramble lengths the seed bar offers, per puzzle, after Random state (js/scramble.js).
+// A 2×2 mix-up uses R, U and F only.
 const SCR_LENS={3:[20,22,25],2:[9,11,13],4:[30,40,50]};
-function setScrLenOptions(){const sel=$('#scrLen');const lens=SCR_LENS[puzzleN()];if([...sel.options].map(o=>+o.value).join()===lens.join())return;sel.innerHTML=lens.map(n=>`<option${n===lens[1]?' selected':''}>${n}</option>`).join('');}
+function setScrLenOptions(){const sel=$('#scrLen');const vals=['rs',...SCR_LENS[puzzleN()].map(String)];if([...sel.options].map(o=>o.value).join()===vals.join())return;
+  const was=sel.value;sel.replaceChildren(...vals.map(v=>{const o=document.createElement('option');o.value=v;o.textContent=v==='rs'?'Random state':v;return o;}));
+  sel.value=was==='rs'||!was?'rs':vals[2];}
+// The length of a random-move scramble: the one chosen, or the middle one under Random state.
+function scrLen(){const v=$('#scrLen').value;return v==='rs'||!v?SCR_LENS[puzzleN()][1]:+v;}
 function scrambleMoves(seed,n){return puzzleN()===2?twoScramble(seed,n):puzzleN()===4?fourScramble(seed,n):randomMoveScramble(seed,n);}
+// A new scramble. With no seed and Random state chosen, a random-state one when the pool has one;
+// it loads with its moves, as a typed scramble does, since no seed makes it again. Else random moves.
 function newScramble(seed){
-  seed=seed||randomSeedName();loadScramble(seed,scrambleMoves(seed,+$('#scrLen').value),false);}
+  if(!seed&&$('#scrLen').value==='rs'){const m=rsTake(puzzleN());if(m){loadScramble(randomSeedName(),m,true);return;}}
+  seed=seed||randomSeedName();loadScramble(seed,scrambleMoves(seed,scrLen()),false);}
 function loadScramble(seed,moves,custom){
   scr.seed=seed;$('#seed').value=custom?'':seed;$('#seed').placeholder=custom?seed:'seed name';
   scr.moves=Array.isArray(moves)?moves:parseAlg(moves);scr.cube=applyAlg(puzzleCube(),scr.moves);
@@ -476,7 +484,7 @@ function refreshCross(){if(!tablesReady){$('#crossOpt').textContent='…';ensure
   $('#crossTryOut').innerHTML='';}
 $('#crossReveal').onclick=()=>{crossState.revealed=!crossState.revealed;refreshCross();};
 $('#crossPlus1').onchange=refreshCross;$('#crossColor').onchange=()=>{store.set('crossColor',$('#crossColor').value);if(!seqState.drill)showForTab();refreshCross();planState.plan=null;renderLLGroups();renderF2LGrid();if(mobileMQ.matches)renderMobileRef();$('#planOut').innerHTML='<p class="muted">Cross color changed. Press Plan.</p>';};
-$('#crossNew').onclick=()=>{ensureTables(()=>{const diff=$('#crossDiff').value;for(let k=0;k<200;k++){const seed=randomSeedName();const moves=randomMoveScramble(seed,+$('#scrLen').value);const c=toFrame(applyAlg(new Cube(),moves));const d=buildCrossTable()[crossIndex(c)];if(diff==='any'||(diff==='easy'&&d<=5)||(diff==='hard'&&d>=7)){newScramble(seed);return;}}newScramble();});};
+$('#crossNew').onclick=()=>{ensureTables(()=>{const diff=$('#crossDiff').value;for(let k=0;k<200;k++){const seed=randomSeedName();const moves=randomMoveScramble(seed,scrLen());const c=toFrame(applyAlg(new Cube(),moves));const d=buildCrossTable()[crossIndex(c)];if(diff==='any'||(diff==='easy'&&d<=5)||(diff==='hard'&&d>=7)){newScramble(seed);return;}}newScramble();});};
 $('#crossCheck').onclick=()=>{let ms;try{ms=parseAlg($('#crossTry').value);applyAlg(new Cube(),ms);}catch(e){$('#crossTryOut').innerHTML='<span style="color:var(--warn)">'+esc(badMoveText(e))+'</span>';return;}
   const {cube}=orientedScramble();const c=applyAlg(cube,ms);const ok=crossSolved(c);const opt=crossState.sol?crossState.sol.optimal:'?';const n=ms.filter(m=>!'xyz'.includes(m[0])).length;
   let msg=ok?`<b style="color:var(--good)">Cross solved</b> in ${n} moves. Optimal is ${opt}. ${n>opt?`Gap: ${n-opt}.`:'That is optimal.'}`:`<b style="color:var(--warn)">Cross not solved.</b> `;
@@ -845,6 +853,8 @@ function openSettings(){if($('#setBg'))return;
     <h3>Smart cube</h3>
     <label class="setrow" title="The last move on the left, the older moves to its right. Off: the last move on the right, so the moves read as an algorithm"><input type="checkbox" id="setTrailRtl"${typeof trailDir!=='function'||trailDir()==='rtl'?' checked':''}> Last move on the left</label>
     <p class="muted">The moves beside the live cube, and in the lab. Off, the moves read left to right, as an algorithm does.</p>
+    <h3>Scrambles</h3>
+    <p class="muted" id="setScr">${esc(rsStatus())}</p>
     <h3>Phone</h3>
     <label class="setrow" title="On a phone, in the Reference section: close a case's details, and the page goes on to the next stage"><input type="checkbox" id="setRefNext"${store.get('refNext',true)?' checked':''}> Go to the next stage after a case closes</label>
     <p class="muted">Phone only, in the Reference section.</p>
@@ -881,5 +891,5 @@ $('#f2lPairs').onchange=()=>{if(f2lState.mode==='live')showF2LState();};
 // boot
 $('#crossColor').value=store.get('crossColor','white');setScrLenOptions();
 document.body.dataset.tab=curTab;$('#mtitle').textContent='Solve';
-renderTimes();renderHistory();renderAnimBtn();newScramble();applyMobile();setTimeout(()=>{buildCrossTable();tablesReady=true;if(curTab==='cross')refreshCross();},300);
+renderTimes();renderHistory();renderAnimBtn();newScramble();RS.bootSeed=scr.seed;setTimeout(rsStart,0);applyMobile();setTimeout(()=>{buildCrossTable();tablesReady=true;if(curTab==='cross')refreshCross();},300);
 

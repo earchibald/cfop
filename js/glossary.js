@@ -134,6 +134,8 @@ const GLOSSARY=[
    def:'The World Cube Association. It runs official competitions and sets their rules, such as how to hold the cube for a scramble and how long inspection lasts.'},
   {id:'average',term:'Average (ao5, ao12)',match:/\bao(?:5|12)\b/i,
    def:'A fair average of recent solves. For ao5, drop the best and the worst of the last five times, then take the mean of the other three. For ao12, drop the best and the worst of the last twelve, then average the other ten.'},
+  {id:'random-state',term:'Random state',match:/\brandom[- ]state\b/i,see:['wca','seed'],
+   def:'A scramble that puts the cube in a random position, each position as likely as any other. WCA competitions use random-state scrambles from TNoodle. Twistwright makes them with cubing.js, which has the same solvers as TNoodle. A seed gives random moves instead.'},
   {id:'seed',term:'Seed',match:/\bseeds?\b/i,
    def:'A word that picks a scramble in Twistwright. The same seed always gives the same scramble, so you can repeat or share one.'},
   {id:'smart-cube',term:'Smart cube',match:/\bsmart cubes?\b/i,

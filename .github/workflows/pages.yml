@@ -18,6 +18,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The libraries the page loads at run time (cubing.js for random-state scrambles), pinned in
+      # package.json. git ignores vendor/, so each deploy fetches and checks them.
+      - run: node scripts/vendor.js --force
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

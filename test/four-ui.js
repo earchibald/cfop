@@ -23,7 +23,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   click($('#methodPop .mcard[data-method="master"]'));
   assert.strictEqual(d.body.dataset.method,'master');assert.strictEqual(d.body.dataset.kind,'beg');assert.strictEqual(d.body.dataset.puzzle,'4x4');
   assert.strictEqual($('#puzzleName').textContent,'4×4 ·');assert.strictEqual(d.body.dataset.tab,'learn');
-  assert.deepStrictEqual($$('#scrLen option').map(o=>o.textContent),['30','40','50']);
+  assert.deepStrictEqual($$('#scrLen option').map(o=>o.textContent),['Random state','30','40','50']);
   assert.ok(w.scr.moves.length===40&&w.scr.moves.every(m=>/^(?:[UDLRFB]|Uu|Rr|Ff)['2]?$/.test(m)),'a 4×4 scramble: '+w.scr.moves.join(' '));
   assert.ok(w.scr.cube.isFour,'the scramble state is a 4×4');
   assert.strictEqual($('#progSq').children.length,10,'ten progress squares');
