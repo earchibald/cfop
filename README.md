@@ -29,6 +29,11 @@ The site deploys to GitHub Pages on every push to `main`.
 
 The scripts share one global scope and load in the order above.
 
+## License
+
+All rights reserved. You may read the source and use the site, but you may not
+copy, change or reuse it. See [`LICENSE`](LICENSE).
+
 ## Test
 
 ```sh

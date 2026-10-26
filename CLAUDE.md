@@ -16,7 +16,8 @@ The app was called Cubeworks. Keep these old names as they are:
 
 | Path | Contents |
 |---|---|
-| `index.html` | Page shell and markup |
+| `index.html` | Page shell and markup; the footer (`footer.foot`, one link to the repository with the version, `#footVer`; see `docs/design-language.md`) |
+| `LICENSE` | All rights reserved: the source may be read, the site and the released app used; nothing may be copied or reused. `package.json` says `UNLICENSED` |
 | `css/app.css` | All styles |
 | `js/version.js` | `APP_VERSION`, shown in the Settings window. Loads first |
 | `js/tips.js` | Tooltips: one styled card for every control with a `title` (`.tipcard`, after 350 ms of hover, or on a keyboard focus; the browser's own tooltip held off while the pointer is over the control; the key from a `.hk` badge after the text, " · N"; none on a touch screen); `tipText(el)`, `tipsShown()`. Every button, select, checkbox label, input and clickable tile carries a `title`: add one with any new control. Loads second |

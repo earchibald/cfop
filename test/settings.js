@@ -18,6 +18,12 @@ w.addEventListener('load',async()=>{try{
   const v=w.eval('APP_VERSION');
   assert.ok(/^\d+\.\d+\.\d+$/.test(v),'the version has three numbers');
   assert.strictEqual(v,pkg.version,'js/version.js and package.json carry the same version');
+  // The footer: one link to the repository, the version in it, last in the page.
+  const foot=$('footer.foot'),repo=$('#footRepo');
+  assert.ok(foot&&foot.parentNode===$('.page')&&foot===$('.page').lastElementChild,'the footer is last in the page');
+  assert.strictEqual(repo.getAttribute('href'),'https://github.com/earchibald/cfop','the footer links to the repository');
+  assert.ok(repo.title&&repo.querySelector('svg')&&/GitHub Repository/.test(repo.textContent),'the link has a title, the mark and the words');
+  assert.strictEqual($('#footVer').textContent,'v'+v,'the footer shows the version, inside the link');
   // The button sits just left of Theme.
   assert.strictEqual($('#settingsBtn').nextElementSibling.id,'themeBtn','Settings is left of Theme');
   // The window: the settings area, then the buttons, then the version.
