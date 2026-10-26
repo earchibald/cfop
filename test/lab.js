@@ -849,7 +849,7 @@ async function chrome(storage){
   console.log('lab chrome ok');
 }
 // The keyboard cube: a Cube select in the bar picks a layout of six keys (left, up, right, down
-// around the front, and back). The key alone is counterclockwise, Shift clockwise, Option two layers.
+// around the front, and back). The key alone is clockwise, Shift counterclockwise, Option two layers.
 // The cube as held after the keys is the cube as held before them with the typed moves applied,
 // through two-layer turns (the hold moves on) and a hold changed in the bar.
 async function keyboard(){
@@ -861,16 +861,16 @@ async function keyboard(){
   const pick=v=>{$('#keysSel').value=v;$('#keysSel').dispatchEvent(new w.Event('change',{bubbles:true}));};
   const km=run('labKeyMove');
   // the four layouts, and the modifiers
-  assert.strictEqual(km('awdx','KeyA',false,false,false),"L'",'the key alone is counterclockwise');
-  assert.strictEqual(km('awdx','KeyA',true,false,false),'L','Shift is clockwise');
-  assert.strictEqual(km('awdx','KeyA',false,false,true),'L','Caps Lock is clockwise on a letter');
-  assert.strictEqual(km('awdx','KeyA',true,false,true),"L'",'Shift with Caps Lock types lower case');
-  assert.strictEqual(km('awdx','KeyD',false,true,false),"r'",'Option is two layers');assert.strictEqual(km('awdx','KeyD',true,true,false),'r','with Shift too');
-  assert.deepStrictEqual(['KeyA','KeyW','KeyD','KeyX','KeyS','KeyE'].map(c=>km('awdx',c,true,false,false)),['L','U','R','D','F','B'],'A W D X, S E');
-  assert.deepStrictEqual(['KeyS','KeyE','KeyF','KeyC','KeyD','KeyR'].map(c=>km('sefc',c,true,false,false)),['L','U','R','D','F','B'],'S E F C, D R');
-  assert.deepStrictEqual(['KeyJ','KeyI','KeyL','Comma','KeyK','KeyO'].map(c=>km('jil',c,true,false,false)),['L','U','R','D','F','B'],'J I L comma, K O');
-  assert.deepStrictEqual(['KeyK','KeyO','Semicolon','Period','KeyL','KeyP'].map(c=>km('kol',c,true,false,false)),['L','U','R','D','F','B'],'K O ; ., L P');
-  assert.strictEqual(km('jil','Comma',false,false,true),"D'",'Caps Lock does not count on a comma');
+  assert.strictEqual(km('awdx','KeyA',false,false,false),'L','the key alone is clockwise');
+  assert.strictEqual(km('awdx','KeyA',true,false,false),"L'",'Shift is counterclockwise');
+  assert.strictEqual(km('awdx','KeyA',false,false,true),"L'",'Caps Lock is counterclockwise on a letter');
+  assert.strictEqual(km('awdx','KeyA',true,false,true),'L','Shift with Caps Lock types lower case');
+  assert.strictEqual(km('awdx','KeyD',false,true,false),'r','Option is two layers');assert.strictEqual(km('awdx','KeyD',true,true,false),"r'",'with Shift too');
+  assert.deepStrictEqual(['KeyA','KeyW','KeyD','KeyX','KeyS','KeyE'].map(c=>km('awdx',c,false,false,false)),['L','U','R','D','F','B'],'A W D X, S E');
+  assert.deepStrictEqual(['KeyS','KeyE','KeyF','KeyC','KeyD','KeyR'].map(c=>km('sefc',c,false,false,false)),['L','U','R','D','F','B'],'S E F C, D R');
+  assert.deepStrictEqual(['KeyJ','KeyI','KeyL','Comma','KeyK','KeyO'].map(c=>km('jil',c,false,false,false)),['L','U','R','D','F','B'],'J I L comma, K O');
+  assert.deepStrictEqual(['KeyK','KeyO','Semicolon','Period','KeyL','KeyP'].map(c=>km('kol',c,false,false,false)),['L','U','R','D','F','B'],'K O ; ., L P');
+  assert.strictEqual(km('jil','Comma',false,false,true),'D','Caps Lock does not count on a comma');
   assert.strictEqual(km('awdx','KeyQ',true,false,false),null,'another key makes no move');assert.strictEqual(km('','KeyA',true,false,false),null,'no layout, no move');
   // on: the look for a cube stops, the keys show, the S badge goes, Solved is on
   assert.ok(!$('#list').hidden,'the look for a cube is up');
@@ -881,7 +881,7 @@ async function keyboard(){
   assert.ok(!$('#solved').disabled&&$('#solvedText').textContent==='Solved','Solved is on');assert.ok(!$('#paint').disabled,'Paint my cube is on');
   assert.ok(L().target.isSolved(),'the cube starts solved');
   // keys turn faces as held; the list shows them as typed
-  kd('KeyD',{shiftKey:true});kd('KeyW');kd('KeyS');kd('KeyS');
+  kd('KeyD');kd('KeyW',{shiftKey:true});kd('KeyS');kd('KeyS');
   assert.strictEqual(L().moves.join(' '),"R U' F2",'the moves as typed, merged');
   assert.ok(L().target.equals(w.applyAlg(new Cube(),['R',"U'",'F2'])),'the cube turned');
   assert.ok(await until(()=>!L().anim&&L().shown.equals(L().target)),'the layers turned on the picture');
@@ -901,7 +901,7 @@ async function keyboard(){
   assert.ok(await until(()=>!L().anim&&L().shown.equals(L().target),3000),'the picture catches up');
   // a two-layer turn moves the hold: r from white up, green front puts green up
   setHold('0','2');
-  const S=L().target,H=L().hold;kd('KeyD',{shiftKey:true,altKey:true});
+  const S=L().target,H=L().hold;kd('KeyD',{altKey:true});
   assert.strictEqual(L().moves[L().moves.length-1],'r','r on the list');assert.strictEqual($('#holdUp').value+'/'+$('#holdFront').value,'2/3','r puts green up, yellow toward you');
   // the last frame of the turn is the picture after it: the two layers in the old hold are the face in the new
   const draw=(c,h)=>w.renderCube3D(c.toFacelets(),{n:3,rot:w.quatMat(h.q)});
@@ -916,13 +916,13 @@ async function keyboard(){
   const n=L().moves.length;$('#solved').click();assert.ok(L().target.isSolved()&&L().moves.length===n,'Solved: no moves added');
   // the other layouts take their keys, and hide the badges they take
   pick('sefc');assert.ok($('#reset kbd').classList.contains('gone')&&$('#clear kbd').classList.contains('gone')&&$('#solved kbd').classList.contains('gone')&&!$('#iso~kbd').classList.contains('gone')&&!$('#patBtn kbd').classList.contains('gone'),'S E F C D R take R, C and S, not P');
-  kd('KeyR',{shiftKey:true});assert.strictEqual(L().moves[L().moves.length-1],'B','R turns the back');
-  pick('kol');kd('Semicolon',{altKey:true});assert.strictEqual(L().moves[L().moves.length-1],"r'",'; with Option is r\'');
+  kd('KeyR');assert.strictEqual(L().moves[L().moves.length-1],'B','R turns the back');
+  pick('kol');kd('Semicolon',{altKey:true,shiftKey:true});assert.strictEqual(L().moves[L().moves.length-1],"r'",'; with Shift and Option is r\'');
   assert.ok($('#patBtn kbd').classList.contains('gone'),'P is the back: the Patterns badge goes');
   // Smart cube again: the badges come back and the look starts
   pick('');assert.strictEqual(L().keys,'');assert.ok($('#kbHelp').hidden&&!$$('kbd.gone').length,'the keys go, the badges come back');
   assert.ok(await until(()=>!$('#list').hidden),'the look for a cube starts again');
-  const m=L().moves.length;kd('KeyD',{shiftKey:true});assert.strictEqual(L().moves.length,m,'no keyboard moves with the smart cube');
+  const m=L().moves.length;kd('KeyD');assert.strictEqual(L().moves.length,m,'no keyboard moves with the smart cube');
   pick('jil');assert.deepStrictEqual(errs,[]);
   // the layout is kept: a second open starts on it, with no look for a cube
   const b=await boot(fakeBridge([]),{storage});
