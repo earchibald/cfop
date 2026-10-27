@@ -16,6 +16,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Azeret+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css">
 <link rel="stylesheet" href="css/trail.css">
+<link rel="stylesheet" href="css/start.css">
 </head>
 <body>
 <header class="top">
@@ -101,7 +102,7 @@
       <button class="ln-link" id="keyLesson" title="Open the lesson on the parts of the cube and the move letters">Open the Basics lesson</button>
     </div>
   </section>
-  <section class="panel tight seedbar">
+  <section class="panel tight seedbar" id="seedBar">
     <span class="lbl">Scramble</span>
     <div class="seedrow">
       <input id="seed" placeholder="seed name" title="Type any word to get a repeatable scramble">
@@ -121,7 +122,7 @@
   </section>
 <div class="wrap">
   <nav class="rail" id="rail">
-    <button data-tab="solve" data-sec="solve" class="on" title="A full CFOP plan for the scramble"><span class="k">1</span><i class="sec-sq"></i>Solve</button>
+    <button data-tab="solve" data-sec="solve" class="on" title="The scramble, the cube and the timer. A CFOP plan is one click away"><span class="k">1</span><i class="sec-sq"></i>Scramble</button>
     <button data-tab="cross" data-sec="cross" title="Train the cross: short scrambles and the best plans"><span class="k">2</span><i class="sec-sq"></i>Cross</button>
     <button data-tab="f2l" data-sec="f2l" title="Train the first two layers, one pair at a time"><span class="k">3</span><i class="sec-sq"></i>F2L</button>
     <button data-tab="ll" data-sec="ll" title="Train the last layer: the two-look OLL and PLL cases"><span class="k">4</span><i class="sec-sq"></i>OLL · PLL</button>
@@ -150,16 +151,17 @@
   <main class="main">
     <!-- SOLVE -->
     <section class="tab on" id="tab-solve" data-sec="solve">
-      <div class="panel">
-        <div class="row" style="justify-content:space-between">
-          <div><h2>Guided solve</h2><p class="muted" style="margin:0">Scramble with white up and green in front, as shown in the player above. Press Plan. Each step shows the cube at that point; click a move to step through it.</p></div>
+      <details class="panel planfold" id="planFold">
+        <summary title="Show a CFOP plan for this scramble"><h2>Reveal a CFOP plan for this scramble</h2> <span class="muted planwas">was the Solve tab</span></summary>
+        <div class="row" style="justify-content:space-between;margin-top:10px">
+          <div><p class="muted" style="margin:0">The scramble is white up and green in front, as the cube shows it. Press Plan. Each step shows the cube at that point; click a move to step through it.</p></div>
           <div class="row"><select id="crossColor" title="Scrambles are always applied white up, green front. This is the color you then solve on the bottom."><option value="white">White cross (z2 after scramble)</option><option value="yellow">Yellow cross (no rotation)</option><option value="green">Green cross</option><option value="blue">Blue cross</option><option value="red">Red cross</option><option value="orange">Orange cross</option></select>
           <select id="f2lOrder" title="The order the plan solves the four pairs in"><option value="greedy">F2L: shortest pair first</option><option value="FR,FL,BL,BR">F2L: FR FL BL BR</option><option value="FL,FR,BR,BL">F2L: FL FR BR BL</option></select>
           <label title="Turn the whole cube (y) before a step, so each pair goes in at the front right and each last-layer case sits as the reference shows it. Off: keep one front and use any face moves."><input type="checkbox" id="planRef"> Rotate to each algorithm</label>
           <button class="primary" id="planBtn" title="Work out a full solution for the scramble and show it in the player">Plan</button></div>
         </div>
-      </div>
-      <div class="panel" id="planOut"><p class="muted">No plan yet. Scramble, then press Plan. The plan uses optimal cross, short pair inserts, and the two-look OLL/PLL algorithms from the Reference tab.</p></div>
+      <div id="planOut" style="margin-top:10px"><p class="muted">No plan yet. Scramble, then press Plan. The plan uses optimal cross, short pair inserts, and the two-look OLL/PLL algorithms from the Reference tab.</p></div>
+      </details>
     </section>
     <!-- CROSS -->
     <section class="tab" id="tab-cross" data-sec="cross">
@@ -370,6 +372,8 @@
 <script src="js/f2l.js"></script>
 <script src="js/scramble.js"></script>
 <script src="js/app.js"></script>
+<script src="js/screencube.js"></script>
+<script src="js/place.js"></script>
 <script src="js/transfer.js"></script>
 <script src="js/enter.js"></script>
 <script src="js/scan-assemble.js"></script>
@@ -388,6 +392,9 @@
 <script src="js/paint.js"></script>
 <script src="js/guide.js"></script>
 <script src="js/practice.js"></script>
+<script src="js/cubemenu.js"></script>
+<script src="js/start.js"></script>
+<script src="js/start-app.js"></script>
 <script src="js/speed-ui.js"></script>
 <script src="js/speed4-ui.js"></script>
 <script src="js/glossary.js"></script>
