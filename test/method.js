@@ -18,8 +18,14 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   let {w,d,errs}=await boot(false);
   const $=s=>d.querySelector(s),$$=s=>[...d.querySelectorAll(s)];
   const popOpen=()=>!$('#methodPop').classList.contains('hidden');
-  assert.ok(popOpen(),'a first visit opens the method chooser');assert.ok(d.body.classList.contains('pop-open'),'the page behind the chooser is locked');
+  // A first visit asks the cube level (js/start.js). Skip closes it; the chip opens the chooser.
+  assert.ok(d.body.classList.contains('starting')&&!popOpen(),'a first visit asks the cube level, not the method');
+  assert.strictEqual($$('#start .st-level').length,5,'five levels');
+  $('#start [data-close]').click();assert.ok(!d.body.classList.contains('starting'),'Skip closes the level page');
+  $('#methodChip').click();
+  assert.ok(popOpen(),'the chip opens the method chooser');assert.ok(d.body.classList.contains('pop-open'),'the page behind the chooser is locked');
   assert.strictEqual($('#methodChip').getAttribute('aria-expanded'),'true');
+  assert.ok($('#methodLevel')&&/Not set/.test($('#methodLevel').textContent),'the chooser shows the level row');
   assert.strictEqual(d.body.dataset.method,'cfop','CFOP until a method is chosen');
   assert.strictEqual($('#methodName').textContent,'CFOP');
   assert.ok($('#methodPop .mcard[data-method="cfop"]').classList.contains('on'),'the current card is marked');

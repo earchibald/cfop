@@ -236,7 +236,8 @@ function renderSequence(){$('#seqLabel').textContent=seqState.label||'';const ca
   $('#scramble').innerHTML=seqState.moves.map((m,i)=>{const t=`<span class="m${/^[xyz]/.test(m)?' rot':''}${fc[i]>=0?' fc c'+fc[i]:''}" data-i="${i}" title="Show the cube after this move">${fmtMove(m)}</span>`;return cap?`<span class="mt">${t}<small>${esc(moveCaption(m))}</small></span>`:t;}).join('');
   $$('#scramble .m').forEach(el=>el.onclick=()=>{stopAuto();seqState.idx=+el.dataset.i+1;applySequence();});}
 $('#scrub').oninput=e=>{stopAuto();seqState.idx=+e.target.value;applySequence();};
-function focusPlayer(){const p=$('#player');window.scrollTo({top:0,behavior:'smooth'});p.classList.remove('flash');void p.offsetWidth;p.classList.add('flash');}
+// The player sits in the section (js/place.js): bring it into view where it is.
+function focusPlayer(){const p=$('#player');if(p.scrollIntoView)p.scrollIntoView({block:'nearest',behavior:'smooth'});p.classList.remove('flash');void p.offsetWidth;p.classList.add('flash');}
 // In beginner mode the home module shows the cube white up, with no z2 (beghome.js).
 function showScr(){if(isBeg()&&typeof showBegScr==='function'){showBegScr();return;}
   const r=crossRotation();const end=applyAlg(scr.cube,r?[r]:[]);
@@ -329,12 +330,13 @@ function avg(arr,n){if(arr.length<n)return null;const a=arr.slice(-n).map(x=>x.m
 function renderTimes(){const arr=scopeTimes();$('#stLast').textContent=fmt(arr.length?arr[arr.length-1].ms:null);$('#stAo5').textContent=fmt(avg(arr,5));$('#stAo12').textContent=fmt(avg(arr,12));const best=arr.length?Math.min(...arr.map(x=>x.ms)):null;$('#stBest').textContent=fmt(best);$('#stN').textContent=arr.length;
   $('#times').innerHTML=arr.slice(-40).map((x,i)=>`<span class="${x.ms===best?'best':''}" title="${esc(x.label||'')} · ${new Date(x.t).toLocaleString()}. Click to delete this time">${fmt(x.ms)}</span>`).reverse().join('');$('#timesScope').textContent='Times: '+scopeName();}
 // The timer scope as words: a tab name, or the case name for a case drill.
-function scopeName(){const s=timer.scope;if(s.startsWith('ll:')){const a=LL_ALL.find(x=>x.id===s.slice(3));return a?a.name:s.slice(3);}if(s.startsWith('f2l:'))return 'F2L case #'+s.slice(4);if(s.startsWith('two:')&&typeof twoCaseName==='function')return twoCaseName(s);if(s.startsWith('four:')&&typeof fourCaseName==='function')return fourCaseName(s);return {solve:'Solve',cross:'Cross',f2l:'F2L',ll:'OLL · PLL',lab:'Lab',ref:'Reference',two:'2×2 solve',four:'4×4 solve'}[s]||s;}
+function scopeName(){const s=timer.scope;if(s.startsWith('ll:')){const a=LL_ALL.find(x=>x.id===s.slice(3));return a?a.name:s.slice(3);}if(s.startsWith('f2l:'))return 'F2L case #'+s.slice(4);if(s.startsWith('two:')&&typeof twoCaseName==='function')return twoCaseName(s);if(s.startsWith('four:')&&typeof fourCaseName==='function')return fourCaseName(s);return {solve:'Scramble',cross:'Cross',f2l:'F2L',ll:'OLL · PLL',lab:'Lab',ref:'Reference',two:'2×2 solve',four:'4×4 solve'}[s]||s;}
 function setScope(s){timer.scope=s;renderTimes();}
 function recordTime(ms){const arr=times[timer.scope]||(times[timer.scope]=[]);arr.push({ms,t:Date.now(),label:currentLabel()});store.set('times',times);renderTimes();if(onTimerStop)onTimerStop(ms);}
 let onTimerStop=null;const scrLabel=()=>curTab==='f2l'?'f2l '+scr.seed:scr.seed;let currentLabel=scrLabel;
 const tEl=$('#timer');
-function timerTick(){if(timer.state==='running'){tEl.textContent=fmt(performance.now()-timer.t0);timer.raf=requestAnimationFrame(timerTick);}else if(timer.state==='inspecting'){const left=15-(performance.now()-timer.inspT0)/1000;tEl.textContent=left>0?Math.ceil(left).toString():(left>-2?'+2':'DNF');timer.raf=requestAnimationFrame(timerTick);}}
+// Settings > Hide the time while I solve (cw:hideTime): the timer shows a mark, not the count.
+function timerTick(){if(timer.state==='running'){tEl.textContent=store.get('hideTime',false)?'Solving':fmt(performance.now()-timer.t0);timer.raf=requestAnimationFrame(timerTick);}else if(timer.state==='inspecting'){const left=15-(performance.now()-timer.inspT0)/1000;tEl.textContent=left>0?Math.ceil(left).toString():(left>-2?'+2':'DNF');timer.raf=requestAnimationFrame(timerTick);}}
 function timerHidden(){return isBeg()&&!document.body.dataset.begtimer;}
 function timerPress(){ // key/finger down
   if(timerHidden())return;
@@ -908,6 +910,6 @@ $('#planRef').checked=store.get('planRef',false);$('#planRef').onchange=()=>{sto
 $('#f2lPairs').onchange=()=>{if(f2lState.mode==='live')showF2LState();};
 // boot
 $('#crossColor').value=store.get('crossColor','white');setScrLenOptions();
-document.body.dataset.tab=curTab;$('#mtitle').textContent='Solve';
+document.body.dataset.tab=curTab;$('#mtitle').textContent='Scramble';
 renderTimes();renderHistory();renderAnimBtn();newScramble();RS.bootSeed=scr.seed;setTimeout(rsStart,0);applyMobile();setTimeout(()=>{buildCrossTable();tablesReady=true;if(curTab==='cross')refreshCross();},300);
 
