@@ -844,9 +844,9 @@ function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHi
 // (setHidden, cw:hidden), the same settings as the chips on the cube. Timer: 15 s inspection (cw:insp), the
 // same as the box by the timer. Pictures: Play case animations (cw:playPics, js/loop.js). Color Blind Assist: a
 // letter on each sticker (cw:cba, body.cba). Phone: the Reference section goes on to the next stage
-// when a case's details close (cw:refNext). Smart cube: the move trail right to left or left to right (cw:trailDir, js/trail.js). With a Listen log, a button copies it for a report. It shows the version, under the buttons, so a report
+// when a case's details close (cw:refNext). Smart cube: the move trail right to left or left to right (cw:trailDir, js/trail.js). Your data: Copy my data and Paste my data (js/transfer.js); openSettings('data') opens on it and pastes. With a Listen log, a button copies it for a report. It shows the version, under the buttons, so a report
 // can name it. While it is open, keys go to the window only: Esc cancels and Enter saves.
-function openSettings(){if($('#setBg'))return;
+function openSettings(open){if($('#setBg'))return;
   const bg=document.createElement('div');bg.className='modal-bg ask-bg';bg.id='setBg';
   bg.innerHTML=`<div class="modal ask settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
    <h2 id="setTitle">Settings</h2>
@@ -872,6 +872,7 @@ function openSettings(){if($('#setBg'))return;
     <h3>Phone</h3>
     <label class="setrow" title="On a phone, in the Reference section: close a case's details, and the page goes on to the next stage"><input type="checkbox" id="setRefNext"${store.get('refNext',true)?' checked':''}> Go to the next stage after a case closes</label>
     <p class="muted">Phone only, in the Reference section.</p>
+    ${dataSectionHTML()}
     ${typeof listenLogText==='function'&&listenLogText()?`<div class="row" style="gap:8px;margin-top:10px"><button type="button" class="small" id="setListenLog" title="Copy what Listen heard and what it showed, for a report">Copy what Listen heard</button><button type="button" class="small ghost" id="setListenClear" title="Forget what Listen heard">Clear it</button></div>`:''}
    </div>
    <div class="row" style="justify-content:flex-end;margin-top:14px"><button id="setCancel" title="Close and keep the settings as they were">Cancel<span class="hk">Esc</span></button><button class="primary" id="setSave" title="Keep these settings and close">Save<span class="hk">Enter</span></button></div>
@@ -881,7 +882,8 @@ function openSettings(){if($('#setBg'))return;
   const save=()=>{setAnim($('#setAnim').checked);if($('#setHidden').checked!==hiddenOn())setHidden($('#setHidden').checked);store.set('insp',$('#setInsp').checked);$('#inspChk').checked=$('#setInsp').checked;store.set('refNext',$('#setRefNext').checked);store.set('playPics',$('#setPlayPics').checked);setCba($('#setCba').checked);
     store.set('trailDir',$('#setTrailRtl').checked?'rtl':'ltr');if(typeof cubeTabMovesDraw==='function')cubeTabMovesDraw();close();};
   const keys=e=>{if(e.key==='Tab')return;e.stopPropagation();if(e.type!=='keydown')return;
-    if(e.key==='Escape'){e.preventDefault();close();}else if(e.key==='Enter'){e.preventDefault();save();}};
+    // Enter in Your data belongs to its box and its buttons.
+    if(e.key==='Escape'){e.preventDefault();close();}else if(e.key==='Enter'&&!(e.target.closest&&e.target.closest('#setData'))){e.preventDefault();save();}};
   document.body.appendChild(bg);
   bg.addEventListener('click',e=>{if(e.target===bg)close();});
   $('#setCancel').onclick=close;$('#setSave').onclick=save;
@@ -890,8 +892,10 @@ function openSettings(){if($('#setBg'))return;
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>{lb.textContent='Copied';},show);else show();};
   const lc=$('#setListenClear');if(lc)lc.onclick=()=>{listenLogClear();lc.parentNode.remove();const ta=$('#setListenText');if(ta)ta.remove();};
   document.addEventListener('keydown',keys,true);document.addEventListener('keyup',keys,true);
-  setTimeout(()=>{const b=$('#setSave');if(b)b.focus();},20);}
-$('#settingsBtn').onclick=openSettings;
+  dataMount();
+  if(open==='data'){$('#setData').scrollIntoView({block:'center'});dataPaste();}
+  setTimeout(()=>{const b=$('#setSave');if(b&&!document.activeElement.closest('#setData'))b.focus();},20);}
+$('#settingsBtn').onclick=()=>openSettings();
 $('#hiddenBtn').onclick=()=>setHidden(!hiddenOn());
 pictureButton($('#saveImgBtn'),()=>$('#cube'),()=>seqState.drill||(scr.seed?'seed '+scr.seed:'cube'));
 // Color Blind Assist: every picture carries its letters; body.cba shows them.

@@ -394,4 +394,22 @@ if(typeof document!=='undefined'&&$('#smartBtn')){
     try{window.history.replaceState(null,'',location.pathname);}catch(e){} // history alone is the scramble history in app.js
     bridgeStart().then(()=>{if(METHODS[method].puzzle!=='3x3')setMethod('cfop');openSmart();});
   }
+  // Bring History from Safari in the app opens this page in Safari with ?migrate=1: send the
+  // history saved here to the app, then say what happened.
+  if(/[?&]migrate=1/.test(location.search)){
+    try{window.history.replaceState(null,'',location.pathname);}catch(e){}
+    bridgeStart().then(l=>l&&!l.native?bridgeMigrate(l):{count:0,error:'no app'}).then(smartMigrated);
+  }
+}
+// The note of a history move, at the top of the Safari page.
+function smartMigrated(r){
+  const t=r.error?'The Twistwright app did not answer. Open the app, then choose File > Bring History from Safari.'
+    :r.cancelled?'The app did not take the history. Nothing changed.'
+    :r.count?`Your history is in the Twistwright app now: ${r.count} saved ${r.count===1?'item':'items'}. You can close this tab.`
+    :'This page has no saved history to move.';
+  let n=$('#migrateNote');
+  if(!n){n=document.createElement('div');n.id='migrateNote';n.className='migrate-note';n.setAttribute('role','status');document.body.appendChild(n);}
+  const s=document.createElement('span');s.textContent=t;
+  const b=document.createElement('button');b.textContent='Close';b.title='Close this note';b.onclick=()=>n.remove();
+  n.replaceChildren(s,b);
 }

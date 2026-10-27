@@ -5,6 +5,7 @@ const {UUID}=require('./fake-gan');
 function bridgeInfo(){return {app:'Twistwright',version:'test',ws:'ws://127.0.0.1:27273/'};}
 // devices: [{id, dev (a fakeDevice), mac}]. opts.bluetooth: the state in hello (default poweredOn).
 // opts.rejectOrigin: close at once, as the app does for a page it does not serve.
+// opts.migrate: 'cancel' to answer a history move as a user who says no; else the app takes it.
 function fakeBridge(devices,opts={}){
   const sockets=[];
   class FakeWebSocket{
@@ -44,10 +45,27 @@ function fakeBridge(devices,opts={}){
           if(!d){err('No such cube.');break;}
           d.dev.gatt.getPrimaryService(UUID[d.gen][0]).then(s=>s.getCharacteristic(m.char)).then(ch=>ch.writeValue(Buffer.from(m.data,'hex'))).then(()=>this.emit({ev:'written',seq:m.seq})).catch(()=>err('No such characteristic.'));
           break;}
+        case 'migrate':
+          setTimeout(()=>this.emit(opts.migrate==='cancel'?{ev:'migrated',seq:m.seq,count:0,cancelled:true}
+            :{ev:'migrated',seq:m.seq,count:Object.keys(m.data||{}).length}),5);
+          break;
         default: err('Unknown request '+m.op+'.');
       }
     }
   }
   return {FakeWebSocket,sockets};
 }
-module.exports={fakeBridge,bridgeInfo};
+// The app's own window: a fake webkit.messageHandlers.bridge in front of the same fake app.
+// hello answers {version, bluetooth}; every other message goes to a fake socket, and what comes
+// back goes to window.bridgeEvent, as the app calls it. install(w) puts it on a window.
+function fakeNative(devices,opts={}){
+  const {FakeWebSocket}=fakeBridge(devices,opts);
+  const ws=new FakeWebSocket('native');let win=null;const sent=[];
+  ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.ev!=='hello'&&win&&win.bridgeEvent)win.bridgeEvent(m);};
+  const handler={postMessage(m){
+    m=JSON.parse(JSON.stringify(m));sent.push(m);
+    if(m.op==='hello')return Promise.resolve({version:'test',bluetooth:opts.bluetooth||'poweredOn'});
+    ws.send(JSON.stringify(m));return Promise.resolve(null);}};
+  return {install(w){win=w;w.webkit={messageHandlers:{bridge:handler}};},sent};
+}
+module.exports={fakeBridge,fakeNative,bridgeInfo};

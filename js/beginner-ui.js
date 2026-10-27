@@ -172,6 +172,9 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&methodPopOpen()){cl
 const begFirstVisit=store.get('method',null)==null;
 setMethod(method,{force:true});
 if(begFirstVisit)setTimeout(openMethodPop,300);
+// The first visit also offers the data from another browser or the Mac app (js/transfer.js).
+if(begFirstVisit)$('#methodData').classList.remove('hidden');
+$('#methodPaste').onclick=()=>{closeMethodPop();openSettings('data');};
 
 // ?onboard: a strip at the foot of the page says that this is a first visit and nothing is saved.
 // Start over loads the page again as a new visitor; Leave goes back to the page with the saved history.
