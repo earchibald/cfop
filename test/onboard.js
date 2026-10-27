@@ -19,7 +19,7 @@ const SEED={'cw:method':'"beginner"','cw:btab':'"blearn"','cw:animate':'false'};
   const before=JSON.stringify([...ls.map]);
   const $=s=>d.querySelector(s);
   assert.deepStrictEqual(errs,[],'no script errors');
-  assert.ok(!$('#methodPop').classList.contains('hidden'),'the method chooser opens as on a first visit');
+  assert.ok(d.body.classList.contains('starting')&&!$('#start').classList.contains('hidden'),'the level picker opens as on a first visit');
   assert.strictEqual(d.body.dataset.method,'cfop','the saved method is not read');
   assert.ok(d.body.classList.contains('onboard'),'the body is marked');
   const bar=$('#onboardBar');assert.ok(bar,'the first-visit strip shows');
