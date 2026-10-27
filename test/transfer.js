@@ -93,11 +93,11 @@ const cwKeys=ls=>{const o={};for(let i=0;i<ls.length;i++){const k=ls.key(i);if(k
 
   // ---- the first visit ----
   const F=await boot({clip:{text:A.clip.text}});
-  assert.ok(!$(F,'#methodData').classList.contains('hidden')&&!$(F,'#methodPop').classList.contains('hidden'),'the first visit offers the data in the chooser');
-  assert.ok($(F,'#methodPaste').title,'its button has a title');
-  await sleep(300); // the chooser puts the focus on its card first
-  $(F,'#methodPaste').click();await sleep(20);
-  assert.ok($(F,'#methodPop').classList.contains('hidden')&&$(F,'#setBg')&&F.clip.reads===1,'it closes the chooser, opens Settings and reads the clipboard');
+  // The first visit asks the cube level (js/start.js); the level page offers the data.
+  assert.ok(F.d.body.classList.contains('starting')&&$(F,'#start [data-paste]'),'the first visit offers the data on the level page');
+  assert.ok($(F,'#start [data-paste]').title,'its button has a title');
+  $(F,'#start [data-paste]').click();await sleep(20);
+  assert.ok(!F.d.body.classList.contains('starting')&&$(F,'#setBg')&&F.clip.reads===1,'it closes the level page, opens Settings and reads the clipboard');
   assert.ok(/Replace the data/.test($(F,'#dataMsg').textContent),'and asks to replace');
   await sleep(40);assert.ok(F.d.activeElement.closest('#setData'),'the focus stays in Your data');
   F.d.querySelector('#dataMsg button').click();

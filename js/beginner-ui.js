@@ -157,7 +157,7 @@ function setMethod(m,opts){
   if(changed||(opts&&opts.force)){goTab(store.get(tabKey(),homeTab()));}
   document.dispatchEvent(new CustomEvent('cw:method',{detail:m}));
 }
-function openMethodPop(){const pop=$('#methodPop'),chip=$('#methodChip');renderChip();
+function openMethodPop(){const pop=$('#methodPop'),chip=$('#methodChip');renderChip();if(typeof startLevelRow==='function')startLevelRow();if(typeof cubePopClose==='function')cubePopClose();
   if(!mobileMQ.matches)pop.style.left=Math.max(8,chip.offsetLeft)+'px';else pop.style.left='';
   pop.classList.remove('hidden');chip.setAttribute('aria-expanded','true');document.body.classList.add('pop-open');pop.scrollTop=0;
   setTimeout(()=>{const c=$('#methodPop .mcard.on');if(c)c.focus();},20);}
@@ -168,10 +168,10 @@ $$('#methodPop .mcard').forEach(c=>c.onclick=()=>{closeMethodPop();setMethod(c.d
 document.addEventListener('click',e=>{if(!methodPopOpen())return;if(e.target.closest('#methodPop')||e.target.closest('#methodChip'))return;closeMethodPop();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&methodPopOpen()){closeMethodPop();$('#methodChip').focus();}});
 
-// boot: the first visit opens the popover once
+// boot: the first visit asks the cube level (js/start.js); with no level picker, the popover opens once
 const begFirstVisit=store.get('method',null)==null;
 setMethod(method,{force:true});
-if(begFirstVisit)setTimeout(openMethodPop,300);
+if(begFirstVisit)setTimeout(()=>{if(typeof startOpen==='function'&&store.get('level',null)==null)startOpen('level');else openMethodPop();},300);
 // The first visit also offers the data from another browser or the Mac app (js/transfer.js).
 if(begFirstVisit)$('#methodData').classList.remove('hidden');
 $('#methodPaste').onclick=()=>{closeMethodPop();openSettings('data');};

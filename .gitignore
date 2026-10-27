@@ -5,3 +5,4 @@ mac/build/
 mac/spike/build/
 vendor/
 vendor.next/
+.dev/
