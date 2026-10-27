@@ -221,7 +221,9 @@ th{color:var(--muted);font-weight:500;border-top:0;font-size:14px}
 @media (max-width:760px){.page{padding:12px}.player{grid-template-columns:1fr}.wrap{grid-template-columns:1fr}nav.rail{position:static;flex-direction:row;overflow-x:auto;gap:2px}nav.rail button{padding:8px 10px;white-space:nowrap}nav.rail button .k{display:none}.grid2{grid-template-columns:1fr}.timer{font-size:44px}.step{grid-template-columns:1fr;gap:4px}.top{padding:10px 12px}}
 
 .modal-bg{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:calc(var(--r) + 4px);max-width:880px;width:100%;max-height:92vh;overflow:auto;padding:22px;display:grid;grid-template-columns:300px 1fr;gap:22px;position:relative;box-shadow:var(--shadow)}
+/* While a window is open the page behind it stays still, so a swipe scrolls the window. */
+body:has(.modal-bg){overflow:hidden}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:calc(var(--r) + 4px);max-width:880px;width:100%;max-height:92vh;overflow:auto;overscroll-behavior:contain;padding:22px;display:grid;grid-template-columns:300px 1fr;gap:22px;position:relative;box-shadow:var(--shadow)}
 .modal .pic svg{width:100%;height:auto;display:block}
 .modal .pic{background:var(--panel2);border-radius:var(--r);padding:14px}
 .modal h2{font-size:24px;margin-bottom:4px}
@@ -398,7 +400,7 @@ details.fold>summary:hover h3{color:var(--text)}
 .modal.settings .setrow{display:flex;gap:8px;align-items:center;cursor:pointer}
 .modal.settings .setrow+p{margin:4px 0 0 26px;font-size:13px}
 .modal.settings .appver{margin-top:12px;text-align:right;font-family:var(--mono);font-size:12px;color:var(--muted);user-select:text}
-@media (max-width:760px){.modal-bg.ask-bg{padding:16px;align-items:center}.modal.ask{max-width:420px;border:1px solid var(--line);border-radius:calc(var(--r) + 4px);box-shadow:var(--shadow);padding:22px 24px}}
+@media (max-width:760px){.modal-bg.ask-bg{padding:16px;align-items:center}.modal.ask{max-width:420px;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:auto;border:1px solid var(--line);border-radius:calc(var(--r) + 4px);box-shadow:var(--shadow);padding:22px 24px}}
 
 /* ---------- enter-scramble dialog ---------- */
 .modal.enter{display:block;max-width:560px}
