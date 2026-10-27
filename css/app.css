@@ -399,6 +399,11 @@ details.fold>summary:hover h3{color:var(--text)}
 .modal.settings .setarea p{margin:0}
 .modal.settings .setrow{display:flex;gap:8px;align-items:center;cursor:pointer}
 .modal.settings .setrow+p{margin:4px 0 0 26px;font-size:13px}
+.modal.settings #dataText{display:block;width:100%;box-sizing:border-box;margin-top:8px;font-family:var(--mono);font-size:12px;resize:vertical}
+.modal.settings #setData>p{font-size:13px}
+.modal.settings .data-msg{margin-top:8px;font-size:13px}
+.modal.settings .data-msg:empty{display:none}
+.modal.settings .data-msg.warn{color:var(--bad)}
 .modal.settings .appver{margin-top:12px;text-align:right;font-family:var(--mono);font-size:12px;color:var(--muted);user-select:text}
 @media (max-width:760px){.modal-bg.ask-bg{padding:16px;align-items:center}.modal.ask{max-width:420px;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:auto;border:1px solid var(--line);border-radius:calc(var(--r) + 4px);box-shadow:var(--shadow);padding:22px 24px}}
 
@@ -493,6 +498,9 @@ body.pop-open{overflow:hidden}
 .mcard.on .mcur{display:inline-block}
 .mcard .mnote{font-size:13px;color:var(--good)}
 .mcard .mnote.muted{color:var(--muted)}
+.mdata{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px;font-size:14px}
+.mdata button{flex:none}
+@media (max-width:560px){.mdata{flex-direction:column;align-items:flex-start}}
 @media (max-width:560px){.mcards{grid-template-columns:1fr}}
 .progresspanel{display:flex;flex-direction:column;gap:10px}
 .progresspanel .lbl{color:var(--muted);font-size:14px}

@@ -24,6 +24,7 @@
   <button class="puzzle" id="methodChip" aria-expanded="false" aria-controls="methodPop" title="Puzzle and method"><span class="desktop-only" id="puzzleName">3×3 ·</span><span id="methodName">CFOP</span> <span aria-hidden="true">▾</span></button>
   <div id="methodPop" class="method-pop hidden" role="dialog" aria-label="Choose a puzzle and a method">
     <div class="row" style="justify-content:space-between;align-items:baseline"><h3>Choose a puzzle and a method</h3><span class="muted" style="font-size:13px">4×4 comes later</span></div>
+    <div class="mdata hidden" id="methodData"><span>Did you use Twistwright in another browser or in the Mac app? Bring your data here.</span><button type="button" class="small" id="methodPaste" title="Paste the data that you copied in the other browser with Settings &gt; Copy my data">Paste my data</button></div>
     <h4 class="mgroup">3×3 cube</h4>
     <div class="mcards">
       <button class="mcard" data-method="beginner" title="The 3×3 step by step, from the Rubik's guide"><span class="row" style="width:100%"><i class="sec-sq" style="--sec:var(--sticker-Y)"></i><b>Beginner</b><span class="tag mcur">current</span></span><span class="muted">The Rubik's eight-step method. Learn one step at a time. Solve your own cube with the app at your side.</span><span class="mnote" id="mnote-beginner"></span></button>
@@ -368,6 +369,7 @@
 <script src="js/f2l.js"></script>
 <script src="js/scramble.js"></script>
 <script src="js/app.js"></script>
+<script src="js/transfer.js"></script>
 <script src="js/enter.js"></script>
 <script src="js/scan-assemble.js"></script>
 <script src="js/scan.js"></script>

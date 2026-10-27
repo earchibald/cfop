@@ -429,6 +429,15 @@ sends every `cw:` key over the WebSocket (`{op:"migrate",data,seq}`,
 place of its own and reloads it, and answers `{ev:"migrated",seq,count}`. The
 Safari page shows the result at the top (`smartMigrated`) and keeps its copy.
 
+Any other way goes through the page itself, with no app: Settings > Your data
+(`js/transfer.js`). Copy my data puts every `cw:` key on the clipboard as one
+block of JSON (`{"twistwright":1,"version","saved","keys"}`); Paste my data in
+another browser, or in the app's window, asks, replaces all its `cw:` keys and
+loads the page again. So data moves from the app to Chrome, from Safari to
+Chrome, or from Chrome to the app. A browser that does not let the page read
+the clipboard gets a box to paste into. The first visit offers Paste my data
+in the method chooser.
+
 ### The pages: built-in or live
 
 From 0.2.0 the app carries a copy of the site. `mac/build.sh` takes the files

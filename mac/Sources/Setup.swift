@@ -7,7 +7,8 @@ import Speech
 // in System Settings > Privacy & Security; this window asks for them all in one place, before the
 // page needs them. It opens at the first launch, and again from Twistwright > Set Up Twistwright…
 // or the menu bar item. A row that macOS turned off can only be turned on in System Settings, so
-// its button opens that pane. The last row moves the history from Safari into the window.
+// its button opens that pane. The last row moves the history from Safari into the window. Data from any
+// other browser comes in through the page itself: Settings > Your data (js/transfer.js).
 
 enum Grant { case notAsked, allowed, off }
 
@@ -134,7 +135,7 @@ final class SetupWindow: NSObject, NSWindowDelegate {
         let hb = NSButton(title: "Bring History…", target: self, action: #selector(history(_:)))
         views.append(NSBox.separator())
         views.append(row(symbol: "clock.arrow.circlepath", title: "History from Safari",
-                         detail: "If you used Twistwright in Safari with this app: your times, cases and settings move into this window. The app opens Safari once to send them.",
+                         detail: "If you used Twistwright in Safari with this app: your times, cases and settings move into this window. The app opens Safari once to send them. From another browser: choose Copy my data in its Settings, then Paste my data in this window's Settings.",
                          state: historyState, button: hb))
         let done = NSButton(title: "Done", target: self, action: #selector(close(_:)))
         done.keyEquivalent = "\r"
