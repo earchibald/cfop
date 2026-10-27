@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key><string>com.twistwright.spike</string>
+  <key>CFBundleName</key><string>Twistwright Spike</string>
+  <key>CFBundleDisplayName</key><string>Twistwright Spike</string>
+  <key>CFBundleExecutable</key><string>TwistwrightSpike</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>0.1.0</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSCameraUsageDescription</key><string>The spike tests the cube scanner, which reads the faces of your cube with the camera.</string>
+  <key>NSMicrophoneUsageDescription</key><string>The spike tests Listen, which takes case names and commands by voice.</string>
+  <key>NSSpeechRecognitionUsageDescription</key><string>The spike tests Listen, which turns what you say into case names and commands.</string>
+</dict>
+</plist>

@@ -2,5 +2,6 @@ node_modules/
 .DS_Store
 .claude/worktrees/
 mac/build/
+mac/spike/build/
 vendor/
 vendor.next/

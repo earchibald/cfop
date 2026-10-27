@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spike probe</title>
+<style>
+  :root { --bg: #f7f6f2; --card: #fdfdfb; --ink: #15202b; --quiet: #4a5560; --line: #d6dad6; --accent: #2e6bd6;
+          --pass: #1f7a3d; --fail: #b3261e; --wait: #9a5b00; --info: #4a5560; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #15202b; --card: #1c2a36; --ink: #eef1f4; --quiet: #a9b6c3; --line: #33465a; --accent: #8db5f5;
+            --pass: #6fcf8f; --fail: #ff8a80; --wait: #f2b84b; --info: #a9b6c3; }
+  }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 -apple-system, system-ui, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 24px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .meta { color: var(--quiet); margin: 0 0 16px; }
+  .bar { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 16px; }
+  button { font: inherit; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  th, td { text-align: left; padding: 8px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+  th { border-top: none; color: var(--quiet); font-weight: 600; font-size: 13px; }
+  td.name { width: 24%; font-weight: 600; }
+  td.name small { display: block; font-weight: 400; color: var(--quiet); }
+  td.status { width: 9%; font-weight: 600; }
+  td.act { width: 14%; }
+  td.detail { word-break: break-word; }
+  .pass { color: var(--pass); } .fail { color: var(--fail); } .wait { color: var(--wait); } .info, .run { color: var(--info); }
+  h2 { font-size: 17px; margin: 28px 0 8px; }
+  textarea { width: 100%; box-sizing: border-box; min-height: 48px; font: inherit; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+  video { display: block; max-width: 240px; margin-top: 8px; border-radius: 8px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Spike probe</h1>
+  <p class="meta" id="meta">Asking the app for its details.</p>
+  <div class="bar">
+    <button id="again" title="Run the automatic tests again">Run the automatic tests again</button>
+    <button id="copy" title="Copy the report as JSON">Copy the report</button>
+    <button data-go="../" title="Open the Twistwright page at this origin">Open the site</button>
+    <button data-go="../lab/" title="Open the lab at this origin">Open the lab</button>
+  </div>
+  <h2>Automatic tests</h2>
+  <table id="auto"><tr><th>Test</th><th>Result</th><th></th><th>Detail</th></tr></table>
+  <h2>Tests that need you</h2>
+  <table id="manual"><tr><th>Test</th><th>Result</th><th></th><th>Detail</th></tr></table>
+  <h2>Paste</h2>
+  <p class="meta">Copy some text in another app. Click in the box and press Cmd+V. The Paste row above shows the result.</p>
+  <textarea id="pasteBox" title="Press Cmd+V here" placeholder="Press Cmd+V here"></textarea>
+</main>
+<script type="module" src="probe.js"></script>
+</body>
+</html>
