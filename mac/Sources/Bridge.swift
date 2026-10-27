@@ -2,22 +2,40 @@ import Foundation
 import Network
 import CoreBluetooth
 
-// The bridge: a WebSocket on 127.0.0.1 that carries JSON messages between the page and
-// CoreBluetooth. The page keeps the GAN protocol and the cipher (js/gan.js); the app only moves
-// bytes. js/bridge.js is the other end.
+// The bridge carries JSON messages between a page and CoreBluetooth. The page keeps the GAN
+// protocol and the cipher (js/gan.js); the app only moves bytes. js/bridge.js is the other end.
+// A page reaches it one of two ways: the page in the app's own window through a message handler
+// (PageClient, in Page.swift), and Safari through a WebSocket on 127.0.0.1 (SocketClient).
 //
 //   page → app   {op:"scan"} {op:"stop"} {op:"connect",id} {op:"disconnect",id}
 //                {op:"notify",id,char} {op:"write",id,char,data,seq}
+//                {op:"migrate",data:{key:value},seq}  Safari only: its saved history, for the window
 //   app → page   {ev:"hello",version,bluetooth} {ev:"bluetooth",state}
 //                {ev:"device",id,name,mac} while a scan runs
 //                {ev:"connected",id,services:[{uuid,chars:[uuid]}]} {ev:"gone",id}
 //                {ev:"value",id,char,data} {ev:"written",seq} {ev:"error",id?,seq?,message}
+//                {ev:"migrated",seq,count,cancelled?}
 //
 // data is hex. UUIDs are the 128-bit form in lower case, as Web Bluetooth gives them. id is the
 // peripheral identifier that CoreBluetooth gives; mac is read from the manufacturer data, as
-// ganMacFromData does, and is null until an advertisement carries it.
+// ganMacFromData does, and is null until an advertisement carries it. In the window, hello is the
+// answer to {op:"hello"}; over the WebSocket it comes when the socket opens.
 
-final class Client {
+// One page on the other end of the bridge.
+protocol BridgeClient: AnyObject {
+    func send(_ obj: [String: Any])
+}
+extension BridgeClient {
+    func error(_ message: String, id: String? = nil, seq: Int? = nil) {
+        var m: [String: Any] = ["ev": "error", "message": message]
+        if let id = id { m["id"] = id }
+        if let seq = seq { m["seq"] = seq }
+        send(m)
+    }
+}
+
+// A Safari page over the WebSocket.
+final class SocketClient: BridgeClient {
     let conn: NWConnection
     weak var server: BridgeServer?
     var rejected = false
@@ -29,6 +47,7 @@ final class Client {
             case .ready:
                 guard let self = self else { return }
                 if self.rejected { self.conn.cancel(); return }
+                self.server?.bridge.add(self)
                 self.send(["ev": "hello", "version": appVersion, "bluetooth": self.server?.bridge.stateName ?? "unknown"])
                 self.receive()
             case .failed, .cancelled: self?.gone()
@@ -57,12 +76,6 @@ final class Client {
         let ctx = NWConnection.ContentContext(identifier: "msg", metadata: [NWProtocolWebSocket.Metadata(opcode: .text)])
         conn.send(content: data, contentContext: ctx, isComplete: true, completion: .contentProcessed { _ in })
     }
-    func error(_ message: String, id: String? = nil, seq: Int? = nil) {
-        var m: [String: Any] = ["ev": "error", "message": message]
-        if let id = id { m["id"] = id }
-        if let seq = seq { m["seq"] = seq }
-        send(m)
-    }
     private var wentAway = false
     func gone() {
         if wentAway { return }
@@ -71,14 +84,16 @@ final class Client {
     }
 }
 
+// The WebSocket for Safari, on ws://127.0.0.1:27273/. It stays for the release that moves a
+// Safari user's history into the window; the clean release removes it.
 final class BridgeServer {
     let port: UInt16
     let bridge: Bridge
     var listener: NWListener?
-    var clients: [Client] = []
-    var awaiting: [Client] = []
+    var clients: [SocketClient] = []
+    var awaiting: [SocketClient] = []
 
-    init(port: UInt16, bridge: Bridge) { self.port = port; self.bridge = bridge; bridge.server = self }
+    init(port: UInt16, bridge: Bridge) { self.port = port; self.bridge = bridge }
 
     func start() {
         let params = NWParameters.tcp
@@ -100,7 +115,7 @@ final class BridgeServer {
         guard let l = try? NWListener(using: params) else { NSLog("Bridge: cannot listen on \(port)"); return }
         l.newConnectionHandler = { [weak self] c in
             guard let self = self else { return }
-            let cl = Client(c, self)
+            let cl = SocketClient(c, self)
             self.clients.append(cl); self.awaiting.append(cl)
             cl.start()
         }
@@ -108,25 +123,32 @@ final class BridgeServer {
         l.start(queue: .main)
         listener = l
     }
-    func remove(_ c: Client) {
+    func remove(_ c: SocketClient) {
         clients.removeAll { $0 === c }; awaiting.removeAll { $0 === c }
-        bridge.clientGone(c, others: clients)
+        bridge.remove(c)
     }
-    func broadcast(_ m: [String: Any]) { clients.forEach { $0.send(m) } }
 }
 
 final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     var central: CBCentralManager?
     var peripherals: [String: CBPeripheral] = [:]
     var macs: [String: String] = [:]
-    var owners: [String: Client] = [:]
+    var owners: [String: BridgeClient] = [:]
     var pendingServices: [String: Int] = [:]
-    var writes: [String: [(seq: Int, client: Client)]] = [:]
-    var scanWanted = false
-    weak var server: BridgeServer?
+    var writes: [String: [(seq: Int, client: BridgeClient)]] = [:]
+    // Every page on the bridge, and the pages that look for cubes now. The scan runs while one does.
+    var clients: [BridgeClient] = []
+    var scanners: [BridgeClient] = []
+    var scanWanted: Bool { !scanners.isEmpty }
     let onChange: () -> Void
+    // A Safari page sent its saved history: the app asks the user, then answers with migrated.
+    var onMigrate: ((_ data: [String: String], _ from: BridgeClient, _ seq: Int) -> Void)?
 
     init(onChange: @escaping () -> Void) { self.onChange = onChange }
+
+    func add(_ c: BridgeClient) { if !clients.contains(where: { $0 === c }) { clients.append(c) } }
+    func remove(_ c: BridgeClient) { clients.removeAll { $0 === c }; release(c) }
+    func broadcast(_ m: [String: Any]) { clients.forEach { $0.send(m) } }
 
     // The manager starts on the first scan, so macOS asks for Bluetooth permission when the user
     // presses Connect, not when the app opens.
@@ -158,15 +180,17 @@ final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
         peripherals.values.filter { $0.state == .connected }.map { $0.name ?? "GAN cube" }
     }
 
-    func handle(_ msg: [String: Any], from c: Client) {
+    func handle(_ msg: [String: Any], from c: BridgeClient) {
         let op = msg["op"] as? String ?? ""
         let id = msg["id"] as? String ?? ""
         let seq = msg["seq"] as? Int
         switch op {
         case "scan":
-            startCentral(); scanWanted = true; scanIfReady(); onChange()
+            startCentral()
+            if !scanners.contains(where: { $0 === c }) { scanners.append(c) }
+            scanIfReady(); onChange()
         case "stop":
-            scanWanted = false; central?.stopScan(); onChange()
+            stopScan(for: c); onChange()
         case "connect":
             guard let p = peripherals[id] else { c.error("The cube is not in the list any more. Look for it again.", id: id); return }
             owners[id] = c; p.delegate = self
@@ -186,24 +210,33 @@ final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
                 p.writeValue(data, for: ch, type: .withoutResponse)
                 c.send(["ev": "written", "seq": seq ?? 0])
             }
+        case "migrate":
+            let data = (msg["data"] as? [String: Any] ?? [:]).compactMapValues { $0 as? String }
+            if let f = onMigrate { f(data, c, seq ?? 0) }
+            else { c.send(["ev": "migrated", "seq": seq ?? 0, "count": 0, "cancelled": true]) }
         default:
             c.error("Unknown request \(op).")
         }
     }
-    // A page went away: drop the cubes it connected, and stop the scan when no page is left.
-    func clientGone(_ c: Client, others: [Client]) {
+    func stopScan(for c: BridgeClient) {
+        scanners.removeAll { $0 === c }
+        if scanners.isEmpty { central?.stopScan() }
+    }
+    // A page went away, or the window loaded another page: drop the cubes it connected and its
+    // scan, as Safari does when a tab closes.
+    func release(_ c: BridgeClient) {
         for (id, o) in owners where o === c {
-            owners[id] = nil
+            owners[id] = nil; writes[id] = nil
             if let p = peripherals[id] { central?.cancelPeripheralConnection(p) }
         }
-        if others.isEmpty { scanWanted = false; central?.stopScan() }
+        stopScan(for: c)
         onChange()
     }
     func scanIfReady() {
         guard scanWanted, let c = central, c.state == .poweredOn else { return }
         c.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
         // Cubes seen before are still here for a page that just opened.
-        for (id, p) in peripherals { server?.broadcast(deviceMessage(id, p)) }
+        for (id, p) in peripherals { broadcast(deviceMessage(id, p)) }
     }
     func characteristic(_ p: CBPeripheral, _ uuid: String?) -> CBCharacteristic? {
         guard let u = uuid?.lowercased() else { return nil }
@@ -224,7 +257,7 @@ final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
 
     // ----- CBCentralManagerDelegate -----
     func centralManagerDidUpdateState(_ c: CBCentralManager) {
-        server?.broadcast(["ev": "bluetooth", "state": stateName])
+        broadcast(["ev": "bluetooth", "state": stateName])
         scanIfReady(); onChange()
     }
     func centralManager(_ c: CBCentralManager, didDiscover p: CBPeripheral, advertisementData ad: [String: Any], rssi: NSNumber) {
@@ -242,7 +275,7 @@ final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
             macs[id] = data.suffix(6).reversed().map { String(format: "%02X", $0) }.joined(separator: ":")
             newMac = true
         }
-        if isNew || newMac { server?.broadcast(deviceMessage(id, p)) }
+        if isNew || newMac { broadcast(deviceMessage(id, p)) }
     }
     func centralManager(_ c: CBCentralManager, didConnect p: CBPeripheral) { p.discoverServices(nil) }
     func centralManager(_ c: CBCentralManager, didFailToConnect p: CBPeripheral, error: Error?) {

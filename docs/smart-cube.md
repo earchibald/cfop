@@ -398,14 +398,36 @@ has no mixed content.
 
 ## The macOS app
 
-`mac/` holds Twistwright for macOS, a menu bar app with no window of its own.
-It does three things:
+`mac/` holds Twistwright for macOS. From 1.47.0 it is a Dock app with a window of
+its own: a `WKWebView` that shows the site at `twistwright://app/`, with the
+Bluetooth bridge in the same process. The spike in `mac/spike/` tested that
+origin first (secure context, storage across launches, module workers,
+cubing.js, camera, microphone, speech: all passed on 2026-10-27). For one
+release, the hand-off release, the app also keeps the menu bar item and serves
+Safari as before, so a Safari user can move their history into the window. The
+clean release removes the Safari path.
 
 | Part | Where | What |
 |---|---|---|
-| Site | `mac/Sources/Site.swift` | Serves the page at `http://127.0.0.1:27272/`, from one of two sources (see below): the built-in pages, or the live pages of `https://www.twistwright.com` through a proxy. `--root DIR` serves a checkout instead of both, for work on the site. `/bridge/info` answers `{app, version, ws, site, builtin}`, which is how the page knows the app is there; `site` is `builtin`, `live` or `root`, and `builtin` is the `APP_VERSION` of the built-in pages. |
-| Bridge | `mac/Sources/Bridge.swift` | A WebSocket on `ws://127.0.0.1:27273/` that carries JSON between the page and CoreBluetooth. The page keeps the GAN protocol and the cipher; the app moves bytes. The handshake accepts only the `Origin` of the page the app serves. The messages are listed at the top of the file. |
-| App | `mac/Sources/App.swift` | The menu bar item (Open Twistwright, the two page sources, the Bluetooth state, the connected cube, Copy the address, Quit) and the `twistwright://` scheme. `twistwright://smart` opens the page with `?smart=1`, and the page opens the Smart cube dialog itself. |
+| Site | `mac/Sources/Site.swift` | `Site` gives the files of the site from one of two sources (see below): the built-in pages, or the live pages of `https://www.twistwright.com` through a proxy. `--root DIR` gives a checkout instead of both, for work on the site. Two front ends read it: `SchemeHandler` for the window at `twistwright://app/` (a folder without its slash gets a small page that goes to the folder with one), and `SiteServer` for Safari at `http://127.0.0.1:27272/`. `/bridge/info` answers `{app, version, ws, site, builtin}` there, which is how a Safari page knows the app is there; `site` is `builtin`, `live` or `root`, and `builtin` is the `APP_VERSION` of the built-in pages. |
+| Bridge | `mac/Sources/Bridge.swift` | Carries JSON between a page and CoreBluetooth. The page keeps the GAN protocol and the cipher; the app moves bytes. A page is a `BridgeClient`: `PageClient` for a window, `SocketClient` for Safari over the WebSocket on `ws://127.0.0.1:27273/` (the handshake accepts only the `Origin` of the page the app serves). The scan runs while one page asks for it; a page that goes away drops its cubes. The messages are listed at the top of the file. |
+| Page | `mac/Sources/Page.swift` | `PageWindow`: one window with one page. The page posts to `webkit.messageHandlers.bridge` (only pages at `twistwright://` reach it); the app answers `hello` and calls `window.bridgeEvent(m)` for each message back. A new page or a closed window drops the cubes of the page before, as a closed tab does. Other addresses open in the default browser; downloads go to a save panel; the camera and the microphone go to the page with no second prompt; Safari's Web Inspector reaches the page. |
+| Setup | `mac/Sources/Setup.swift` | The Set Up Twistwright window: Bluetooth, Camera, Microphone and Speech Recognition, each with its state in macOS (Allow…, ✓ Allowed, or Turned off with Open System Settings), and History from Safari. It opens at the first launch (`setupShown` in the app's defaults) and from Twistwright > Set Up Twistwright… or the menu bar item; `--setup` opens it and leaves the flag as it is. |
+| App | `mac/Sources/App.swift` | The main menu (File: Bring History from Safari…, Open in Safari; View: reload, zoom, the two page sources; Window: Twistwright ⌘1, Smart Cube Lab ⌘2), the menu bar item (Open Twistwright, Open in Safari, Set Up Twistwright…, the Bluetooth state, the connected cube, Copy the Safari Address, Quit) and the `twistwright://` scheme. `twistwright://smart` opens the window with `?smart=1`, and the page opens the Smart cube dialog itself. |
+
+The page in the window finds the app through `bridgeNative()` in `js/bridge.js`
+before it looks for a server, so the rest of the page is the same in the window
+and in Safari. The user agent ends in `Twistwright/<version>`.
+
+### The history from Safari
+
+Safari keeps the history of `http://127.0.0.1:27272/`; the window keeps its own,
+at `twistwright://app`. File > Bring History from Safari… (or the row in the
+setup window) opens `http://127.0.0.1:27272/?migrate=1` in Safari. That page
+sends every `cw:` key over the WebSocket (`{op:"migrate",data,seq}`,
+`bridgeMigrate`), the app asks the user, writes the keys into the window in
+place of its own and reloads it, and answers `{ev:"migrated",seq,count}`. The
+Safari page shows the result at the top (`smartMigrated`) and keeps its copy.
 
 ### The pages: built-in or live
 

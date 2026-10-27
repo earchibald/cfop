@@ -7,13 +7,16 @@
   <key>CFBundleDisplayName</key><string>Twistwright</string>
   <key>CFBundleExecutable</key><string>Twistwright</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.2.0</string>
-  <key>CFBundleVersion</key><string>3</string>
+  <key>CFBundleShortVersionString</key><string>1.47.0</string>
+  <key>CFBundleVersion</key><string>4</string>
   <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
-  <key>LSUIElement</key><true/>
+  <key>LSApplicationCategoryType</key><string>public.app-category.education</string>
   <key>NSHighResolutionCapable</key><true/>
-  <key>NSBluetoothAlwaysUsageDescription</key><string>Twistwright connects to your GAN smart cube and reads its state for the page in your browser.</string>
+  <key>NSBluetoothAlwaysUsageDescription</key><string>Twistwright connects to your GAN smart cube and reads its state.</string>
+  <key>NSCameraUsageDescription</key><string>Twistwright reads the faces of your cube with the camera when you scan it.</string>
+  <key>NSMicrophoneUsageDescription</key><string>Twistwright listens for case names and commands when you press Listen.</string>
+  <key>NSSpeechRecognitionUsageDescription</key><string>Twistwright turns what you say into case names and commands when you press Listen.</string>
   <key>CFBundleURLTypes</key>
   <array>
     <dict>

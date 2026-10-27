@@ -998,4 +998,7 @@ body.onboard .foot{padding-bottom:56px}
 /* ?onboard: the first-visit strip at the foot of the page */
 .onboard-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:60;display:flex;align-items:center;gap:8px;padding:6px 6px 6px 14px;max-width:calc(100vw - 32px);box-sizing:border-box;background:var(--accent);color:var(--accent-ink);border-radius:999px;box-shadow:var(--shadow);font-size:13px;white-space:nowrap}
 .onboard-bar span{overflow:hidden;text-overflow:ellipsis}
+/* The note of a history move from Safari into the Mac app (smartMigrated). */
+.migrate-note{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 10px);z-index:60;display:flex;align-items:center;gap:12px;padding:8px 8px 8px 16px;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;background:var(--primary);color:var(--primary-ink);border-radius:var(--r);box-shadow:var(--shadow);font-size:14px;line-height:1.4}
+.migrate-note button{font:inherit;font-weight:500;padding:4px 12px;border-radius:999px;border:0;background:var(--primary-ink);color:var(--primary);cursor:pointer;flex:none}
 .onboard-bar button{font:inherit;font-weight:500;padding:4px 12px;border-radius:999px;border:0;background:var(--accent-ink);color:var(--accent);cursor:pointer}

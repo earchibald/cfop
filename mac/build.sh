@@ -52,8 +52,9 @@ if [ -n "$SITE_REF" ]; then
   printf '{"ref":"%s","commit":"%s","version":"%s"}\n' "$SITE_REF" "$COMMIT" "$VERSION" > "$APP/Contents/Resources/site.json"
   echo "Built in the site at $SITE_REF ($(echo "$COMMIT" | cut -c1-7)), version ${VERSION:-unknown}"
 fi
-if [ "$SIGN" = "-" ]; then codesign --force --sign - "$APP"
-else codesign --force --options runtime --timestamp --sign "$SIGN" "$APP"; fi
+# The entitlements let the hardened runtime give the page the camera and the microphone.
+if [ "$SIGN" = "-" ]; then codesign --force --options runtime --entitlements Twistwright.entitlements --sign - "$APP"
+else codesign --force --options runtime --timestamp --entitlements Twistwright.entitlements --sign "$SIGN" "$APP"; fi
 zip_it() { rm -f build/Twistwright-mac.zip; ditto -c -k --keepParent "$APP" build/Twistwright-mac.zip; }
 zip_it
 if [ -n "$NOTARIZE" ]; then

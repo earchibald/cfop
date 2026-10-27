@@ -1,16 +1,20 @@
-// Twistwright for macOS: a menu bar app that gives the Twistwright web page a way to a GAN smart
-// cube. Safari has no Web Bluetooth, so the app does the Bluetooth work and serves the page at
-// http://127.0.0.1:27272/, an address from which Safari lets the page talk to a local WebSocket.
-// A twistwright:// link opens the app, and the app opens that page in the default browser.
+// Twistwright for macOS: the Twistwright site in a window of its own, with a way to a GAN smart
+// cube. WebKit has no Web Bluetooth, so the app does the Bluetooth work (Bridge.swift) and the
+// page reaches it through a message handler. The window shows the pages at twistwright://app/,
+// from the copy of the site built into the app or live from twistwright.com.
 //
-//   Twistwright.app/Contents/MacOS/Twistwright [--root DIR] [--no-open]
+// For one release the app also keeps the menu bar item and serves the page to Safari at
+// http://127.0.0.1:27272/ with a WebSocket bridge, so a Safari user can move their history into
+// the window (File > Bring History from Safari). A twistwright:// link opens the window.
 //
-// --root serves the site from a folder (a checkout) in place of twistwright.com. --no-open does
-// not open the browser at launch. Build with mac/build.sh.
+//   Twistwright.app/Contents/MacOS/Twistwright [--root DIR] [--no-open] [--site builtin|live] [--port N]
+//
+// --root shows the site from a folder (a checkout). --no-open opens no window at launch.
+// Build with mac/build.sh.
 import AppKit
 
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate
-app.setActivationPolicy(.accessory)
+app.setActivationPolicy(.regular)
 app.run()

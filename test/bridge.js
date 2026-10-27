@@ -4,7 +4,7 @@
 // gets the download of the app.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const {fakeDevice}=require('./fake-gan');
-const {fakeBridge,bridgeInfo}=require('./fake-bridge');
+const {fakeBridge,fakeNative,bridgeInfo}=require('./fake-bridge');
 const MAC='AB:12:34:5C:9D:E1';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms)return false;await sleep(10);}return true;};
@@ -35,15 +35,39 @@ async function pure(){
   assert.strictEqual(gone,1,'the cube going away reaches the device');assert.ok(got.some(e=>e.type==='gone'),'and ganOpen');
   console.log('bridge pure ok');
 }
+// ----- no DOM: the app's own window, through its message handler -----
+async function pureNative(){
+  const run=require('./vm-load')('js/engine.js','js/gan.js','js/bridge.js');
+  const g=run('this');Object.assign(g,{setTimeout,clearTimeout,AbortController});
+  assert.strictEqual(run('bridgeNative()'),null,'no message handler outside the app');
+  const Cube=run('Cube'),applyAlg=run('applyAlg');
+  const cube={};const c1=applyAlg(new Cube(),['R','U2',"B'"]);Object.assign(cube,{cp:[...c1.cp],co:[...c1.co],ep:[...c1.ep],eo:[...c1.eo]});
+  const dev=fakeDevice(4,MAC,cube,{name:'GAN12uiM_A1B2'});
+  const nat=fakeNative([{id:'p1',gen:4,dev,mac:MAC}]);
+  g.window=g;nat.install(g);g.fetch=()=>{throw new Error('the window asks no server');};
+  const link=await run('bridgeStart')();
+  assert.ok(link&&link.native,'the window takes the message handler');assert.strictEqual(run('BRIDGE'),link);
+  assert.strictEqual(link.version,'test');assert.strictEqual(link.bluetooth,'poweredOn');
+  assert.deepStrictEqual(nat.sent[0],{op:'hello'},'hello first');
+  const found=[];const stop=link.scan(d=>found.push(d));
+  assert.ok(await until(()=>found.some(d=>d.mac===MAC)),'the scan comes back through bridgeEvent');stop();
+  const conn=await run('ganOpen')(run('bridgeDevice')(link,{id:'p1',name:'GAN12uiM_A1B2',mac:MAC}),MAC,()=>{});
+  assert.ok((await conn.readState(2000)).equals(c1),'the state comes through the window bridge');
+  await conn.send('reset');assert.ok(nat.sent.some(m=>m.op==='write'),'a write goes through the handler');
+  console.log('bridge native ok');
+}
 // ----- the page -----
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
-function fakeStorage(){const m=new Map();return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear()};}
-// o.bridge: a fakeBridge to install, with /bridge/info answered; o.platform: navigator.platform; o.search: the query.
+function fakeStorage(init={}){const m=new Map(Object.entries(init));return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear(),
+  key:i=>[...m.keys()][i]??null,get length(){return m.size;}};}
+// o.bridge: a fakeBridge to install, with /bridge/info answered; o.native: a fakeNative, the app's
+// own window; o.platform: navigator.platform; o.search: the query; o.storage: saved keys.
 function boot(o={}){
   const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
   const dom=new JSDOM(html,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,url:'file://'+path.join(__dirname,'..','index.html')+(o.search||''),virtualConsole:vc,
-    beforeParse(w){w.matchMedia=q=>({matches:false,addEventListener(){},addListener(){}});w.scrollTo=()=>{};Object.defineProperty(w,'localStorage',{value:fakeStorage()});
+    beforeParse(w){w.matchMedia=q=>({matches:false,addEventListener(){},addListener(){}});w.scrollTo=()=>{};Object.defineProperty(w,'localStorage',{value:fakeStorage(o.storage)});
       if(o.platform!=null)Object.defineProperty(w.navigator,'platform',{value:o.platform});
+      if(o.native)o.native.install(w);
       if(o.bridge){w.BRIDGE_LOCAL=true;w.WebSocket=o.bridge.FakeWebSocket;w.fetch=async u=>u==='/bridge/info'?{ok:true,json:async()=>bridgeInfo()}:{ok:false};}}});
   const w=dom.window;w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=function(){};
   return new Promise(res=>w.addEventListener('load',()=>setTimeout(()=>res({w,d:w.document,errs}),400)));
@@ -113,4 +137,51 @@ async function download(){
   await sleep(50);assert.ok(c.d.querySelector('#smartBg'),'?smart=1 opens the dialog'); // jsdom keeps the query on a file: page; a browser drops it
   console.log('bridge download ok');
 }
-(async()=>{try{await pure();await page();await download();process.exit(0);}catch(e){console.error(e);process.exit(1);}})();
+// ----- the page in the app's own window -----
+async function pageNative(){
+  const cube={cp:[0,1,2,3,4,5,6,7],co:[0,0,0,0,0,0,0,0],ep:[0,1,2,3,4,5,6,7,8,9,10,11],eo:[0,0,0,0,0,0,0,0,0,0,0,0]};
+  const dev=fakeDevice(4,MAC,cube,{name:'GAN-7F3C'});
+  const nat=fakeNative([{id:'p1',gen:4,dev,mac:MAC}]);
+  const {w,d,errs}=await boot({native:nat,platform:'MacIntel'});
+  const $=s=>d.querySelector(s),$$=s=>[...d.querySelectorAll(s)];
+  const click=el=>{assert.ok(el,'element to click');el.dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true}));};
+  assert.deepStrictEqual(nat.sent[0],{op:'hello'},'the page in the window says hello to the message handler');
+  assert.strictEqual(w.smartMode(),'bridge');assert.strictEqual($('#smartBtn').textContent,'Smart cube','no download in the app');
+  click($('#smartBtn'));await sleep(20);click($('#smartConnect'));
+  assert.ok(await until(()=>$$('#smartListItems button').length===1&&$('#smartListItems button').dataset.mac===MAC),'the list shows the cube');
+  click($('#smartListItems button'));
+  assert.ok(await until(()=>!$('#smartUse').disabled,3000),'connected and read in the window: '+$('#smartStatus').textContent);
+  assert.ok(nat.sent.some(m=>m.op==='connect')&&nat.sent.some(m=>m.op==='notify'),'connect and notify go through the handler');
+  d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  assert.deepStrictEqual(errs,[],'no script errors');
+  console.log('bridge window ok');
+}
+// ----- Bring History from Safari: the Safari page with ?migrate=1 -----
+async function migrate(){
+  const saved={'cw:method':'"cfop"','cw:times':'[1,2,3]','other':'x'};
+  const bridge=fakeBridge([]);
+  const a=await boot({bridge,platform:'MacIntel',search:'?migrate=1',storage:saved});
+  const note=b=>b.d.querySelector('#migrateNote');
+  assert.ok(await until(()=>note(a)),'a note shows');
+  const sent=bridge.sockets[0].sent.filter(m=>m.op==='migrate');
+  assert.strictEqual(sent.length,1,'the page sends the history once');assert.strictEqual(typeof sent[0].seq,'number');
+  assert.strictEqual(sent[0].data['cw:times'],'[1,2,3]','the saved keys go as they are');assert.ok(!('other' in sent[0].data),'only cw: keys');
+  const n=Object.keys(sent[0].data).length;
+  assert.strictEqual(note(a).querySelector('span').textContent,`Your history is in the Twistwright app now: ${n} saved items. You can close this tab.`);
+  assert.strictEqual(a.w.localStorage.getItem('cw:times'),'[1,2,3]','Safari keeps its copy');
+  assert.ok(note(a).querySelector('button').title,'the Close button has a tooltip');
+  note(a).querySelector('button').dispatchEvent(new a.w.MouseEvent('click',{bubbles:true}));assert.ok(!note(a),'Close removes the note');
+  assert.deepStrictEqual(a.errs,[]);
+  // The user says no in the app.
+  const b=await boot({bridge:fakeBridge([],{migrate:'cancel'}),platform:'MacIntel',search:'?migrate=1',storage:saved});
+  assert.ok(await until(()=>note(b)));
+  assert.strictEqual(note(b).querySelector('span').textContent,'The app did not take the history. Nothing changed.');
+  // No app: the note says how to start again.
+  const c=await boot({platform:'MacIntel',search:'?migrate=1',storage:saved});
+  assert.ok(await until(()=>note(c)));assert.ok(/did not answer/.test(note(c).textContent));
+  // A page with no ?migrate=1 sends nothing.
+  const e=fakeBridge([]);await boot({bridge:e,platform:'MacIntel',storage:saved});
+  assert.ok(!e.sockets[0].sent.some(m=>m.op==='migrate'),'no move without the query');
+  console.log('bridge migrate ok');
+}
+(async()=>{try{await pure();await pureNative();await page();await download();await pageNative();await migrate();process.exit(0);}catch(e){console.error(e);process.exit(1);}})();
