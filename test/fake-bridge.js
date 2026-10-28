@@ -24,6 +24,13 @@ function fakeBridge(devices,opts={}){
       const err=(msg)=>this.emit(Object.assign({ev:'error',message:msg},m.id?{id:m.id}:{},m.seq!=null?{seq:m.seq}:{}));
       switch(m.op){
         case 'scan':
+          // Before macOS has asked (bluetooth notAsked), a scan with auto starts nothing; a scan
+          // from a press asks, and the fake says yes.
+          if(this.bt===undefined)this.bt=opts.bluetooth||'poweredOn';
+          if(this.bt==='notAsked'){
+            if(m.auto){this.emit({ev:'bluetooth',state:'notAsked'});break;}
+            this.bt='poweredOn';setTimeout(()=>this.emit({ev:'bluetooth',state:'poweredOn'}),2);
+          }
           // Each cube shows up; the second message carries the MAC address, as a real scan does.
           for(const x of devices){setTimeout(()=>this.emit({ev:'device',id:x.id,name:x.dev.name,mac:null}),5);setTimeout(()=>this.emit({ev:'device',id:x.id,name:x.dev.name,mac:x.mac||null}),15);}
           break;

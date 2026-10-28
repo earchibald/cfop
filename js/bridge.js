@@ -26,15 +26,16 @@ function bridgeBytes(hex){const u=new Uint8Array(hex.length>>1);for(let i=0;i<u.
 
 // The link to the app, the same over both ways:
 // {version, bluetooth, native, send, request, on, off, close, scan, take}. bluetooth is the state
-// of Bluetooth on the Mac: poweredOn, poweredOff, unauthorized, unsupported or unknown (not
-// started yet). post(m) sends one message; take(m) is called with each message from the app.
+// of Bluetooth on the Mac: poweredOn, poweredOff, unauthorized, unsupported, notAsked (macOS has
+// not asked for it yet) or unknown (not started yet). post(m) sends one message; take(m) is called with each message from the app.
 function bridgeLink(version,post,close,native){
   const handlers=new Set();
   const link={version,bluetooth:'unknown',native:!!native,
     send:post,
     on:f=>handlers.add(f),off:f=>handlers.delete(f),
     close,
-    take(m){if(m.ev==='bluetooth')link.bluetooth=m.state;handlers.forEach(f=>f(m));},
+    // Bluetooth asked at last (the Set Up window, say): the page may look for a cube again.
+    take(m){if(m.ev==='bluetooth'){const was=link.bluetooth;link.bluetooth=m.state;if(was==='notAsked'&&m.state!=='notAsked'&&BRIDGE===link)bridgeChanged();}handlers.forEach(f=>f(m));},
     // Send a request and wait for the event that answers it: ev with the same id, or written
     // and error with the same seq.
     request(m,ev,ms){return new Promise((ok,bad)=>{
@@ -45,8 +46,9 @@ function bridgeLink(version,post,close,native){
         else if(e.ev==='error'){clearTimeout(t);link.off(f);bad(Object.assign(new Error(e.message),{code:'bridge'}));}};
       link.on(f);link.send(m);});},
     // Look for cubes. onDevice gets {id, name, mac} for each; the mac can come in a second
-    // message, once an advertisement carries it. Returns a function that stops the scan.
-    scan(onDevice){const f=e=>{if(e.ev==='device')onDevice(e);};link.on(f);link.send({op:'scan'});return()=>{link.off(f);link.send({op:'stop'});};}};
+    // message, once an advertisement carries it. Returns a function that stops the scan. auto: the
+    // look with no click, which the app does not let bring up the Bluetooth question.
+    scan(onDevice,auto){const f=e=>{if(e.ev==='device')onDevice(e);};link.on(f);link.send(auto?{op:'scan',auto:true}:{op:'scan'});return()=>{link.off(f);link.send({op:'stop'});};}};
   return link;
 }
 // Safari: open the WebSocket and wait for hello. Resolves the link.
