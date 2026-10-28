@@ -20,7 +20,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const popOpen=()=>!$('#methodPop').classList.contains('hidden');
   // A first visit asks the cube level (js/start.js). Skip closes it; the chip opens the chooser.
   assert.ok(d.body.classList.contains('starting')&&!popOpen(),'a first visit asks the cube level, not the method');
-  assert.strictEqual($$('#start .st-level').length,5,'five levels');
+  assert.strictEqual($$('#start .st-level').length,4,'four levels');
   $('#start [data-close]').click();assert.ok(!d.body.classList.contains('starting'),'Skip closes the level page');
   $('#methodChip').click();
   assert.ok(popOpen(),'the chip opens the method chooser');assert.ok(d.body.classList.contains('pop-open'),'the page behind the chooser is locked');
@@ -40,7 +40,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.ok($('#tab-learn').classList.contains('on'));
   assert.strictEqual($$('#brail button').length,5,'five beginner tabs');
   assert.ok($('#brail button[data-tab="learn"]').classList.contains('on'));
-  assert.strictEqual(d.body.dataset.begview,'ask','the beginner home asks about the cube; no moves are loaded');
+  assert.strictEqual(d.body.dataset.begview,'home','the beginner home: no moves are loaded, no player');
   assert.ok(!/z2/.test($('#seqLabel').textContent),'no hidden z2: a beginner holds the cube white up');
   assert.ok(/white on top/.test($('#seqLabel').textContent),'the label says white on top');
   // The beginner player: progress, no timer, until Time my solves.
@@ -98,7 +98,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ({w,d,errs}=await boot(true));
   w.setMethod('beginner');
   assert.strictEqual(d.body.dataset.tab,'learn','Learn is the phone home');
-  assert.ok($('#begNext h2')&&$('#begAsk .beg-cards'),'the phone home shows Up next and Your cube');
+  assert.ok($('#begNextTitle')&&$('#tab-learn .lh-steps'),'the phone home shows Up next and the steps');
   $('#menuBtn').click();assert.strictEqual($$('#menu button').length,5,'the phone menu lists the five beginner tabs');
   assert.deepStrictEqual(errs,[],'no script errors on the phone');
   console.log('method: chooser, chip, rails, progress panel, timer toggle, tab memory ok');process.exit(0);

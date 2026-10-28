@@ -24,15 +24,17 @@ frames, read 2026-10-27). This branch builds it into the site as a first pass. E
 | Frame | Built in | Notes |
 |---|---|---|
 | 0 · Welcome: your cube level | `js/start.js` (`START_SCREENS.level`) | Opens on a first visit (no `cw:method`, no `cw:level`) in place of the method menu. Also: Paste my data, and Skip: look around first. |
-| 0 · Where each level goes | `LEVELS` in `js/start.js` | The routing table is the code, not a page. |
+| 0 · Where each level goes | `LEVELS` in `js/start.js` | The routing table is the code, not a page. Four levels from 1.54.0 (see Rework 6); the ids stay 1, 3, 4, 5. |
 | 1.1 Do you have a cube? | removed in 1.49.0 | See "Rework 1" below: the basics come first, the cube question after them. |
 | new · Meet the cube | `t1-what` | Basics 1 of 4. What the cube is: six faces, nine stickers each, solved is one color per face, a turn mixes it. Show me a turn turns one face on the picture and back, with no letter. |
 | 1.3–1.5 Basics: hold, pieces, six moves | `t1-hold`, `t1-pieces`, `t1-moves` | Basics 2, 3 and 4 of 4. One picture for everyone: a drag looks around it, no key turns it, no cube switch. On the pieces page a kind lifts its pieces out and back (see Rework 2), and Find it is a click on the picture. The hold page's two lines are buttons (see Rework 3); the hold and moves pages light stickers with the picture's `fade`. The moves page is the first page with a move letter. Its twelve buttons turn the move and back (see Rework 4). |
-| new · The six moves, short | `t2-moves` | Level 2 only, before 2.1: the letters, the ′, the hold in one line, the same twelve move buttons. It does not mark Basics. |
+| new · The six moves, short | removed in 1.54.0 | Level 2 is part of level 1 now. |
 | 1.6 Basics learned | `t1-done` | Reaching it marks `beg-0` finished. Next: pick your cube goes to 2.1. |
-| 2.1 Which cube will you use? | `t2-cube` | Level 1 after the basics; level 2 after its short six-moves page (Back goes to it). Regular cube is first and the default, lit with the glow; Smart cube opens the Smart cube window after; Virtual cube goes through 1.2 first (see Rework 5). |
+| new · Your first solve | `t1-ready` | A regular cube only, after 2.1: It is solved (Mix it up with me) or It is mixed up (scan, paint), and the turn-over in two pictures. Each goes to Solve my cube. |
+| new · The turn-over | `gdTurnHTML` in `js/guide.js` | A screen of its own in the guided solve wherever the top changes: white to yellow before the daisy, yellow to white for the white corners, back to yellow. The cube turns over on the picture again and again. |
+| 2.1 Which cube will you use? | `t2-cube` | Level 1 after the basics (Back goes to them). Regular cube is first and the default, lit with the glow, and goes to Your first solve; Smart cube connects, on Solve my cube; Virtual cube goes through 1.2 first (see Rework 5). |
 | 1.2 Meet the virtual cube | `t1-keys`, `js/screencube.js` | Only after 2.1, for the virtual cube. Two key sets that work at once: A W D X · S E and the numeric keypad's 4 8 6 2 · 5 9, drawn side by side; Shift for prime, drag to look around, double-click to reset. The last turn is in words ("Right face, clockwise"). On a touch screen the keyboard parts are hidden and six buttons, named in words, sit under the cube. |
-| 2.2 Beginner home, no player on top | `js/place.js`, `begCubeLine` in `js/start-app.js` | The cube line under Up next, with Change (the cube menu). |
+| 2.2 Beginner home, no player on top | `lnHomeHTML` in `js/learn.js`, `begCubeLine` in `js/start-app.js` | As drawn from 1.54.0: Up next with the step's goal, the cube line with Change, Start the step and Solve my cube with help; the steps with their statuses beside it. |
 | 2.3 A step, the cube in the section | `js/place.js` | The lessons keep their own pages; the player is beside them, not on top. |
 | 2.4 All learned: on to CFOP | `begCfopCard` | On the Progress tab when Basics and the eight steps are all finished. |
 | L.1 / L.2 The section on top | `js/place.js`, `css/start.css` | One cube slot (`#cubeSlot`) in `main.main`, placed by CSS: `body[data-cube]` is `wide` (Scramble and the other Solve tabs: across the top, with the seed bar), `side` (a sticky column, with a scramble pill), or `none` (Reference, Smart cube, Cheat sheet). Nothing moves in the DOM after the start, because `guide.js` and others write their whole section again. |
@@ -149,6 +151,36 @@ label, and the `START.keysNext` routing.
   window in the main window (`showSettings` in `mac/Sources/App.swift`). In a browser Cmd+, stays the
   browser's. It reaches users with the next Mac app release.
 
+## Rework 6: one first level, straight to the first solve (1.54.0)
+
+- **One level.** "Never touched one" and "Played but never solved" are one level: **I've never solved
+  one!** Its id stays 1. A saved `cw:level` 2 reads as 1 (`startLevel`), so the method menu's level
+  row still names it. The level 2 short moves page (`t2-moves`) is gone.
+- **The basics, then the first solve.** The four basics pages and the cube question are as before.
+  Then:
+  - Regular cube: **Your first solve** (`t1-ready`). It is solved: Mix it up with me. It is mixed up:
+    Scan it with the camera, or Paint its colors. Each closes the pages on Solve my cube.
+  - Virtual cube: the keys page, then a mixed-up virtual cube and the guided solve (`t1-solve`).
+  - Smart cube: Solve my cube with the connect begun (`smartConnectNow`, in the click's own tick).
+- **White on top, then yellow on top.** The basics and the mix-up hold the cube white on top. The
+  guided solve now stops on a **turn-over screen** wherever the top changes, in place of a dashed
+  `z2` tile inside the first part: "Turn it over: yellow on top", the hold in large words with a
+  square of each color ("Yellow on top · Green toward you"), the cube turning over on the picture
+  again and again, and the button "Yellow is on top →". The player is hidden there, so the screen is
+  first in view. The part after it starts turned over. The beginner method is not yellow up the whole
+  way: the white corners (step 3) are done white on top, so there are three turn-overs in a solve
+  (to yellow, to white, to yellow). Every part shows the hold too (`gdHoldBadge`). The first-solve
+  page, the Solve my cube entry and the end of the mix-up say ahead of time that yellow goes on top.
+- **The old beginner home is gone.** No "What does your cube look like right now?", no white-up "Hold
+  it like this" picture, no "Show the scramble as letters" link, no long step cards and no "Finished
+  all eight?" footer. The Learn home is the storyboard's: Up next with the goal picture, the cube
+  line, Start the step and Solve my cube with help, and the steps beside it (`lnHomeHTML`). `#begHome`
+  is gone from `index.html`. The CFOP button shows in the Up next card once every step is Learned.
+- **Solve my cube** starts with cards for the cube in use (`gdEntryCards`): a regular cube gets Mix it
+  up with me and Scan / Paint, the virtual cube a mix-up, a smart cube Connect. Mix it up with me runs
+  there now, in place of the cards (`#begMix`). Start with this scramble stays, as one line.
+- `body[data-begview]` is `home`, `mix` or `player` (`ask` is gone).
+
 ## Planned: the fat moves, in the CFOP intro
 
 The owner asked for a fat moves page after the six moves, then moved it out of the basics: it
@@ -186,13 +218,13 @@ page as drafted:
 
 ## Storage added
 
-`cw:level` (1–5), `cw:cubeSrc` (`screen`, `mine`, `smart`), `cw:screenKeys` (a layout id; unused from 1.53.0),
+`cw:level` (1, 3, 4 or 5; a 2 from before 1.54.0 reads as 1), `cw:cubeSrc` (`screen`, `mine`, `smart`), `cw:screenKeys` (a layout id; unused from 1.53.0),
 `cw:known` (`{cross, f2lfeel, oll}`: 0, 1 or 2), `cw:llShow`, `cw:crossLesson`, `cw:timerHome`,
 `cw:hideTime`. Statuses go to the one map, `cw:llStatus`, with the new ids `pllf-<name>` for the
 full PLL.
 
 ## Tests
 
-`test/start.js` walks the five levels in jsdom, the cube menu, the slot per tab, the level row, the
+`test/start.js` walks the four levels in jsdom, the first solve, the cube menu, the slot per tab, the level row, the
 CFOP card, the Cross lesson, Still to learn and the timer home. `test/method.js`, `test/onboard.js`
 and `test/transfer.js` now expect the level picker on a first visit.
