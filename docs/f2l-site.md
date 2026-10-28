@@ -55,7 +55,7 @@ remaining.
 | F2L on the site | The F2L tab shows the scramble solved through the cross. Reveal shows the whole pair plan at once. The 41 cases are a drill. | Reveal is all or nothing. There is no guidance, no choice of pair, no reason for the moves. The plan's inserts are search results with no explanation. |
 | F2L in the lab | A window guides one pair at a time on the smart cube: the hint as a drill, Shortest or By corner, combinations, Then, solved pairs. | Only in the lab, only for a smart cube. The lab is a separate page. |
 | A scanned or painted cube | Six faces or 54 taps give a state. `scrambleFromCube` turns it into a scramble. | After one wrong move the screen is wrong, and the only fix is a full new scan. |
-| The scanner's colors | Reference colors are the Rubik's stickers. A per-face white balance, then a joint read of all 54 stickers against the centers (`jointColors`) when the faces do not fit. | Warm or low light pulls red toward orange and white toward yellow. Glossy GAN plastic reflects the screen. The joint read only runs when the plain read fails. |
+| The scanner's colors | Reference colors are classic stickers. A per-face white balance, then a joint read of all 54 stickers against the centers (`jointColors`) when the faces do not fit. | Warm or low light pulls red toward orange and white toward yellow. Glossy GAN plastic reflects the screen. The joint read only runs when the plain read fails. |
 | The painter | A separate dialog with its own net and palette. | A scan that needs one sticker fixed cannot borrow the painter's palette; the net has a click that cycles colors instead. |
 
 ## The design
@@ -201,7 +201,7 @@ keeps the painter.
 
 Three changes, each testable on its own.
 
-1. **A second reference set.** Built. `SCAN_REFS` is the Rubik's stickers.
+1. **A second reference set.** Built. `SCAN_REFS` is classic stickers.
    `SCAN_REFS_PLASTIC` is the light-mode palette in `docs/design-language.md`,
    sampled from GAN product photos. `classifySamples` tries both sets and
    keeps the one with the lower total distance over the face. The Sticker

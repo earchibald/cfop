@@ -1,11 +1,11 @@
 # The 4×4
 
-Two methods for the 4×4 (the Rubik's Master), next to the 3×3 and 2×2 ones. The chip in the
+Two methods for the 4×4, next to the 3×3 and 2×2 ones. The chip in the
 top bar chooses a puzzle and a method: `4×4 · Beginner` and `4×4 · Advanced`.
 
 | Section | Source | Built |
 |---|---|---|
-| Beginner | "You can do the Rubik's Master, Solution Guide" (Spin Master, V1-EU-M-2020), https://cdn.prod.website-files.com/6595ca03bcd68f311fd41872/65afebc2b6c6586c93d633da_Rubiks_SolutionGuide_4x4-Master.pdf | 2026-10-11, `js/master.js`, the beginner tabs through a pack |
+| Beginner | A reduction guide (2020): centers, edges, then the 3×3 beginner steps | 2026-10-11, `js/master.js`, the beginner tabs through a pack |
 | Advanced | Reduction with CFOP, the two parity fixes most 4×4 solvers learn first, and Yau described as the next step | 2026-10-11, `js/speed4.js`, `js/speed4-ui.js` |
 
 ## The model
@@ -31,10 +31,10 @@ cube has no scramble behind it: `loadState` makes the state itself the mix-up.
 
 | Step | Name | What the guide says |
 |---|---|---|
-| 0 | Get to know your Master | 24 center tiles, 24 edge pieces, 8 corners; the color layout (white opposite yellow, red opposite orange, blue opposite green; when white is up, red is left of blue); face turns, slice turns, two letters for both. |
+| 0 | Get to know your cube | 24 center tiles, 24 edge pieces, 8 corners; the color layout (white opposite yellow, red opposite orange, blue opposite green; when white is up, red is left of blue); face turns, slice turns, two letters for both. |
 | 1 | Solve the centers | White first, a white tile on top. Another white tile not on top: on a side, hold it in front and turn the front until it is at the lower right of the center; on the bottom, turn the bottom until it is at the lower right. Turn the top until a non-white tile is at the upper left. Front: `Rr U R'r'`. Bottom: `Rr2 U Rr2`. Then yellow, red, green, orange, blue, keeping the layout: when yellow is up, green is to the right of red. |
 | 2 | Pair the edges | Two pieces of the same colors to the left and right of the front with outside turns. Not across: `R F' U F` lines them up. Across: `Dd R F' U R' F D'd'`, "Don't Run Fast Unless Running Fast Daily". |
-| 3–10 | Like a 3×3 | The eight steps of the Rubik's Cube guide (`js/beginner.js`), outside turns only. Yellow cross with 1 or 3 edges up: parity, `r2 B2 U2 l U2 r' U2 r U2 F2 r F2 l' B2 r2`. Yellow edges with two correct: across, hold them left and right, `r2 U2 r2 Uu2 r2 u2`, "Are you? Are you you? Are you?"; next to each other, hold them left and back, the parity, then the 3×3 algorithm. |
+| 3–10 | Like a 3×3 | The eight steps of the 3×3 beginner guide (`js/beginner.js`), outside turns only. Yellow cross with 1 or 3 edges up: parity, `r2 B2 U2 l U2 r' U2 r U2 F2 r F2 l' B2 r2`. Yellow edges with two correct: across, hold them left and right, `r2 U2 r2 Uu2 r2 u2`, "Are you? Are you you? Are you?"; next to each other, hold them left and back, the parity, then the 3×3 algorithm. |
 
 The engine confirms the guide (`test/four.js`, `test/master.js`): the center insert swaps the
 front's lower-right tile with the top's upper-left one; the pairing algorithm exchanges the

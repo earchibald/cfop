@@ -11,7 +11,7 @@ To record:
 2. Scan the cube. Fix any wrong sticker on the net before you save; the truth
    follows the net.
 3. Press Save frames and unpack the zip into a folder here, named for the cube
-   and the light: `gan-warm`, `gan-low`, `rubiks-daylight`.
+   and the light: `gan-warm`, `gan-low`, `stickers-daylight`.
 
 Keep each folder small: a dozen frames of each face at 320 px is about 2 MB.
 The voter needs ten frames of a face to lock it, so keep at least ten.

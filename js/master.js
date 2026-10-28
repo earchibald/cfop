@@ -1,7 +1,6 @@
-// ===== The 4×4 beginner method: the Rubik's Master solution guide =====
-// Source: "You can do the Rubik's Master, Solution Guide" (Spin Master, V1-EU-M-2020), the current
-// guide at rubiks.com/solve-it. Three stages: solve the centers, pair the edges, then solve the
-// cube like a 3×3 with the Rubik's Cube guide, plus two parity fixes a 3×3 never needs. The holds,
+// ===== The 4×4 beginner method: a reduction solution guide =====
+// Three stages: solve the centers, pair the edges, then solve the
+// cube like a 3×3 with the beginner 3×3 guide, plus two parity fixes a 3×3 never needs. The holds,
 // the algorithms and the sayings are the guide's own; the 3×3 part comes from js/beginner.js.
 // Data: MASTER_STEPS (the basics, centers, edges, then the eight 3×3 steps as steps 3 to 10),
 // MASTER_ALGS. masterChunks boxes the named algorithms inside a move list.
@@ -46,7 +45,7 @@ function masterChunks(moves){
 // fixes added where the guide puts them (the yellow cross and the yellow edges).
 const MASTER_STEPS=(()=>{
   const own=[
-    {n:0,id:'basics',name:'Get to know your Master',
+    {n:0,id:'basics',name:'Get to know your cube',
      goal:'Know the pieces, the color layout, the slices and the moves.',
      goals:['24 center tiles, 24 edge pieces, 8 corners','The color layout','Face turns and slice turns'],
      what:'A 4×4 cube has 8 corners like a 3×3, but 24 center tiles instead of 6 and 24 edge pieces instead of 12. No center is fixed, so nothing tells you the color of a face until you build it.',
