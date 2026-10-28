@@ -7,7 +7,7 @@
 //   Level 1, never touched one: the basics first, in four pages (what the cube is, how to hold
 //     it, the pieces, the six moves), on a picture that a drag looks around. No question about a
 //     cube and no move letter before the moves page. Then which cube (the keys page for the
-//     screen cube), then the beginner method.
+//     virtual cube), then the beginner method.
 //   Level 2, played but never solved: which cube, then the beginner method.
 //   Level 3, have solved it: how, then the beginner steps checked off, then the bridge to CFOP
 //     and the Cross lesson.
@@ -66,7 +66,7 @@ function startGo(screen){START.screen=screen;startDraw();const h=$('#start h1');
 // The end of a track: the level, the cube source, the method and the section.
 function startFinish(m,tab,after){if(START.level)store.set('level',START.level);if(START.src&&typeof setCubeSrc==='function')setCubeSrc(START.src);
   startClose();setMethod(m,{force:true});if(tab)goTab(tab);
-  // The screen cube starts mixed up, in the player (a beginner sees it at once, not the question).
+  // The virtual cube starts mixed up, in the player (a beginner sees it at once, not the question).
   if(START.src==='screen'&&!after){newScramble();if(isBeg()&&typeof showBegLetters==='function')showBegLetters();}
   if(after)after();
   document.dispatchEvent(new CustomEvent('cw:level',{detail:START.level}));}
@@ -82,7 +82,7 @@ function stPic(cube,fade,label){return `<svg viewBox="0 0 400 370" role="img" ar
 function stBars(n){return LEVEL_COLORS.map((c,i)=>`<i class="lvbar${i<n?'':' off'}" style="--sec:var(--sticker-${c})"></i>`).join('');}
 function stBar(crumb,right){return `<div class="st-bar"><span class="st-crumb">Getting started${crumb?' · '+esc(crumb):''}</span><span class="spacer"></span>${right||''}</div>`;}
 function stBack(to,label){return `<button class="st-link" data-go="${to}" title="${esc(label||'Back')}">${esc(label||'← Back')}</button>`;}
-function stSources(note){const notes={mine:'Scan or paint it later, from the cube chip.',smart:'The browser asks to connect next.',screen:'Keys turn it. A drag turns the whole cube.'};
+function stSources(note){const notes={mine:'Scan or paint it later, from the cube chip.',smart:smartInApp()?'The app looks for your cube next.':'The browser asks to connect next.',screen:'The keyboard or the numeric keypad turns it. A drag turns the whole cube.'};
   const order=['mine','smart','screen'].map(id=>CUBE_SRCS.find(s=>s.id===id));
   return `<div class="st-srcs"><span class="st-lbl">Your cube</span><div class="st-seg" role="group" aria-label="Cube source">${order.map(s=>`<button data-src="${s.id}" aria-pressed="${START.src===s.id}" title="${esc(s.tip)}"><i class="cdot" data-src="${s.id}"></i>${esc(s.name)}</button>`).join('')}</div>${note===false?'':`<span class="muted">${esc((notes[START.src]||'')+' Change it any time in the top bar.')}</span>`}</div>`;}
 // The nine beginner steps by short name: Basics, The daisy, White cross ...
@@ -106,19 +106,22 @@ START_SCREENS['t1-what']=()=>`${stBasicsBar(1)}
   <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 1 of 4</span><h1>Meet the cube</h1><p>The cube is a puzzle. It has six faces. Each face has nine stickers.</p>
     <ul class="st-rules"><li><b>Solved</b>: each face is one color. The six colors are white, yellow, green, blue, red and orange.</li><li><b>A turn</b>: each face can turn. A turn moves stickers onto the faces next to it.</li><li><b>The puzzle</b>: many turns mix up the colors. You bring each face back to one color.</li></ul>
     <div class="st-box st-say"><span>See one face turn, then turn back.</span><button class="small" data-demo="1" title="Turn one face on the picture, then turn it back">Show me a turn</button></div>
-    <p class="muted">No cube yet? That is fine. The picture is your cube on these pages. After the basics, you pick a real cube or a cube on the screen.</p>
+    <p class="muted">No cube yet? That is fine. The picture is your cube on these pages. After the basics, you pick a regular cube, a smart cube or a virtual cube.</p>
     <div class="st-foot">${stBack('level','← Change my level')}<span class="spacer"></span><button class="primary" data-go="t1-hold" title="Go on to how to hold it">Next: how to hold it →</button></div></div>
   ${stCubeSide()}</div>`;
-// The screen cube's keys: after the basics for level 1, after the cube question for level 2.
+// The virtual cube's keys: after the basics for level 1, after the cube question for level 2.
 // The last turn is in words (stMoveSay): a level 2 user has not met the letters.
-START_SCREENS['t1-keys']=()=>{const k=screenKeys(SCREEN.layout);const key=(f,word,tip)=>`<button class="st-key" data-turn="${f}" title="${esc(tip)}"><b>${esc(k[f])}</b><span>${word}</span></button>`;
-  return `${stBar('Your screen cube',stBack('t2-cube'))}
+// The six keys of a layout on a three-by-three grid, as they sit on the keys: up and back on the
+// top row, left, front and right in the middle, down under the front.
+function stKeyGrid(id,label){const k=screenKeys(id);const key=(f,word,tip)=>`<button class="st-key" data-turn="${f}" title="${esc(tip+': '+k[f])}"><b>${esc(k[f])}</b><span>${word}</span></button>`;
+  return `<div class="st-keyset"><span class="st-lbl">${esc(label)}</span><div class="st-keys" aria-label="${esc(label)}: the six keys"><i></i>${key('U','Up','Turn the top face')}${key('B','Back','Turn the back face')}${key('L','Left','Turn the left face')}${key('F','Front','Turn the front face')}${key('R','Right','Turn the right face')}<i></i>${key('D','Down','Turn the bottom face')}<i></i></div></div>`;}
+START_SCREENS['t1-keys']=()=>{const k=screenKeys('awdx'),n=screenKeys('pad');
+  return `${stBar('Your virtual cube',stBack('t2-cube'))}
   <div class="st-split"><div class="st-pic"><div class="st-cube" id="stCube"></div><span class="muted st-small">Drag to look around. Double-click to put it back.</span><span class="st-small">Last turn: <b id="stLast">${esc(START.last)}</b></span></div>
-  <div class="st-text"><h1>Meet your screen cube</h1><p class="st-kbd">Six keys turn the six faces. Rest your hand on them. The middle key turns the face toward you.</p><p class="st-touch">The six buttons under the cube turn the six faces, clockwise.</p>
-    <div class="st-keys st-kbd" aria-label="The six keys"><i></i>${key('U','Up','Turn the top face')}${key('B','Back','Turn the back face')}${key('L','Left','Turn the left face')}${key('F','Front','Turn the front face')}${key('R','Right','Turn the right face')}<i></i>${key('D','Down','Turn the bottom face')}<i></i></div>
+  <div class="st-text"><h1>Meet your virtual cube</h1><p class="st-kbd">Use the keyboard or numeric keypad to turn the cube faces. Rest your hand on the six keys. The middle key turns the face toward you.</p><p class="st-touch">The six buttons under the cube turn the six faces, clockwise.</p>
+    <div class="st-keysets st-kbd">${stKeyGrid('awdx',SCREEN_KEYMAPS.awdx.where)}${stKeyGrid('pad',SCREEN_KEYMAPS.pad.where)}</div>
     <ul class="st-rules"><li class="st-kbd"><b>Key alone</b>: the face turns clockwise.</li><li class="st-kbd"><b>Shift + key</b>: it turns the other way.</li><li><b>Drag</b>: the whole cube turns. No face moves.</li></ul>
-    <div class="st-kbd"><div class="st-lbl">Keys for your keyboard</div><div class="row st-layouts">${Object.entries(SCREEN_KEYMAPS).map(([id,m])=>`<button class="small${id===SCREEN.layout?' on':''}" data-layout="${id}" aria-pressed="${id===SCREEN.layout}" title="Use these keys">${esc(m.name)}</button>`).join('')}</div></div>
-    <div class="st-foot"><span class="st-kbd">Try it: press <b class="mono">${esc(k.F)}</b>, then <b class="mono">Shift+${esc(k.F)}</b>.</span><span class="spacer"></span><button class="primary" data-go="t2-screen" title="Go on">Next: a mixed-up screen cube →</button></div></div></div>`;};
+    <div class="st-foot"><span class="st-kbd">Try it: press <b class="mono">${esc(k.F)}</b> or <b class="mono">${esc(n.F)}</b>, then <b class="mono">Shift+${esc(k.F)}</b>.</span><span class="spacer"></span><button class="primary" data-go="t2-screen" title="Go on">Next: a mixed-up virtual cube →</button></div></div></div>`;};
 START_SCREENS['t1-hold']=()=>`${stBasicsBar(2)}
   <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 2 of 4</span><h1>Hold it like this</h1><p>Each face has one center sticker. The centers never move. They give each face its color.</p>
     <button class="st-hold" data-hold="top" title="Show the top layer"><span class="st-hl" data-hl="U"><b>White center on top.</b></span> <span class="muted">The picture shows it this way.</span></button>
@@ -221,9 +224,9 @@ START_SCREENS['t1-done']=()=>{const names=stSteps();
   <div class="st-foot">${stBack('t1-moves')}<span class="spacer"></span><button class="primary" data-go="t2-cube" title="Pick the cube to learn with">Next: pick your cube →</button></div></div>`;};
 // ---------- Track 2 · played but never solved ----------
 START_SCREENS['t2-cube']=()=>{const cards=[
-    {id:'mine',name:'My cube',tag:'most people',what:'You turn it by hand. The page shows each step on a picture.',how:'Mixed up already? Scan it with the camera or paint its colors.',note:'Next: scan, paint, or mix it up with me.',cta:'Use my cube →'},
-    {id:'smart',name:'Smart cube',tag:'GAN, Bluetooth',what:'The page sees every turn you make. Hints uncover as you turn.',how:'Chrome or Edge connect directly. Safari needs the Mac app.',note:'Next: the browser asks to connect.',cta:'Connect my cube →'},
-    {id:'screen',name:'Screen cube',tag:'no cube needed',what:'Six keys turn the faces. Drag with the mouse to turn the whole cube.',how:'On a phone, buttons under the cube turn it.',note:'Next: the keys, then a mixed-up screen cube.',cta:'Use the screen cube →'}];
+    {id:'mine',name:'Regular cube',tag:'most people',what:'You turn it by hand. The page shows each step on a picture.',how:'Mixed up already? Scan it with the camera or paint its colors.',note:'Next: scan, paint, or mix it up with me.',cta:'Use a regular cube →'},
+    {id:'smart',name:'Smart cube',tag:'GAN, Bluetooth',what:'The page sees every turn you make. Hints uncover as you turn.',how:smartHowWords(),note:smartInApp()?'Next: the app looks for your cube.':'Next: the browser asks to connect.',cta:'Connect my cube →'},
+    {id:'screen',name:'Virtual cube',tag:'no cube needed',what:'Use the keyboard or numeric keypad to turn the cube faces. Drag with the mouse to turn the whole cube.',how:'On a phone, buttons under the cube turn it.',note:'Next: the keys, then a mixed-up virtual cube.',cta:'Use the virtual cube →'}];
   const sel=cards.find(c=>c.id===START.src)||cards[0];
   return `${stBar('',stBack(START.level===1?'t1-done':START.level===2?'t2-moves':'level',START.level<=2?'← Back':'← Change my level'))}
   <div class="st-center"><div class="st-head"><h1>Which cube will you use?</h1><p>Every lesson works with all three. Change it at any time from the chip in the top bar.</p></div>
@@ -329,7 +332,7 @@ function startSaveFive(){const F=START.five;store.set('insp',F.insp);$('#inspChk
   $('#scrLen').value=F.rs?'rs':String(SCR_LENS[3][1]);
   if(F.all){for(const i of [2,3,4,5])startMark(START_SETS[i].ids(),'finished');startSetKnown('cross',2);startSetKnown('f2lfeel',2);startSetKnown('oll',2);}
   store.set('timerHome',true);}
-// t2-screen: the end of the keys page for level 2 with the screen cube.
+// t2-screen: the end of the keys page for level 2 with the virtual cube.
 START_SCREENS['t2-screen']=()=>{setTimeout(()=>startFinish('beginner','learn'),0);return '';};
 // ---------- drawing and the clicks ----------
 function startDraw(){const el=startEl();const f=START_SCREENS[START.screen]||START_SCREENS.level;
@@ -342,9 +345,9 @@ function startCubeMount(){const box=$('#stCube');if(!box)return;const scr0=START
   if(scr0==='t1-moves'||scr0==='t2-moves')cap='Click a move to see it turn. Drag to look around. Double-click to put the view back.';
   // Only the keys page takes the keys: the basics come before the cube question.
   const keys=scr0==='t1-keys';
-  // The screen cube keeps its state from page to page; a lit page shows it solved.
+  // The virtual cube keeps its state from page to page; a lit page shows it solved.
   const prev=START.sc,cube=prev&&scr0==='t1-keys'?prev.cube:new Cube();
-  START.sc=screenCube(box,{cube,fade,keys,label:'The screen cube',onPick:scr0==='t1-pieces'?stPick:null,onMove:m=>{START.last=stMoveSay(m);const l=$('#stLast');if(l)l.textContent=START.last;}});
+  START.sc=screenCube(box,{cube,fade,keys,label:'The virtual cube',onPick:scr0==='t1-pieces'?stPick:null,onMove:m=>{START.last=stMoveSay(m);const l=$('#stLast');if(l)l.textContent=START.last;}});
   if(!keys&&SCREEN.active===START.sc)SCREEN.active=null;
   const c=$('#stCap');if(c)c.textContent=cap;
   if(scr0==='t1-pieces'&&START.found)START.sc.bump(new Set([ST_FIND]),{stay:true});
@@ -361,7 +364,6 @@ function startWire(el){
   on('[data-close]',()=>startClose());
   on('[data-paste]',()=>{startClose();openSettings('data');});
   on('[data-level]',b=>{const l=LEVELS[+b.dataset.level-1];START.level=l.n;START.found=false;START.kind=null;START.check=null;START.sets=null;START.quiz=null;START.five=null;startGo(l.first);});
-  on('[data-layout]',b=>{screenSetLayout(b.dataset.layout);startDraw();});
   on('.st-keys [data-turn]',b=>START.sc&&START.sc.turn(b.dataset.turn));
   on('.st-seg [data-src],.st-pick[data-src]',b=>{START.src=b.dataset.src;startDraw();});
   // A kind or the hint lifts pieces out and back. The page is not drawn again, so the view stays.
@@ -372,7 +374,7 @@ function startWire(el){
   on('[data-mv]',b=>stMoveShow(b.dataset.mv));
   on('[data-demo]',()=>{const sc=START.sc;if(!sc)return;sc.turn('R');setTimeout(()=>{if(START.sc===sc)sc.turn("R'");},900);});
   on('[data-finish]',b=>startEnd(b.dataset.finish));
-  on('[data-t2go]',()=>{if(START.src==='screen')startGo('t1-keys');else if(START.src==='smart')startFinish('beginner','learn',()=>openSmart());else startFinish('beginner','learn');});
+  on('[data-t2go]',()=>{if(START.src==='screen')startGo('t1-keys');else if(START.src==='smart')startFinish('beginner','learn',()=>smartConnectNow());else startFinish('beginner','learn');});
   on('[data-way]',b=>{START.way=b.dataset.way;START.check=null;startGo(b.dataset.to);});
   on('[data-step]',b=>{START.check[+b.dataset.step]=+b.dataset.v;startDraw();});
   on('[data-check]',b=>{const a=b.dataset.check;startSaveCheck();if(a==='cfop')startGo('t3-bridge');else if(a==='timer')startFinish('cfop','solve');else startFinish('beginner','learn');});
@@ -399,9 +401,9 @@ function startEnd(where){
   if(where==='cross'){startFinish('cfop','cross',()=>{store.set('crossLesson',0);if(typeof crossLessonShow==='function')crossLessonShow(0);});return;}
   if(where==='menu'){startFinish('cfop','solve',()=>setTimeout(openMethodPop,50));return;}
   if(where==='ll'){startFinish('cfop','ll',()=>{if(typeof llShowSet==='function')llShowSet('left');});return;}
-  if(where==='timer'){startSaveFive();startFinish('cfop','solve',()=>{if(START.src==='smart')openSmart();if(typeof timerHomeApply==='function')timerHomeApply();});return;}
+  if(where==='timer'){startSaveFive();startFinish('cfop','solve',()=>{if(START.src==='smart')smartConnectNow();if(typeof timerHomeApply==='function')timerHomeApply();});return;}
 }
-// The keys while the pages are open: the screen cube takes its six (js/screencube.js runs first),
+// The keys while the pages are open: the virtual cube takes its six (js/screencube.js runs first),
 // Space runs the quiz timer, and the site's own keys wait.
 // Only the keys aimed at the pages (the focus in #start; the pages put it on their heading).
 document.addEventListener('keydown',e=>{if(!START.on||document.querySelector('.modal-bg'))return;const t=e.target;if(!t||!t.closest||!t.closest('#start'))return;if(t.tagName==='INPUT'||t.tagName==='TEXTAREA')return;

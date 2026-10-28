@@ -70,6 +70,12 @@ function smartMode(){
 // The page in the app's own window. Its message handler is there from the start, before the
 // app answers hello (BRIDGE), so a click at once never gets the download.
 function smartInApp(){return typeof bridgeNative==='function'&&!!bridgeNative();}
+// How a smart cube connects here, in one line: the app says nothing of browsers.
+function smartHowWords(){
+  if(smartInApp())return 'The app connects to your cube over Bluetooth.';
+  if(smartMode()==='bridge')return 'The Twistwright app connects to your cube.';
+  return 'Chrome and Edge connect directly. Safari connects through the Mac app.';
+}
 // An iPad says Mac too, but has touch.
 function smartIsMac(){const n=typeof navigator==='undefined'?{}:navigator;return /Mac/.test(n.platform||'')&&!(n.maxTouchPoints>1);}
 // The Bluetooth name of a cube as a person says it: GAN12uiM_A1B2 is a GAN 12 ui Maglev,
@@ -138,7 +144,7 @@ function openSmart(note){
   $('#smartMac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();smartMacGo();}});
   document.addEventListener('keydown',smartKeys,true);
   smartDraw();smartButtons();
-  if(!ganAvailable())smartStatus('This browser cannot use Bluetooth. Use Chrome or Edge on a computer or an Android phone. On an iPhone or iPad, use the Bluefy browser.');
+  if(!ganAvailable()&&!smartInApp())smartStatus('This browser cannot use Bluetooth. Use Chrome or Edge on a computer or an Android phone. On an iPhone or iPad, use the Bluefy browser.');
   else if(smartConn&&note&&smartCube)smartStatus(note);
   else if(smartConn){smartStatus(`Connected to ${smartConn.name}. Reading the cube.`);smartRead();}
   else if(smartMode()==='bridge')smartStatus('Press Connect, then choose your cube in the list.');
