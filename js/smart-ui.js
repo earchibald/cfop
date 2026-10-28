@@ -108,12 +108,12 @@ function openSmartDownload(){
   bg.innerHTML=`<div class="modal smart dl" role="dialog" aria-label="Smart cube on a Mac">
    <button class="close small ghost" id="smartClose" aria-label="Close" title="Close this window (Esc)">✕</button>
    <h2>Smart cube on a Mac</h2>
-   <p class="muted" style="margin-top:0">Safari cannot use Bluetooth. The Twistwright app for macOS can. It connects to your GAN cube and opens Twistwright in your browser at an address where the page can reach the cube.</p>
+   <p class="muted" style="margin-top:0">Safari cannot use Bluetooth. The Twistwright app for macOS can. It shows Twistwright in a window of its own and connects to your GAN cube.</p>
    <div class="scan-row"><button class="primary" id="smartDl" title="Get the Twistwright app for macOS from GitHub">Download for macOS</button><button class="small" id="smartOpenApp" title="Open the Twistwright app if it is installed">Open the app</button></div>
    <ol class="muted" style="font-size:14px;padding-left:20px">
     <li>Unzip the download and move Twistwright to Applications.</li>
-    <li>Open Twistwright. If macOS says it cannot check the app, open System Settings › Privacy &amp; Security and press Open Anyway.</li>
-    <li>The app opens Twistwright in your browser and sits in the menu bar. Press Smart cube there.</li>
+    <li>Open Twistwright. macOS asks once if you want to open an app from the internet. Press Open.</li>
+    <li>Allow Bluetooth when the app asks. Then press Smart cube in the app's window.</li>
    </ol>
    <p class="muted" style="font-size:14px">Chrome and Edge have Bluetooth without an app.</p>
   </div>`;

@@ -515,15 +515,17 @@ the tagged commit. To release:
 An app built with no tag (`mac/build.sh`) carries the site at HEAD, and
 `site.json` says `HEAD` with the commit.
 
-Until a release is notarized, macOS blocks the first open ("Apple could not
-verify") and the user has to press Open Anyway in System Settings › Privacy &
-Security. The download dialog says so. To notarize, store credentials once:
-`xcrun notarytool store-credentials twistwright` (Apple ID, team LMMVWL22J9, an
-app-specific password), then build with `--notarize twistwright`.
+Releases are notarized, from 1.47.0 (its zip was notarized and stapled after
+the release and uploaded again). The keychain profile `twistwright` holds the
+credentials (`xcrun notarytool store-credentials twistwright`: Apple ID, team
+LMMVWL22J9, an app-specific password). A downloaded notarized app opens after
+one question from macOS, and the download dialog says only that. A release
+built without `--notarize` is blocked at the first open ("Apple could not
+verify") until the user presses Open Anyway in System Settings › Privacy &
+Security, so always pass it.
 
 ### What is not there yet
 
-- An app icon. The bundle uses the system icon.
 - Reconnect when the app restarts while the page is open: the page drops the
   link and shows the download button; a reload finds the app again.
 - A `localhost` history is not the `twistwright.com` history. `cw:` data is per
