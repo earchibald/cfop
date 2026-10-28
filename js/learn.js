@@ -204,23 +204,28 @@ function lnPlainTiles(moves,big){
   const ms=Array.isArray(moves)?moves:parseAlg(moves);
   return `<span class="ms${big?' big':''}">${ms.map(m=>`<span class="m">${fmtMove(m)}</span>`).join('')}</span>`;
 }
-// The face thumb on a step card: the step's goal, as seen from above. '.' is a gray tile.
-function lnFace(id){const p=begPack().faces[id]||'.'.repeat(puzzleN()*puzzleN());
-  return `<span class="face${p.length===4?' f2':p.length===16?' f4':''}" aria-hidden="true">${[...p].map(ch=>`<i${ch==='.'?'':` class="${ch}"`}></i>`).join('')}</span>`;}
-// The algorithm names a step uses.
-function lnUses(s){return s.algs?s.algs.map(a=>begPack().algs[a].name).join(' · '):'';}
-function lnTag(st){return `<span class="tag ln-tag ${esc(st)}">${esc(st||'unlearned')}</span>`;}
 
-// ---------- the Learn home: the nine steps ----------
-const lnView={n:null,why:new Set(),hlT:0}; // n: the open lesson, or null for the step list
-// Up next and the way a real cube gets in live above the tabs, in the beginner home (js/beghome.js).
+// ---------- the Learn home ----------
+const lnView={n:null,why:new Set(),hlT:0}; // n: the open lesson, or null for the home
+// The beginner home, as the onboarding storyboard draws it (Beginner home): Up next with the step's
+// goal on a picture, the cube in use (#begCubeLine, js/start-app.js) and the two ways on, the lesson
+// or a solve with help; beside it the steps, each with its status. A click on a step opens its lesson.
+const LN_ST_WORD={'':'Not started',learning:'Learning',finished:'Learned'};
+function lnStName(s){return s.n===0?'Basics':s.name.replace(/^The /,'').replace(/^./,c=>c.toUpperCase());}
 function lnHomeHTML(){
-  const pk=begPack();const nx=begProgress.next();
-  const cards=pk.steps.map(s=>{const st=lnStatus(s.n),cur=nx&&nx.n===s.n,uses=lnUses(s);
-    return `<button class="bstep${cur?' cur':''}" data-ln="open" data-n="${s.n}" title="Open the lesson: ${esc(lnStepNo(s))}, ${esc(s.name)}">${lnFace(s.id)}<span class="body"><span class="n">${esc(lnStepNo(s))}${cur?' · up next':''}</span><br><b>${esc(s.name)}</b>${uses?` <span class="muted ln-uses">· ${esc(uses)}</span>`:''}<br><span class="desc">${esc(s.goal)}</span></span>${lnTag(st)}</button>`;}).join('');
-  return `<div class="panel ln-intro"><div><h2>Learn: the ${pk.word} steps</h2><p class="muted">Do them in order, or tap any step. Each lesson shows the goal, the moves, and the cases you will meet. Mark a step finished when you can do it without the app.</p></div></div>
-  <div class="panel ln-steps"><div class="ln-mob ln-listhead"><b>Learn</b><span class="muted">tap a step</span></div>${cards}</div>
-  <div class="panel ln-foot"><div><b>Finished all ${pk.word}?</b> <span class="muted">${esc(pk.next.foot)}</span></div><button class="small" data-ln="next" title="Switch the method to ${esc(pk.next.name)}">${esc(pk.next.btn)}</button></div>`;
+  const pk=begPack(),nx=begProgress.next(),N=pk.count;
+  const learned=pk.steps.filter(s=>lnStatus(s.n)==='finished').length,st=nx?lnStatus(nx.n):'';
+  const kicker=!nx?`All ${pk.word} steps learned`:nx.n===0?'Up next · Basics':`Up next · Step ${nx.n} of ${N}`;
+  const go=nx?(nx.n===0?'Start the basics':'Start '+nx.name.replace(/^The /,'the ')):'Solve my cube';
+  const rows=pk.steps.map(s=>{const v=lnStatus(s.n);
+    return `<button class="lh-step${nx&&nx.n===s.n?' cur':''}" data-ln="open" data-n="${s.n}" title="Open the lesson: ${esc(lnStepNo(s))}, ${esc(s.name)}"><span class="mono muted">${s.n}</span><span class="lh-name">${esc(lnStName(s))}</span><span class="lh-st ${esc(v)}">${LN_ST_WORD[v]}</span></button>`;}).join('');
+  return `<div class="lh"><section class="panel lh-next" aria-label="Up next">
+    <span class="st-lbl">${esc(kicker)}</span>
+    <div class="lh-goal"><div class="lh-pic">${lnPic(lnGoals()[nx?nx.n:N],nx&&lnGoalBelow(nx.n))}</div><div class="lh-body"><h2 id="begNextTitle">${esc(nx?nx.name:'You can solve the cube')}</h2><p id="begNextText">${esc(nx?(nx.n===0?pk.basics:nx.goal):pk.next.text)}</p>${nx?`<span class="lh-st ${esc(st)}">${LN_ST_WORD[st]}</span>`:''}</div></div>
+    <div class="begcube" id="begCubeLine"></div>
+    <div class="row lh-act"><button class="primary big" id="begContinue" data-ln="${nx?'open':'solve'}" data-n="${nx?nx.n:''}" title="${nx?esc(`Open the lesson: ${lnStepNo(nx)}, ${nx.name}`):'Open Solve my cube'}">${esc(go)} →</button>${nx?'<button class="big" data-ln="solve" title="Open Solve my cube: the app tells you every move">Solve my cube with help</button>':`<button class="big" data-ln="next" title="Switch the method to ${esc(pk.next.name)}">${esc(pk.next.btn)}</button>`}</div>
+  </section>
+  <section class="panel lh-steps" aria-label="Steps"><div class="lh-head"><b>Steps</b><span class="mono muted">${learned} of ${N+1} learned</span></div>${rows}</section></div>`;
 }
 
 // ---------- a lesson ----------
@@ -270,7 +275,7 @@ function lnLessonHTML(n){
 // ---------- render and actions ----------
 function lnRender(){
   const t=$('#tab-learn');if(!t)return;lnDemoStop();lnTurnStop();clearTimeout(lnView.hlT);
-  if(lnView.n==null){t.innerHTML=lnHomeHTML();delete document.body.dataset.lesson;}
+  if(lnView.n==null){t.innerHTML=lnHomeHTML();delete document.body.dataset.lesson;if(typeof begCubeLine==='function')begCubeLine();}
   else{t.innerHTML=lnLessonHTML(lnView.n);document.body.dataset.lesson='1';}
 }
 // Scroll so the top of `el` (the Learn section by default) sits under the top bar.
@@ -287,6 +292,7 @@ $('#tab-learn').addEventListener('click',e=>{
   const pk=begPack();const n=lnView.n,s=pk.steps[n],act=b.dataset.ln;
   if(act==='open')openLesson(+b.dataset.n);
   else if(act==='list')lnShowList();
+  else if(act==='solve')goTab('bsolve');
   else if(act==='next')setMethod(pk.next.method);
   else if(act==='mark')lnMarkFinished(n);
   else if(act==='demo'){if(lnDemo.on)lnDemoStop(true);else{lnDemoPlay();lnScrollTop($('#tab-learn .ln-pic'),true);}}

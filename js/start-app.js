@@ -13,7 +13,7 @@
 // ---------- the method menu ----------
 function startLevelRow(){const pop=$('#methodPop');if(!pop)return;let row=$('#methodLevel');
   if(!row){row=document.createElement('div');row.id='methodLevel';row.className='mlevel';const head=pop.querySelector('.row');head.after(row);}
-  const n=store.get('level',null),l=n?LEVELS[n-1]:null;
+  const n=store.get('level',null),l=n?startLevel(n):null;
   row.innerHTML=`<span class="st-lbl">Your level</span><span class="lvbars" aria-hidden="true">${stBars(n||0)}</span><span>${l?esc(l.name):'Not set'}</span><span class="spacer"></span><button class="small ghost" id="methodLevelBtn" title="Pick your cube level again">${l?'Change':'Pick one'}</button>`;
   $('#methodLevelBtn').onclick=e=>{e.stopPropagation();closeMethodPop();startOpen('level');};
   const card=pop.querySelector('.mcard[data-method="cfop"]');if(card){let t=card.querySelector('.mnext');const next=method==='beginner'&&begAllLearned();
@@ -22,10 +22,10 @@ function startLevelRow(){const pop=$('#methodPop');if(!pop)return;let row=$('#me
 // Basics and the eight steps of the 3×3 beginner method, all Learned.
 function begAllLearned(){for(let n=0;n<=8;n++)if(llState.status['beg-'+n]!=='finished')return false;return true;}
 // ---------- the beginner home: the cube in use ----------
-function begCubeLine(){const home=$('#begHome');if(!home)return;let el=$('#begCubeLine');
-  if(!el){el=document.createElement('div');el.id='begCubeLine';el.className='panel tight begcube';const next=$('#begNext');if(next)next.after(el);else home.prepend(el);}
+// The line in the Up next card of the Learn home (lnHomeHTML draws the box, #begCubeLine).
+function begCubeLine(){const el=$('#begCubeLine');if(!el)return;
   const id=typeof smartLive==='function'&&smartLive()?'smart':cubeSrc();
-  const lines={screen:'Virtual cube. It is mixed up and ready. The keyboard or the numeric keypad turns it.',mine:'Regular cube. Scan it, paint it, or mix it up with me first.',smart:smartLive()?'Smart cube connected. The page sees each turn.':'Smart cube. Not connected yet.'};
+  const lines={screen:'Virtual cube. The keyboard or the numeric keypad turns it.',mine:'Regular cube. You turn it by hand. Solve my cube asks how the app learns it.',smart:smartLive()?'Smart cube connected. The page sees each turn.':'Smart cube. Not connected yet.'};
   el.innerHTML=`<i class="cdot" data-src="${id}" aria-hidden="true"></i><span>${esc(lines[id])}</span><button class="small ghost" id="begCubeChange" title="Choose the cube: screen, your own or a smart cube">Change</button>`;
   $('#begCubeChange').onclick=e=>{e.stopPropagation();cubePopOpenNow();};}
 // ---------- the beginner Progress tab: on to CFOP ----------

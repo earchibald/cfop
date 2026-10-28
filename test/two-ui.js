@@ -34,12 +34,12 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const scr2=w.scr.moves.join(' ');
   assert.strictEqual($('#progSq').children.length,5,'five progress squares');
   assert.ok(/Basics/.test($('#progNext').textContent));
-  assert.strictEqual($$('#tab-learn .bstep').length,6,'Basics plus five steps in Learn');
-  assert.ok(/the five steps/.test($('#tab-learn').textContent));
-  assert.ok($('#begAsk .beg-cards'),'the home asks about the cube');assert.ok($('#begAsk [data-beg="scan"]'),'the camera scan reads a 2×2 too');assert.ok($('#begAsk [data-beg="paint"]'),'paint as well');
-  assert.ok($$('#begAsk .face.f2').length===2,'2×2 face thumbs');
+  assert.strictEqual($$('#tab-learn .lh-step').length,6,'Basics plus five steps in Learn');
+  assert.ok(/0 of 6 learned/.test($('#tab-learn .lh-steps').textContent));
+  await sleep(5);w.goTab('bsolve');assert.ok($('#tab-bsolve [data-beg="scan"]'),'the camera scan reads a 2×2 too');assert.ok($('#tab-bsolve [data-beg="paint"]'),'paint as well');
+  assert.ok(!$('#tab-bsolve .st-flipnote'),'no yellow-on-top note: the 2×2 guide starts white on top');
   // The letters view draws a 2×2 in the player.
-  click($('#begAsk [data-beg="letters"]'));assert.strictEqual(d.body.dataset.begview,'player');
+  w.showBegLetters();assert.strictEqual(d.body.dataset.begview,'player');
   w.seqGo(w.seqState.moves.length);assert.strictEqual(stickers(),12,'a 2×2 shows 12 stickers');
   // A lesson, its goal and a case drill.
   w.openLesson(1);assert.ok(/Step 1 of 5/.test($('#tab-learn .ln-of').textContent));assert.ok(/first two corners/i.test($('#tab-learn h2').textContent));
