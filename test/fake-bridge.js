@@ -71,7 +71,8 @@ function fakeNative(devices,opts={}){
   ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.ev!=='hello'&&win&&win.bridgeEvent)win.bridgeEvent(m);};
   const handler={postMessage(m){
     m=JSON.parse(JSON.stringify(m));sent.push(m);
-    if(m.op==='hello')return Promise.resolve({version:'test',bluetooth:opts.bluetooth||'poweredOn'});
+    // opts.helloDelay: the app answers hello late (ms), as at launch.
+    if(m.op==='hello'){const r={version:'test',bluetooth:opts.bluetooth||'poweredOn'};return opts.helloDelay?new Promise(ok=>setTimeout(()=>ok(r),opts.helloDelay)):Promise.resolve(r);}
     ws.send(JSON.stringify(m));return Promise.resolve(null);}};
   return {install(w){win=w;w.webkit={messageHandlers:{bridge:handler}};},sent};
 }

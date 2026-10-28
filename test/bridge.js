@@ -154,6 +154,28 @@ async function pageNative(){
   assert.ok(nat.sent.some(m=>m.op==='connect')&&nat.sent.some(m=>m.op==='notify'),'connect and notify go through the handler');
   d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
   assert.deepStrictEqual(errs,[],'no script errors');
+  // The app answers hello late, as at launch (boot waits 400 ms; hello takes 1500). The page is
+  // in the app all the same: no download, the plain dialog with Connect on, and Connect my cube
+  // (smartConnectNow) lists the cube once the app answers.
+  const dev2=fakeDevice(4,MAC,cube,{name:'GAN-7F3C'});
+  const late=fakeNative([{id:'p1',gen:4,dev:dev2,mac:MAC}],{helloDelay:1500});
+  const b=await boot({native:late,platform:'MacIntel'});
+  const $b=s=>b.d.querySelector(s);
+  assert.ok(!late.sent.some(m=>m.op==='scan'),'nothing past hello yet');
+  assert.strictEqual(b.w.smartMode(),'bridge','in the app before hello');assert.ok(b.w.ganAvailable());
+  assert.strictEqual($b('#smartBtn').textContent,'Smart cube','no download button in the app');
+  b.w.openSmartDownload();
+  assert.ok($b('#smartBg')&&!$b('#smartBg .modal.dl'),'the download dialog never opens in the app');
+  assert.ok(!$b('#smartConnect').disabled,'Connect is on before hello');
+  assert.ok(!/cannot use Bluetooth/.test($b('#smartStatus').textContent),$b('#smartStatus').textContent);
+  b.w.closeSmart();
+  b.w.smartConnectNow();
+  assert.ok($b('#smartBg')&&/Choose your cube in the list\./.test($b('#smartStatus').textContent),'Connect my cube: the dialog says to choose: '+$b('#smartStatus').textContent);
+  assert.ok(await until(()=>!$b('#smartList').classList.contains('hidden'),3000),'the list comes up when the app answers');
+  assert.ok(await until(()=>!!$b('#smartListItems button')&&$b('#smartListItems button').dataset.mac===MAC,3000),'the cube is listed once the app answers');
+  $b('#smartListItems button').dispatchEvent(new b.w.MouseEvent('click',{bubbles:true}));
+  assert.ok(await until(()=>!$b('#smartUse').disabled,3000),'connected: '+$b('#smartStatus').textContent);
+  assert.deepStrictEqual(b.errs,[],'no script errors');
   console.log('bridge window ok');
 }
 // ----- Bring History from Safari: the Safari page with ?migrate=1 -----
