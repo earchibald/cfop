@@ -29,6 +29,11 @@ rm -rf build; mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 swiftc -O -swift-version 5 Sources/*.swift -o "$APP/Contents/MacOS/Twistwright"
 cp Info.plist "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
+# The icon: AppIcon.icon, the Icon Composer document that scripts/mac-icon.js writes. actool makes
+# Assets.car (light, dark, tinted and clear, for macOS 26 and later) and AppIcon.icns (older systems).
+xcrun actool AppIcon.icon --compile "$APP/Contents/Resources" --platform macosx --minimum-deployment-target 14.0 \
+  --app-icon AppIcon --output-partial-info-plist build/icon-info.plist --errors --warnings --output-format human-readable-text >/dev/null
+rm -f build/icon-info.plist
 # The built-in site: the files of the page and the lab, as GitHub Pages serves them, at SITE_REF.
 # site.json names the ref, the commit and APP_VERSION. It sits beside the site, so it is not served.
 if [ -n "$SITE_REF" ]; then
