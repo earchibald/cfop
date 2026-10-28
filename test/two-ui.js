@@ -49,7 +49,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   // The guided solve on the 2×2 scramble, part by part to the end.
   w.startGuide();assert.strictEqual(d.body.dataset.tab,'bsolve');assert.strictEqual(ev('guideState').view,'guide');
   assert.strictEqual($$('#gdBar .stage').length,5,'five stages');assert.ok(/Stage \d of 5/.test($('#gdWhere').textContent));
-  const n=ev('guideState').parts.length;assert.ok(n>=4&&n<=14,'a plan of a few parts: '+n);
+  const n=ev('guideState').parts.length,np=ev('guideState').parts.filter(x=>!x.won).length;assert.ok(np>=4&&np<=14,'a plan of a few parts: '+np);
   for(let i=0;i<n;i++)click($('#gdDone'));
   assert.strictEqual(ev('guideState').view,'done');assert.ok(/You did it/.test($('#gdWin').textContent));assert.ok(/Try Speed/.test($('#gdCfop').textContent));
   assert.ok(w.twoSolved(w.applyAlg(w.scr.cube,ev('guideState').plan.moves)),'the plan solves the scramble');

@@ -42,7 +42,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   w.openLesson(7);assert.ok(/parity/i.test($('#tab-learn').textContent),'the yellow cross lesson teaches the parity');
   // the guided solve, part by part to the end
   w.startGuide();assert.strictEqual(ev('guideState').view,'guide');assert.strictEqual($$('#gdBar .stage').length,10);assert.ok(/Stage 1 of 10/.test($('#gdWhere').textContent));
-  const n=ev('guideState').parts.length;assert.ok(n>=30&&n<=80,'a plan of many parts: '+n);
+  const n=ev('guideState').parts.length,np=ev('guideState').parts.filter(x=>!x.won).length;assert.ok(np>=30&&np<=80,'a plan of many parts: '+np);
   for(let i=0;i<n;i++)click($('#gdDone'));
   assert.strictEqual(ev('guideState').view,'done');assert.ok(/Try Advanced/.test($('#gdCfop').textContent));
   assert.ok(w.fourSolved(w.applyAlg(w.scr.cube,ev('guideState').plan.moves).toFacelets()),'the plan solves the scramble');

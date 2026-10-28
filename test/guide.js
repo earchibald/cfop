@@ -86,6 +86,27 @@ w.addEventListener('load',async()=>{try{
   assert.strictEqual(JSON.stringify(turns),'["yellow","white","yellow"]','three holds: yellow, white for the corners, yellow again');
   w.eval(`guideState.i=${G().parts.findIndex((x,i)=>i>0&&x.turn)};gdRender()`);
   assert.ok(turn()&&/hold the cube with the WHITE CENTER on top/.test($('#gdTitle').textContent),'the corners hold says white on top');
+  // After the last part of a stage: a stage-solved screen, the real cube large in the player.
+  const wonAt=G().parts.findIndex(x=>x.won);const won=G().parts[wonAt];
+  assert.ok(won&&won.stage.n===1&&G().parts[wonAt-1].k===G().parts[wonAt-1].m-1,'the first stage-solved screen follows the last part of the daisy');
+  const withParts=G().plan.stages.filter(st=>st.parts.length).length;
+  assert.strictEqual(G().parts.filter(x=>x.won).length,withParts-1,'one after each stage but the last');
+  assert.ok(!G().parts[G().parts.length-1].won,'You did it follows the last stage, not a stage-solved screen');
+  w.eval(`guideState.i=${wonAt-1};gdRender()`);
+  assert.ok(!/solved the/i.test($('#gdNext').textContent)&&/Stage 2 next/.test($('#gdNext').textContent),'Coming up skips the stage-solved screen');
+  $('#gdDone').click();assert.strictEqual(G().i,wonAt,'Done on the last daisy part goes to the stage-solved screen');
+  assert.strictEqual($('#gdTitle').textContent,'You solved the Daisy!','the title');
+  assert.strictEqual($('#gdDone').textContent,'Move on to White Cross →','the button');
+  assert.strictEqual(d.body.dataset.gd,'won','the won layout');
+  assert.strictEqual(w.seqState.moves.length,0,'no moves to step');
+  assert.deepStrictEqual(w.cubeAtSeq(0).toFacelets(),G().parts[wonAt-1].after.toFacelets(),'the player shows the real cube after the daisy');
+  assert.ok($('#gdBar .stage[data-n="1"]').classList.contains('done')&&$('#gdBar .stage[data-n="2"]').classList.contains('cur'),'the stage bar marks the daisy solved');
+  assert.ok(!$('#tab-bsolve .gd-moves'),'no tiles on the screen');
+  $('#gdPrev').click();assert.strictEqual(G().i,wonAt-1,'Previous goes back to the last daisy part');
+  $('#gdDone').click();$('#gdDone').click();
+  assert.ok(G().parts[G().i].stage.n===2&&!G().parts[G().i].won,'Move on goes to the white cross');
+  w.eval(`guideState.i=${G().parts.findIndex(x=>x.won&&x.stage.n===3)};gdRender()`);
+  assert.strictEqual($('#gdTitle').textContent,'You solved the White Corners!','each stage has its own');
   w.eval('guideState.i=1;gdRender();gdLoadPart(true)');
   assert.deepStrictEqual(w.cubeAtSeq(w.seqState.moves.length).toFacelets(),first.after.toFacelets(),'the part ends on its after cube');
   assert.ok($$('#scramble .mt small').length>=1,'beginner tiles carry captions');
@@ -163,6 +184,6 @@ w.addEventListener('load',async()=>{try{
   w.goTab('learn');w.startGuide();assert.ok($('#tab-bsolve').classList.contains('on')&&turn()&&G().i===0,'startGuide opens the guide at the start');
 
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('guide: entry cards, the hold screens (the real cube in the player), the hold, the tiles as steps, the key row, start, stage bar, Done/Previous/Show me, the whole plan, You did it, Solve again, Scramble one, New restarts ok');
+  console.log('guide: entry cards, the hold screens (the real cube in the player), the stage-solved screens, the hold, the tiles as steps, the key row, start, stage bar, Done/Previous/Show me, the whole plan, You did it, Solve again, Scramble one, New restarts ok');
   process.exit(0);
 }catch(e){console.error('guide: FAIL',e.message,errs);process.exit(1);}});
