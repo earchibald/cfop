@@ -741,7 +741,7 @@ body[data-kind="beg"] #drillNote,body:not([data-kind="beg"]) #begBar{display:non
 .beg-key-line{display:flex;flex-wrap:wrap;gap:6px 24px;padding:12px 16px;border-radius:12px;background:var(--panel2);font-size:14px}
 .beg-mix-done h2{font-size:26px}
 /* the player in beginner dress: a caption under every tile, a Key panel, plain words */
-.scramble .mt{display:inline-flex;flex-direction:column;align-items:center;gap:1px}
+.scramble .mt{display:inline-flex;flex-direction:column;align-items:center;gap:9px}
 .scramble .mt small{font-family:var(--sans);font-size:10.5px;color:var(--muted);line-height:1.1;white-space:nowrap}
 .scramble .mt .m{min-width:36px}
 body[data-kind="beg"] .scramble{gap:6px 8px}
