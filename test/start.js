@@ -30,15 +30,27 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   assert.ok(d.body.classList.contains('starting'),'a first visit opens the level picker');
   assert.strictEqual($$('#start .st-level').length,5,'five levels');
   for(const b of $$('#start button'))assert.ok(b.title,'every control has a title: '+b.textContent.trim());
-  // Level 1 with the screen cube: the keys turn it, the basics, then the beginner method.
-  $('#start [data-level="1"]').click();assert.strictEqual($('#start').dataset.screen,'t1-have');
-  $('#start [data-have="screen"]').click();assert.strictEqual($('#start').dataset.screen,'t1-keys');
+  // Level 1: the basics first (no cube question, no move letter before the moves page, no keys),
+  // then which cube, the screen cube's keys, then the beginner method.
+  $('#start [data-level="1"]').click();assert.strictEqual($('#start').dataset.screen,'t1-what');
+  const letters=/(^|[^\w])[UDFBRL]['′]?($|[^\w])/;
+  for(const s of ['t1-what','t1-hold','t1-pieces']){
+    if(s!=='t1-what'){$(`#start [data-go="${s}"]`).click();assert.strictEqual($('#start').dataset.screen,s);}
+    assert.ok(!letters.test($('#start').textContent),'no move letter on '+s);
+    assert.ok(!$('#start [data-src]')&&!$('#start .st-keys'),'no cube question on '+s);
+    assert.ok(w.eval('SCREEN').active!==w.eval('START').sc,'the keys do not turn the picture on '+s);}
+  key(w,d,'KeyS');assert.ok(w.eval('START').sc.cube.isSolved(),'a key does nothing in the basics');
+  w.startGo('t1-what');$('#start [data-demo]').click();assert.ok(!w.eval('START').sc.cube.isSolved(),'Show me a turn turns a face');
+  for(const s of ['t1-hold','t1-pieces','t1-moves']){$(`#start [data-go="${s}"]`).click();assert.strictEqual($('#start').dataset.screen,s);}
+  assert.ok(/U D F B R L/.test($('#start').textContent),'the moves page brings in the letters');
+  $('#start [data-go="t1-done"]').click();assert.strictEqual(st()['beg-0'],'finished','Basics is marked Learned');
+  $('#start [data-go="t2-cube"]').click();assert.strictEqual($('#start').dataset.screen,'t2-cube','then the cube question');
+  $('#start .st-pick[data-src="screen"]').click();$('#start [data-t2go]').click();assert.strictEqual($('#start').dataset.screen,'t1-keys');
   key(w,d,'KeyS');key(w,d,'KeyD',true);
   assert.ok(!w.eval('START').sc.cube.isSolved(),'the keys turn the screen cube');
-  assert.strictEqual($('#stLast').textContent,'R′','the last turn shows');
+  assert.strictEqual($('#stLast').textContent,'Right face, counterclockwise','the last turn shows in words');
   $('#start [data-turn="U"]').click();
-  for(const s of ['t1-hold','t1-pieces','t1-moves','t1-done']){$(`#start [data-go="${s}"]`).click();assert.strictEqual($('#start').dataset.screen,s);}
-  $('#start [data-finish="beg"]').click();
+  $('#start [data-go="t2-screen"]').click();await new Promise(r=>setTimeout(r,10));
   assert.ok(!d.body.classList.contains('starting'),'the pages close');
   assert.strictEqual(d.body.dataset.method,'beginner');assert.strictEqual(d.body.dataset.tab,'learn');
   assert.strictEqual(st()['beg-0'],'finished','Basics is marked Learned');
