@@ -62,10 +62,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         makeMainMenu()
         makeStatusMenu()
         if !noOpen { main.show() }
-        // The setup opens once, at the first launch; --setup opens it and leaves that untouched.
-        let d = UserDefaults.standard
+        // The setup opens at launch while something is not asked yet: at the first launch, and after
+        // a new signature makes macOS forget the answers. It does not open twice for the same rows,
+        // so a row the user leaves alone does not bring it back. --setup opens it and saves nothing.
+        let d = UserDefaults.standard, open = setup.notAsked.joined(separator: ",")
         if showSetup { setup.show() }
-        else if !noOpen && !d.bool(forKey: "setupShown") { d.set(true, forKey: "setupShown"); setup.show() }
+        else if !noOpen && !open.isEmpty && d.string(forKey: "setupOpenFor") != open {
+            d.set(open, forKey: "setupOpenFor"); setup.show()
+        }
     }
 
     // A closed window leaves the app running: the menu bar item and Safari's bridge stay.
