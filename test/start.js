@@ -66,7 +66,9 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   $('#stFound [data-go="t1-moves"]').click();assert.strictEqual($('#start').dataset.screen,'t1-moves');
   w.startGo('t1-pieces');assert.ok($('#stFound'),'found stays found');
   for(const s of ['t1-hold','t1-pieces','t1-moves']){$(`#start [data-go="${s}"]`).click();assert.strictEqual($('#start').dataset.screen,s);}
-  assert.ok(/U D F B R L/.test($('#start').textContent),'the moves page brings in the letters');
+  assert.strictEqual($$('#start .st-faces li').length,6,'the moves page names the six faces');
+  assert.strictEqual($$('#start .st-move').map(b=>b.textContent).join(' '),'U D F B R L U′ D′ F′ B′ R′ L′','and brings in the letters');
+  assert.ok(/"R prime"/.test($('#start').textContent),'and names the prime');
   $('#start [data-go="t1-done"]').click();assert.strictEqual(st()['beg-0'],'finished','Basics is marked Learned');
   $('#start [data-go="t2-cube"]').click();assert.strictEqual($('#start').dataset.screen,'t2-cube','then the cube question');
   $('#start .st-pick[data-src="screen"]').click();$('#start [data-t2go]').click();assert.strictEqual($('#start').dataset.screen,'t1-keys');
@@ -89,7 +91,16 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   // Level 2: a short six-moves page, then the cube question.
   w.startOpen('level');$('#start [data-level="2"]').click();assert.strictEqual($('#start').dataset.screen,'t2-moves');
   assert.ok(/U D F B R L/.test($('#start').textContent),'level 2 meets the letters');assert.ok(!$('#start .st-dots'),'not a basics page');
-  $('#start [data-face="U"]').click();assert.ok(/Up/.test($('#start .st-say').textContent));
+  // The moves: two rows of buttons; a click turns the move, then the other way turns it back.
+  assert.strictEqual($$('#start .st-move').length,12,'six moves and six the other way');assert.ok(!$('#start [data-prime]'),'no other-way switch');
+  w.eval('ST_MOVE_T.glow=10;ST_MOVE_T.turn=30;ST_MOVE_T.next=150');const wait=ms=>new Promise(r=>setTimeout(r,ms));
+  const on=()=>$$('#start .st-move.on').map(b=>b.dataset.mv).join(),cube=()=>w.eval('START').sc.cube;
+  for(const [m,back] of [['U',"U'"],["U'",'U'],['R',"R'"]]){
+    $(`#start .st-move[data-mv="${m}"]`).click();assert.strictEqual(on(),m,m+' lights');
+    assert.ok(/Up|Right/.test($('#stMoveSay').textContent)&&(m.length>1)===/counterclockwise/.test($('#stMoveSay').textContent),m+' in words');
+    await wait(90);assert.ok(!cube().isSolved(),m+' turns the picture');
+    await wait(120);assert.strictEqual(on(),back,'then '+back+' lights');
+    await wait(240);assert.strictEqual(on(),'','the lights go out');assert.ok(cube().isSolved(),m+' then '+back+': solved again');}
   $('#start [data-go="t2-cube"]').click();assert.strictEqual($('#start').dataset.screen,'t2-cube','then the cube question');
   $('#start [data-go="t2-moves"]').click();assert.strictEqual($('#start').dataset.screen,'t2-moves','Back goes to the moves');
   w.startClose();
@@ -137,9 +148,10 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   $('#start [data-next]').click();$(`#start [data-pick="${Q.qs[1].id}"]`).click();assert.strictEqual(Q.right,1);
   $('#start [data-finish="ll"]').click();
   assert.strictEqual(d.body.dataset.tab,'ll');assert.strictEqual(JSON.parse(w.localStorage.getItem('cw:llShow')),'left','OLL · PLL opens on Still to learn');
-  assert.ok($('#llGroups .case[data-id="'+c.id+'"]')&&!$('#llGroups .case[data-id="'+c.id+'"]').classList.contains('llhide'),'the missed case shows');
-  const learned=Q.qs[1].id.startsWith('pllf-')?`.case[data-pll="${Q.qs[1].id.slice(5)}"]`:`.case[data-id="${Q.qs[1].id}"]`;
-  assert.ok($('#llGroups '+learned).classList.contains('llhide'),'a Learned case folds away');
+  // The quiz picks at random: a full PLL card carries data-pll, the others data-id.
+  const card=id=>$('#llGroups '+(id.startsWith('pllf-')?`.case[data-pll="${id.slice(5)}"]`:`.case[data-id="${id}"]`));
+  assert.ok(card(c.id)&&!card(c.id).classList.contains('llhide'),'the missed case shows');
+  assert.ok(card(Q.qs[1].id).classList.contains('llhide'),'a Learned case folds away');
   assert.strictEqual($$('#llGroups .case[data-pll]').length,21,'the full PLL is a group');
   assert.ok(/Finish/.test($('#llShowBar .llplan').textContent),'the plan in one line');
   $('#llShowBar [data-show="all"]').click();assert.ok(!$('#llGroups .llhide'),'All shows every case');

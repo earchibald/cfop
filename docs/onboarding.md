@@ -27,8 +27,8 @@ frames, read 2026-10-27). This branch builds it into the site as a first pass. E
 | 0 · Where each level goes | `LEVELS` in `js/start.js` | The routing table is the code, not a page. |
 | 1.1 Do you have a cube? | removed in 1.49.0 | See "Rework 1" below: the basics come first, the cube question after them. |
 | new · Meet the cube | `t1-what` | Basics 1 of 4. What the cube is: six faces, nine stickers each, solved is one color per face, a turn mixes it. Show me a turn turns one face on the picture and back, with no letter. |
-| 1.3–1.5 Basics: hold, pieces, six moves | `t1-hold`, `t1-pieces`, `t1-moves` | Basics 2, 3 and 4 of 4. One picture for everyone: a drag looks around it, no key turns it, no My cube / Screen cube switch. On the pieces page a kind lifts its pieces out and back (see Rework 2), and Find it is a click on the picture. The hold page's two lines are buttons (see Rework 3); the hold and moves pages light stickers with the picture's `fade`. The moves page is the first page with a move letter. Show me turns the layer and back. |
-| new · The six moves, short | `t2-moves` | Level 2 only, before 2.1: the letters, the ′, the hold in one line, the same move buttons and Show me. It does not mark Basics. |
+| 1.3–1.5 Basics: hold, pieces, six moves | `t1-hold`, `t1-pieces`, `t1-moves` | Basics 2, 3 and 4 of 4. One picture for everyone: a drag looks around it, no key turns it, no My cube / Screen cube switch. On the pieces page a kind lifts its pieces out and back (see Rework 2), and Find it is a click on the picture. The hold page's two lines are buttons (see Rework 3); the hold and moves pages light stickers with the picture's `fade`. The moves page is the first page with a move letter. Its twelve buttons turn the move and back (see Rework 4). |
+| new · The six moves, short | `t2-moves` | Level 2 only, before 2.1: the letters, the ′, the hold in one line, the same twelve move buttons. It does not mark Basics. |
 | 1.6 Basics learned | `t1-done` | Reaching it marks `beg-0` finished. Next: pick your cube goes to 2.1. |
 | 2.1 Which cube will you use? | `t2-cube` | Level 1 after the basics; level 2 after its short six-moves page (Back goes to it). Smart cube opens the Smart cube window after. Screen cube goes through 1.2 first. |
 | 1.2 Meet the screen cube | `t1-keys`, `js/screencube.js` | Only after 2.1, for the screen cube. The lab's four key layouts, Shift for prime, drag to look around, double-click to reset. The last turn is in words ("Right face, clockwise"). On a touch screen the keyboard parts are hidden and six buttons, named in words, sit under the cube. |
@@ -112,6 +112,34 @@ label, and the `START.keysNext` routing.
 - `stHoldShow` in `js/start.js` runs it: `ST_HOLD` names the layers, `bump(stLayer(f), {dir})` moves
   a layer as one along its face's normal (`renderCube3D`'s `lift.dir`), and `.st-hl.on` lights the
   words for the up and hold of each bump. A new click starts over. The page is not drawn again.
+
+## Rework 4: the moves as two rows (1.52.0)
+
+- **The bug.** Show me turned a clockwise move twice: `invertAlg(['U'])` gives the string `"U'"`,
+  and `[0]` of it is `"U"`. A prime move came back right only by chance.
+- **Two rows of buttons.** `U D F B R L` over `U′ D′ F′ B′ R′ L′`. The ′ switch and Show me are gone.
+- **A click shows the move and its way back.** U lights its button with the glow, the U layer lights
+  on the picture, and U turns. Then U′ lights and turns it back. A click on U′ does U′, then U. The
+  line under the buttons names each move in words as it lights. The picture ends solved.
+- `stMoveShow` in `js/start.js` runs it, with the times in `ST_MOVE_T`; the turn is slower than a
+  key's (`screenCube`'s `turn(move, {dur})`). A new click starts over from solved.
+- **The words.** The faces are a list, "with front facing you": Up (the top), Down (the bottom),
+  Front, Back, Right, Left. Then: "Relative to you, the letter for a face turns that face
+  clockwise. A ′ after the letter turns it the other way. We call the marking "prime", so a
+  counterclockwise R′ is pronounced "R prime"." Level 2's short page keeps its own one-line intro.
+
+## Planned: the fat moves, in the CFOP intro
+
+The owner asked for a fat moves page after the six moves, then moved it out of the basics: it
+belongs to the CFOP intro (track 3, around `t3-bridge`), not to a first-timer. The buttons are ready:
+`stMoveBtns(['u','d','f','b','r','l'], label)` draws them, and `stMoveShow` lights a small letter's
+face and the middle layer next to it (`stMoveLayers`, `ST_MID`) and names it "Right two layers". The
+page as drafted:
+
+> **The fat moves.** A fat move turns two layers at once: a face and the middle layer next to it.
+> Some cubers call it a wide move. A small letter writes it. **r** turns the right face and the
+> middle layer together. Some guides write **Rw**. A fat move turns the same way as its face:
+> clockwise, relative to you. A ′ turns it the other way, so **r′** is pronounced "r prime".
 
 ## Not built yet
 
