@@ -885,6 +885,12 @@ body:not(.can-listen) #cubeWinListen,body:not(.can-listen) #cubeWinListenRow,bod
 .cubewin .st-alg{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;min-height:26px;font-family:var(--mono);font-size:14px;font-weight:500}
 .cubewin .st-alg .mv{min-width:28px;padding:2px 5px;text-align:center;border:1px solid var(--line);border-radius:5px;background:var(--panel2)}
 .cubewin .st-alg .mv.hid{color:var(--muted);border-style:dashed;background:transparent}
+.cubewin .cw-reveal{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;font-size:13px;color:var(--muted)}
+.cubewin .cw-reveal label{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.cubewin .cw-reveal .rv-speed{flex:1 1 220px;min-width:0}
+.cubewin .cw-reveal input[type=range]{flex:1;min-width:80px;accent-color:var(--accent)}
+.cubewin .cw-reveal .val{min-width:96px;font-variant-numeric:tabular-nums;color:var(--text)}
+.cubewin .cw-reveal input[type=checkbox]{margin:0;accent-color:var(--accent)}
 .cubewin .st-alg .mv.done{color:var(--muted);border-color:var(--good);background:color-mix(in srgb,var(--good) 18%,var(--panel))}
 .cubewin .mv.rot{font-style:italic;color:var(--muted)}
 .cubewin .scan-row{margin:0}
