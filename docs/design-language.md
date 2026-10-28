@@ -9,7 +9,7 @@ The cube is the design. Chrome is monochrome. Color carries meaning.
 | Type | Rubik for text and the timer. Azeret Mono for notation. |
 | Shape | Rounded cubies: 16px panels, 10px buttons, 7px chips, hairline borders, a soft top sheen. |
 | Footer | One small row at the foot of every page, on the desktop and the phone, left-aligned: 12px text, a 14px GitHub mark, "GitHub Repository" and the version (`v` + `APP_VERSION`, in Azeret Mono). The whole row is one link to the repository. It is chrome, not content: the link stays `--muted`, not `--link`, and goes to `--text` with an underline on hover and focus. Add a new item as another inline link in the same row; do not add a second row. |
-| Mark | The player cube, solved, half way through R: the same view (yaw -32, pitch 28) and the same code, `cubePolys` in `js/draw.js` with `{move:'R',t:0.5}`. app.js draws it into `#mark` on load. Dark mode shows white up and red right. Light mode shows the same cube with yellow up and orange right, because white vanishes on the light desk. One SVG; `--mk-top`, `--mk-side` and `--mk-bottom` switch with the theme, and `--mk-body` is the plastic. |
+| Mark | The player cube, solved, half way through R: the same view (yaw -32, pitch 28) and the same code, `cubePolys` in `js/draw.js` with `{move:'R',t:0.5}`. app.js draws it into `#mark` on load. Dark mode shows white up and red right. Light mode shows the same cube with yellow up and orange right, because white vanishes on the light desk. One SVG; `--mk-top`, `--mk-side` and `--mk-bottom` switch with the theme, and `--mk-body` is the plastic. The macOS app icon is the same mark, light and dark, on the desk of each theme: `scripts/mac-icon.js` writes `mac/AppIcon.icon` from this code. |
 
 ## Color means something
 
