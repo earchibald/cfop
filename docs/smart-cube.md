@@ -412,7 +412,7 @@ clean release removes the Safari path.
 | Site | `mac/Sources/Site.swift` | `Site` gives the files of the site from one of two sources (see below): the built-in pages, or the live pages of `https://www.twistwright.com` through a proxy. `--root DIR` gives a checkout instead of both, for work on the site. Two front ends read it: `SchemeHandler` for the window at `twistwright://app/` (a folder without its slash gets a small page that goes to the folder with one), and `SiteServer` for Safari at `http://127.0.0.1:27272/`. `/bridge/info` answers `{app, version, ws, site, builtin}` there, which is how a Safari page knows the app is there; `site` is `builtin`, `live` or `root`, and `builtin` is the `APP_VERSION` of the built-in pages. |
 | Bridge | `mac/Sources/Bridge.swift` | Carries JSON between a page and CoreBluetooth. The page keeps the GAN protocol and the cipher; the app moves bytes. A page is a `BridgeClient`: `PageClient` for a window, `SocketClient` for Safari over the WebSocket on `ws://127.0.0.1:27273/` (the handshake accepts only the `Origin` of the page the app serves). The scan runs while one page asks for it; a page that goes away drops its cubes. The messages are listed at the top of the file. |
 | Page | `mac/Sources/Page.swift` | `PageWindow`: one window with one page. The page posts to `webkit.messageHandlers.bridge` (only pages at `twistwright://` reach it); the app answers `hello` and calls `window.bridgeEvent(m)` for each message back. A new page or a closed window drops the cubes of the page before, as a closed tab does. Other addresses open in the default browser; downloads go to a save panel; the camera and the microphone go to the page with no second prompt; Safari's Web Inspector reaches the page. |
-| Setup | `mac/Sources/Setup.swift` | The Set Up Twistwright window: Bluetooth, Camera, Microphone and Speech Recognition, each with its state in macOS (Allow…, ✓ Allowed, or Turned off with Open System Settings), and History from Safari. It opens at the first launch (`setupShown` in the app's defaults) and from Twistwright > Set Up Twistwright… or the menu bar item; `--setup` opens it and leaves the flag as it is. |
+| Setup | `mac/Sources/Setup.swift` | The Set Up Twistwright window: Bluetooth, Camera, Microphone and Speech Recognition, each with its state in macOS (Allow…, ✓ Allowed, or Turned off with Open System Settings), and History from Safari. It opens at launch while a row is still Allow… (the first launch, or a build with another signature, which macOS takes for a new app and so asks again), but not twice for the same rows (`setupOpenFor` in the app's defaults), and from Twistwright > Set Up Twistwright… or the menu bar item; `--setup` opens it and saves nothing. |
 | App | `mac/Sources/App.swift` | The main menu (File: Bring History from Safari…, Open in Safari; View: reload, zoom, the two page sources; Window: Twistwright ⌘1, Smart Cube Lab ⌘2), the menu bar item (Open Twistwright, Open in Safari, Set Up Twistwright…, the Bluetooth state, the connected cube, Copy the Safari Address, Quit) and the `twistwright://` scheme. `twistwright://smart` opens the window with `?smart=1`, and the page opens the Smart cube dialog itself. |
 
 The page in the window finds the app through `bridgeNative()` in `js/bridge.js`
@@ -515,15 +515,17 @@ the tagged commit. To release:
 An app built with no tag (`mac/build.sh`) carries the site at HEAD, and
 `site.json` says `HEAD` with the commit.
 
-Until a release is notarized, macOS blocks the first open ("Apple could not
-verify") and the user has to press Open Anyway in System Settings › Privacy &
-Security. The download dialog says so. To notarize, store credentials once:
-`xcrun notarytool store-credentials twistwright` (Apple ID, team LMMVWL22J9, an
-app-specific password), then build with `--notarize twistwright`.
+Releases are notarized, from 1.47.0 (its zip was notarized and stapled after
+the release and uploaded again). The keychain profile `twistwright` holds the
+credentials (`xcrun notarytool store-credentials twistwright`: Apple ID, team
+LMMVWL22J9, an app-specific password). A downloaded notarized app opens after
+one question from macOS, and the download dialog says only that. A release
+built without `--notarize` is blocked at the first open ("Apple could not
+verify") until the user presses Open Anyway in System Settings › Privacy &
+Security, so always pass it.
 
 ### What is not there yet
 
-- An app icon. The bundle uses the system icon.
 - Reconnect when the app restarts while the page is open: the page drops the
   link and shows the download button; a reload finds the app again.
 - A `localhost` history is not the `twistwright.com` history. `cw:` data is per
