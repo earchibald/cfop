@@ -93,6 +93,15 @@ body.starting header.top>*:not(h1){display:none!important}
 .st-pic{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
 .st-cube{width:min(100%,380px);background:var(--cube-bg);border-radius:18px;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
 .st-cube:active{cursor:grabbing}.st-cube svg{display:block;width:100%;height:auto}
+.screencube{--lift-glow:var(--accent)}
+/* The pieces page: the callout under the picture once the edge is found, its arrow to the cube. */
+.st-cubewrap{width:min(100%,380px);display:flex;flex-direction:column;align-items:center;gap:14px}
+.st-callout{position:relative;width:min(100%,340px);display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:12px 14px;border-radius:14px;background:var(--panel);border:2px solid var(--accent);box-shadow:var(--shadow);line-height:1.4;animation:stCallout .32s cubic-bezier(.2,1.4,.4,1) both}
+.st-callout>b{font-size:18px}.st-callout>span{font-size:14px}
+.st-callout::before{content:"";position:absolute;top:-9px;left:50%;width:14px;height:14px;background:var(--panel);border-left:2px solid var(--accent);border-top:2px solid var(--accent);transform:translateX(-50%) rotate(45deg)}
+@keyframes stCallout{from{opacity:0;transform:translateY(-10px) scale(.9)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.st-callout{animation:none}}
 /* The keys page: the keyboard parts with a keyboard, a line about the buttons on a touch screen. */
 .st-touch{display:none}
 @media (hover:none){.st-kbd{display:none!important}.st-touch{display:block}}
@@ -157,6 +166,7 @@ body.starting header.top>*:not(h1){display:none!important}
 .start .spacer,.st-foot .spacer,.st-bar .spacer{flex:1}
 @media (max-width:1000px){.st-levels{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:760px){.start{padding:8px 12px 32px}.st-levels,.st-three,.st-grid2,.st-split,.st-split.st-wide,.st-quiz{grid-template-columns:1fr}
+  .st-split>.st-pic{order:-1}.st-split{gap:16px}
   .st-level{min-height:0}.st-row{grid-template-columns:22px minmax(0,1fr)}.st-row .st-seg{grid-column:1/-1}.st-row .st-st{grid-column:2}.st-brow{grid-template-columns:1fr}.st-brow>span[aria-hidden]{display:none}}
 
 /* ===== Getting started, in the site ===== */
