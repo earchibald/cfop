@@ -21,13 +21,14 @@ function screenLayout(){return SCREEN.layout;}
 function screenSetLayout(id){if(!SCREEN_KEYMAPS[id])return;SCREEN.layout=id;try{store.set('screenKeys',id);}catch(e){}document.dispatchEvent(new CustomEvent('cw:screenkeys',{detail:id}));}
 // Draw a cube into `el` and let the keys and a drag act on it.
 // opts: cube (a Cube), fade (a Set of lit sticker indices, the rest dim), label, keys (false: the
-// keys do nothing here), onMove(move, cube) after each turn, view ({yaw, pitch}).
+// keys do nothing here), onMove(move, cube) after each turn, view ({yaw, pitch}), onPick(index) on a
+// click on a sticker with no drag (the 54 index).
 function screenCube(el,opts={}){
-  const sc={el,cube:opts.cube||new Cube(),fade:opts.fade||null,view:{...(opts.view||SCREEN_VIEW)},anim:null,keys:opts.keys!==false,onMove:opts.onMove||null,label:opts.label||'The screen cube'};
+  const sc={el,cube:opts.cube||new Cube(),fade:opts.fade||null,view:{...(opts.view||SCREEN_VIEW)},anim:null,lift:null,keys:opts.keys!==false,onMove:opts.onMove||null,onPick:opts.onPick||null,label:opts.label||'The screen cube'};
   el.classList.add('screencube');el.setAttribute('role','img');el.setAttribute('aria-label',sc.label);
   if(!el.title)el.title='Drag to look around the cube. Double-click to put it back.';
   const draw=()=>{const a=sc.anim,f=(a?a.from:sc.cube).toFacelets();
-    el.innerHTML=`<svg viewBox="0 0 400 370" aria-hidden="true">${renderCube3D(f,{yaw:sc.view.yaw,pitch:sc.view.pitch,scale:46,n:3,fade:sc.fade,move:a?a.move:null,t:a?a.t:0})}</svg>`;};
+    el.innerHTML=`<svg viewBox="0 0 400 370" aria-hidden="true">${renderCube3D(f,{yaw:sc.view.yaw,pitch:sc.view.pitch,scale:46,n:3,fade:sc.fade,move:a?a.move:null,t:a?a.t:0,lift:a?null:sc.lift,cls:sc.onPick?i=>'pk'+i:null})}</svg>`;};
   sc.draw=draw;
   sc.set=(cube,fade)=>{if(sc.anim){cancelAnimationFrame(sc.anim.raf);sc.anim=null;}sc.cube=cube;if(fade!==undefined)sc.fade=fade;draw();};
   sc.turn=move=>{const from=sc.anim?sc.anim.to:sc.cube;const to=applyAlg(from,move);
@@ -40,11 +41,32 @@ function screenCube(el,opts={}){
       sc.anim.raf=requestAnimationFrame(step);}
     if(sc.onMove)sc.onMove(move,to);return to;};
   sc.resetView=()=>{sc.view={...SCREEN_VIEW};draw();};
+  // Lift the pieces with a sticker in `set` out of the cube, with a glow: out, a hold, and back in.
+  // o: up, hold, down (ms), stay (stay out), done(). A new bump or null stops the one before.
+  sc.bump=(set,o={})=>{const L0=sc.lift;if(L0){cancelAnimationFrame(L0.raf);clearTimeout(L0.timer);}
+    if(!set){sc.lift=null;draw();return;}
+    const up=o.up??420,hold=o.hold??1300,down=o.down??480,L={set,t:0,raf:0,timer:0};sc.lift=L;
+    const end=()=>{if(sc.lift!==L)return;sc.lift=null;draw();if(o.done)o.done();};
+    const reduce=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(typeof requestAnimationFrame!=='function'||reduce){L.t=1;draw();if(!o.stay)L.timer=setTimeout(end,up+hold);return;}
+    const t0=performance.now();
+    const step=()=>{if(sc.lift!==L)return;const e=performance.now()-t0;
+      if(e>=up&&o.stay){L.t=1;draw();return;}
+      if(e>=up+hold+down){end();return;}
+      const x=e<up?e/up:e<up+hold?1:1-(e-up-hold)/down,t=0.5-0.5*Math.cos(Math.PI*x);
+      if(t!==L.t){L.t=t;draw();}
+      if(e>=up&&e<up+hold){L.timer=setTimeout(()=>{L.raf=requestAnimationFrame(step);},up+hold-e);return;}
+      L.raf=requestAnimationFrame(step);};
+    L.raf=requestAnimationFrame(step);};
   // The drag: across turns the view about the vertical, up and down tilts it.
   let drag=null;
-  el.addEventListener('pointerdown',e=>{if(e.button)return;drag={x:e.clientX,y:e.clientY,yaw:sc.view.yaw,pitch:sc.view.pitch};try{el.setPointerCapture(e.pointerId);}catch(_){}});
-  el.addEventListener('pointermove',e=>{if(!drag)return;sc.view.yaw=drag.yaw+(e.clientX-drag.x)*0.6;sc.view.pitch=Math.max(-80,Math.min(80,drag.pitch+(e.clientY-drag.y)*0.5));draw();});
-  const end=()=>{drag=null;};el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+  el.addEventListener('pointerdown',e=>{if(e.button)return;drag={x:e.clientX,y:e.clientY,yaw:sc.view.yaw,pitch:sc.view.pitch,target:e.target,moved:false};try{el.setPointerCapture(e.pointerId);}catch(_){}});
+  el.addEventListener('pointermove',e=>{if(!drag)return;if(Math.abs(e.clientX-drag.x)+Math.abs(e.clientY-drag.y)>5)drag.moved=true;sc.view.yaw=drag.yaw+(e.clientX-drag.x)*0.6;sc.view.pitch=Math.max(-80,Math.min(80,drag.pitch+(e.clientY-drag.y)*0.5));draw();});
+  // A click with no drag picks the sticker under it. The target is the one under the press: the
+  // capture sends the rest of the events to el.
+  el.addEventListener('pointerup',e=>{const dr=drag;drag=null;if(!dr||dr.moved||!sc.onPick)return;
+    const m=dr.target&&dr.target.getAttribute&&/(?:^|\s)pk(\d+)/.exec(dr.target.getAttribute('class')||'');if(m)sc.onPick(+m[1]);});
+  const end=()=>{drag=null;};el.addEventListener('pointercancel',end);
   el.addEventListener('dblclick',()=>sc.resetView());
   if(sc.keys)SCREEN.active=sc;
   draw();return sc;
