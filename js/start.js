@@ -4,9 +4,10 @@
 // body.starting); each track ends in the site with a method, a tab, a cube source and the
 // statuses the user marked. cw:level keeps the level (1 to 5); the method menu can open the
 // picker again (startLevelRow in js/start-app.js).
-//   Level 1, never touched one: Do you have a cube? (the screen cube if not), then the basics in
-//     three pages (hold it, the pieces, the six moves) with the user's cube or the screen cube,
-//     then the beginner method.
+//   Level 1, never touched one: the basics first, in four pages (what the cube is, how to hold
+//     it, the pieces, the six moves), on a picture that a drag looks around. No question about a
+//     cube and no move letter before the moves page. Then which cube (the keys page for the
+//     screen cube), then the beginner method.
 //   Level 2, played but never solved: which cube, then the beginner method.
 //   Level 3, have solved it: how, then the beginner steps checked off, then the bridge to CFOP
 //     and the Cross lesson.
@@ -14,7 +15,7 @@
 //     on what was marked, then OLL · PLL on the cases still to learn.
 //   Level 5, already a speedcuber: one setup page, then the Scramble tab with a large timer.
 const LEVELS=[
-  {n:1,name:'Never touched one',sub:'New to the cube. Start with how it moves.',goes:'→ Basics',first:'t1-have',tip:'Start with the basics'},
+  {n:1,name:'Never touched one',sub:'New to the cube. Start with what it is.',goes:'→ Basics',first:'t1-what',tip:'Start with the basics'},
   {n:2,name:'Played but never solved',sub:'You can turn it. You have not solved it yet.',goes:'→ Beginner method',first:'t2-cube',tip:'Start the beginner method'},
   {n:3,name:'Have solved it',sub:'You can solve it, slowly or with notes.',goes:'→ Check, then CFOP',first:'t3-start',tip:'Review the beginner method'},
   {n:4,name:'Know advanced algorithms',sub:'You know some CFOP: F2L, OLL or PLL.',goes:'→ CFOP sets',first:'t4-sets',tip:'Go to CFOP'},
@@ -47,8 +48,11 @@ const ST_MOVE_WORDS={
   B:['Back','Turn the back face. Clockwise as seen from behind.','Turn the back face the other way.'],
   R:['Right','Turn the right face up, away from you.','Turn the right face down, toward you.'],
   L:['Left','Turn the left face down, toward you.','Turn the left face up, away from you.']};
+// A turn in words, with no letter: "Right face, clockwise". The keys page shows it, and a level 2
+// user has not met the letters.
+function stMoveSay(m){const w=ST_MOVE_WORDS[m[0]];if(!w)return m;return `${w[0]} face, ${/['′]/.test(m)?'counterclockwise':'clockwise'}`;}
 const ST_HIDDEN={D:'The bottom face is hidden. You see its edge.',B:'The back face is hidden. You see its edge.',L:'The left face is hidden. You see its edge.'};
-const START={on:false,screen:'level',level:null,src:'mine',kind:'edges',face:'R',prime:false,keysNext:'t1-hold',
+const START={on:false,screen:'level',level:null,src:'mine',kind:'edges',face:'R',prime:false,
   check:null,sets:null,caseSet:null,quiz:null,five:null,sc:null,last:'—',way:null};
 function startEl(){let el=$('#start');if(el)return el;el=document.createElement('div');el.id='start';el.className='start hidden';
   el.setAttribute('role','region');el.setAttribute('aria-label','Getting started');$('header.top').after(el);return el;}
@@ -78,7 +82,6 @@ function stPic(cube,fade,label){return `<svg viewBox="0 0 400 370" role="img" ar
 function stBars(n){return LEVEL_COLORS.map((c,i)=>`<i class="lvbar${i<n?'':' off'}" style="--sec:var(--sticker-${c})"></i>`).join('');}
 function stBar(crumb,right){return `<div class="st-bar"><span class="st-crumb">Getting started${crumb?' · '+esc(crumb):''}</span><span class="spacer"></span>${right||''}</div>`;}
 function stBack(to,label){return `<button class="st-link" data-go="${to}" title="${esc(label||'Back')}">${esc(label||'← Back')}</button>`;}
-function stSrcToggle(){return `<div class="st-seg" role="group" aria-label="Which cube"><button data-src="mine" aria-pressed="${START.src!=='screen'}" title="I hold a real cube">My cube</button><button data-src="screen" aria-pressed="${START.src==='screen'}" title="I use the cube on the screen">Screen cube</button></div>`;}
 function stSources(note){const notes={mine:'Scan or paint it later, from the cube chip.',smart:'The browser asks to connect next.',screen:'Keys turn it. A drag turns the whole cube.'};
   const order=['mine','smart','screen'].map(id=>CUBE_SRCS.find(s=>s.id===id));
   return `<div class="st-srcs"><span class="st-lbl">Your cube</span><div class="st-seg" role="group" aria-label="Cube source">${order.map(s=>`<button data-src="${s.id}" aria-pressed="${START.src===s.id}" title="${esc(s.tip)}"><i class="cdot" data-src="${s.id}"></i>${esc(s.name)}</button>`).join('')}</div>${note===false?'':`<span class="muted">${esc((notes[START.src]||'')+' Change it any time in the top bar.')}</span>`}</div>`;}
@@ -94,51 +97,59 @@ START_SCREENS.level=()=>{const first=store.get('level',null)==null;
   <p class="muted st-small">Your times and history stay on this device.</p>
   <p class="st-small"><button class="st-link" data-paste="1" title="Paste the data that you copied in another browser with Settings &gt; Copy my data">Used Twistwright in another browser? Paste my data</button> · <button class="st-link" data-close="1" title="Close this and look at the whole site">Skip: look around first</button></p></div>`;};
 // ---------- Track 1 · never touched one ----------
-START_SCREENS['t1-have']=()=>`${stBar('',stBack('level','← Change my level'))}
-  <div class="st-center"><div class="st-head"><h1>Do you have a cube?</h1><p>Both ways teach the same things. You can get a cube later.</p></div>
-  <div class="st-two">
-    <button class="st-card" data-have="mine" title="Learn with the cube in your hands"><span class="st-cardpic">${stPic(new Cube(),null,'A solved cube')}</span><span class="st-cardtext"><b>Yes, I have one</b><span class="muted">Hold it while you read. Each page asks you to look at it.</span><span class="st-goes">Use my cube →</span></span></button>
-    <button class="st-card" data-have="screen" title="Learn with a cube on the screen"><span class="st-keycap" aria-hidden="true">${['','W','E','A','S','D','','X',''].map(k=>`<i${k?'':' class="off"'}>${k}</i>`).join('')}</span><span class="st-cardtext"><b>No, not yet</b><span class="muted">Use a cube on the screen. Six keys turn it. Drag to look around it.</span><span class="st-goes">Use the screen cube →</span></span></button>
-  </div><p class="muted st-small">On a phone there are no keys: buttons under the screen cube turn it.</p></div>`;
+// The basics come first: no question about a cube, and no move letter before the moves page.
+// The picture is the cube for these pages (a drag looks around it); the cube question follows
+// the basics (t2-cube).
+function stBasicsBar(n){return stBar('Basics',`<span class="st-dots" aria-label="Part ${n} of 4">${[1,2,3,4].map(i=>`<i class="${i<=n?'on':''}"></i>`).join('')}</span>`);}
+function stCubeSide(){return `<div class="st-pic"><div class="st-cube" id="stCube"></div><span class="muted st-small" id="stCap"></span></div>`;}
+START_SCREENS['t1-what']=()=>`${stBasicsBar(1)}
+  <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 1 of 4</span><h1>Meet the cube</h1><p>The cube is a puzzle. It has six faces. Each face has nine stickers.</p>
+    <ul class="st-rules"><li><b>Solved</b>: each face is one color. The six colors are white, yellow, green, blue, red and orange.</li><li><b>A turn</b>: each face can turn. A turn moves stickers onto the faces next to it.</li><li><b>The puzzle</b>: many turns mix up the colors. You bring each face back to one color.</li></ul>
+    <div class="st-box st-say"><span>See one face turn, then turn back.</span><button class="small" data-demo="1" title="Turn one face on the picture, then turn it back">Show me a turn</button></div>
+    <p class="muted">No cube yet? That is fine. The picture is your cube on these pages. After the basics, you pick a real cube or a cube on the screen.</p>
+    <div class="st-foot">${stBack('level','← Change my level')}<span class="spacer"></span><button class="primary" data-go="t1-hold" title="Go on to how to hold it">Next: how to hold it →</button></div></div>
+  ${stCubeSide()}</div>`;
+// The screen cube's keys: after the basics for level 1, after the cube question for level 2.
+// The last turn is in words (stMoveSay): a level 2 user has not met the letters.
 START_SCREENS['t1-keys']=()=>{const k=screenKeys(SCREEN.layout);const key=(f,word,tip)=>`<button class="st-key" data-turn="${f}" title="${esc(tip)}"><b>${esc(k[f])}</b><span>${word}</span></button>`;
-  return `${stBar('Your screen cube',stBack(START.keysNext==='t1-hold'?'t1-have':'t2-cube'))}
-  <div class="st-split"><div class="st-pic"><div class="st-cube" id="stCube"></div><span class="muted st-small">Drag to look around. Double-click to put it back.</span><span class="st-small">Last turn: <b id="stLast" class="mono">${esc(START.last)}</b></span></div>
-  <div class="st-text"><h1>Meet your screen cube</h1><p>Six keys turn the six faces. Rest your hand on them. The middle key turns the face toward you.</p>
-    <div class="st-keys" aria-label="The six keys"><i></i>${key('U','Up','Turn the top face')}${key('B','Back','Turn the back face')}${key('L','Left','Turn the left face')}${key('F','Front','Turn the front face')}${key('R','Right','Turn the right face')}<i></i>${key('D','Down','Turn the bottom face')}<i></i></div>
-    <ul class="st-rules"><li><b>Key alone</b>: the face turns clockwise.</li><li><b>Shift + key</b>: it turns the other way.</li><li><b>Drag</b>: the whole cube turns. No face moves.</li></ul>
-    <div class="st-lbl">Keys for your keyboard</div><div class="row st-layouts">${Object.entries(SCREEN_KEYMAPS).map(([id,m])=>`<button class="small${id===SCREEN.layout?' on':''}" data-layout="${id}" aria-pressed="${id===SCREEN.layout}" title="Use these keys">${esc(m.name)}</button>`).join('')}</div>
-    <div class="st-foot"><span>Try it: press <b class="mono">${esc(k.F)}</b>, then <b class="mono">Shift+${esc(k.F)}</b>.</span><span class="spacer"></span><button class="primary" data-go="${START.keysNext}" title="Go on">${START.keysNext==='t1-hold'?'Next: the basics →':'Next: a mixed-up screen cube →'}</button></div></div></div>`;};
-function stBasicsBar(n){return stBar('Basics',`<span class="st-dots" aria-label="Part ${n} of 3">${[1,2,3].map(i=>`<i class="${i<=n?'on':''}"></i>`).join('')}</span>${stSrcToggle()}`);}
-function stCubeSide(lead){return `<div class="st-pic">${START.src==='screen'?'':`<span class="st-look">${esc(lead||'Now look at your cube')}</span>`}<div class="st-cube" id="stCube"></div><span class="muted st-small" id="stCap"></span></div>`;}
-START_SCREENS['t1-hold']=()=>`${stBasicsBar(1)}
-  <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 1 of 3</span><h1>Hold it like this</h1><p>Each face has one center sticker. The centers never move. They give each face its color.</p>
-    <label class="st-check" title="Check this when white is on top"><input type="checkbox"> <span><b>White center on top.</b> <span class="muted">${START.src==='screen'?'The screen cube starts this way.':'Find it, then put it up.'}</span></span></label>
+  return `${stBar('Your screen cube',stBack('t2-cube'))}
+  <div class="st-split"><div class="st-pic"><div class="st-cube" id="stCube"></div><span class="muted st-small">Drag to look around. Double-click to put it back.</span><span class="st-small">Last turn: <b id="stLast">${esc(START.last)}</b></span></div>
+  <div class="st-text"><h1>Meet your screen cube</h1><p class="st-kbd">Six keys turn the six faces. Rest your hand on them. The middle key turns the face toward you.</p><p class="st-touch">The six buttons under the cube turn the six faces, clockwise.</p>
+    <div class="st-keys st-kbd" aria-label="The six keys"><i></i>${key('U','Up','Turn the top face')}${key('B','Back','Turn the back face')}${key('L','Left','Turn the left face')}${key('F','Front','Turn the front face')}${key('R','Right','Turn the right face')}<i></i>${key('D','Down','Turn the bottom face')}<i></i></div>
+    <ul class="st-rules"><li class="st-kbd"><b>Key alone</b>: the face turns clockwise.</li><li class="st-kbd"><b>Shift + key</b>: it turns the other way.</li><li><b>Drag</b>: the whole cube turns. No face moves.</li></ul>
+    <div class="st-kbd"><div class="st-lbl">Keys for your keyboard</div><div class="row st-layouts">${Object.entries(SCREEN_KEYMAPS).map(([id,m])=>`<button class="small${id===SCREEN.layout?' on':''}" data-layout="${id}" aria-pressed="${id===SCREEN.layout}" title="Use these keys">${esc(m.name)}</button>`).join('')}</div></div>
+    <div class="st-foot"><span class="st-kbd">Try it: press <b class="mono">${esc(k.F)}</b>, then <b class="mono">Shift+${esc(k.F)}</b>.</span><span class="spacer"></span><button class="primary" data-go="t2-screen" title="Go on">Next: a mixed-up screen cube →</button></div></div></div>`;};
+START_SCREENS['t1-hold']=()=>`${stBasicsBar(2)}
+  <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 2 of 4</span><h1>Hold it like this</h1><p>Each face has one center sticker. The centers never move. They give each face its color.</p>
+    <label class="st-check" title="Check this when white is on top"><input type="checkbox"> <span><b>White center on top.</b> <span class="muted">The picture shows it this way.</span></span></label>
     <label class="st-check" title="Check this when green faces you"><input type="checkbox"> <span><b>Green center toward you.</b> <span class="muted">Red is then on your right.</span></span></label>
-    <p class="muted">Opposite faces: white and yellow, green and blue, red and orange.</p>
-    <div class="st-foot">${stBack(START.src==='screen'?'t1-keys':'t1-have')}<span class="spacer"></span><button class="primary" data-go="t1-pieces" title="Go on to the pieces">I hold it like this →</button></div></div>
+    <p class="muted">Opposite faces: white and yellow, green and blue, red and orange. Have a cube? Hold yours the same way.</p>
+    <div class="st-foot">${stBack('t1-what')}<span class="spacer"></span><button class="primary" data-go="t1-pieces" title="Go on to the pieces">I see it →</button></div></div>
   ${stCubeSide()}</div>`;
 START_SCREENS['t1-pieces']=()=>{const info={centers:['Centers','6 · one color','Light the centers'],edges:['Edges','12 · two colors','Light the edges'],corners:['Corners','8 · three colors','Light the corners']};
-  return `${stBasicsBar(2)}
-  <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 2 of 3</span><h1>Three kinds of pieces</h1><p>Pick a kind. The picture lights those pieces. Find one on ${START.src==='screen'?'the screen cube':'your cube'}.</p>
+  return `${stBasicsBar(3)}
+  <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 3 of 4</span><h1>Three kinds of pieces</h1><p>Pick a kind. The picture lights those pieces. Drag the picture to find them on the other faces.</p>
     <div class="st-kinds">${Object.entries(info).map(([k,[n,s,t]])=>`<button class="st-kind" data-kind="${k}" aria-pressed="${START.kind===k}" title="${t}"><b>${n}</b><span class="muted">${s}</span></button>`).join('')}</div>
     <div class="st-box st-find"><span class="st-lbl">Find it</span><span>Find the <b>white and green edge</b>. It sits between the white center and the green center.</span><button class="small" data-kind="find" title="Light this piece on the picture">Show me</button></div>
     <div class="st-foot">${stBack('t1-hold')}<span class="spacer"></span><button class="primary" data-go="t1-moves" title="Go on to the moves">I found it →</button></div></div>
   ${stCubeSide()}</div>`;};
-START_SCREENS['t1-moves']=()=>{const f=START.face,p=START.prime,mine=START.src!=='screen',k=screenKeys(SCREEN.layout);const w=ST_MOVE_WORDS[f];
-  const doIt=w[p?2:1]+(mine?` Then turn it back with ${p?f:f+'′'}. Your cube is solved again.`:` Then press ${p?k[f]:'Shift+'+k[f]} to turn it back.`);
-  return `${stBasicsBar(3)}
-  <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 3 of 3</span><h1>The six moves</h1><p>Each letter names a face. The letter alone turns it clockwise, as you look at that face. A <b>′</b> turns it the other way.</p>
+// The moves page is where the letters come in: the face names first, then one letter for each.
+START_SCREENS['t1-moves']=()=>{const f=START.face,p=START.prime;const w=ST_MOVE_WORDS[f];
+  const doIt=w[p?2:1]+` Then ${p?f:f+'′'} turns it back.`;
+  return `${stBasicsBar(4)}
+  <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 4 of 4</span><h1>The six moves</h1><p>Each face has a name, as you hold the cube: up (the top), down (the bottom), front, back, right and left. The guide writes each one as its first letter: <b class="mono">U D F B R L</b>.</p>
+    <p>The letter alone turns that face clockwise, as you look straight at that face. A <b>′</b> after the letter turns it the other way.</p>
     <div class="row st-moves">${['U','D','F','B','R','L'].map(x=>`<button class="st-move${p?' prime':''}" data-face="${x}" aria-pressed="${x===f}" title="${ST_MOVE_WORDS[x][0]} face">${x}${p?'′':''}</button>`).join('')}<button class="st-move st-prime" data-prime="1" aria-pressed="${p}" title="Turn the other way">′ other way</button></div>
-    <div class="st-box st-say"><span><b class="mono${p?' mod':''}">${f}${p?'′':''}</b> · ${w[0]}${mine?'':` · press <b class="mono">${esc((p?'Shift+':'')+k[f])}</b>`}</span><span>${esc(doIt)}</span><button class="small" data-show="1" title="Turn the layer on the picture, then back">Show me</button></div>
-    <div class="st-foot">${stBack('t1-pieces')}<span class="spacer"></span><button class="primary" data-go="t1-done" title="Finish the basics">My cube is solved again →</button></div></div>
-  ${stCubeSide(mine?'Turn it on your cube':'')}</div>`;};
+    <div class="st-box st-say"><span><b class="mono${p?' mod':''}">${f}${p?'′':''}</b> · ${w[0]}</span><span>${esc(doIt)}</span><button class="small" data-show="1" title="Turn the layer on the picture, then back">Show me</button></div>
+    <div class="st-foot">${stBack('t1-pieces')}<span class="spacer"></span><button class="primary" data-go="t1-done" title="Finish the basics">I know the six moves →</button></div></div>
+  ${stCubeSide()}</div>`;};
 START_SCREENS['t1-done']=()=>{const names=stSteps();
-  return `${stBar('Basics',`<span class="st-dots" aria-label="All three parts finished"><i class="on"></i><i class="on"></i><i class="on"></i></span>`)}
-  <div class="st-center"><div class="st-head"><span class="st-tick" aria-hidden="true">✓</span><h1>You know the basics</h1><p>Basics is marked Learned. Next, solve the cube one step at a time.</p></div>
-  <div class="st-donelist"><span>✓ How to hold it</span><span>✓ Centers, edges, corners</span><span>✓ The six moves</span></div>
+  return `${stBar('Basics',`<span class="st-dots" aria-label="All four parts finished"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>`)}
+  <div class="st-center"><div class="st-head"><span class="st-tick" aria-hidden="true">✓</span><h1>You know the basics</h1><p>Basics is marked Learned. Next, pick the cube you learn with. Then solve it one step at a time.</p></div>
+  <div class="st-donelist"><span>✓ What the cube is</span><span>✓ How to hold it</span><span>✓ Centers, edges, corners</span><span>✓ The six moves</span></div>
   <div class="st-box"><div class="row" style="justify-content:space-between"><b>The beginner method</b><span class="muted">1 of 9 learned</span></div>
     <div class="st-steps">${names.map((n,i)=>`<span class="st-step${i===0?' on':''}">${i===0?'✓ ':''}${esc(n)}</span>`).join('')}</div></div>
-  <div class="st-foot"><button class="st-link" data-go="t2-cube" title="Pick the cube to use">Use another cube</button><span class="spacer"></span><button class="primary" data-finish="beg" title="Open the beginner method">Start the beginner method →</button></div></div>`;};
+  <div class="st-foot">${stBack('t1-moves')}<span class="spacer"></span><button class="primary" data-go="t2-cube" title="Pick the cube to learn with">Next: pick your cube →</button></div></div>`;};
 // ---------- Track 2 · played but never solved ----------
 START_SCREENS['t2-cube']=()=>{const cards=[
     {id:'mine',name:'My cube',tag:'most people',what:'You turn it by hand. The page shows each step on a picture.',how:'Mixed up already? Scan it with the camera or paint its colors.',note:'Next: scan, paint, or mix it up with me.',cta:'Use my cube →'},
@@ -256,38 +267,41 @@ function startDraw(){const el=startEl();const f=START_SCREENS[START.screen]||STA
   el.dataset.screen=START.screen;el.innerHTML=f();startWire(el);}
 function startCubeMount(){const box=$('#stCube');if(!box)return;const scr0=START.screen;
   let fade=null,cap='';
-  if(scr0==='t1-hold'){fade=stFaces([4]);cap=START.src==='screen'?'Drag to look at the other faces. Double-click and it comes back to white on top, green toward you.':'From where you sit, your cube shows these three centers.';}
+  if(scr0==='t1-what')cap='Drag to look around the cube. Double-click to put it back.';
+  if(scr0==='t1-hold'){fade=stFaces([4]);cap='Drag to look at the other faces. Double-click and it comes back to white on top, green toward you.';}
   if(scr0==='t1-pieces'){const k=START.kind;fade=k==='find'?new Set([7,19]):stFaces(ST_PIECES[k]);
-    cap={centers:'A center never moves. It names its face.',edges:'An edge sits between two centers. It has two colors.',corners:'A corner sits where three faces meet. It has three colors.',find:START.src==='screen'?'Lit on the screen cube. Drag to see it from the side.':'Top face, the row nearest you. White on top, green in front.'}[k];}
+    cap={centers:'A center never moves. It names its face.',edges:'An edge sits between two centers. It has two colors.',corners:'A corner sits where three faces meet. It has three colors.',find:'Top face, the row nearest you. Drag to see it from the side.'}[k];}
   if(scr0==='t1-moves'){fade=stLayer(START.face);cap=ST_HIDDEN[START.face]||'The lit stickers move with '+START.face+'.';}
-  const keys=scr0==='t1-keys'||START.src==='screen';
+  // Only the keys page takes the keys: the basics come before the cube question.
+  const keys=scr0==='t1-keys';
   // The screen cube keeps its state from page to page; a lit page shows it solved.
   const prev=START.sc,cube=prev&&scr0==='t1-keys'?prev.cube:new Cube();
-  START.sc=screenCube(box,{cube,fade,keys,label:'The screen cube',onMove:m=>{START.last=m.replace("'",'′');const l=$('#stLast');if(l)l.textContent=START.last;}});
+  START.sc=screenCube(box,{cube,fade,keys,label:'The screen cube',onMove:m=>{START.last=stMoveSay(m);const l=$('#stLast');if(l)l.textContent=START.last;}});
   if(!keys&&SCREEN.active===START.sc)SCREEN.active=null;
   const c=$('#stCap');if(c)c.textContent=cap;
   // On a touch screen there are no keys: six buttons under the cube turn it.
   if(keys&&typeof matchMedia==='function'&&matchMedia('(hover: none)').matches){const pad=document.createElement('div');pad.className='st-pad';
-    pad.innerHTML=['U','D','F','B','R','L'].map(f=>`<button class="small" data-pad="${f}" title="Turn the ${ST_MOVE_WORDS[f][0].toLowerCase()} face">${f}</button>`).join('');box.after(pad);
+    pad.innerHTML=['U','D','F','B','R','L'].map(f=>`<button class="small" data-pad="${f}" title="Turn the ${ST_MOVE_WORDS[f][0].toLowerCase()} face">${ST_MOVE_WORDS[f][0]}</button>`).join('');box.after(pad);
     pad.querySelectorAll('[data-pad]').forEach(b=>b.onclick=()=>START.sc.turn(b.dataset.pad));}
 }
 function startWire(el){
   startCubeMount();
   const on=(sel,fn)=>el.querySelectorAll(sel).forEach(b=>b.onclick=()=>fn(b));
-  on('[data-go]',b=>startGo(b.dataset.go));
+  // The basics are Learned once the last page is passed, before the cube question.
+  on('[data-go]',b=>{if(b.dataset.go==='t1-done')startMark(['beg-0'],'finished');startGo(b.dataset.go);});
   on('[data-close]',()=>startClose());
   on('[data-paste]',()=>{startClose();openSettings('data');});
   on('[data-level]',b=>{const l=LEVELS[+b.dataset.level-1];START.level=l.n;START.check=null;START.sets=null;START.quiz=null;START.five=null;startGo(l.first);});
-  on('[data-have]',b=>{START.src=b.dataset.have;START.keysNext='t1-hold';startGo(START.src==='screen'?'t1-keys':'t1-hold');});
   on('[data-layout]',b=>{screenSetLayout(b.dataset.layout);startDraw();});
   on('.st-keys [data-turn]',b=>START.sc&&START.sc.turn(b.dataset.turn));
   on('.st-seg [data-src],.st-pick[data-src]',b=>{START.src=b.dataset.src;startDraw();});
   on('[data-kind]',b=>{START.kind=b.dataset.kind;startDraw();});
   on('[data-face]',b=>{START.face=b.dataset.face;startDraw();});
   on('[data-prime]',()=>{START.prime=!START.prime;startDraw();});
+  on('[data-demo]',()=>{const sc=START.sc;if(!sc)return;sc.turn('R');setTimeout(()=>{if(START.sc===sc)sc.turn("R'");},900);});
   on('[data-show]',()=>{const sc=START.sc;if(!sc)return;const m=START.face+(START.prime?"'":'');sc.turn(m);setTimeout(()=>{if(START.sc===sc)sc.turn(invertAlg([m])[0]);},900);});
   on('[data-finish]',b=>startEnd(b.dataset.finish));
-  on('[data-t2go]',()=>{if(START.src==='screen'){START.keysNext='t2-screen';startGo('t1-keys');}else if(START.src==='smart')startFinish('beginner','learn',()=>openSmart());else startFinish('beginner','learn');});
+  on('[data-t2go]',()=>{if(START.src==='screen')startGo('t1-keys');else if(START.src==='smart')startFinish('beginner','learn',()=>openSmart());else startFinish('beginner','learn');});
   on('[data-way]',b=>{START.way=b.dataset.way;START.check=null;startGo(b.dataset.to);});
   on('[data-step]',b=>{START.check[+b.dataset.step]=+b.dataset.v;startDraw();});
   on('[data-check]',b=>{const a=b.dataset.check;startSaveCheck();if(a==='cfop')startGo('t3-bridge');else if(a==='timer')startFinish('cfop','solve');else startFinish('beginner','learn');});
