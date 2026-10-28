@@ -25,19 +25,20 @@ function smartNotify(detail){if(typeof document!=='undefined')document.dispatchE
 // hour (macReleaseLoad), and until then offers the release named here: a real file, so the label
 // and the zip always agree.
 const MAC_RELEASE_API='https://api.github.com/repos/earchibald/cfop/releases/latest';
-let MAC_RELEASE={version:'1.47.4',url:'https://github.com/earchibald/cfop/releases/download/mac-v1.47.4/Twistwright-mac.zip'};
+let MAC_RELEASE={version:'1.47.4',url:'https://github.com/earchibald/cfop/releases/download/mac-v1.47.4/Twistwright-mac-1.47.4.zip'};
 // A release from the GitHub API as {version, url}, or null: the tag mac-vX.Y.Z and its zip.
 function macReleaseRead(j){
   const m=String(j&&j.tag_name||'').match(/^mac-v(\d+\.\d+\.\d+)$/);if(!m)return null;
   const zips=((j&&j.assets)||[]).filter(x=>/\.zip$/.test(x.name||''));
-  const a=zips.find(x=>/^Twistwright/.test(x.name))||zips[0];
+  const a=zips.find(x=>x.name==='Twistwright-mac-'+m[1]+'.zip')||zips.find(x=>/^Twistwright/.test(x.name))||zips[0];
   return a&&a.browser_download_url?{version:m[1],url:a.browser_download_url}:null;
 }
 function macDownloadLabel(){return 'Download for macOS v'+MAC_RELEASE.version;}
 function macReleaseLoad(){
   const KEY='tw:macRelease',HOUR=3600e3;
   let kept=null;try{kept=JSON.parse(localStorage.getItem(KEY)||'null');}catch(e){}
-  if(kept&&kept.version&&kept.url){MAC_RELEASE={version:kept.version,url:kept.url};macReleaseShow();if(Date.now()-kept.at<HOUR)return Promise.resolve(MAC_RELEASE);}
+  // A kept zip without its version in the name is from before 1.47.4's zip was renamed: ask again.
+  if(kept&&kept.version&&kept.url&&String(kept.url).endsWith('-'+kept.version+'.zip')){MAC_RELEASE={version:kept.version,url:kept.url};macReleaseShow();if(Date.now()-kept.at<HOUR)return Promise.resolve(MAC_RELEASE);}
   if(typeof fetch!=='function')return Promise.resolve(MAC_RELEASE);
   return Promise.resolve().then(()=>fetch(MAC_RELEASE_API,{headers:{Accept:'application/vnd.github+json'}}))
     .then(r=>r&&r.ok?r.json():null).then(j=>{

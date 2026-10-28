@@ -505,7 +505,7 @@ run while the installed app keeps 27272.
 
 Releases live on GitHub Releases of this repo, tagged `mac-vX.Y.Z` after
 `CFBundleShortVersionString` in `mac/Info.plist`. The zip carries the version in
-its name, `Twistwright-mac-X.Y.Z.zip` (from 1.47.5; unzipped it is
+its name, `Twistwright-mac-X.Y.Z.zip` (1.47.4 renamed so on GitHub; unzipped it is
 `Twistwright.app`). The page asks the GitHub API for the latest release
 (`macReleaseLoad` in `js/smart-ui.js`, kept an hour in `tw:macRelease`) and
 links its zip with its version: "Download for macOS v1.47.5", in the download

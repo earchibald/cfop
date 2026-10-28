@@ -132,7 +132,7 @@ async function download(){
   assert.ok($('#smartBg .modal.dl'),'the download dialog opens');assert.ok(/Safari cannot use Bluetooth/.test($('#smartBg').textContent));
   assert.ok($('#smartDl')&&$('#smartOpenApp'),'download and open buttons');
   // No answer from GitHub: the release the page names, a real file, with its version.
-  const OLD='https://github.com/earchibald/cfop/releases/download/mac-v1.47.4/Twistwright-mac.zip';
+  const OLD='https://github.com/earchibald/cfop/releases/download/mac-v1.47.4/Twistwright-mac-1.47.4.zip';
   assert.strictEqual($('#smartDl').textContent,'Download for macOS v1.47.4','the button names the version');
   assert.ok(!$('#footMac').classList.contains('hidden'),'a Mac gets the footer link');
   assert.ok(/^Download for macOSv1\.47\.4$/.test($('#footMac').textContent)&&$('#footMac').getAttribute('href')===OLD,'the footer link: '+$('#footMac').textContent+' '+$('#footMac').getAttribute('href'));
@@ -161,11 +161,16 @@ async function download(){
   assert.strictEqual(e.w.macReleaseRead({tag_name:'v2'}),null,'not a Mac tag');
   assert.strictEqual(e.w.macReleaseRead({tag_name:'mac-v1.48.0',assets:[{name:'notes.txt',browser_download_url:'x'}]}),null,'no zip');
   assert.strictEqual(e.w.macReleaseRead({tag_name:'mac-v1.48.0',assets:[{name:'Twistwright-mac.zip',browser_download_url:'z'}]}).url,'z','an old zip name still works');
+  assert.strictEqual(e.w.macReleaseRead({tag_name:'mac-v1.48.0',assets:[{name:'Twistwright-mac.zip',browser_download_url:'z'},{name:'Twistwright-mac-1.48.0.zip',browser_download_url:'v'}]}).url,'v','the zip with the version first');
+  // A kept zip with no version in its name (1.47.4 before its rename): a fresh look.
+  const sr={json:rel.json};const stale={at:Date.now(),version:'1.47.4',url:'https://github.com/earchibald/cfop/releases/download/mac-v1.47.4/Twistwright-mac.zip'};
+  const s=await boot({platform:'MacIntel',release:sr,storage:{'tw:macRelease':JSON.stringify(stale)}});
+  assert.strictEqual(sr.calls.length,1,'the old name asks again');assert.strictEqual(s.d.querySelector('#footMac').getAttribute('href'),NEW,'and gets the new zip');
   // Only a Mac desktop gets the link, and asks GitHub.
   const pc={json:rel.json};const h=await boot({platform:'Win32',release:pc});
   assert.ok(h.d.querySelector('#footMac').classList.contains('hidden'),'no link off a Mac');assert.deepStrictEqual(pc.calls,[],'and no look');
   const ipad=await boot({platform:'MacIntel',touch:5});assert.ok(ipad.d.querySelector('#footMac').classList.contains('hidden'),'no link on an iPad');
-  for(const x of [e,f,g])assert.deepStrictEqual(x.errs,[]);
+  for(const x of [e,f,g,s])assert.deepStrictEqual(x.errs,[]);
   console.log('bridge download ok');
 }
 // ----- the page in the app's own window -----
