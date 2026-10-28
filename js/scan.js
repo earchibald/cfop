@@ -14,7 +14,7 @@ function linToLab(r,g,b){
 }
 const hexLin=h=>[0,2,4].map(i=>SRGB_LIN[parseInt(h.substr(i,2),16)]);
 // Reference sticker colors in linear RGB, by color index (white red green yellow orange blue):
-// the Rubik's stickers, and stickerless plastic (GAN) from the light-mode palette of css/app.css
+// the classic sticker colors, and stickerless plastic (GAN) from the light-mode palette of css/app.css
 // (docs/design-language.md). classifySamples tries both and keeps the set the face sits nearer,
 // unless opts.style pins one.
 const SCAN_REFS=['F4F4F4','C41E3A','009E60','FFD500','FF5800','0051BA'].map(hexLin);

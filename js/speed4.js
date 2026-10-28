@@ -1,5 +1,5 @@
 // ===== 4×4 advanced: reduction with CFOP, the parity fixes, and the way to Yau =====
-// The plan: the centers and the edges as the Master guide builds them (js/master.js), then the
+// The plan: the centers and the edges as the 4×4 beginner guide builds them (js/master.js), then the
 // 3×3 stage with CFOP from js/engine.js and js/algs.js (cross, F2L, two-look OLL and PLL), with
 // the two parity fixes placed where a speedsolver meets them: OLL parity after F2L, PLL parity
 // after OLL. The parity algorithms are the ones most 4×4 solvers learn first (jperm.net, the

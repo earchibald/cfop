@@ -1,5 +1,5 @@
 // The 2×2 in the page: the chooser offers both puzzles, the 2×2 beginner method reuses the
-// beginner tabs with the Mini guide's five steps and a 2×2 picture, the speed section plans,
+// beginner tabs with the 2×2 beginner guide's five steps and a 2×2 picture, the speed section plans,
 // drills and references Ortega and CLL, and each puzzle keeps its own scramble.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');

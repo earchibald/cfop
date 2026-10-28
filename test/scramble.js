@@ -76,7 +76,7 @@ const RUF=m=>[...m].every(x=>/^[RUF]['2]?$/.test(x));
   assert.strictEqual(w.scr.seed,'in-use','another scramble since the boot stays');
   // ----- notation -----
   const four=[...w.rsMoves(4,FAKE['444'])];
-  assert.ok(four.includes('Rr')&&!four.some(m=>/w/.test(m)),'the 4x4 in the Master guide letters: '+four.slice(20,30).join(' '));
+  assert.ok(four.includes('Rr')&&!four.some(m=>/w/.test(m)),'the 4x4 in the beginner guide letters: '+four.slice(20,30).join(' '));
   const two=[...w.rsMoves(2,FAKE['222'])];
   assert.ok(RUF(two),'a 2x2 scramble is R, U and F: '+two.join(' '));
   assert.ok(sameTwo([...w.parseAlg(FAKE['222'])],two),'the same 2x2 state');

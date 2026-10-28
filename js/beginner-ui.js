@@ -8,7 +8,7 @@
 //
 // A beginner pack is everything the beginner modules need from a method: the steps and the
 // algorithms, the solver, how the cube is held, and the words that differ. Two packs: the 3×3
-// (js/beginner.js, the Rubik's Cube guide) and the 2×2 (js/mini.js, the Rubik's Mini guide).
+// (js/beginner.js, the 3×3 guide) and the 2×2 (js/mini.js, the 2×2 guide).
 // Both solvers return the same plan shape: stages of parts, each part with a hold `pre` (a
 // string of whole-cube turns), `moves`, `chunks` and `up`, the face on top while it is done.
 // All markup is built from fixed strings and the method data; every dynamic string goes

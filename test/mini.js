@@ -67,7 +67,7 @@ for(let i=0;i<300;i++){
   for(const s of plan.stages)for(const p of s.parts){parts++;assert.ok(p.title&&p.text,'every part has a title and text');
     assert.strictEqual(p.up,s.n<=3?'white':'yellow');
     for(const m of [...parseAlg(p.pre),...p.moves])assert.ok(ALLOWED.test(m),'move '+m);
-    if(p.pre){const ms=parseAlg(p.pre);assert.ok(ms.length<=2&&ms.every(m=>/^[xyz]/.test(m)),'a hold is one or two whole-cube turns');if(!(s.n===1&&p.title==='Hold your Mini'))assert.ok(ms.every(m=>/^y/.test(m)),'later holds turn about the vertical: '+p.pre);}
+    if(p.pre){const ms=parseAlg(p.pre);assert.ok(ms.length<=2&&ms.every(m=>/^[xyz]/.test(m)),'a hold is one or two whole-cube turns');if(!(s.n===1&&p.title==='Hold your cube'))assert.ok(ms.every(m=>/^y/.test(m)),'later holds turn about the vertical: '+p.pre);}
     assert.ok(p.moves.length<=14);}
   let c=start,up='white';const atEnd=[];
   for(const s of plan.stages){for(const p of s.parts){if(p.up!==up){c=applyAlg(c,['z2']);up=p.up;}c=applyAlg(c,[...parseAlg(p.pre),...p.moves]);}atEnd.push(s.n>=4&&up==='white'?applyAlg(c,['z2']):c);} // a stage with no parts: seen as the next stage holds it
