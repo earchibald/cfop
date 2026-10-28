@@ -361,6 +361,58 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.strictEqual(stName(),'Sune','the case is kept through '+ev('cubeTab.since')+' moves: '+stName());
   for(;i<scr.length;i+=4){user(scr.slice(i,i+4));await until(()=>!ev('cubeTab.anim')&&ev('cubeTab.target').equals(cur),1500);}
   assert.ok(await until(()=>stName()==='Cross',2500),'past the budget, the cross: '+stName());
+  // ----- the reveal row: the Reveal slider and Pause the reveal while I turn -----
+  const rvR=$('#cubeWinRevealMs'),rvV=$('#cubeWinRevealVal'),rvP=$('#cubeWinRevealPause'),settled=()=>until(()=>!ev('cubeTab.anim')&&ev('cubeTab.target').equals(cur),1500);
+  const shownN=()=>stMoves().filter(m=>m!=='•').length,slide=v=>{rvR.value=String(v);rvR.dispatchEvent(new w.Event('input',{bubbles:true}));};
+  assert.strictEqual(w.cubeTabRevealMsOf(undefined),800,'800 ms by default');assert.strictEqual(w.cubeTabRevealMsOf('1200'),1200);
+  assert.strictEqual(w.cubeTabRevealMsOf(5000),2000);assert.strictEqual(w.cubeTabRevealMsOf(-40),0);assert.strictEqual(w.cubeTabRevealMsOf('x'),800);
+  assert.strictEqual(w.cubeTabRevealWords(0),'At once');assert.strictEqual(w.cubeTabRevealWords(800),'0.8 s per move');assert.strictEqual(w.cubeTabRevealWords(2000),'2.0 s per move');
+  assert.ok(rvR&&rvR.closest('.cw-aside')&&$('#cubeWinReveal').previousElementSibling===stage(),'the row sits under the stage, beside the picture');
+  assert.strictEqual(rvR.min,'0');assert.strictEqual(rvR.max,'2000');assert.ok(rvR.title&&rvP.closest('label').title,'both carry a title');
+  assert.strictEqual(rvR.value,'800','the slider starts at 800');assert.strictEqual(rvV.textContent,'0.8 s per move');
+  assert.ok(rvP.checked&&ev('cubeTab.revealPause'),'the pause is on by default');
+  assert.strictEqual(w.localStorage.getItem('cw:smartReveal'),null);assert.strictEqual(w.localStorage.getItem('cw:smartRevealPause'),null);
+  // 0: the moves of a case show all at once. The value is saved.
+  slide(0);assert.strictEqual(ev('cubeTab.revealMs'),0);assert.strictEqual(rvV.textContent,'At once');assert.strictEqual(w.localStorage.getItem('cw:smartReveal'),'0','saved');
+  {const back=w.parseAlg(w.invertAlg(scr.join(' ')));for(let j=0;j<back.length;j+=4){user(back.slice(j,j+4));await settled();}}
+  assert.ok(await until(()=>stName()==='Sune'&&!stage().classList.contains('stale'),2500),'the Sune again: '+stName());
+  assert.strictEqual(shownN(),ev('cubeTab.stage').moves.length,'at 0, every move shows at once: '+stMoves().join(' '));
+  assert.ok(!ev('cubeTab.revealTimer'),'and no timer runs');
+  // 300: one move per 300 ms.
+  slide(300);assert.strictEqual(rvV.textContent,'0.3 s per move');assert.strictEqual(w.localStorage.getItem('cw:smartReveal'),'300');
+  {const sm=ev('cubeTab.stage').moves;for(let j=0;j<sm.length;j+=4){user(sm.slice(j,j+4));await settled();}}
+  assert.ok(await until(()=>stName()==='Solved',2500),'the Sune done: '+stName());
+  for(let j=0;j<setup.length;j+=4){user(setup.slice(j,j+4));await settled();}
+  assert.ok(await until(()=>stName()==='T perm'&&!stage().classList.contains('stale'),2500),'T perm: '+stName());
+  const tpn=ev('cubeTab.stage').moves.length;assert.ok(tpn>=10);
+  assert.ok(shownN()<=1,'a new case starts hidden: '+stMoves().join(' '));
+  assert.ok(await until(()=>shownN()>=1,1000),'one move shows');assert.ok(shownN()<=2,'not all at once: '+shownN());
+  assert.ok(await until(()=>shownN()>=2,1000),'then the next');assert.ok(shownN()<tpn,'still not all: '+shownN());
+  // A slider moved during a reveal acts at once: 0 shows the rest now.
+  slide(0);assert.strictEqual(shownN(),tpn,'0 in the middle of a reveal shows the rest at once');
+  // Paused (the default): turns stop the reveals and fade the stage. A U turn and back keeps the case.
+  slide(300);
+  // U and U' by turns, one per 80 ms (the cube is never still for stillMs), then back where it was.
+  // It gives the moves shown at the last turn, before the cube is still again.
+  const turnAbout=async(ms,each)=>{const t=Date.now();let k=0,n;while(Date.now()-t<ms){user([k%2?"U'":'U']);k++;await sleep(80);each&&each();}n=shownN();if(k%2){user(["U'"]);}await settled();return n;};
+  // A new T perm reveal to watch: put the cube through the case and set it up again (a fresh case).
+  {const tm=ev('cubeTab.stage').moves;for(let j=0;j<tm.length;j+=4){user(tm.slice(j,j+4));await settled();}}
+  assert.ok(await until(()=>stName()==='Solved',2500),'the T perm done: '+stName());
+  for(let j=0;j<setup.length;j+=4){user(setup.slice(j,j+4));await settled();}
+  assert.ok(await until(()=>stName()==='T perm'&&shownN()>=1,2500),'T perm again, revealing: '+stName()+' '+shownN());
+  {let c=-1,staleAll=true;const n=await turnAbout(900,()=>{const f=stage().classList.contains('stale');if(c<0){if(f)c=shownN();}else if(!f)staleAll=false;});
+    assert.ok(c>=0&&staleAll,'paused: the turns fade the stage');assert.ok(c<tpn,'moves left to show');assert.strictEqual(n,c,'no move shows while the cube turns');}
+  assert.ok(await until(()=>stName()==='T perm'&&!stage().classList.contains('stale'),1500),'still again, the same case');
+  // Unpaused: the reveals go on through the turns, and the stage does not fade. The box is saved.
+  click(rvP);assert.ok(!rvP.checked);
+  assert.strictEqual(ev('cubeTab.revealPause'),false);assert.strictEqual(w.localStorage.getItem('cw:smartRevealPause'),'false','saved');
+  {const c=shownN();assert.ok(c<tpn-3,'moves left to show: '+c);let faded=false;
+    const n=await turnAbout(1000,()=>{if(stage().classList.contains('stale'))faded=true;});
+    assert.ok(!faded,'no fade while the cube turns');assert.ok(n>=c+2,'the moves keep showing through the turns: '+c+' then '+n);}
+  assert.ok(await until(()=>!ev('cubeTab.stillTimer'),1500));assert.strictEqual(stName(),'T perm','the same case after the turns');
+  // Back to the defaults for what follows.
+  click(rvP);assert.ok(ev('cubeTab.revealPause'));assert.strictEqual(w.localStorage.getItem('cw:smartRevealPause'),'true');
+  run('cubeTab.revealMs=120');
   // The hold stays through a change of tab.
   w.goTab('solve');w.goTab('smart');assert.strictEqual(ev('cubeTab.hold'),holdOf('z2'),'the hold survives a change of tab');
   assert.ok(same(winPolys(),fixed(w.applyAlg(cur,['z2']))),'and so does the picture');

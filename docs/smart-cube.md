@@ -156,8 +156,17 @@ needs one; otherwise one turn of the whole cube (x, x', z, z', z2 or x2) comes
 first in the moves, z2 for a cross on top so the front stays. The window reads
 the stage only after the cube has been still for 1200 ms (`cubeTab.stillMs`);
 a turn fades the panel but leaves it there. The moves show hidden (a dot
-each), and every 1500 ms more without a turn (`cubeTab.revealMs`) one more
-shows. Only a change of the cube counts as a turn (`cubeTabStir`, from
+each), and every `cubeTab.revealMs` more without a turn one more shows
+(1500 ms up to 1.47; from 1.48.0 the Reveal slider under the stage sets it, 0 to
+2000 ms in steps of 100, 800 by default, kept in `cw:smartReveal`; at 0 every
+move shows at once, and a change acts at once on a reveal in progress,
+`cubeTabSetReveal`). Beside the slider, Pause the reveal while I turn
+(`cubeTab.revealPause`, `cw:smartRevealPause`, on by default) is the behavior
+above: a turn stops the reveals and fades the panel. Off, a turn neither fades
+the panel nor stops the timer, so the moves keep showing while the user makes
+them; once the cube is still the stage is read again as usual, the same case
+keeps its timer (`cubeTabSettle` does not restart it) and a new case starts a
+reveal of its own. Only a change of the cube counts as a turn (`cubeTabStir`, from
 `cubeTabShow`): a cube can send its state again with no turn, and version
 1.10.1 stopped a state that matches the picture from putting the reveals off,
 which had kept every move a dot. A `move` message only asks for the state;

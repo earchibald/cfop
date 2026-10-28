@@ -55,14 +55,21 @@
 // and nothing here changes for it.
 // Beside the picture, the stage of a CFOP solve (cfopStage, stage.js): Cross, F2L, or the two-look
 // case ("Sune") with the hold under it and its moves hidden. The stage is read only after the
-// cube has been still for `stillMs` (1200); every `revealMs` (1500) more without a turn, one
-// more move shows. A turn fades what is shown but leaves it there, until the cube is still
-// again. A pause part way through the algorithm keeps the case, with the moves done so far
-// marked (cfopStageDone); the same case read again (after a U turn, say) keeps the moves already
+// cube has been still for `stillMs` (1200); every `revealMs` more without a turn, one more move
+// shows. A turn fades what is shown but leaves it there, until the cube is still again. A pause
+// part way through the algorithm keeps the case, with the moves done so far marked
+// (cfopStageDone); the same case read again (after a U turn, say) keeps the moves already
 // revealed. The stage never falls back on its own: a reading further back than the stage shown
 // (a Sune breaks the cross with its first move) keeps the stage, cubeTabBehind, until the cube is
 // at or past it again, or more moves have gone by since it was read (`since`) than the user needs
 // for it. A turn of the whole cube with the cube still reads the stage again at once.
+// The reveal row (1.48.0), under the stage: a Reveal slider sets `revealMs`, 0 to 2000 in steps
+// of 100 (kept in cw:smartReveal, 800 by default; 1500 before): 0 shows every move of the case at
+// once. A change acts at once on a reveal in progress (cubeTabSetReveal). Beside it, Pause the
+// reveal while I turn (`revealPause`, kept in cw:smartRevealPause, on by default): on, a turn stops
+// the reveals and fades the stage, as above. Off, a turn neither fades the stage nor stops its
+// timer: the moves of the case keep showing as the user makes them. The stage is still read again
+// once the cube is still; the same case keeps its timer, and a new case starts a reveal of its own.
 // The lock (1.40.0): a Lock button beside Reset view, on by default (`lock`, kept in cw:smartLock).
 // Locked, the picture stays on the hold and the tilt is not used: no band, and Reset view is off.
 // Unlocked, the picture follows the tilt as above, and Reset view lines it up with the hold. The
@@ -81,10 +88,16 @@
 const cubeTab={conn:null,name:'',shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,
   q:null,qTo:null,qraf:0,qAt:0,moves:[],colors:[],hold:null,
   gyro:false,raw:null,basis:null,away:null,awayTimer:0,awayMs:500,awayDeg:55,backDeg:40,warn:false,
-  stage:null,done:0,revealed:0,stale:false,stillTimer:0,revealTimer:0,stillMs:1200,revealMs:1500,since:0,keepMoves:12,battery:null,look:'',
+  stage:null,done:0,revealed:0,stale:false,stillTimer:0,revealTimer:0,stillMs:1200,revealMs:cubeTabRevealMsOf(typeof store==='undefined'?undefined:store.get('smartReveal')),since:0,keepMoves:12,battery:null,look:'',
   lock:typeof store==='undefined'||store.get('smartLock',true)!==false,
+  revealPause:typeof store==='undefined'||store.get('smartRevealPause',true)!==false,
   front:typeof store!=='undefined'&&store.get('smartFront',false)===true};
 const CUBE_TAB_SHOWN=10;
+// The Reveal slider's wait, from a saved value: a whole number of ms, 0 to 2000; 800 when unset.
+// (A function declaration: cubeTab, above it, calls it at load.)
+function cubeTabRevealMsOf(v){const n=Math.round(Number(v));return v==null||v===''||!isFinite(n)?800:Math.min(2000,Math.max(0,n));}
+// The wait in words, beside the slider.
+function cubeTabRevealWords(ms){return ms<=0?'At once':`${(ms/1000).toFixed(1)} s per move`;}
 // The two cameras of the picture (1.41.0): from above and to the right, three faces in view (the
 // default); and straight on, the front face alone until the tilt turns the cube. Front view
 // switches them (`front`, kept in cw:smartFront), the button and the V key. Straight on, the faces
@@ -147,6 +160,8 @@ function cubeTabMount(){
   $('#cubeWinLock').onclick=()=>cubeTabSetLock(!cubeTab.lock);
   $('#cubeWinHidden').onclick=()=>setHidden(!hiddenOn());
   $('#cubeWinFront').onclick=()=>cubeTabSetFront(!cubeTab.front);
+  $('#cubeWinRevealMs').oninput=e=>cubeTabSetReveal(e.target.value);
+  $('#cubeWinRevealPause').onchange=e=>cubeTabSetRevealPause(e.target.checked);cubeTabRevealDraw();
   $('#cubeWinMatch').onclick=cubeTabMatch;$('#cubeWinKeep').onclick=cubeTabKeep;$('#cubeWinReset').onclick=cubeTabKeep;
   if(typeof smartListenMount==='function')smartListenMount(); // the voice commands (smart-listen.js)
   document.addEventListener('cw:tab',e=>cubeTabTab(e.detail));
@@ -531,10 +546,12 @@ function cubeTabTurn(m){
 // ----- the stage beside the picture -----
 // The cube turned (its state differs from the picture): fade the stage, and read it again once the
 // cube has been still for stillMs. Only a change counts: a cube can send its state again on its
-// own, and a state that matches the picture must not put the reveals off.
+// own, and a state that matches the picture must not put the reveals off. With Pause the reveal
+// while I turn off, the stage does not fade and the reveals go on.
 function cubeTabStir(){
-  clearTimeout(cubeTab.stillTimer);clearTimeout(cubeTab.revealTimer);cubeTab.revealTimer=0;
-  if(cubeTab.stage&&!cubeTab.stale){cubeTab.stale=true;cubeTabStageDraw();}
+  clearTimeout(cubeTab.stillTimer);
+  if(cubeTab.revealPause){clearTimeout(cubeTab.revealTimer);cubeTab.revealTimer=0;
+    if(cubeTab.stage&&!cubeTab.stale){cubeTab.stale=true;cubeTabStageDraw();}}
   cubeTab.stillTimer=setTimeout(cubeTabSettle,cubeTab.stillMs);
 }
 // The cube is still: read the stage. Part way through the algorithm shown, the case stays and the
@@ -543,17 +560,19 @@ function cubeTabStir(){
 function cubeTabSettle(){
   clearTimeout(cubeTab.stillTimer);cubeTab.stillTimer=0;
   const held=cubeTabHeld(cubeTab.target);if(!held)return;
-  const old=cubeTab.stage,k=old?cfopStageDone(old,held):0;
+  const old=cubeTab.stage,k=old?cfopStageDone(old,held):0;let fresh=false;
   if(k>0&&k<old.moves.length){cubeTab.done=k;cubeTab.revealed=Math.max(cubeTab.revealed,k);}
   else{
     const st=cfopStage(held,typeof store!=='undefined'?store.get('crossColor','white'):'white');
     if(old&&cubeTabBehind(old,st))cubeTab.done=0;
     else{
-      const same=old&&old.stage===st.stage&&old.name===st.name;
+      const same=old&&old.stage===st.stage&&old.name===st.name;fresh=!same;
       cubeTab.stage=st;cubeTab.done=0;cubeTab.revealed=same?Math.min(cubeTab.revealed,st.moves.length):0;cubeTab.since=0;
     }
   }
-  cubeTab.stale=false;cubeTabStageDraw();cubeTabRevealLater();
+  cubeTab.stale=false;cubeTabStageDraw();
+  // The reveals went on through the turns (no pause): the same case keeps its timer.
+  if(fresh||!cubeTab.revealTimer)cubeTabRevealLater();
 }
 // `st`, read now, falls behind `old`, the stage shown, and the user may be part way through `old`:
 // a Sune breaks the cross with its first move, and any other way through the algorithm (another
@@ -565,11 +584,32 @@ function cubeTabBehind(old,st){
   if(old.stage==='solved'||old.stage==='cross')return false;
   return stageRank(st.stage)<stageRank(old.stage)&&cubeTab.since<=Math.max(cubeTab.keepMoves,2*old.moves.length+4);
 }
-// One more move shows every revealMs, until all of them show.
+// One more move shows every revealMs, until all of them show. At 0 they all show at once.
 function cubeTabRevealLater(){
   clearTimeout(cubeTab.revealTimer);cubeTab.revealTimer=0;
   const st=cubeTab.stage;if(!st||cubeTab.revealed>=st.moves.length)return;
+  if(cubeTab.revealMs<=0){cubeTab.revealed=st.moves.length;cubeTabStageDraw();return;}
   cubeTab.revealTimer=setTimeout(()=>{cubeTab.revealTimer=0;cubeTab.revealed++;cubeTabStageDraw();cubeTabRevealLater();},cubeTab.revealMs);
+}
+// The Reveal slider: the new wait acts at once on a reveal in progress. The pause box: on while
+// the cube turns, the reveal stops and the stage fades; off, a faded stage comes back and its
+// reveal goes on.
+function cubeTabRevealing(){const st=cubeTab.stage;return !!(cubeTab.conn&&st&&!cubeTab.stale&&cubeTab.revealed<st.moves.length);}
+function cubeTabSetReveal(ms){
+  cubeTab.revealMs=cubeTabRevealMsOf(ms);if(typeof store!=='undefined')store.set('smartReveal',cubeTab.revealMs);
+  cubeTabRevealDraw();
+  if(cubeTabRevealing())cubeTabRevealLater();
+}
+function cubeTabSetRevealPause(on){
+  cubeTab.revealPause=!!on;if(typeof store!=='undefined')store.set('smartRevealPause',cubeTab.revealPause);
+  cubeTabRevealDraw();
+  if(on&&cubeTab.stillTimer){clearTimeout(cubeTab.revealTimer);cubeTab.revealTimer=0;if(cubeTab.stage&&!cubeTab.stale){cubeTab.stale=true;cubeTabStageDraw();}}
+  else if(!on&&cubeTab.stale&&cubeTab.stage){cubeTab.stale=false;cubeTabStageDraw();if(cubeTabRevealing())cubeTabRevealLater();}
+}
+function cubeTabRevealDraw(){
+  const r=$('#cubeWinRevealMs'),v=$('#cubeWinRevealVal'),p=$('#cubeWinRevealPause');if(!r)return;
+  r.value=String(cubeTab.revealMs);r.setAttribute('aria-valuetext',cubeTabRevealWords(cubeTab.revealMs));v.textContent=cubeTabRevealWords(cubeTab.revealMs);
+  p.checked=cubeTab.revealPause;
 }
 function cubeTabStageStop(){clearTimeout(cubeTab.stillTimer);clearTimeout(cubeTab.revealTimer);cubeTab.stillTimer=cubeTab.revealTimer=0;}
 function cubeTabStageReset(){cubeTabStageStop();cubeTab.stage=null;cubeTab.done=cubeTab.revealed=cubeTab.since=0;cubeTab.stale=false;}
