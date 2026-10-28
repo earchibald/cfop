@@ -52,7 +52,7 @@ const ST_MOVE_WORDS={
 // user has not met the letters.
 function stMoveSay(m){const w=ST_MOVE_WORDS[m[0]];if(!w)return m;return `${w[0]} face, ${/['′]/.test(m)?'counterclockwise':'clockwise'}`;}
 const ST_HIDDEN={D:'The bottom face is hidden. You see its edge.',B:'The back face is hidden. You see its edge.',L:'The left face is hidden. You see its edge.'};
-const START={on:false,screen:'level',level:null,src:'mine',kind:null,found:false,face:'R',prime:false,
+const START={on:false,screen:'level',level:null,src:'mine',kind:null,found:false,
   check:null,sets:null,caseSet:null,quiz:null,five:null,sc:null,last:'—',way:null};
 function startEl(){let el=$('#start');if(el)return el;el=document.createElement('div');el.id='start';el.className='start hidden';
   el.setAttribute('role','region');el.setAttribute('aria-label','Getting started');$('header.top').after(el);return el;}
@@ -170,19 +170,45 @@ function stFound(){START.found=true;if(START.sc)START.sc.bump(new Set([ST_FIND])
   const b=$('#stFound button');if(b)try{b.focus({preventScroll:true});}catch(e){}}
 // The moves page is where the letters come in: the face names first, then one letter for each.
 // Level 2 has a short one before the cube question: it can turn a cube, but may not know the letters.
-function stMovesPage(short){const f=START.face,p=START.prime;const w=ST_MOVE_WORDS[f];
-  const doIt=w[p?2:1]+` Then ${p?f:f+'′'} turns it back.`;
+function stMovesPage(short){
   const intro=short?`<p>The lessons write each move as a letter: <b class="mono">U D F B R L</b>. They are up (the top), down, front, back, right and left, as you hold the cube: white on top, green toward you.</p>`
-    :`<p>Each face has a name, as you hold the cube: up (the top), down (the bottom), front, back, right and left. The guide writes each one as its first letter: <b class="mono">U D F B R L</b>.</p>`;
+    :`<p>Each face of the cube has a name, with front facing you:</p>
+    <ul class="st-faces"><li>Up (the top)</li><li>Down (the bottom)</li><li>Front</li><li>Back</li><li>Right</li><li>Left</li></ul>`;
   const foot=short?`${stBack('level','← Change my level')}<span class="spacer"></span><button class="primary" data-go="t2-cube" title="Pick the cube to learn with">I know the six moves →</button>`
     :`${stBack('t1-pieces')}<span class="spacer"></span><button class="primary" data-go="t1-done" title="Finish the basics">I know the six moves →</button>`;
   return `${short?stBar('Before you start'):stBasicsBar(4)}
   <div class="st-split"><div class="st-text"><span class="st-lbl">${short?'Before you start':'Basics · 4 of 4'}</span><h1>The six moves</h1>${intro}
-    <p>The letter alone turns that face clockwise, as you look straight at that face. A <b>′</b> after the letter turns it the other way.</p>
-    <div class="row st-moves">${['U','D','F','B','R','L'].map(x=>`<button class="st-move${p?' prime':''}" data-face="${x}" aria-pressed="${x===f}" title="${ST_MOVE_WORDS[x][0]} face">${x}${p?'′':''}</button>`).join('')}<button class="st-move st-prime" data-prime="1" aria-pressed="${p}" title="Turn the other way">′ other way</button></div>
-    <div class="st-box st-say"><span><b class="mono${p?' mod':''}">${f}${p?'′':''}</b> · ${w[0]}</span><span>${esc(doIt)}</span><button class="small" data-show="1" title="Turn the layer on the picture, then back">Show me</button></div>
+    <p>Relative to you, the letter for a face turns that face clockwise. A <b>′</b> after the letter turns it the other way. We call the marking "prime", so a counterclockwise <b class="mono">R′</b> is pronounced "R prime".</p>
+    ${stMoveBtns(['U','D','F','B','R','L'],'The six moves, then the six the other way')}
     <div class="st-foot">${foot}</div></div>
   ${stCubeSide()}</div>`;}
+// The twelve buttons, the moves over their primes, and the line that names each one as it turns.
+function stMoveBtns(faces,label){
+  const btn=(f,p)=>`<button class="st-move${p?' prime':''}" data-mv="${f}${p?"'":''}" title="${stMoveName(f)}, ${p?'counterclockwise':'clockwise'}, then back">${f}${p?'′':''}</button>`;
+  return `<div class="st-moves" role="group" aria-label="${label}">${faces.map(f=>btn(f,false)).join('')}${faces.map(f=>btn(f,true)).join('')}</div>
+    <div class="st-box st-say" id="stMoveSay" aria-live="polite"><span>Click a move. It turns on the picture, then the other way turns it back.</span></div>`;}
+// A fat move (a small letter: r) turns its face and the middle layer next to it. No page uses one
+// yet: the fat moves page waits for the CFOP intro (docs/onboarding.md, Rework 4).
+const ST_MID={R:[[0,[1,4,7]],[2,[1,4,7]],[3,[1,4,7]],[5,[1,4,7]]],U:[[1,[3,4,5]],[2,[3,4,5]],[4,[3,4,5]],[5,[3,4,5]]],
+  F:[[0,[3,4,5]],[3,[3,4,5]],[1,[1,4,7]],[4,[1,4,7]]]};ST_MID.L=ST_MID.R;ST_MID.D=ST_MID.U;ST_MID.B=ST_MID.F;
+function stMoveLayers(f){const F=f.toUpperCase(),s=stLayer(F);if(f!==F)for(const [face,pos] of ST_MID[F])for(const p of pos)s.add(9*face+p);return s;}
+function stMoveName(f){const w=ST_MOVE_WORDS[f.toUpperCase()][0];return f===f.toUpperCase()?w+' face':w+' two layers';}
+function stMoveWords(f,p){const t=ST_MOVE_WORDS[f.toUpperCase()][p?2:1];return f===f.toUpperCase()?t:t.replace(/\bface\b/,'two layers');}
+// The words for one move: "U · Up face, clockwise", then what the hands do.
+function stMoveLine(m){const f=m[0],p=m.endsWith("'");
+  return `<span><b class="mono${p?' mod':''}">${f}${p?'′':''}</b> · ${stMoveName(f)}, ${p?'counterclockwise':'clockwise'}</span><span>${esc(stMoveWords(f,p))}</span>`;}
+// A click on a move: its button lights, and its layer lights and turns. Then the other way lights
+// and turns it back, and the picture is solved again. A new click starts over from solved.
+const ST_MOVE_T={glow:250,turn:650,next:1500};
+function stMoveShow(m){const sc=START.sc,el=startEl();if(!sc)return;const run=START.moveRun=(START.moveRun||0)+1;
+  const f=m[0],back=m.endsWith("'")?f:f+"'",live=()=>START.moveRun===run&&START.sc===sc,T=ST_MOVE_T;
+  const btn=x=>el.querySelector(`.st-move[data-mv="${x}"]`),say=$('#stMoveSay'),cap=$('#stCap');
+  const lit=x=>{el.querySelectorAll('.st-move.on').forEach(b=>b.classList.remove('on'));const b=x&&btn(x);if(b)b.classList.add('on');};
+  sc.set(new Cube(),stMoveLayers(f));if(cap)cap.textContent=ST_HIDDEN[f.toUpperCase()]||'The lit stickers turn with '+f+'.';
+  const step=x=>{lit(x);if(say)say.innerHTML=stMoveLine(x);setTimeout(()=>{if(live())sc.turn(x,{dur:T.turn});},T.glow);};
+  step(m);
+  setTimeout(()=>{if(live())step(back);},T.next);
+  setTimeout(()=>{if(!live())return;lit(null);sc.set(sc.cube,null);},2*T.next);}
 START_SCREENS['t1-moves']=()=>stMovesPage(false);
 START_SCREENS['t2-moves']=()=>stMovesPage(true);
 
@@ -313,7 +339,7 @@ function startCubeMount(){const box=$('#stCube');if(!box)return;const scr0=START
   if(scr0==='t1-what')cap='Drag to look around the cube. Double-click to put it back.';
   if(scr0==='t1-hold'){fade=stFaces([4]);cap='Drag to look at the other faces. Double-click and it comes back to white on top, green toward you.';}
   if(scr0==='t1-pieces')cap=ST_KIND_SAY[START.found?'find':START.kind||'none'];
-  if(scr0==='t1-moves'||scr0==='t2-moves'){fade=stLayer(START.face);cap=ST_HIDDEN[START.face]||'The lit stickers move with '+START.face+'.';}
+  if(scr0==='t1-moves'||scr0==='t2-moves')cap='Click a move to see it turn. Drag to look around. Double-click to put the view back.';
   // Only the keys page takes the keys: the basics come before the cube question.
   const keys=scr0==='t1-keys';
   // The screen cube keeps its state from page to page; a lit page shows it solved.
@@ -343,10 +369,8 @@ function startWire(el){
     const c=$('#stCap');if(c)c.textContent=ST_KIND_SAY[k];if(START.sc)START.sc.bump(stFaces(ST_PIECES[k]));});
   on('[data-hint]',()=>{const c=$('#stCap');if(c)c.textContent=ST_KIND_SAY.find;if(START.sc)START.sc.bump(new Set([ST_FIND]),{stay:START.found});});
   on('[data-hold]',b=>stHoldShow(b.dataset.hold));
-  on('[data-face]',b=>{START.face=b.dataset.face;startDraw();});
-  on('[data-prime]',()=>{START.prime=!START.prime;startDraw();});
+  on('[data-mv]',b=>stMoveShow(b.dataset.mv));
   on('[data-demo]',()=>{const sc=START.sc;if(!sc)return;sc.turn('R');setTimeout(()=>{if(START.sc===sc)sc.turn("R'");},900);});
-  on('[data-show]',()=>{const sc=START.sc;if(!sc)return;const m=START.face+(START.prime?"'":'');sc.turn(m);setTimeout(()=>{if(START.sc===sc)sc.turn(invertAlg([m])[0]);},900);});
   on('[data-finish]',b=>startEnd(b.dataset.finish));
   on('[data-t2go]',()=>{if(START.src==='screen')startGo('t1-keys');else if(START.src==='smart')startFinish('beginner','learn',()=>openSmart());else startFinish('beginner','learn');});
   on('[data-way]',b=>{START.way=b.dataset.way;START.check=null;startGo(b.dataset.to);});
