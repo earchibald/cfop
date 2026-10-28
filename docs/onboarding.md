@@ -25,11 +25,12 @@ frames, read 2026-10-27). This branch builds it into the site as a first pass. E
 |---|---|---|
 | 0 · Welcome: your cube level | `js/start.js` (`START_SCREENS.level`) | Opens on a first visit (no `cw:method`, no `cw:level`) in place of the method menu. Also: Paste my data, and Skip: look around first. |
 | 0 · Where each level goes | `LEVELS` in `js/start.js` | The routing table is the code, not a page. |
-| 1.1 Do you have a cube? | `t1-have` | Yes: My cube. No: the screen cube. |
-| 1.2 Meet the screen cube | `t1-keys`, `js/screencube.js` | The lab's four key layouts, Shift for prime, drag to look around, double-click to reset. On a touch screen, six buttons under the cube. |
-| 1.3–1.5 Basics: hold, pieces, six moves | `t1-hold`, `t1-pieces`, `t1-moves` | The My cube / Screen cube switch is on each page. The lit stickers use the picture's `fade`. Show me turns the layer and back. |
-| 1.6 Basics learned | `t1-done` | Marks `beg-0` finished; Start the beginner method goes to Learn. |
-| 2.1 Which cube will you use? | `t2-cube` | Smart cube opens the Smart cube window after. Screen cube goes through 1.2 first. |
+| 1.1 Do you have a cube? | removed in 1.49.0 | See "Rework 1" below: the basics come first, the cube question after them. |
+| new · Meet the cube | `t1-what` | Basics 1 of 4. What the cube is: six faces, nine stickers each, solved is one color per face, a turn mixes it. Show me a turn turns one face on the picture and back, with no letter. |
+| 1.3–1.5 Basics: hold, pieces, six moves | `t1-hold`, `t1-pieces`, `t1-moves` | Basics 2, 3 and 4 of 4. One picture for everyone: a drag looks around it, no key turns it, no My cube / Screen cube switch. The lit stickers use the picture's `fade`. The moves page is the first page with a move letter. Show me turns the layer and back. |
+| 1.6 Basics learned | `t1-done` | Reaching it marks `beg-0` finished. Next: pick your cube goes to 2.1. |
+| 2.1 Which cube will you use? | `t2-cube` | Level 1 after the basics; level 2 at once. Smart cube opens the Smart cube window after. Screen cube goes through 1.2 first. |
+| 1.2 Meet the screen cube | `t1-keys`, `js/screencube.js` | Only after 2.1, for the screen cube. The lab's four key layouts, Shift for prime, drag to look around, double-click to reset. The last turn is in words ("Right face, clockwise"). On a touch screen the keyboard parts are hidden and six buttons, named in words, sit under the cube. |
 | 2.2 Beginner home, no player on top | `js/place.js`, `begCubeLine` in `js/start-app.js` | The cube line under Up next, with Change (the cube menu). |
 | 2.3 A step, the cube in the section | `js/place.js` | The lessons keep their own pages; the player is beside them, not on top. |
 | 2.4 All learned: on to CFOP | `begCfopCard` | On the Progress tab when Basics and the eight steps are all finished. |
@@ -48,6 +49,45 @@ frames, read 2026-10-27). This branch builds it into the site as a first pass. E
 | 5.1 Setup, one screen | `t5-setup` | Full CFOP marks every case. Hide the time while I solve is `cw:hideTime`. Random-state is the length menu. |
 | 5.2 Home is the timer | `timerHomeApply`, `weakDraw` | `cw:timerHome`: a large timer on the Scramble tab, Weak spots (the slowest case drills), Today. |
 
+## Rework 1: the basics before the cube (1.49.0)
+
+**Why.** A true beginner was asked "Do you have a cube?" before they knew what the cube is. If they
+picked the screen cube, the next page showed "Last turn: R′", and on a phone the buttons said
+U D F B R L: move letters the beginner had not met.
+
+**Level 1 now goes:**
+
+1. **Meet the cube** (`t1-what`): what it is, its faces and colors, what solved means, what a turn does.
+2. **Hold it like this** (`t1-hold`): the centers, white up, green toward you, the opposite colors.
+3. **Three kinds of pieces** (`t1-pieces`): centers, edges, corners, and find the white and green edge.
+4. **The six moves** (`t1-moves`): the face names first, then the letters `U D F B R L` and the ′.
+5. **You know the basics** (`t1-done`): Basics is marked Learned.
+6. **Which cube will you use?** (`t2-cube`): My cube, Smart cube or Screen cube.
+7. For the screen cube only, **Meet your screen cube** (`t1-keys`), then a mixed-up cube in the player.
+8. The beginner method, on Learn.
+
+**The rules this keeps:**
+
+- No question about a cube before the basics are done. Pages 1 to 4 say "the picture" and add "Have a
+  cube? ..." where it helps. None of them assumes the user has one.
+- No move letter on a page before the moves page. `test/start.js` checks the text of pages 1 to 3.
+- The picture in the basics takes no keys. A drag looks around it, and a double click puts it back.
+- The screen cube's page names a turn in words. Level 2 reaches it without the basics, so it must
+  not need the letters either.
+
+**Level 2** is unchanged: the cube question comes first, then the keys page for the screen cube.
+
+**Removed:** `t1-hold`'s My cube / Screen cube switch (`stSrcToggle`), the "Now look at your cube"
+label, and the `START.keysNext` routing.
+
+**Open:**
+
+- Should level 2 see a short "the six moves" page before the beginner method? Lesson 0 on Learn teaches
+  the letters too.
+- Show me a turn on page 1 turns the right face. Should it show several turns that mix the cube up,
+  then undo them?
+- On a phone the picture sits under the text. Should it go above?
+
 ## Not built yet
 
 - csTimer import (5.1 shows the button, turned off).
@@ -60,7 +100,7 @@ frames, read 2026-10-27). This branch builds it into the site as a first pass. E
 
 ## Open questions (from the storyboard's sticky)
 
-1. Track 1 basics: one long lesson, or three short pages (built: three)?
+1. Track 1 basics: one long lesson, or short pages (built: four since 1.49.0, with Meet the cube first)?
 2. Screen cube: in every section, or only where a section draws the cube (built: the player in any section)?
 3. Beginner rail: does Solve my cube become Scramble too (built: no)?
 4. Is the level asked again from the top bar menu (built: yes, Your level · Change)?
