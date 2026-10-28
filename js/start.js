@@ -19,7 +19,7 @@
 //   Level 5, already a speedcuber: one setup page, then the Scramble tab with a large timer.
 // n is the id that cw:level keeps. There is no 2 now: it was "played but never solved".
 const LEVELS=[
-  {n:1,name:"I've never solved one!",sub:'New to the cube, or you can turn it but have never solved it.',goes:'→ Basics, then your first solve',first:'t1-what',tip:'Start with the basics, then solve your first cube'},
+  {n:1,name:"I've never solved one!",sub:"New to the cube, or you've played around but never solved it. ...at least, not on purpose.",goes:'→ Basics, then your first solve',first:'t1-what',tip:'Start with the basics, then solve your first cube'},
   {n:3,name:'Have solved it',sub:'You can solve it, slowly or with notes.',goes:'→ Check, then CFOP',first:'t3-start',tip:'Review the beginner method'},
   {n:4,name:'Know advanced algorithms',sub:'You know some CFOP: F2L, OLL or PLL.',goes:'→ CFOP sets',first:'t4-sets',tip:'Go to CFOP'},
   {n:5,name:'Already a speedcuber',sub:'You time your solves. You want drills.',goes:'→ CFOP, timer',first:'t5-setup',tip:'Go to CFOP with the timer'}];
@@ -96,7 +96,7 @@ const START_SCREENS={};
 // ---------- 0 · the level ----------
 START_SCREENS.level=()=>{const first=store.get('level',null)==null;
   return `${stBar('',first?'':`<button class="st-link" data-close="1" title="Back to the page">Close</button>`)}
-  <div class="st-center"><div class="st-head"><h1>What's your cube level?</h1><p>Pick one. We start you in the right place. You can change it later.</p></div>
+  <div class="st-center"><div class="st-head"><h1>How do you feel about solving cubes?</h1><p>Pick one. It should do you right. It's easy to jump around later.</p></div>
   <div class="st-levels">${LEVELS.map(l=>`<button class="st-level" data-level="${l.n}" title="${esc(l.tip)}"><span class="lvbars" aria-hidden="true">${stBars(l.n)}</span><b>${esc(l.name)}</b><span class="muted">${esc(l.sub)}</span><span class="st-goes">${esc(l.goes)}</span></button>`).join('')}</div>
   <p class="muted st-small">Your times and history stay on this device.</p>
   <p class="st-small"><button class="st-link" data-paste="1" title="Paste the data that you copied in another browser with Settings &gt; Copy my data">Used Twistwright in another browser? Paste my data</button> · <button class="st-link" data-close="1" title="Close this and look at the whole site">Skip: look around first</button></p></div>`;};

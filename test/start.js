@@ -38,6 +38,8 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   // Level 1, I've never solved one: the basics first (no cube question, no move letter before the
   // moves page, no keys), then which cube, the virtual cube's keys, then the first solve.
   assert.ok(/I've never solved one!/.test($('#start [data-level="1"]').textContent)&&!$('#start [data-level="2"]'),'levels 1 and 2 are one level');
+  assert.ok(/How do you feel about solving cubes\?/.test($('#start h1').textContent)&&/jump around later/.test($('#start .st-head p').textContent),'the level page heading');
+  assert.ok(/not on purpose/.test($('#start [data-level="1"]').textContent),'the words of the first level');
   $('#start [data-level="1"]').click();assert.strictEqual($('#start').dataset.screen,'t1-what');
   const letters=/(^|[^\w])[UDFBRL]['′]?($|[^\w])/;
   for(const s of ['t1-what','t1-hold','t1-pieces']){

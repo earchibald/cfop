@@ -23,7 +23,7 @@ frames, read 2026-10-27). This branch builds it into the site as a first pass. E
 
 | Frame | Built in | Notes |
 |---|---|---|
-| 0 · Welcome: your cube level | `js/start.js` (`START_SCREENS.level`) | Opens on a first visit (no `cw:method`, no `cw:level`) in place of the method menu. Also: Paste my data, and Skip: look around first. |
+| 0 · Welcome: your cube level | `js/start.js` (`START_SCREENS.level`) | Opens on a first visit (no `cw:method`, no `cw:level`) in place of the method menu. From 1.56.1 the heading is "How do you feel about solving cubes?", then "Pick one. It should do you right. It's easy to jump around later." Also: Paste my data, and Skip: look around first. |
 | 0 · Where each level goes | `LEVELS` in `js/start.js` | The routing table is the code, not a page. Four levels from 1.54.0 (see Rework 6); the ids stay 1, 3, 4, 5. |
 | 1.1 Do you have a cube? | removed in 1.49.0 | See "Rework 1" below: the basics come first, the cube question after them. |
 | new · Meet the cube | `t1-what` | Basics 1 of 4. What the cube is: six faces, nine stickers each, solved is one color per face, a turn mixes it. Show me a turn turns one face on the picture and back, with no letter. |
