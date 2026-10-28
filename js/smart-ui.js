@@ -226,7 +226,9 @@ async function smartPick(known,where,why,seq){
   if(!link)throw new Error('The Twistwright app is not running. Open it, then press Connect again.');
   if(link.bluetooth==='unauthorized')throw new Error('macOS did not allow Bluetooth for Twistwright. Allow it in System Settings › Privacy & Security › Bluetooth, then press Connect again.');
   if(link.bluetooth==='poweredOff')throw new Error('Bluetooth is off on this Mac. Turn it on, then press Connect again.');
-  return smartList(link,known,where,why,seq);
+  // The look with no click (known is set) does not make macOS ask for Bluetooth. A press does.
+  if(known&&link.bluetooth==='notAsked')throw Object.assign(new Error('not asked'),{name:'NotAsked'});
+  return smartList(link,known,where,why,seq,!!known);
 }
 // The row of the look: a note, the cubes found as buttons (over the bridge) and Cancel, in the
 // dialog (#smartList) or the tab (#smartTabList). start(end, p) begins the look and returns what
@@ -249,8 +251,8 @@ function smartLookNote(names){return `Looking for ${names.map(smartNiceName).joi
 // End the look that `why` started (any look with no `why`), if it runs.
 function smartLookStop(why){if(smartLook&&(!why||smartLook.why===why))smartLook.end(null);}
 // The list over the bridge. A known cube ends the look as soon as the scan hears it, with the
-// address the scan carries or the one saved; any other cube is a button.
-function smartList(link,known,where,why,seq){
+// address the scan carries or the one saved; any other cube is a button. auto: the look with no click.
+function smartList(link,known,where,why,seq,auto){
   const names=known?Object.keys(known):[];if(!names.length)known=null;
   const seen=new Map();
   return smartRow(known?smartLookNote(names):'Looking for cubes. Turn a face to wake the cube up.',where,why,seq,(end,p)=>{
@@ -262,7 +264,7 @@ function smartList(link,known,where,why,seq){
       b.textContent=d.name;b.dataset.mac=d.mac||'';b.title='Connect to '+d.name;
       b.onclick=()=>end(bridgeDevice(link,{id:d.id,name:d.name,mac:b.dataset.mac||null}));
       if(!known)note.textContent='Choose your cube.';
-    });
+    },auto);
     const onEv=e=>{
       if(e.ev==='bluetooth'&&e.state==='unauthorized')note.textContent='macOS did not allow Bluetooth for Twistwright. Allow it in System Settings › Privacy & Security › Bluetooth.';
       if(e.ev==='bluetooth'&&e.state==='poweredOff')note.textContent='Bluetooth is off on this Mac.';
@@ -313,7 +315,7 @@ async function smartConnect(o){
   const hold={where,why,end:()=>{if(smartLook===hold)smartLook=null;smartPickSeq++;}};smartLook=hold;
   let device;
   try{device=await smartPick(auto?smartKnown():null,where,why,seq);}
-  catch(e){if(smartLook===hold)smartLook=null;if(seq===smartPickSeq)smartSay(where,e.name==='NotFoundError'?(auto?'Press Connect to look for your cube again.':'No cube was chosen. Turn the cube to wake it up, then press Connect again.'):'Bluetooth did not start: '+e.message);return;}
+  catch(e){if(smartLook===hold)smartLook=null;if(seq===smartPickSeq)smartSay(where,e.name==='NotAsked'?'Press Connect to look for your cube.':e.name==='NotFoundError'?(auto?'Press Connect to look for your cube again.':'No cube was chosen. Turn the cube to wake it up, then press Connect again.'):'Bluetooth did not start: '+e.message);return;}
   if(smartLook===hold)smartLook=null;
   if(seq!==smartPickSeq||smartConn||smartBusy)return;
   if(!device){smartSay(where,'Press Connect, then choose your cube in the list that the browser shows.');return;}

@@ -255,7 +255,9 @@ press. Leaving the tab ends the look that the tab began. When the link drops,
 the page looks for the cube again by itself, on any tab, and the reconnect does
 not move the page. Disconnect by hand stops this. The look's row moves to the
 dimmed panel while the link is down. Where the address is unknown, a press
-opens the dialog to ask for it; a look with no click does not. `test/smart-auto.js`.
+opens the dialog to ask for it; a look with no click does not. In the macOS
+app a look with no click waits while macOS has not asked for Bluetooth (the
+card says to press Connect). `test/smart-auto.js`.
 
 Version 1.37.0 adds the whole-cube turns by voice and puts the hold in terms
 of the top and the front. "X", "x prime", "x counterclockwise", "back x" and
@@ -463,7 +465,12 @@ The built-in pages still load the fonts from Google Fonts. With no connection
 the page uses the system fonts.
 
 CoreBluetooth starts on the first scan, so macOS asks for Bluetooth permission
-when the user presses Connect, not when the app opens.
+when the user presses Connect (or Allow in the Set Up window), not when the app
+opens. Until macOS has asked, the app gives the state as `notAsked`, and a scan
+the page sends with `auto` (the look with no click, as when the window opens on
+the Smart cube tab) starts nothing: before 1.47.3 that look brought up the
+question at launch, ahead of the Set Up window. When the state leaves
+`notAsked`, the page fires `cw:bridge` and the tab looks again.
 
 ### The page side
 

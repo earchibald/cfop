@@ -7,7 +7,7 @@ import CoreBluetooth
 // A page reaches it one of two ways: the page in the app's own window through a message handler
 // (PageClient, in Page.swift), and Safari through a WebSocket on 127.0.0.1 (SocketClient).
 //
-//   page → app   {op:"scan"} {op:"stop"} {op:"connect",id} {op:"disconnect",id}
+//   page → app   {op:"scan",auto?} {op:"stop"} {op:"connect",id} {op:"disconnect",id}
 //                {op:"notify",id,char} {op:"write",id,char,data,seq}
 //                {op:"migrate",data:{key:value},seq}  Safari only: its saved history, for the window
 //   app → page   {ev:"hello",version,bluetooth} {ev:"bluetooth",state}
@@ -19,7 +19,9 @@ import CoreBluetooth
 // data is hex. UUIDs are the 128-bit form in lower case, as Web Bluetooth gives them. id is the
 // peripheral identifier that CoreBluetooth gives; mac is read from the manufacturer data, as
 // ganMacFromData does, and is null until an advertisement carries it. In the window, hello is the
-// answer to {op:"hello"}; over the WebSocket it comes when the socket opens.
+// answer to {op:"hello"}; over the WebSocket it comes when the socket opens. bluetooth is notAsked
+// while macOS has not asked for Bluetooth yet; a scan with auto (the page's look with no click)
+// then starts nothing, so the question comes from a press of Connect or from the Set Up window.
 
 // One page on the other end of the bridge.
 protocol BridgeClient: AnyObject {
@@ -151,12 +153,14 @@ final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     func broadcast(_ m: [String: Any]) { clients.forEach { $0.send(m) } }
 
     // The manager starts on the first scan, so macOS asks for Bluetooth permission when the user
-    // presses Connect, not when the app opens.
+    // presses Connect (or Allow in the Set Up window), not when the app opens.
     func startCentral() {
         if central == nil { central = CBCentralManager(delegate: self, queue: .main) }
     }
+    // Before the manager starts: notAsked while macOS has not asked for Bluetooth, else unknown.
+    var notAsked: Bool { central == nil && CBCentralManager.authorization == .notDetermined }
     var stateName: String {
-        guard let c = central else { return "unknown" }
+        guard let c = central else { return notAsked ? "notAsked" : "unknown" }
         switch c.state {
         case .poweredOn: return "poweredOn"
         case .poweredOff: return "poweredOff"
@@ -172,6 +176,7 @@ final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
         case "poweredOff": return "off"
         case "unauthorized": return "not allowed. See System Settings > Privacy & Security > Bluetooth"
         case "unsupported": return "not on this Mac"
+        case "notAsked": return "not asked yet"
         case "unknown": return central == nil ? "not started" : "starting"
         default: return stateName
         }
@@ -186,6 +191,8 @@ final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
         let seq = msg["seq"] as? Int
         switch op {
         case "scan":
+            // The page's look with no click does not bring up the question. It waits for a press.
+            if msg["auto"] as? Bool == true && notAsked { c.send(["ev": "bluetooth", "state": stateName]); return }
             startCentral()
             if !scanners.contains(where: { $0 === c }) { scanners.append(c) }
             scanIfReady(); onChange()

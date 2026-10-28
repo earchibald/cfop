@@ -100,6 +100,27 @@ async function bridge(){
   assert.ok(await until(()=>!!p.ev('smartConn')),'the known cube connects by itself');
   assert.ok(!p.$('#smartBg'));
   assert.deepStrictEqual(p.errs,[]);
+  // Before macOS has asked for Bluetooth, the look with no click does not scan, so the question
+  // does not come at launch. A press of Connect scans (the app asks), and the cube connects.
+  const br3=fakeBridge([{id:'p1',gen:4,dev,mac:MAC}],{bluetooth:'notAsked'});
+  p=await boot({store,bridge:br3});p.w.goTab('smart');
+  assert.ok(await until(()=>/Press Connect to look for your cube\./.test(p.$('#smartTabStatus').textContent)),'not asked: '+p.$('#smartTabStatus').textContent);
+  assert.strictEqual(br3.sockets[0].sent.filter(m=>m.op==='scan').length,0,'no scan before a press');
+  assert.ok(p.$('#smartTabList').classList.contains('hidden'));
+  p.click(p.$('#smartTabConnect'));
+  assert.ok(await until(()=>!!p.$('#smartTabListItems button')&&p.$('#smartTabListItems button').dataset.mac),'a press scans: the list');
+  p.click(p.$('#smartTabListItems button'));
+  assert.ok(await until(()=>!!p.ev('smartConn')),'and the cube connects');
+  assert.ok(br3.sockets[0].sent.some(m=>m.op==='scan'&&!m.auto),'the press scan has no auto');
+  assert.deepStrictEqual(p.errs,[]);
+  // The Set Up window asks: the state leaves notAsked, and the tab looks again with no click.
+  const br4=fakeBridge([{id:'p1',gen:4,dev,mac:MAC}],{bluetooth:'notAsked'});
+  p=await boot({store,bridge:br4});p.w.goTab('smart');
+  assert.ok(await until(()=>/Press Connect to look/.test(p.$('#smartTabStatus').textContent)));
+  br4.sockets[0].bt='poweredOn';br4.sockets[0].emit({ev:'bluetooth',state:'poweredOn'});
+  assert.ok(await until(()=>!!p.ev('smartConn')),'asked in Set Up: the known cube connects by itself');
+  assert.ok(br4.sockets[0].sent.some(m=>m.op==='scan'&&m.auto),'that look is a scan with auto');
+  assert.deepStrictEqual(p.errs,[]);
   console.log('smart-auto bridge ok');
 }
 (async()=>{await chrome();await bridge();process.exit(0);})().catch(e=>{console.error(e);process.exit(1);});
