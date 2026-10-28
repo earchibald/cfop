@@ -5,8 +5,9 @@ import Speech
 
 // The Set Up Twistwright window. macOS asks once for each thing the app uses, and keeps the answer
 // in System Settings > Privacy & Security; this window asks for them all in one place, before the
-// page needs them. It opens at the first launch, and again from Twistwright > Set Up Twistwright…
-// or the menu bar item. A row that macOS turned off can only be turned on in System Settings, so
+// page needs them. It opens at launch while macOS has not asked for one of them (the first launch,
+// or a build that macOS takes for a new app and so forgets the answers), and again from
+// Twistwright > Set Up Twistwright… or the menu bar item. A row that macOS turned off can only be turned on in System Settings, so
 // its button opens that pane. The last row moves the history from Safari into the window. Data from any
 // other browser comes in through the page itself: Settings > Your data (js/transfer.js).
 
@@ -78,6 +79,9 @@ final class SetupWindow: NSObject, NSWindowDelegate {
             self?.refresh()
         }
     }
+
+    // The rows that macOS has not asked for yet, by title.
+    var notAsked: [String] { rows.filter { $0.item.status() == .notAsked }.map { $0.item.title } }
 
     static func grant(_ s: AVAuthorizationStatus) -> Grant {
         switch s {
