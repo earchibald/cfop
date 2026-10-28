@@ -27,7 +27,7 @@ frames, read 2026-10-27). This branch builds it into the site as a first pass. E
 | 0 · Where each level goes | `LEVELS` in `js/start.js` | The routing table is the code, not a page. |
 | 1.1 Do you have a cube? | removed in 1.49.0 | See "Rework 1" below: the basics come first, the cube question after them. |
 | new · Meet the cube | `t1-what` | Basics 1 of 4. What the cube is: six faces, nine stickers each, solved is one color per face, a turn mixes it. Show me a turn turns one face on the picture and back, with no letter. |
-| 1.3–1.5 Basics: hold, pieces, six moves | `t1-hold`, `t1-pieces`, `t1-moves` | Basics 2, 3 and 4 of 4. One picture for everyone: a drag looks around it, no key turns it, no My cube / Screen cube switch. On the pieces page a kind lifts its pieces out and back (see Rework 2), and Find it is a click on the picture. The hold and moves pages light stickers with the picture's `fade`. The moves page is the first page with a move letter. Show me turns the layer and back. |
+| 1.3–1.5 Basics: hold, pieces, six moves | `t1-hold`, `t1-pieces`, `t1-moves` | Basics 2, 3 and 4 of 4. One picture for everyone: a drag looks around it, no key turns it, no My cube / Screen cube switch. On the pieces page a kind lifts its pieces out and back (see Rework 2), and Find it is a click on the picture. The hold page's two lines are buttons (see Rework 3); the hold and moves pages light stickers with the picture's `fade`. The moves page is the first page with a move letter. Show me turns the layer and back. |
 | new · The six moves, short | `t2-moves` | Level 2 only, before 2.1: the letters, the ′, the hold in one line, the same move buttons and Show me. It does not mark Basics. |
 | 1.6 Basics learned | `t1-done` | Reaching it marks `beg-0` finished. Next: pick your cube goes to 2.1. |
 | 2.1 Which cube will you use? | `t2-cube` | Level 1 after the basics; level 2 after its short six-moves page (Back goes to it). Smart cube opens the Smart cube window after. Screen cube goes through 1.2 first. |
@@ -101,6 +101,17 @@ label, and the `START.keysNext` routing.
   the callout "You found it!" comes up under the picture with Next: the six moves. Show me lifts the
   edge as a hint. Skip goes on without the puzzle. `START.found` keeps it found on a return.
 - **On a phone** the picture is above the text on every split page.
+
+## Rework 3: the hold, shown on the picture (1.51.0)
+
+- **No checkboxes.** "White center on top" and "Green center toward you" are buttons.
+- **White center on top** lifts the top layer up out of the picture with the glow and puts it back.
+  The words "White center on top." light up and rise with it, and fall back as it goes down.
+- **Green center toward you** lifts the front layer, then the right layer. "Green center toward
+  you." lights with the front layer, then "Red is then on your right." with the right layer.
+- `stHoldShow` in `js/start.js` runs it: `ST_HOLD` names the layers, `bump(stLayer(f), {dir})` moves
+  a layer as one along its face's normal (`renderCube3D`'s `lift.dir`), and `.st-hl.on` lights the
+  words for the up and hold of each bump. A new click starts over. The page is not drawn again.
 
 ## Not built yet
 
