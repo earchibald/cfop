@@ -42,10 +42,11 @@ function screenCube(el,opts={}){
     if(sc.onMove)sc.onMove(move,to);return to;};
   sc.resetView=()=>{sc.view={...SCREEN_VIEW};draw();};
   // Lift the pieces with a sticker in `set` out of the cube, with a glow: out, a hold, and back in.
-  // o: up, hold, down (ms), stay (stay out), done(). A new bump or null stops the one before.
+  // o: up, hold, down (ms), stay (stay out), dir and d (see renderCube3D's lift), done(). A new bump or
+  // null stops the one before.
   sc.bump=(set,o={})=>{const L0=sc.lift;if(L0){cancelAnimationFrame(L0.raf);clearTimeout(L0.timer);}
     if(!set){sc.lift=null;draw();return;}
-    const up=o.up??420,hold=o.hold??1300,down=o.down??480,L={set,t:0,raf:0,timer:0};sc.lift=L;
+    const up=o.up??420,hold=o.hold??1300,down=o.down??480,L={set,t:0,raf:0,timer:0,dir:o.dir||null,d:o.d};sc.lift=L;
     const end=()=>{if(sc.lift!==L)return;sc.lift=null;draw();if(o.done)o.done();};
     const reduce=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
     if(typeof requestAnimationFrame!=='function'||reduce){L.t=1;draw();if(!o.stay)L.timer=setTimeout(end,up+hold);return;}
