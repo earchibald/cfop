@@ -243,15 +243,22 @@ body[data-kind="beg"][data-cube="wide"][data-gd] #player>.cubebox svg#cube{max-h
 body[data-kind="beg"][data-cube="wide"][data-gd] #player>.seqpanel{grid-column:1;grid-row:3;align-self:start;gap:8px}
 body[data-kind="beg"][data-cube="wide"][data-gd] .gd-part{grid-column:2;grid-row:2/span 2;align-self:start}
 body[data-kind="beg"][data-cube="wide"][data-gd] .gd-row2{grid-column:1/-1;grid-row:4}
-body[data-kind="beg"][data-cube="wide"][data-gd][data-gd="hold"] #player>.seqpanel{display:none}
-@media (max-width:1000px){body[data-kind="beg"][data-cube="wide"][data-gd] .main{grid-template-columns:minmax(240px,320px) minmax(0,1fr)}body[data-kind="beg"][data-cube="wide"][data-gd] .gd-body{grid-template-columns:1fr}}
+body[data-kind="beg"][data-cube="wide"][data-gd]:is([data-gd="hold"],[data-gd="won"]) #player>.seqpanel{display:none}
+body[data-kind="beg"][data-cube="wide"][data-gd="won"] .main{grid-template-columns:minmax(340px,600px) minmax(0,1fr)}
+body[data-kind="beg"][data-cube="wide"][data-gd="won"] #player>.cubebox{grid-row:2/span 2}
+body[data-kind="beg"][data-cube="wide"][data-gd="won"] #player>.cubebox svg#cube{max-height:min(68vh,580px)}
+body[data-kind="beg"][data-cube="wide"][data-gd="won"] .gd-part{align-self:center}
+@media (max-width:1000px){body[data-kind="beg"][data-cube="wide"][data-gd] .main{grid-template-columns:minmax(240px,320px) minmax(0,1fr)}body[data-kind="beg"][data-cube="wide"][data-gd] .gd-body{grid-template-columns:1fr}
+  body[data-kind="beg"][data-cube="wide"][data-gd="won"] .main{grid-template-columns:minmax(300px,440px) minmax(0,1fr)}}
 @media (max-width:760px){body[data-kind="beg"][data-cube="wide"][data-gd] .main{grid-template-columns:minmax(0,1fr);grid-template-rows:none}
   body[data-kind="beg"][data-cube="wide"][data-gd] #player>.cubebox{grid-column:1;grid-row:2}body[data-kind="beg"][data-cube="wide"][data-gd] #player>.seqpanel{grid-column:1;grid-row:3}
   body[data-kind="beg"][data-cube="wide"][data-gd] .gd-part{grid-column:1;grid-row:4}body[data-kind="beg"][data-cube="wide"][data-gd] .gd-row2{grid-column:1;grid-row:5;flex-direction:column}
   .gd-row2 .gd-next{max-width:none;text-align:left}.gd-holdnow h2{font-size:24px}
   .gd-head>div:first-child{flex-basis:100%}.gd-head .gd-tools{flex:1 1 100%;min-width:0;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start}
   .scrub input[type=range]{min-width:0}
-  body[data-kind="beg"][data-cube="wide"][data-gd] #player>.cubebox svg#cube{max-height:32vh}}
+  body[data-kind="beg"][data-cube="wide"][data-gd] #player>.cubebox svg#cube{max-height:32vh}
+  body[data-kind="beg"][data-cube="wide"][data-gd="won"] #player>.cubebox{grid-row:3}body[data-kind="beg"][data-cube="wide"][data-gd="won"] .gd-part{grid-row:2}
+  body[data-kind="beg"][data-cube="wide"][data-gd="won"] #player>.cubebox svg#cube{max-height:52vh}}
 .begcfop{display:grid;grid-template-columns:170px minmax(0,1fr);gap:18px;align-items:center}
 .begcfop-pic{background:var(--cube-bg);border-radius:14px}.begcfop-pic svg{display:block;width:100%;height:auto}
 .begcfop-text{display:flex;flex-direction:column;gap:8px}.begcfop-text h2{margin:0}

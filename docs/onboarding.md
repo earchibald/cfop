@@ -207,6 +207,16 @@ The owner's words, used as written where they gave them.
   `applySequence` fires). On a phone it is one column: the cube, the step buttons, the part, the key.
 - The captions under the player's tiles no longer cover the face color bar (`.scramble .mt` gap).
 
+## Rework 8: a stage-solved screen (1.56.0)
+
+- After the last part of a stage, a screen of its own (`gdWonHTML` in `js/guide.js`, an entry with
+  `won: true`): "You solved the Daisy!" with the real cube large in the player (`body[data-gd="won"]`:
+  a wider cube column, no step buttons; on a phone the words first, the cube under them). The
+  button is "Move on to White Cross →"; Previous part goes back. The owner asked for it after the
+  daisy; every stage but the last has one, by the stage's short name ("You solved the White
+  Corners!"). After the last stage, You did it shows as before. The stage bar marks the stage solved
+  there, and Coming up on the stage's last part skips the screen.
+
 ## Planned: the fat moves, in the CFOP intro
 
 The owner asked for a fat moves page after the six moves, then moved it out of the basics: it

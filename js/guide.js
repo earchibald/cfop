@@ -8,6 +8,8 @@
 // yellow from the middle layer on. Before the first part, and where the top changes, the guide
 // stops on a hold screen of its own (an entry with turn: true): one line says how to hold the cube,
 // and the player shows the real cube held that way, to drag round. The part after it starts held so.
+// After the last part of a stage (but the last stage: You did it follows), a stage-solved screen (an
+// entry with won: true): "You solved the Daisy!", the real cube large, and Move on to White Cross.
 // While a part or a hold screen shows, body[data-gd] puts the cube beside the text (css/start.css):
 // the part holds its moves as tiles, lit as the player steps (gdTileSync), and the key is one strip.
 // Globals: startGuide() (go to this tab and start the guided solve on the current scramble),
@@ -34,7 +36,9 @@ function gdBuild(){
     const hold=parseAlg(p.pre||'');const before=c;const held=applyAlg(c,hold);
     c=applyAlg(c,[...hold,...p.moves]);
     g.parts.push({stage:st,k,m:st.parts.length,part:p,seq:[...hold,...p.moves],before,held,after:c,done,flip:false});done+=gdFaceMoves(p.moves);
+    if(k===st.parts.length-1)g.parts.push({won:true,stage:st,k,m:st.parts.length,part:p,before:c,held:c,after:c,done,flip:false});
   });
+  if(g.parts.length&&g.parts[g.parts.length-1].won)g.parts.pop();
   g.total=done;g.plan=plan;g.view=g.parts.length?'guide':'done';
   if(g.view==='done')gdCount();
   return true;
@@ -73,7 +77,7 @@ function gdTiles(p,base){
 }
 // Light the tile of the move the player shows, when the player shows this part.
 function gdTileSync(){
-  const g=guideState,e=g.view==='guide'&&g.parts[g.i];if(!e||e.turn||seqState.label!==gdLabel(e))return;
+  const g=guideState,e=g.view==='guide'&&g.parts[g.i];if(!e||e.turn||e.won||seqState.label!==gdLabel(e))return;
   $$('#tab-bsolve .gd-moves .m[data-k]').forEach(el=>{const k=+el.dataset.k;el.classList.toggle('done',k<seqState.idx);el.classList.toggle('cur',k===seqState.idx-1);});
 }
 // The key in one strip, under the cube and the part.
@@ -109,8 +113,23 @@ function gdHoldHTML(){
   </div>`;
 }
 
+// The stage-solved screen: the cube as it is now, large in the player, and the next stage.
+const gdTitleCase=s=>String(s).replace(/(^|\s)(\w)/g,(m,a,b)=>a+b.toUpperCase());
+function gdWonHTML(){
+  const g=guideState,pk=begPack(),e=g.parts[g.i],st=e.stage;
+  const next=g.parts.slice(g.i+1).find(x=>x.stage!==st);
+  const nextName=next?gdTitleCase(pk.short[next.stage.n-1]):'';
+  return `<div class="panel gd-barp">${gdStageBar()}</div>
+  <div class="panel gd-part gd-holdnow gd-won" id="gdStageWon">
+    <span class="st-lbl">Stage ${st.n} of ${pk.count} · solved</span>
+    <h2 id="gdTitle">You solved the ${esc(gdTitleCase(pk.short[st.n-1]))}!</h2>
+    <p class="muted">The picture shows your cube now. Drag it to look around. <b>Hidden faces</b> shows the back, the left and the bottom.</p>
+    <div class="gd-actions"><button class="big primary" id="gdDone" title="Go to stage ${next?next.stage.n:''}: ${esc(next?next.stage.name:'')}">Move on to ${esc(nextName)} →</button><button class="ghost" id="gdPrev" title="Go back one part">← Previous part</button></div>
+  </div>`;
+}
+
 // ---------- the player ----------
-function gdLabel(e){return e.turn?'solve · hold the cube: '+e.to+' on top':'solve · stage '+e.stage.n+' · '+e.part.title;}
+function gdLabel(e){return e.won?'solve · stage '+e.stage.n+' solved':e.turn?'solve · hold the cube: '+e.to+' on top':'solve · stage '+e.stage.n+' · '+e.part.title;}
 // Load the current part at its first move: the 3D cube shows the cube before the part.
 // force: load it even when a drill shows (an explicit start of the guide).
 function gdLoadPart(force){
@@ -120,20 +139,20 @@ function gdLoadPart(force){
   if(g.view==='done'){setSequence([...begPack().heldMoves,...g.plan.moves],'solve · the whole plan',scr.cube);return;}
   const e=g.parts[g.i];
   // The hold screen: the cube as it is now, held the new way, with no moves to step.
-  if(e.turn){setSequence([],gdLabel(e),e.held);return;}
+  if(e.turn||e.won){setSequence([],gdLabel(e),e.held);return;}
   setSequence(e.seq,gdLabel(e),e.before);seqState.idx=0;applySequence();
   // Light the piece this part moves. With a whole-cube turn first, the piece moves with the turn: skip it.
   if(!e.part.pre){const lit=gdLit(e.before,e.part.piece);if(lit)showCube(cubeAtSeq(0),lit);}
 }
 function gdShowMe(){
-  const e=guideState.parts[guideState.i];if(!e||e.turn)return;
+  const e=guideState.parts[guideState.i];if(!e||e.turn||e.won)return;
   setSequence(e.seq,gdLabel(e),e.before);seqState.idx=0;applySequence();focusPlayer();startAuto();
 }
 tabShow.bsolve=()=>gdLoadPart(false);
 
 // ---------- views ----------
 function gdStageBar(){
-  const g=guideState,pk=begPack();const cur=g.view==='guide'?g.parts[g.i].stage.n:pk.count+1;
+  const g=guideState,pk=begPack();const at=g.parts[g.i],cur=g.view==='guide'?at.stage.n+(at.won?1:0):pk.count+1;
   return `<div class="stagebar" id="gdBar" aria-label="The ${pk.word} stages">${g.plan.stages.map(st=>{
     const done=st.n<cur||!st.parts.length;const on=st.n===cur;
     return `<button class="stage${done&&!on?' done':''}${on?' cur':''}" data-n="${st.n}" title="Stage ${st.n}: ${esc(st.name)}${st.parts.length?'':'. Already done on this cube.'}"><i></i>${st.n} ${esc(pk.short[st.n-1])}</button>`;}).join('')}</div>`;
@@ -141,7 +160,7 @@ function gdStageBar(){
 function gdPlanList(){
   const g=guideState;
   return g.plan.stages.map(st=>`<h3 class="gd-ph">Stage ${st.n} · ${esc(st.name)}</h3>`+(st.parts.length?st.parts.map(p=>{
-    const i=g.parts.findIndex(e=>e.part===p&&!e.turn);const on=i===g.i&&g.view==='guide';const done=i<g.i||g.view==='done';
+    const i=g.parts.findIndex(e=>e.part===p&&!e.turn&&!e.won);const on=i===g.i&&g.view==='guide';const done=i<g.i||g.view==='done';
     return `<button class="gd-prow${on?' cur':''}${done&&!on?' done':''}" data-i="${i}" title="Go to part ${i+1} of the solve"><span class="mono muted">${i+1}</span><span>${esc(p.title)}</span><span class="muted">${gdFaceMoves(p.moves)} moves</span></button>`;}).join(''):'<p class="muted gd-pnone">Already done on this cube.</p>')).join('');
 }
 // The entry: how the app learns the cube, for the cube in use. Mix it up with me takes the place
@@ -172,7 +191,7 @@ function gdGuideHTML(){
   const hold=pk.holdLine?`<li>${pk.holdLine(e)}${topNote&&e.k===0?' '+esc(topNote):''}</li>`
     :`<li><b>Hold the cube</b> with ${esc(p.up)} up and <b>${esc(col)} in front</b>.${p.pre?` Turn the whole cube so the ${esc(col)} center faces you (${esc(p.pre)}). The dashed move is this turn.`:' The 3D cube shows this view.'}</li>`;
   const why=gdWhy(e);
-  const next=g.parts[g.i+1];
+  const next=g.parts.slice(g.i+1).find(x=>!x.won);
   const lesson=typeof openLesson==='function'?`<button class="small ghost" id="gdLesson" title="Open the lesson for this stage">Open the lesson</button>`:'';
   const plan=g.showPlan?'Hide the whole plan':'Show the whole plan';const planTip=g.showPlan?'Hide the list of every part':'List every part of the solve. A click goes to that part';
   const nextHTML=next?`<div><b>Coming up:</b> ${esc(next.turn?'Hold the cube '+next.to+' on top':next.part.title)}.</div>${next.stage!==st?`<div class="muted">Stage ${next.stage.n} next: ${esc(next.stage.name.replace(/^The /,'the '))}.</div>`:''}`:'<div><b>Coming up:</b> nothing. This is the last part. After it, the cube is solved.</div>';
@@ -203,8 +222,8 @@ function gdDoneHTML(){
 }
 function gdRender(){
   const g=guideState;const root=$('#tab-bsolve');if(!root)return;
-  const turn=g.view==='guide'&&g.parts[g.i].turn;
-  const html=g.view==='guide'?(turn?gdHoldHTML():gdGuideHTML()):g.view==='done'?gdDoneHTML():gdEntryHTML();
+  const at=g.view==='guide'&&g.parts[g.i];
+  const html=g.view==='guide'?(at.won?gdWonHTML():at.turn?gdHoldHTML():gdGuideHTML()):g.view==='done'?gdDoneHTML():gdEntryHTML();
   root.innerHTML=html;gdPlace();
   if(g.view==='entry'&&typeof begMix==='object'&&begMix.on&&typeof renderBegMix==='function')renderBegMix();
   const on=(sel,fn)=>{const el=root.querySelector(sel);if(el)el.onclick=fn;};
@@ -222,14 +241,14 @@ function gdRender(){
   root.querySelectorAll('#gdBar .stage').forEach(b=>b.onclick=()=>{
     if(!b.classList.contains('done'))return;const n=+b.dataset.n;const i=g.parts.findIndex(e=>e.stage.n===n);if(i>=0)gdGo(i);});
   root.querySelectorAll('.gd-prow').forEach(b=>b.onclick=()=>gdGo(+b.dataset.i));
-  root.querySelectorAll('.gd-moves .m[data-k]').forEach(t=>t.onclick=()=>{const e=g.parts[g.i];if(!e||e.turn)return;
+  root.querySelectorAll('.gd-moves .m[data-k]').forEach(t=>t.onclick=()=>{const e=g.parts[g.i];if(!e||e.turn||e.won)return;
     if(seqState.label!==gdLabel(e))gdLoadPart(true);seqGo(+t.dataset.k+1);});
   gdTileSync();
 }
-// body[data-gd]: part or hold while the guide shows one on this tab, else none. css/start.css puts
+// body[data-gd]: part, hold or won while the guide shows one on this tab, else none. css/start.css puts
 // the cube beside the text then.
 function gdPlace(){const g=guideState,on=curTab==='bsolve'&&g.view==='guide'&&g.parts[g.i];
-  if(on)document.body.dataset.gd=g.parts[g.i].turn?'hold':'part';else delete document.body.dataset.gd;}
+  if(on)document.body.dataset.gd=g.parts[g.i].won?'won':g.parts[g.i].turn?'hold':'part';else delete document.body.dataset.gd;}
 document.addEventListener('cw:step',gdTileSync);
 
 // ---------- moves between parts and views ----------
