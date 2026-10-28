@@ -105,6 +105,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
         _ = sub("Twistwright", [
             item("About Twistwright", #selector(NSApplication.orderFrontStandardAboutPanel(_:))),
+            .separator(),
+            item("Settings…", #selector(showSettings(_:)), ",", mine: true),
             item("Set Up Twistwright…", #selector(showSetup(_:)), mine: true),
             .separator(),
             item("Hide Twistwright", #selector(NSApplication.hide(_:)), "h"),
@@ -197,6 +199,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
     @objc func openWeb(_ s: Any?) { NSWorkspace.shared.open(SITE) }
     @objc func showSetup(_ s: Any?) { setup.show() }
+    // Settings… (Cmd+,) opens the site's own Settings window, in the main window: the lab has none.
+    // In a browser Cmd+, stays the browser's; only the app's window has this item.
+    @objc func showSettings(_ s: Any?) {
+        main.show()
+        main.afterLoad { [weak self] in
+            self?.main.web.evaluateJavaScript("if (typeof openSettings === 'function') openSettings();", completionHandler: nil)
+        }
+    }
     @objc func pickSource(_ s: NSMenuItem) {
         guard let v = s.representedObject as? String, let src = SiteSource(rawValue: v) else { return }
         site.source = src
