@@ -36,7 +36,7 @@ Tagged $TAG on $(git rev-parse --short HEAD): the app $V with the site $SITE bui
 Check mac/build/Twistwright.app, then publish:
 
   git push origin $TAG
-  gh release create $TAG mac/build/Twistwright-mac.zip --title "Twistwright for macOS $V" \\
+  gh release create $TAG mac/build/Twistwright-mac-$V.zip --title "Twistwright for macOS $V" \\
     --notes "Built-in pages: Twistwright $SITE. The menu bar item chooses Built-in pages or Live pages from twistwright.com."
 
 To take the tag back before a push: git tag -d $TAG

@@ -20,7 +20,45 @@
 // and the lab draw theirs the same way.
 let smartConn=null,smartCube=null,smartBusy=false,smartTimer=0,smartMacWait=null;
 function smartNotify(detail){if(typeof document!=='undefined')document.dispatchEvent(new CustomEvent('cw:smart',{detail}));}
-const MAC_APP_URL='https://github.com/earchibald/cfop/releases/latest/download/Twistwright-mac.zip';
+// The Mac app's download, with its version on every label. The zip's name carries the version
+// (Twistwright-mac-1.47.5.zip), so the page asks GitHub for the latest release, keeps the answer an
+// hour (macReleaseLoad), and until then offers the release named here: a real file, so the label
+// and the zip always agree.
+const MAC_RELEASE_API='https://api.github.com/repos/earchibald/cfop/releases/latest';
+let MAC_RELEASE={version:'1.47.4',url:'https://github.com/earchibald/cfop/releases/download/mac-v1.47.4/Twistwright-mac.zip'};
+// A release from the GitHub API as {version, url}, or null: the tag mac-vX.Y.Z and its zip.
+function macReleaseRead(j){
+  const m=String(j&&j.tag_name||'').match(/^mac-v(\d+\.\d+\.\d+)$/);if(!m)return null;
+  const zips=((j&&j.assets)||[]).filter(x=>/\.zip$/.test(x.name||''));
+  const a=zips.find(x=>/^Twistwright/.test(x.name))||zips[0];
+  return a&&a.browser_download_url?{version:m[1],url:a.browser_download_url}:null;
+}
+function macDownloadLabel(){return 'Download for macOS v'+MAC_RELEASE.version;}
+function macReleaseLoad(){
+  const KEY='tw:macRelease',HOUR=3600e3;
+  let kept=null;try{kept=JSON.parse(localStorage.getItem(KEY)||'null');}catch(e){}
+  if(kept&&kept.version&&kept.url){MAC_RELEASE={version:kept.version,url:kept.url};macReleaseShow();if(Date.now()-kept.at<HOUR)return Promise.resolve(MAC_RELEASE);}
+  if(typeof fetch!=='function')return Promise.resolve(MAC_RELEASE);
+  return Promise.resolve().then(()=>fetch(MAC_RELEASE_API,{headers:{Accept:'application/vnd.github+json'}}))
+    .then(r=>r&&r.ok?r.json():null).then(j=>{
+      const rel=macReleaseRead(j);if(!rel)return MAC_RELEASE;
+      MAC_RELEASE=rel;try{localStorage.setItem(KEY,JSON.stringify(Object.assign({at:Date.now()},rel)));}catch(e){}
+      macReleaseShow();return MAC_RELEASE;
+    }).catch(()=>MAC_RELEASE);
+}
+// Every place that offers the download: the dialog's button and the footer link.
+function macReleaseShow(){
+  const dl=$('#smartDl');if(dl)dl.textContent=macDownloadLabel();
+  const f=$('#footMac');if(f){f.href=MAC_RELEASE.url;$('#footMacVer').textContent='v'+MAC_RELEASE.version;}
+}
+// The footer link, on a Mac desktop only (not an iPad, not the app's own window, not a page the
+// app serves): the app is for a Mac, and the app has it already.
+function footMacShow(){
+  const f=$('#footMac');if(!f)return false;
+  const on=smartIsMac()&&!smartInApp()&&!(typeof BRIDGE!=='undefined'&&BRIDGE);
+  f.classList.toggle('hidden',!on);
+  return on;
+}
 // How this page can reach a cube: 'bt' (Web Bluetooth), 'bridge' (the app serves the page),
 // 'download' (a Mac with neither: offer the app) or 'none'.
 function smartMode(){
@@ -123,7 +161,7 @@ function openSmartDownload(){
    <button class="close small ghost" id="smartClose" aria-label="Close" title="Close this window (Esc)">✕</button>
    <h2>Smart cube on a Mac</h2>
    <p class="muted" style="margin-top:0">Safari cannot use Bluetooth. The Twistwright app for macOS can. It shows Twistwright in a window of its own and connects to your GAN cube.</p>
-   <div class="scan-row"><button class="primary" id="smartDl" title="Get the Twistwright app for macOS from GitHub">Download for macOS</button><button class="small" id="smartOpenApp" title="Open the Twistwright app if it is installed">Open the app</button></div>
+   <div class="scan-row"><button class="primary" id="smartDl" title="Get the Twistwright app for macOS from GitHub">${macDownloadLabel()}</button><button class="small" id="smartOpenApp" title="Open the Twistwright app if it is installed">Open the app</button></div>
    <ol class="muted" style="font-size:14px;padding-left:20px">
     <li>Unzip the download and move Twistwright to Applications.</li>
     <li>Open Twistwright. macOS asks once if you want to open an app from the internet. Press Open.</li>
@@ -134,7 +172,8 @@ function openSmartDownload(){
   document.body.appendChild(bg);
   bg.addEventListener('click',e=>{if(e.target===bg)closeSmart();});
   $('#smartClose').onclick=closeSmart;
-  $('#smartDl').onclick=()=>{location.href=MAC_APP_URL;};
+  $('#smartDl').onclick=()=>{location.href=MAC_RELEASE.url;};
+  macReleaseLoad();
   $('#smartOpenApp').onclick=()=>{location.href='twistwright://smart';};
   document.addEventListener('keydown',smartKeys,true);
 }
@@ -405,6 +444,8 @@ function smartDisconnect(){if(smartConn){const c=smartConn;smartConn=null;c.clos
 if(typeof document!=='undefined'&&$('#smartBtn')){
   $('#smartBtn').onclick=openSmart;smartLabel();
   document.addEventListener('cw:bridge',smartLabel);
+  if(footMacShow()){macReleaseShow();macReleaseLoad();}
+  document.addEventListener('cw:bridge',footMacShow);
   // twistwright://smart opens this page with ?smart=1: open the dialog once the app has answered.
   if(/[?&]smart=1/.test(location.search)){
     try{window.history.replaceState(null,'',location.pathname);}catch(e){} // history alone is the scramble history in app.js

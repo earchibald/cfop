@@ -490,7 +490,7 @@ Web Bluetooth or a bridge. `smartMode()` in `smart-ui.js` names the path:
 ### Build and release
 
 ```sh
-mac/build.sh                   # Developer ID signed app in mac/build/, plus Twistwright-mac.zip
+mac/build.sh                   # Developer ID signed app in mac/build/, plus Twistwright-mac-X.Y.Z.zip
 mac/build.sh --adhoc           # a build that stays on this Mac
 mac/build.sh --notarize NAME   # also notarize with the notarytool keychain profile NAME, and staple
 mac/build.sh --site REF        # build in the site at REF (tag, branch, commit); HEAD when not given
@@ -504,10 +504,15 @@ mac/build/Twistwright.app/Contents/MacOS/Twistwright --port 27300 --no-open --si
 run while the installed app keeps 27272.
 
 Releases live on GitHub Releases of this repo, tagged `mac-vX.Y.Z` after
-`CFBundleShortVersionString` in `mac/Info.plist`. The page links
-`releases/latest/download/Twistwright-mac.zip`, so a new release is live as soon
-as it is published, and GitHub releases are for the Mac app only. The site
-itself deploys from `main`.
+`CFBundleShortVersionString` in `mac/Info.plist`. The zip carries the version in
+its name, `Twistwright-mac-X.Y.Z.zip` (from 1.47.5; unzipped it is
+`Twistwright.app`). The page asks the GitHub API for the latest release
+(`macReleaseLoad` in `js/smart-ui.js`, kept an hour in `tw:macRelease`) and
+links its zip with its version: "Download for macOS v1.47.5", in the download
+dialog and in the footer on a Mac desktop. Until GitHub answers, or when it
+cannot, the page offers the release named in `MAC_RELEASE`, a real file, so the
+label and the zip agree. A new release is live as soon as it is published, and
+GitHub releases are for the Mac app only. The site itself deploys from `main`.
 
 The tag also chooses the built-in pages: the app carries the site as it is at
 the tagged commit. To release:

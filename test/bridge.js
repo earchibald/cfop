@@ -61,12 +61,16 @@ const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replac
 function fakeStorage(init={}){const m=new Map(Object.entries(init));return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear(),
   key:i=>[...m.keys()][i]??null,get length(){return m.size;}};}
 // o.bridge: a fakeBridge to install, with /bridge/info answered; o.native: a fakeNative, the app's
-// own window; o.platform: navigator.platform; o.search: the query; o.storage: saved keys.
+// own window; o.platform: navigator.platform; o.search: the query; o.storage: saved keys;
+// o.release: the GitHub API for the latest release, {json} or {fail:true}, its calls in o.release.calls;
+// o.touch: navigator.maxTouchPoints.
 function boot(o={}){
   const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
   const dom=new JSDOM(html,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,url:'file://'+path.join(__dirname,'..','index.html')+(o.search||''),virtualConsole:vc,
     beforeParse(w){w.matchMedia=q=>({matches:false,addEventListener(){},addListener(){}});w.scrollTo=()=>{};Object.defineProperty(w,'localStorage',{value:fakeStorage(o.storage)});
       if(o.platform!=null)Object.defineProperty(w.navigator,'platform',{value:o.platform});
+      if(o.touch!=null)Object.defineProperty(w.navigator,'maxTouchPoints',{value:o.touch});
+      if(o.release){o.release.calls=[];w.fetch=async u=>{o.release.calls.push(u);if(o.release.fail)throw new Error('offline');return {ok:true,json:async()=>o.release.json};};}
       if(o.native)o.native.install(w);
       if(o.bridge){w.BRIDGE_LOCAL=true;w.WebSocket=o.bridge.FakeWebSocket;w.fetch=async u=>u==='/bridge/info'?{ok:true,json:async()=>bridgeInfo()}:{ok:false};}}});
   const w=dom.window;w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=function(){};
@@ -82,7 +86,8 @@ async function page(){
   const Cube=w.eval('Cube');const c1=w.applyAlg(new Cube(),['R','U',"F'",'L2']);set(w,c1);
   const netColors=()=>$$('#smartNet rect').map(r=>r.getAttribute('fill'));const colorsOf=c=>c.toFacelets().map(i=>w.stickerColor(i));
   const ev=s=>w.eval(s);assert.ok(ev('BRIDGE'),'the page found the app');assert.strictEqual(w.smartMode(),'bridge');
-  assert.strictEqual($('#smartBtn').textContent,'Smart cube','over the bridge the button is Smart cube');assert.ok(!$('#smartBtn').classList.contains('dl'));
+  assert.strictEqual($('#smartBtn').textContent,'Smart cube','over the bridge the button is Smart cube');
+  assert.ok($('#footMac').classList.contains('hidden'),'no footer download on a page the app serves');assert.ok(!$('#smartBtn').classList.contains('dl'));
   click($('#smartBtn'));await sleep(20);
   assert.ok(/choose your cube in the list\./.test($('#smartStatus').textContent),'the dialog names the list: '+$('#smartStatus').textContent);
   assert.ok(!$('#smartConnect').disabled,'Connect is on over the bridge');
@@ -112,6 +117,7 @@ async function page(){
   bridge.sockets[0].close();await sleep(20);
   assert.ok(/no longer connected/.test($('#smartStatus').textContent),'the cube is gone with the app: '+$('#smartStatus').textContent);
   assert.strictEqual(ev('BRIDGE'),null);assert.strictEqual($('#smartBtn').textContent,'Download macOS app to use a Smart Cube','without the app a Mac gets the download');
+  assert.ok(!$('#footMac').classList.contains('hidden'),'and the footer offers the app again');
   d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.ok(!$('#smartBg'));
   assert.deepStrictEqual(errs,[],'no script errors');
   console.log('bridge page ok');
@@ -125,7 +131,12 @@ async function download(){
   click($('#smartBtn'));await sleep(20);
   assert.ok($('#smartBg .modal.dl'),'the download dialog opens');assert.ok(/Safari cannot use Bluetooth/.test($('#smartBg').textContent));
   assert.ok($('#smartDl')&&$('#smartOpenApp'),'download and open buttons');
-  assert.ok(/releases\/latest\/download\/Twistwright-mac\.zip$/.test(w.eval('MAC_APP_URL')),'the download is the latest release');
+  // No answer from GitHub: the release the page names, a real file, with its version.
+  const OLD='https://github.com/earchibald/cfop/releases/download/mac-v1.47.4/Twistwright-mac.zip';
+  assert.strictEqual($('#smartDl').textContent,'Download for macOS v1.47.4','the button names the version');
+  assert.ok(!$('#footMac').classList.contains('hidden'),'a Mac gets the footer link');
+  assert.ok(/^Download for macOSv1\.47\.4$/.test($('#footMac').textContent)&&$('#footMac').getAttribute('href')===OLD,'the footer link: '+$('#footMac').textContent+' '+$('#footMac').getAttribute('href'));
+  assert.ok($('#footMac').previousElementSibling.id==='footRepo','after the GitHub link');assert.ok($('#footMac svg'),'with the Mac icon');
   d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.ok(!$('#smartBg'),'Escape closes it');
   // An iPad says Mac too, but has touch: no download for it.
   Object.defineProperty(w.navigator,'maxTouchPoints',{value:5});assert.strictEqual(w.smartMode(),'none');
@@ -135,6 +146,26 @@ async function download(){
   // ?smart=1 from twistwright://smart opens the dialog and lands on the 3x3.
   const c=await boot({platform:'MacIntel',search:'?smart=1'});c.w.localStorage.setItem('cw:method','"mini"');
   await sleep(50);assert.ok(c.d.querySelector('#smartBg'),'?smart=1 opens the dialog'); // jsdom keeps the query on a file: page; a browser drops it
+  // The latest release from GitHub: its version and its zip, kept an hour.
+  const NEW='https://github.com/earchibald/cfop/releases/download/mac-v1.47.5/Twistwright-mac-1.47.5.zip';
+  const rel={json:{tag_name:'mac-v1.47.5',assets:[{name:'Twistwright-mac-1.47.5.zip',browser_download_url:NEW}]}};
+  const e=await boot({platform:'MacIntel',release:rel});const $e=s=>e.d.querySelector(s);
+  assert.deepStrictEqual(rel.calls,['https://api.github.com/repos/earchibald/cfop/releases/latest'],'one look at the latest release');
+  assert.strictEqual($e('#footMacVer').textContent,'v1.47.5');assert.strictEqual($e('#footMac').getAttribute('href'),NEW,'the footer gets the new zip');
+  e.w.openSmartDownload();assert.strictEqual($e('#smartDl').textContent,'Download for macOS v1.47.5','the dialog names the new version');
+  const kept=JSON.parse(e.w.localStorage.getItem('tw:macRelease'));assert.strictEqual(kept.url,NEW,'kept');
+  const fr={json:{}};const f=await boot({platform:'MacIntel',release:fr,storage:{'tw:macRelease':JSON.stringify(kept)}});
+  assert.strictEqual(f.d.querySelector('#footMacVer').textContent,'v1.47.5','the kept release at once');assert.deepStrictEqual(fr.calls,[],'no look within the hour');
+  const g=await boot({platform:'MacIntel',release:{fail:true}});
+  assert.strictEqual(g.d.querySelector('#footMac').getAttribute('href'),OLD,'offline: the named release');
+  assert.strictEqual(e.w.macReleaseRead({tag_name:'v2'}),null,'not a Mac tag');
+  assert.strictEqual(e.w.macReleaseRead({tag_name:'mac-v1.48.0',assets:[{name:'notes.txt',browser_download_url:'x'}]}),null,'no zip');
+  assert.strictEqual(e.w.macReleaseRead({tag_name:'mac-v1.48.0',assets:[{name:'Twistwright-mac.zip',browser_download_url:'z'}]}).url,'z','an old zip name still works');
+  // Only a Mac desktop gets the link, and asks GitHub.
+  const pc={json:rel.json};const h=await boot({platform:'Win32',release:pc});
+  assert.ok(h.d.querySelector('#footMac').classList.contains('hidden'),'no link off a Mac');assert.deepStrictEqual(pc.calls,[],'and no look');
+  const ipad=await boot({platform:'MacIntel',touch:5});assert.ok(ipad.d.querySelector('#footMac').classList.contains('hidden'),'no link on an iPad');
+  for(const x of [e,f,g])assert.deepStrictEqual(x.errs,[]);
   console.log('bridge download ok');
 }
 // ----- the page in the app's own window -----
@@ -147,6 +178,7 @@ async function pageNative(){
   const click=el=>{assert.ok(el,'element to click');el.dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true}));};
   assert.deepStrictEqual(nat.sent[0],{op:'hello'},'the page in the window says hello to the message handler');
   assert.strictEqual(w.smartMode(),'bridge');assert.strictEqual($('#smartBtn').textContent,'Smart cube','no download in the app');
+  assert.ok($('#footMac').classList.contains('hidden'),'no footer download in the app');
   click($('#smartBtn'));await sleep(20);click($('#smartConnect'));
   assert.ok(await until(()=>$$('#smartListItems button').length===1&&$('#smartListItems button').dataset.mac===MAC),'the list shows the cube');
   click($('#smartListItems button'));

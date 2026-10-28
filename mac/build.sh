@@ -60,12 +60,16 @@ fi
 # The entitlements let the hardened runtime give the page the camera and the microphone.
 if [ "$SIGN" = "-" ]; then codesign --force --options runtime --entitlements Twistwright.entitlements --sign - "$APP"
 else codesign --force --options runtime --timestamp --entitlements Twistwright.entitlements --sign "$SIGN" "$APP"; fi
-zip_it() { rm -f build/Twistwright-mac.zip; ditto -c -k --keepParent "$APP" build/Twistwright-mac.zip; }
+# The zip's name carries the app's version (the page reads it from the release); unzipped it is
+# Twistwright.app all the same.
+APP_V=$(sed -n 's|.*<key>CFBundleShortVersionString</key><string>\(.*\)</string>.*|\1|p' Info.plist)
+ZIP="build/Twistwright-mac-$APP_V.zip"
+zip_it() { rm -f "$ZIP"; ditto -c -k --keepParent "$APP" "$ZIP"; }
 zip_it
 if [ -n "$NOTARIZE" ]; then
-  xcrun notarytool submit build/Twistwright-mac.zip --keychain-profile "$NOTARIZE" --wait
+  xcrun notarytool submit "$ZIP" --keychain-profile "$NOTARIZE" --wait
   xcrun stapler staple "$APP"
   zip_it
 fi
 codesign --verify --deep --strict "$APP"
-echo "Built $(pwd)/$APP and build/Twistwright-mac.zip"
+echo "Built $(pwd)/$APP and $ZIP"
