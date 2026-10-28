@@ -74,7 +74,7 @@ body.starting header.top>*:not(h1){display:none!important}
 .st-small{font-size:13px;margin:0}
 .st-lbl{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
 .st-goes{margin-top:auto;font-size:13px;color:var(--muted);font-family:var(--mono)}
-.st-levels{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;width:100%}
+.st-levels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;width:100%}
 .st-level{display:flex;flex-direction:column;align-items:flex-start;gap:12px;min-height:190px;text-align:left;padding:18px 16px;border-radius:16px;background:var(--panel);font-weight:400;line-height:1.4}
 .st-level b{font-size:18px;line-height:1.25}.st-level .muted{font-size:14px}
 .st-level:hover,.st-card:hover{border-color:var(--muted)}
@@ -173,16 +173,46 @@ body.starting header.top>*:not(h1){display:none!important}
 .st-switch i::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:999px;background:var(--text);transition:left .15s}
 .st-switch[aria-pressed="true"] i{background:var(--good)}.st-switch[aria-pressed="true"] i::after{left:16px;background:#fff}
 .start .spacer,.st-foot .spacer,.st-bar .spacer{flex:1}
-@media (max-width:1000px){.st-levels{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media (max-width:760px){.start{padding:8px 12px 32px}.st-levels,.st-three,.st-grid2,.st-split,.st-split.st-wide,.st-quiz{grid-template-columns:1fr}
+/* Your first solve (t1-ready): two cards, then the turn-over that comes in the solve. */
+.st-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%}
+div.st-card{border:1px solid var(--line)}.st-ready .row{flex-wrap:wrap;gap:8px}
+.st-flipnote{flex-direction:row;align-items:center;gap:18px}.st-flipnote>div{display:flex;flex-direction:column;gap:4px}
+.st-flip{display:inline-flex;align-items:center;gap:4px;flex:none}.st-flip svg{display:block;width:104px;height:auto}.st-flip b{font-size:22px;color:var(--muted)}
+@media (max-width:1000px){.st-levels{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:760px){.start{padding:8px 12px 32px}.st-levels,.st-three,.st-two,.st-grid2,.st-split,.st-split.st-wide,.st-quiz{grid-template-columns:1fr}
   .st-split>.st-pic{order:-1}.st-split{gap:16px}
-  .st-level{min-height:0}.st-row{grid-template-columns:22px minmax(0,1fr)}.st-row .st-seg{grid-column:1/-1}.st-row .st-st{grid-column:2}.st-brow{grid-template-columns:1fr}.st-brow>span[aria-hidden]{display:none}}
+  .st-flipnote{flex-direction:column;align-items:flex-start}.st-level{min-height:0}.st-row{grid-template-columns:22px minmax(0,1fr)}.st-row .st-seg{grid-column:1/-1}.st-row .st-st{grid-column:2}.st-brow{grid-template-columns:1fr}.st-brow>span[aria-hidden]{display:none}}
 
 /* ===== Getting started, in the site ===== */
 .mlevel{display:flex;align-items:center;gap:10px;padding:8px 0 12px;border-bottom:1px solid var(--line);margin-bottom:6px;font-size:15px}
 .mlevel .spacer{flex:1}
 .tag.mnext{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-family:var(--mono);font-size:11px}
 .begcube{display:flex;align-items:center;gap:10px;font-size:14px}.begcube span{flex:1}
+/* The Learn home (lnHomeHTML in js/learn.js): Up next with the goal, beside the steps. */
+.lh{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:var(--gap);align-items:start}
+.lh-next{display:flex;flex-direction:column;gap:14px;padding:20px}
+.lh-goal{display:flex;gap:18px;align-items:center}
+.lh-pic{flex:none;width:168px;background:var(--cube-bg);border-radius:14px}.lh-pic svg{display:block;width:100%;height:auto}
+.lh-body{display:flex;flex-direction:column;gap:8px;min-width:0}.lh-body h2{margin:0;font-size:30px;letter-spacing:-.02em}.lh-body p{margin:0;font-size:16px;line-height:1.5}
+.lh-next .begcube{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.lh-act{gap:10px;flex-wrap:wrap}
+.lh-st{align-self:flex-start;font-size:12px;color:var(--muted);border:1px solid currentColor;border-radius:7px;padding:1px 7px;white-space:nowrap}
+.lh-st.learning{color:var(--accent)}.lh-st.finished{color:var(--good)}
+.lh-steps{display:flex;flex-direction:column;gap:2px;padding:14px}
+.lh-head{display:flex;justify-content:space-between;align-items:baseline;padding:2px 6px 8px}.lh-head .mono{font-size:12px}
+.lh-step{display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:8px;border:1px solid transparent;background:none;text-align:left;font-weight:400}
+.lh-step:hover{background:var(--panel2)}.lh-step.cur{background:var(--panel2);border-color:var(--line)}
+.lh-step .mono{font-size:12px;width:14px}.lh-name{flex:1;font-size:14px}
+/* Solve my cube: the entry, the hold on every part, and the turn-over screen (js/guide.js). */
+.gd-entry{display:flex;flex-direction:column;gap:14px;padding:20px}.gd-entryhead h2{margin:0 0 4px}.gd-entryhead p{margin:0}
+.gd-entry .gd-now{display:block;font-size:14px}
+.gd-hold{display:flex;align-items:center;gap:8px;flex-wrap:wrap;align-self:flex-start;width:fit-content;padding:8px 14px;border-radius:12px;border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--panel));font-size:17px;margin:6px 0}
+.gd-holdsq{width:18px;height:18px;border-radius:5px;background:var(--sec);box-shadow:inset 0 0 0 1px rgba(0,0,0,.2);flex:none}
+.gd-turn{display:grid;grid-template-columns:minmax(260px,380px) minmax(0,1fr);gap:24px;align-items:center;padding:22px;border:2px solid var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)}
+.gd-turnpic{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;font-size:13px}
+.gd-turncube{width:100%;background:var(--cube-bg);border-radius:16px}.gd-turncube svg{display:block;width:100%;height:auto}
+.gd-turnbody{display:flex;flex-direction:column;gap:10px}.gd-turnbody h2{margin:0;font-size:34px;letter-spacing:-.02em}.gd-turnbody p{margin:0;font-size:17px;line-height:1.5}
+.gd-turnbody .gd-hold{font-size:20px}
 .begcfop{display:grid;grid-template-columns:170px minmax(0,1fr);gap:18px;align-items:center}
 .begcfop-pic{background:var(--cube-bg);border-radius:14px}.begcfop-pic svg{display:block;width:100%;height:auto}
 .begcfop-text{display:flex;flex-direction:column;gap:8px}.begcfop-text h2{margin:0}
@@ -197,4 +227,5 @@ body.starting header.top>*:not(h1){display:none!important}
 .weaklist{margin:0 0 8px;padding-left:20px}.weaklist li{display:flex;justify-content:space-between;gap:12px;padding:2px 0}
 body.timerhome[data-tab="solve"] .timer{font-size:96px}
 body.timerhome[data-tab="solve"] .player{grid-template-columns:300px minmax(0,1fr) minmax(320px,1.1fr)}
+@media (max-width:760px){.lh,.gd-turn{grid-template-columns:1fr}.lh-pic{width:96px}.lh-body h2{font-size:22px}.gd-turnbody h2{font-size:26px}.lh-act>button{flex:1}}
 @media (max-width:760px){body.timerhome[data-tab="solve"] .timer{font-size:56px}body.timerhome[data-tab="solve"] .player{grid-template-columns:minmax(0,1fr)}.weakspots,.begcfop{grid-template-columns:1fr}}

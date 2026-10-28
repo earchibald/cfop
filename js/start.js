@@ -2,25 +2,28 @@
 // The first visit asks the cube level, then starts each level in its own place (the onboarding
 // storyboard, docs/onboarding.md). The pages cover the page under the top bar (#start,
 // body.starting); each track ends in the site with a method, a tab, a cube source and the
-// statuses the user marked. cw:level keeps the level (1 to 5); the method menu can open the
+// statuses the user marked. cw:level keeps the level (1, 3, 4 or 5); the method menu can open the
 // picker again (startLevelRow in js/start-app.js).
-//   Level 1, never touched one: the basics first, in four pages (what the cube is, how to hold
-//     it, the pieces, the six moves), on a picture that a drag looks around. No question about a
-//     cube and no move letter before the moves page. Then which cube (the keys page for the
-//     virtual cube), then the beginner method.
-//   Level 2, played but never solved: which cube, then the beginner method.
+//   Level 1, I've never solved one: the basics first, in four pages (what the cube is, how to
+//     hold it, the pieces, the six moves), on a picture that a drag looks around, white on top.
+//     No question about a cube and no move letter before the moves page. Then which cube, then
+//     the first solve: the guided solve (js/guide.js), which turns the cube over to yellow on top
+//     on a screen of its own. A regular cube is mixed up with me or scanned first (t1-ready); the
+//     virtual cube meets its keys (t1-keys) and comes mixed up; a smart cube connects.
+//     (Levels 1 and 2 were one level from 1.54.0: a saved cw:level 2 reads as 1, startLevel.)
 //   Level 3, have solved it: how, then the beginner steps checked off, then the bridge to CFOP
 //     and the Cross lesson.
 //   Level 4, know advanced algorithms: the CFOP sets (None, Some with the cases, All), a quiz
 //     on what was marked, then OLL · PLL on the cases still to learn.
 //   Level 5, already a speedcuber: one setup page, then the Scramble tab with a large timer.
+// n is the id that cw:level keeps. There is no 2 now: it was "played but never solved".
 const LEVELS=[
-  {n:1,name:'Never touched one',sub:'New to the cube. Start with what it is.',goes:'→ Basics',first:'t1-what',tip:'Start with the basics'},
-  {n:2,name:'Played but never solved',sub:'You can turn it. You have not solved it yet.',goes:'→ Beginner method',first:'t2-moves',tip:'Start the beginner method'},
+  {n:1,name:"I've never solved one!",sub:'New to the cube, or you can turn it but have never solved it.',goes:'→ Basics, then your first solve',first:'t1-what',tip:'Start with the basics, then solve your first cube'},
   {n:3,name:'Have solved it',sub:'You can solve it, slowly or with notes.',goes:'→ Check, then CFOP',first:'t3-start',tip:'Review the beginner method'},
   {n:4,name:'Know advanced algorithms',sub:'You know some CFOP: F2L, OLL or PLL.',goes:'→ CFOP sets',first:'t4-sets',tip:'Go to CFOP'},
   {n:5,name:'Already a speedcuber',sub:'You time your solves. You want drills.',goes:'→ CFOP, timer',first:'t5-setup',tip:'Go to CFOP with the timer'}];
-const LEVEL_COLORS=['W','Y','O','R','G'];
+const LEVEL_COLORS=['W','Y','O','R'];
+function startLevel(n){if(n===2)n=1;return LEVELS.find(l=>l.n===n)||null;}
 // The CFOP sets of level 4. ids() gives the case statuses a set marks; a set with no cases in the
 // site (by feel, the full OLL) is kept in cw:known only.
 const START_SETS=[
@@ -48,8 +51,7 @@ const ST_MOVE_WORDS={
   B:['Back','Turn the back face. Clockwise as seen from behind.','Turn the back face the other way.'],
   R:['Right','Turn the right face up, away from you.','Turn the right face down, toward you.'],
   L:['Left','Turn the left face down, toward you.','Turn the left face up, away from you.']};
-// A turn in words, with no letter: "Right face, clockwise". The keys page shows it, and a level 2
-// user has not met the letters.
+// A turn in words, with no letter: "Right face, clockwise". The keys page shows it.
 function stMoveSay(m){const w=ST_MOVE_WORDS[m[0]];if(!w)return m;return `${w[0]} face, ${/['′]/.test(m)?'counterclockwise':'clockwise'}`;}
 const ST_HIDDEN={D:'The bottom face is hidden. You see its edge.',B:'The back face is hidden. You see its edge.',L:'The left face is hidden. You see its edge.'};
 const START={on:false,screen:'level',level:null,src:'mine',kind:null,found:false,
@@ -79,7 +81,8 @@ function startKnown(){return store.get('known',{});}
 function startSetKnown(id,v){const k=startKnown();k[id]=v;store.set('known',k);}
 // Pictures.
 function stPic(cube,fade,label){return `<svg viewBox="0 0 400 370" role="img" aria-label="${esc(label||'A cube')}">${renderCube3D((cube||new Cube()).toFacelets(),{yaw:-32,pitch:28,scale:46,n:3,fade:fade||null})}</svg>`;}
-function stBars(n){return LEVEL_COLORS.map((c,i)=>`<i class="lvbar${i<n?'':' off'}" style="--sec:var(--sticker-${c})"></i>`).join('');}
+// The bars of a level: one lit for the first level, all four for the last.
+function stBars(n){const k=LEVELS.indexOf(startLevel(n))+1;return LEVEL_COLORS.map((c,i)=>`<i class="lvbar${i<k?'':' off'}" style="--sec:var(--sticker-${c})"></i>`).join('');}
 function stBar(crumb,right){return `<div class="st-bar"><span class="st-crumb">Getting started${crumb?' · '+esc(crumb):''}</span><span class="spacer"></span>${right||''}</div>`;}
 function stBack(to,label){return `<button class="st-link" data-go="${to}" title="${esc(label||'Back')}">${esc(label||'← Back')}</button>`;}
 function stSources(note){const notes={mine:'Scan or paint it later, from the cube chip.',smart:smartInApp()?'The app looks for your cube next.':'The browser asks to connect next.',screen:'The keyboard or the numeric keypad turns it. A drag turns the whole cube.'};
@@ -109,8 +112,8 @@ START_SCREENS['t1-what']=()=>`${stBasicsBar(1)}
     <p class="muted">No cube yet? That is fine. The picture is your cube on these pages. After the basics, you pick a regular cube, a smart cube or a virtual cube.</p>
     <div class="st-foot">${stBack('level','← Change my level')}<span class="spacer"></span><button class="primary" data-go="t1-hold" title="Go on to how to hold it">Next: how to hold it →</button></div></div>
   ${stCubeSide()}</div>`;
-// The virtual cube's keys: after the basics for level 1, after the cube question for level 2.
-// The last turn is in words (stMoveSay): a level 2 user has not met the letters.
+// The virtual cube's keys: after the cube question, for the virtual cube. The last turn is in words
+// (stMoveSay).
 // The six keys of a layout on a three-by-three grid, as they sit on the keys: up and back on the
 // top row, left, front and right in the middle, down under the front.
 function stKeyGrid(id,label){const k=screenKeys(id);const key=(f,word,tip)=>`<button class="st-key" data-turn="${f}" title="${esc(tip+': '+k[f])}"><b>${esc(k[f])}</b><span>${word}</span></button>`;
@@ -121,7 +124,7 @@ START_SCREENS['t1-keys']=()=>{const k=screenKeys('awdx'),n=screenKeys('pad');
   <div class="st-text"><h1>Meet your virtual cube</h1><p class="st-kbd">Use the keyboard or numeric keypad to turn the cube faces. Rest your hand on the six keys. The middle key turns the face toward you.</p><p class="st-touch">The six buttons under the cube turn the six faces, clockwise.</p>
     <div class="st-keysets st-kbd">${stKeyGrid('awdx',SCREEN_KEYMAPS.awdx.where)}${stKeyGrid('pad',SCREEN_KEYMAPS.pad.where)}</div>
     <ul class="st-rules"><li class="st-kbd"><b>Key alone</b>: the face turns clockwise.</li><li class="st-kbd"><b>Shift + key</b>: it turns the other way.</li><li><b>Drag</b>: the whole cube turns. No face moves.</li></ul>
-    <div class="st-foot"><span class="st-kbd">Try it: press <b class="mono">${esc(k.F)}</b> or <b class="mono">${esc(n.F)}</b>, then <b class="mono">Shift+${esc(k.F)}</b>.</span><span class="spacer"></span><button class="primary" data-go="t2-screen" title="Go on">Next: a mixed-up virtual cube →</button></div></div></div>`;};
+    <div class="st-foot"><span class="st-kbd">Try it: press <b class="mono">${esc(k.F)}</b> or <b class="mono">${esc(n.F)}</b>, then <b class="mono">Shift+${esc(k.F)}</b>.</span><span class="spacer"></span><button class="primary" data-go="t1-solve" title="Mix up the virtual cube and solve it with the app">Next: your first solve →</button></div></div></div>`;};
 START_SCREENS['t1-hold']=()=>`${stBasicsBar(2)}
   <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 2 of 4</span><h1>Hold it like this</h1><p>Each face has one center sticker. The centers never move. They give each face its color.</p>
     <button class="st-hold" data-hold="top" title="Show the top layer"><span class="st-hl" data-hl="U"><b>White center on top.</b></span> <span class="muted">The picture shows it this way.</span></button>
@@ -172,15 +175,12 @@ function stFound(){START.found=true;if(START.sc)START.sc.bump(new Set([ST_FIND])
   document.querySelectorAll('#start [data-go="t1-moves"]').forEach(b=>b.onclick=()=>startGo('t1-moves'));
   const b=$('#stFound button');if(b)try{b.focus({preventScroll:true});}catch(e){}}
 // The moves page is where the letters come in: the face names first, then one letter for each.
-// Level 2 has a short one before the cube question: it can turn a cube, but may not know the letters.
-function stMovesPage(short){
-  const intro=short?`<p>The lessons write each move as a letter: <b class="mono">U D F B R L</b>. They are up (the top), down, front, back, right and left, as you hold the cube: white on top, green toward you.</p>`
-    :`<p>Each face of the cube has a name, with front facing you:</p>
+function stMovesPage(){
+  const intro=`<p>Each face of the cube has a name, with front facing you:</p>
     <ul class="st-faces"><li>Up (the top)</li><li>Down (the bottom)</li><li>Front</li><li>Back</li><li>Right</li><li>Left</li></ul>`;
-  const foot=short?`${stBack('level','← Change my level')}<span class="spacer"></span><button class="primary" data-go="t2-cube" title="Pick the cube to learn with">I know the six moves →</button>`
-    :`${stBack('t1-pieces')}<span class="spacer"></span><button class="primary" data-go="t1-done" title="Finish the basics">I know the six moves →</button>`;
-  return `${short?stBar('Before you start'):stBasicsBar(4)}
-  <div class="st-split"><div class="st-text"><span class="st-lbl">${short?'Before you start':'Basics · 4 of 4'}</span><h1>The six moves</h1>${intro}
+  const foot=`${stBack('t1-pieces')}<span class="spacer"></span><button class="primary" data-go="t1-done" title="Finish the basics">I know the six moves →</button>`;
+  return `${stBasicsBar(4)}
+  <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 4 of 4</span><h1>The six moves</h1>${intro}
     <p>Relative to you, the letter for a face turns that face clockwise. A <b>′</b> after the letter turns it the other way. We call the marking "prime", so a counterclockwise <b class="mono">R′</b> is pronounced "R prime".</p>
     ${stMoveBtns(['U','D','F','B','R','L'],'The six moves, then the six the other way')}
     <div class="st-foot">${foot}</div></div>
@@ -212,26 +212,37 @@ function stMoveShow(m){const sc=START.sc,el=startEl();if(!sc)return;const run=ST
   step(m);
   setTimeout(()=>{if(live())step(back);},T.next);
   setTimeout(()=>{if(!live())return;lit(null);sc.set(sc.cube,null);},2*T.next);}
-START_SCREENS['t1-moves']=()=>stMovesPage(false);
-START_SCREENS['t2-moves']=()=>stMovesPage(true);
+START_SCREENS['t1-moves']=()=>stMovesPage();
 
 START_SCREENS['t1-done']=()=>{const names=stSteps();
   return `${stBar('Basics',`<span class="st-dots" aria-label="All four parts finished"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>`)}
-  <div class="st-center"><div class="st-head"><span class="st-tick" aria-hidden="true">✓</span><h1>You know the basics</h1><p>Basics is marked Learned. Next, pick the cube you learn with. Then solve it one step at a time.</p></div>
+  <div class="st-center"><div class="st-head"><span class="st-tick" aria-hidden="true">✓</span><h1>You know the basics</h1><p>Basics is marked Learned. Next, pick your cube. Then your first solve: the app tells you every move, part by part.</p></div>
   <div class="st-donelist"><span>✓ What the cube is</span><span>✓ How to hold it</span><span>✓ Centers, edges, corners</span><span>✓ The six moves</span></div>
   <div class="st-box"><div class="row" style="justify-content:space-between"><b>The beginner method</b><span class="muted">1 of 9 learned</span></div>
     <div class="st-steps">${names.map((n,i)=>`<span class="st-step${i===0?' on':''}">${i===0?'✓ ':''}${esc(n)}</span>`).join('')}</div></div>
   <div class="st-foot">${stBack('t1-moves')}<span class="spacer"></span><button class="primary" data-go="t2-cube" title="Pick the cube to learn with">Next: pick your cube →</button></div></div>`;};
-// ---------- Track 2 · played but never solved ----------
+// ---------- Track 1 · the cube, then the first solve ----------
 START_SCREENS['t2-cube']=()=>{const cards=[
-    {id:'mine',name:'Regular cube',tag:'most people',what:'You turn it by hand. The page shows each step on a picture.',how:'Mixed up already? Scan it with the camera or paint its colors.',note:'Next: scan, paint, or mix it up with me.',cta:'Use a regular cube →'},
+    {id:'mine',name:'Regular cube',tag:'most people',what:'You turn it by hand. The page shows each step on a picture.',how:'Mixed up already? Scan it with the camera or paint its colors.',note:'Next: mix it up with me, or show the app your mixed-up cube.',cta:'Use a regular cube →'},
     {id:'smart',name:'Smart cube',tag:'GAN, Bluetooth',what:'The page sees every turn you make. Hints uncover as you turn.',how:smartHowWords(),note:smartInApp()?'Next: the app looks for your cube.':'Next: the browser asks to connect.',cta:'Connect my cube →'},
-    {id:'screen',name:'Virtual cube',tag:'no cube needed',what:'Use the keyboard or numeric keypad to turn the cube faces. Drag with the mouse to turn the whole cube.',how:'On a phone, buttons under the cube turn it.',note:'Next: the keys, then a mixed-up virtual cube.',cta:'Use the virtual cube →'}];
+    {id:'screen',name:'Virtual cube',tag:'no cube needed',what:'Use the keyboard or numeric keypad to turn the cube faces. Drag with the mouse to turn the whole cube.',how:'On a phone, buttons under the cube turn it.',note:'Next: the keys, then your first solve.',cta:'Use the virtual cube →'}];
   const sel=cards.find(c=>c.id===START.src)||cards[0];
-  return `${stBar('',stBack(START.level===1?'t1-done':START.level===2?'t2-moves':'level',START.level<=2?'← Back':'← Change my level'))}
+  return `${stBar('',stBack(START.level===1?'t1-done':'level',START.level===1?'← Back':'← Change my level'))}
   <div class="st-center"><div class="st-head"><h1>Which cube will you use?</h1><p>Every lesson works with all three. Change it at any time from the chip in the top bar.</p></div>
   <div class="st-three">${cards.map(c=>`<button class="st-card st-pick" data-src="${c.id}" aria-pressed="${c.id===sel.id}" title="${esc(cubeSrcName(c.id))}"><span class="row"><i class="cdot" data-src="${c.id}"></i><span class="tag">${esc(c.tag)}</span></span><b>${esc(c.name)}</b><span>${esc(c.what)}</span><span class="muted">${esc(c.how)}</span></button>`).join('')}</div>
   <div class="st-foot"><span class="muted">${esc(sel.note)}</span><span class="spacer"></span><button class="primary" data-t2go="1" title="Go on">${esc(sel.cta)}</button></div></div>`;};
+// The turn-over in two pictures: white on top, as in the basics, then yellow on top, as the solve
+// starts. A z2 turns it: green stays toward you.
+function stFlipPics(){return `<span class="st-flip" aria-hidden="true">${stPic(new Cube(),null,'White on top')}<b>→</b>${stPic(applyAlg(new Cube(),['z2']),null,'Yellow on top')}</span>`;}
+// Your first solve with a regular cube: the app must know the cube. A solved one is mixed up with
+// me, one turn at a time; a mixed-up one is scanned or painted. Then the guided solve, on its tab.
+START_SCREENS['t1-ready']=()=>`${stBar('Your first solve',stBack('t2-cube'))}
+  <div class="st-center"><div class="st-head"><h1>Your first solve</h1><p>The app tells you every move, part by part. First it needs to know your cube. Is it mixed up?</p></div>
+  <div class="st-two">
+    <div class="st-card st-ready"><span class="tag">new, or solved</span><b>It is solved</b><span>Mix it up with me. I say each turn, one at a time. Hold it white on top, green toward you, as in the basics.</span><span class="spacer"></span><button class="primary" data-ready="mix" title="The app says each turn of a mix-up, one at a time">Mix it up with me →</button></div>
+    <div class="st-card st-ready"><span class="tag">mixed up</span><b>It is mixed up</b><span>Show it to the app. The camera reads each face, or you paint the colors on a map.</span><span class="spacer"></span><div class="row"><button class="primary" data-ready="scan" title="Show each face of your cube to the camera">Scan it with the camera</button><button data-ready="paint" title="Tap the colors of your cube onto a map">Paint its colors</button></div></div>
+  </div>
+  <div class="st-box st-flipnote">${stFlipPics()}<div><b>Then the cube turns over: yellow on top.</b><span>The basics hold it white on top. Every solve starts with yellow on top. The app stops and shows you the turn before the first move.</span></div></div></div>`;
 // ---------- Track 3 · have solved it ----------
 START_SCREENS['t3-start']=()=>{const ways=[
     {id:'memory',tag:'from memory',name:'With the beginner method',what:'The daisy, then layer by layer. I do not need notes.',next:'Next: check off the steps you know →',go:'t3-check',tip:'Check off the beginner steps'},
@@ -332,8 +343,9 @@ function startSaveFive(){const F=START.five;store.set('insp',F.insp);$('#inspChk
   $('#scrLen').value=F.rs?'rs':String(SCR_LENS[3][1]);
   if(F.all){for(const i of [2,3,4,5])startMark(START_SETS[i].ids(),'finished');startSetKnown('cross',2);startSetKnown('f2lfeel',2);startSetKnown('oll',2);}
   store.set('timerHome',true);}
-// t2-screen: the end of the keys page for level 2 with the virtual cube.
-START_SCREENS['t2-screen']=()=>{setTimeout(()=>startFinish('beginner','learn'),0);return '';};
+// The first solve on the virtual cube: a mixed-up cube, and the guided solve on it.
+function startFirstSolve(){startFinish('beginner','bsolve',()=>{newScramble();if(typeof startGuide==='function')startGuide();});}
+START_SCREENS['t1-solve']=()=>{setTimeout(startFirstSolve,0);return '';};
 // ---------- drawing and the clicks ----------
 function startDraw(){const el=startEl();const f=START_SCREENS[START.screen]||START_SCREENS.level;
   el.dataset.screen=START.screen;el.innerHTML=f();startWire(el);}
@@ -342,7 +354,7 @@ function startCubeMount(){const box=$('#stCube');if(!box)return;const scr0=START
   if(scr0==='t1-what')cap='Drag to look around the cube. Double-click to put it back.';
   if(scr0==='t1-hold'){fade=stFaces([4]);cap='Drag to look at the other faces. Double-click and it comes back to white on top, green toward you.';}
   if(scr0==='t1-pieces')cap=ST_KIND_SAY[START.found?'find':START.kind||'none'];
-  if(scr0==='t1-moves'||scr0==='t2-moves')cap='Click a move to see it turn. Drag to look around. Double-click to put the view back.';
+  if(scr0==='t1-moves')cap='Click a move to see it turn. Drag to look around. Double-click to put the view back.';
   // Only the keys page takes the keys: the basics come before the cube question.
   const keys=scr0==='t1-keys';
   // The virtual cube keeps its state from page to page; a lit page shows it solved.
@@ -363,7 +375,7 @@ function startWire(el){
   on('[data-go]',b=>{if(b.dataset.go==='t1-done')startMark(['beg-0'],'finished');startGo(b.dataset.go);});
   on('[data-close]',()=>startClose());
   on('[data-paste]',()=>{startClose();openSettings('data');});
-  on('[data-level]',b=>{const l=LEVELS[+b.dataset.level-1];START.level=l.n;START.found=false;START.kind=null;START.check=null;START.sets=null;START.quiz=null;START.five=null;startGo(l.first);});
+  on('[data-level]',b=>{const l=startLevel(+b.dataset.level);START.level=l.n;START.found=false;START.kind=null;START.check=null;START.sets=null;START.quiz=null;START.five=null;startGo(l.first);});
   on('.st-keys [data-turn]',b=>START.sc&&START.sc.turn(b.dataset.turn));
   on('.st-seg [data-src],.st-pick[data-src]',b=>{START.src=b.dataset.src;startDraw();});
   // A kind or the hint lifts pieces out and back. The page is not drawn again, so the view stays.
@@ -374,7 +386,9 @@ function startWire(el){
   on('[data-mv]',b=>stMoveShow(b.dataset.mv));
   on('[data-demo]',()=>{const sc=START.sc;if(!sc)return;sc.turn('R');setTimeout(()=>{if(START.sc===sc)sc.turn("R'");},900);});
   on('[data-finish]',b=>startEnd(b.dataset.finish));
-  on('[data-t2go]',()=>{if(START.src==='screen')startGo('t1-keys');else if(START.src==='smart')startFinish('beginner','learn',()=>smartConnectNow());else startFinish('beginner','learn');});
+  // The cube question leads to the first solve: the keys page, the connect, or how the app learns the cube.
+  on('[data-t2go]',()=>{if(START.src==='screen')startGo('t1-keys');else if(START.src==='smart')startFinish('beginner','bsolve',()=>smartConnectNow());else startGo('t1-ready');});
+  on('[data-ready]',b=>{const a=b.dataset.ready;startFinish('beginner','bsolve',()=>{if(a==='mix'){if(typeof begMixStart==='function')begMixStart();}else if(a==='scan'){if(typeof openScan==='function')openScan();}else if(typeof openPaint==='function')openPaint();});});
   on('[data-way]',b=>{START.way=b.dataset.way;START.check=null;startGo(b.dataset.to);});
   on('[data-step]',b=>{START.check[+b.dataset.step]=+b.dataset.v;startDraw();});
   on('[data-check]',b=>{const a=b.dataset.check;startSaveCheck();if(a==='cfop')startGo('t3-bridge');else if(a==='timer')startFinish('cfop','solve');else startFinish('beginner','learn');});

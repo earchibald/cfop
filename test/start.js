@@ -33,10 +33,11 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   assert.ok($('.page>footer.foot')===$('.page').lastElementChild,'the footer stays last');
   // ----- the first visit: the level picker -----
   assert.ok(d.body.classList.contains('starting'),'a first visit opens the level picker');
-  assert.strictEqual($$('#start .st-level').length,5,'five levels');
+  assert.strictEqual($$('#start .st-level').length,4,'four levels');
   for(const b of $$('#start button'))assert.ok(b.title,'every control has a title: '+b.textContent.trim());
-  // Level 1: the basics first (no cube question, no move letter before the moves page, no keys),
-  // then which cube, the virtual cube's keys, then the beginner method.
+  // Level 1, I've never solved one: the basics first (no cube question, no move letter before the
+  // moves page, no keys), then which cube, the virtual cube's keys, then the first solve.
+  assert.ok(/I've never solved one!/.test($('#start [data-level="1"]').textContent)&&!$('#start [data-level="2"]'),'levels 1 and 2 are one level');
   $('#start [data-level="1"]').click();assert.strictEqual($('#start').dataset.screen,'t1-what');
   const letters=/(^|[^\w])[UDFBRL]['′]?($|[^\w])/;
   for(const s of ['t1-what','t1-hold','t1-pieces']){
@@ -94,22 +95,25 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   assert.ok(!w.eval('START').sc.cube.isSolved(),'the keys turn the virtual cube');
   assert.strictEqual($('#stLast').textContent,'Right face, counterclockwise','the last turn shows in words');
   $('#start [data-turn="U"]').click();
-  $('#start [data-go="t2-screen"]').click();await new Promise(r=>setTimeout(r,10));
+  $('#start [data-go="t1-solve"]').click();await new Promise(r=>setTimeout(r,10));
   assert.ok(!d.body.classList.contains('starting'),'the pages close');
-  assert.strictEqual(d.body.dataset.method,'beginner');assert.strictEqual(d.body.dataset.tab,'learn');
+  assert.strictEqual(d.body.dataset.method,'beginner');assert.strictEqual(d.body.dataset.tab,'bsolve','straight to the first solve');
   assert.strictEqual(st()['beg-0'],'finished','Basics is marked Learned');
   assert.strictEqual(JSON.parse(w.localStorage.getItem('cw:level')),1);
   assert.strictEqual(JSON.parse(w.localStorage.getItem('cw:cubeSrc')),'screen','the virtual cube is the cube');
   assert.strictEqual($('#cubeChipName').textContent,'Virtual cube','the chip names it');
-  assert.strictEqual(d.body.dataset.begview,'player','the mixed-up virtual cube is in the player');
+  // The guided solve opens on the turn-over: the basics held it white on top, the solve starts yellow on top.
+  assert.ok($('#gdTurn')&&/Turn it over: yellow on top/.test($('#gdTitle').textContent),'the turn-over screen first');
+  assert.ok(/white on top, as in the basics/.test($('#gdTurn').textContent),'it names the change from the basics');
+  $('#gdDone').click();
+  assert.strictEqual(d.body.dataset.begview,'player','the mixed-up virtual cube is in the player, yellow on top');
+  assert.strictEqual(w.cubeAtSeq(0).toFacelets()[4],3,'yellow on top');
   // The player takes the keys now: a key turns the cube in the section.
-  const n0=w.seqState.moves.length;d.dispatchEvent(new w.KeyboardEvent('keydown',{code:'KeyS',bubbles:true}));
-  assert.strictEqual(w.seqState.moves.length,n0+1,'a key adds a move to the player');assert.strictEqual(w.seqState.moves[n0],'F');
-  assert.ok($('#begCubeLine')&&/Virtual cube/.test($('#begCubeLine').textContent),'the beginner home names the cube');
-  // Level 2: a short six-moves page, then the cube question.
-  w.startOpen('level');$('#start [data-level="2"]').click();assert.strictEqual($('#start').dataset.screen,'t2-moves');
-  assert.ok(/U D F B R L/.test($('#start').textContent),'level 2 meets the letters');assert.ok(!$('#start .st-dots'),'not a basics page');
-  // The moves: two rows of buttons; a click turns the move, then the other way turns it back.
+  const i0=w.seqState.idx;d.dispatchEvent(new w.KeyboardEvent('keydown',{code:'KeyS',bubbles:true}));
+  assert.strictEqual(w.seqState.moves.length,i0+1,'a key adds a move to the player after the step in view');assert.strictEqual(w.seqState.moves[i0],'F');
+  w.goTab('learn');assert.ok($('#begCubeLine')&&/Virtual cube/.test($('#begCubeLine').textContent),'the beginner home names the cube');
+  // The moves page: two rows of buttons; a click turns the move, then the other way turns it back.
+  w.startOpen('level');$('#start [data-level="1"]').click();w.startGo('t1-moves');
   assert.strictEqual($$('#start .st-move').length,12,'six moves and six the other way');assert.ok(!$('#start [data-prime]'),'no other-way switch');
   w.eval('ST_MOVE_T.glow=10;ST_MOVE_T.turn=30;ST_MOVE_T.next=150');const wait=ms=>new Promise(r=>setTimeout(r,ms));
   const on=()=>$$('#start .st-move.on').map(b=>b.dataset.mv).join(),cube=()=>w.eval('START').sc.cube;
@@ -119,10 +123,21 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
     await wait(90);assert.ok(!cube().isSolved(),m+' turns the picture');
     await wait(120);assert.strictEqual(on(),back,'then '+back+' lights');
     await wait(240);assert.strictEqual(on(),'','the lights go out');assert.ok(cube().isSolved(),m+' then '+back+': solved again');}
-  $('#start [data-go="t2-cube"]').click();assert.strictEqual($('#start').dataset.screen,'t2-cube','then the cube question');
-  $('#start [data-go="t2-moves"]').click();assert.strictEqual($('#start').dataset.screen,'t2-moves','Back goes to the moves');
-  w.startClose();
+  // A regular cube: Your first solve asks how the app learns it, and says yellow goes on top.
+  w.startGo('t2-cube');assert.ok($('#start [data-go="t1-done"]'),'Back from the cube question goes to the basics');
+  $('#start .st-pick[data-src="mine"]').click();$('#start [data-t2go]').click();assert.strictEqual($('#start').dataset.screen,'t1-ready');
+  assert.ok($('#start [data-ready="mix"]')&&$('#start [data-ready="scan"]')&&$('#start [data-ready="paint"]'),'mix it up with me, scan, paint');
+  assert.ok(/yellow on top/.test($('#start .st-flipnote').textContent)&&$$('#start .st-flip svg').length===2,'the turn-over in two pictures');
+  for(const b of $$('#start button'))assert.ok(b.title,'every control has a title: '+b.textContent.trim());
+  $('#start [data-ready="mix"]').click();
+  assert.ok(!d.body.classList.contains('starting'));assert.strictEqual(d.body.dataset.tab,'bsolve');assert.strictEqual(d.body.dataset.begview,'mix','Mix it up with me on Solve my cube');
+  assert.strictEqual(JSON.parse(w.localStorage.getItem('cw:cubeSrc')),'mine');
+  $('#begMix [data-beg="mixEnd"]').click();$('#begMix [data-beg="mixSolve"]').click();
+  assert.ok($('#gdTurn'),'then the solve, on the turn-over screen');
+  // A saved level 2 (played but never solved) reads as level 1.
+  assert.strictEqual(w.startLevel(2).n,1);assert.ok(/I've never solved one!/.test(w.startLevel(2).name));
   // ----- the cube menu -----
+  w.setCubeSrc('screen');
   $('#cubeChip').click();assert.ok(!$('#cubePop').classList.contains('hidden'),'the chip opens the cube menu');
   assert.deepStrictEqual($$('#cubePop .csrc').map(b=>b.textContent),['Regular cube','Virtual cube','Smart cube'],'three sources');
   assert.strictEqual($$('#cubePop .cact').length,3,'three actions for the virtual cube: no key layouts');assert.ok(!$('#cubeKeys'));
@@ -134,7 +149,7 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   assert.ok(w.eval('scr').cube.isSolved(),'My cube is solved loads a solved cube');
   // ----- the method menu: the level row; all nine Learned: Next on CFOP and the Progress card -----
   w.startMark([0,1,2,3,4,5,6,7,8].map(n=>'beg-'+n),'finished');
-  $('#methodChip').click();assert.ok(/Never touched one/.test($('#methodLevel').textContent),'the level row');
+  $('#methodChip').click();assert.ok(/I've never solved one!/.test($('#methodLevel').textContent),'the level row');
   assert.ok($('#methodPop .mcard[data-method="cfop"] .mnext'),'CFOP has the Next mark');
   $('#methodChip').click();w.goTab('progress');assert.ok($('#begCfop')&&/Next: CFOP/.test($('#begCfop').textContent),'the Progress tab recommends CFOP');
   $('#begCfopGo').click();assert.strictEqual(d.body.dataset.method,'cfop');
@@ -187,5 +202,5 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   ({w,d,errs}=await boot({'cw:method':'"cfop"','cw:level':'5'}));
   assert.ok(!d.body.classList.contains('starting'),'a returning visitor sees no level page');
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('start: the virtual cube, the cube slot, the cube menu, the five levels, the level row, the CFOP card, the Cross lesson, Still to learn, the timer home ok');process.exit(0);
+  console.log('start: the virtual cube, the cube slot, the cube menu, the four levels, the first solve, the level row, the CFOP card, the Cross lesson, Still to learn, the timer home ok');process.exit(0);
 }catch(e){console.log('start: FAIL',e.message);console.log(e.stack.split('\n').slice(1,4).join('\n'));process.exit(1);}})();

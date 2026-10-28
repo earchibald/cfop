@@ -6,7 +6,7 @@
 // text, with a pill for the scramble; a section with none (Reference, the Smart cube tab, the
 // Cheat sheet) shows no player. body[data-cube] is wide, side or none.
 // Nothing moves after the start: some modules write their whole section again (guide.js), so the
-// player and the beginner home (#begHome, above the section) never live inside one.
+// player never lives inside one.
 const PLACE_NONE=new Set(['ref','smart','sref','fref','cheat']);
 const PLACE_WIDE=new Set(['solve','ssolve','fsolve','bsolve']);
 function placeKind(tab){return PLACE_NONE.has(tab)?'none':PLACE_WIDE.has(tab)?'wide':'side';}
@@ -17,7 +17,7 @@ function placeInit(){
   const pill=document.createElement('div');pill.id='scrPill';pill.className='scrpill';
   pill.innerHTML='<span class="muted">Scramble</span> <b id="scrPillSeed"></b><button class="small" id="scrPillNew" title="A new scramble">New<span class="hk" aria-hidden="true">N</span></button>';
   slot.append(pill,$('#seedBar'),$('#begBar'),$('#player'));
-  main.prepend(slot);main.prepend($('#begHome'));
+  main.prepend(slot);
   $('#scrPillNew').onclick=()=>{if(typeof nextForTab==='function')nextForTab();else newScramble();};
   placePlayer();
 }
