@@ -7,9 +7,10 @@
 //   Level 1, I've never solved one: the basics first, in four pages (what the cube is, how to
 //     hold it, the pieces, the six moves), on a picture that a drag looks around, white on top.
 //     No question about a cube and no move letter before the moves page. Then which cube, then
-//     the first solve: the guided solve (js/guide.js), which turns the cube over to yellow on top
-//     on a screen of its own. A regular cube is mixed up with me or scanned first (t1-ready); the
-//     virtual cube meets its keys (t1-keys) and comes mixed up; a smart cube connects.
+//     the first solve: the guided solve (js/guide.js), which first says to hold the cube yellow on
+//     top, green toward you. A regular cube is mixed up by hand, then scanned or painted
+//     (t1-ready); the virtual cube meets its keys (t1-keys) and comes mixed up; a smart cube
+//     connects.
 //     (Levels 1 and 2 were one level from 1.54.0: a saved cw:level 2 reads as 1, startLevel.)
 //   Level 3, have solved it: how, then the beginner steps checked off, then the bridge to CFOP
 //     and the Cross lesson.
@@ -223,7 +224,7 @@ START_SCREENS['t1-done']=()=>{const names=stSteps();
   <div class="st-foot">${stBack('t1-moves')}<span class="spacer"></span><button class="primary" data-go="t2-cube" title="Pick the cube to learn with">Next: pick your cube →</button></div></div>`;};
 // ---------- Track 1 · the cube, then the first solve ----------
 START_SCREENS['t2-cube']=()=>{const cards=[
-    {id:'mine',name:'Regular cube',tag:'most people',what:'You turn it by hand. The page shows each step on a picture.',how:'Mixed up already? Scan it with the camera or paint its colors.',note:'Next: mix it up with me, or show the app your mixed-up cube.',cta:'Use a regular cube →'},
+    {id:'mine',name:'Regular cube',tag:'most people',what:'You turn it by hand. The page shows each step on a picture.',how:'Mixed up already? Scan it with the camera or paint its colors.',note:'Next: mix it up, then scan it with the camera or paint its colors.',cta:'Use a regular cube →'},
     {id:'smart',name:'Smart cube',tag:'GAN, Bluetooth',what:'The page sees every turn you make. Hints uncover as you turn.',how:smartHowWords(),note:smartInApp()?'Next: the app looks for your cube.':'Next: the browser asks to connect.',cta:'Connect my cube →'},
     {id:'screen',name:'Virtual cube',tag:'no cube needed',what:'Use the keyboard or numeric keypad to turn the cube faces. Drag with the mouse to turn the whole cube.',how:'On a phone, buttons under the cube turn it.',note:'Next: the keys, then your first solve.',cta:'Use the virtual cube →'}];
   const sel=cards.find(c=>c.id===START.src)||cards[0];
@@ -231,18 +232,17 @@ START_SCREENS['t2-cube']=()=>{const cards=[
   <div class="st-center"><div class="st-head"><h1>Which cube will you use?</h1><p>Every lesson works with all three. Change it at any time from the chip in the top bar.</p></div>
   <div class="st-three">${cards.map(c=>`<button class="st-card st-pick" data-src="${c.id}" aria-pressed="${c.id===sel.id}" title="${esc(cubeSrcName(c.id))}"><span class="row"><i class="cdot" data-src="${c.id}"></i><span class="tag">${esc(c.tag)}</span></span><b>${esc(c.name)}</b><span>${esc(c.what)}</span><span class="muted">${esc(c.how)}</span></button>`).join('')}</div>
   <div class="st-foot"><span class="muted">${esc(sel.note)}</span><span class="spacer"></span><button class="primary" data-t2go="1" title="Go on">${esc(sel.cta)}</button></div></div>`;};
-// The turn-over in two pictures: white on top, as in the basics, then yellow on top, as the solve
-// starts. A z2 turns it: green stays toward you.
-function stFlipPics(){return `<span class="st-flip" aria-hidden="true">${stPic(new Cube(),null,'White on top')}<b>→</b>${stPic(applyAlg(new Cube(),['z2']),null,'Yellow on top')}</span>`;}
-// Your first solve with a regular cube: the app must know the cube. A solved one is mixed up with
-// me, one turn at a time; a mixed-up one is scanned or painted. Then the guided solve, on its tab.
+// Your first solve with a regular cube, in one page: a solved cube is mixed up by hand, then the
+// app learns it by a scan or a paint. Then the guided solve, on its tab, which first says how to
+// hold the cube. The words are the owner's.
 START_SCREENS['t1-ready']=()=>`${stBar('Your first solve',stBack('t2-cube'))}
-  <div class="st-center"><div class="st-head"><h1>Your first solve</h1><p>The app tells you every move, part by part. First it needs to know your cube. Is it mixed up?</p></div>
-  <div class="st-two">
-    <div class="st-card st-ready"><span class="tag">new, or solved</span><b>It is solved</b><span>Mix it up with me. I say each turn, one at a time. Hold it white on top, green toward you, as in the basics.</span><span class="spacer"></span><button class="primary" data-ready="mix" title="The app says each turn of a mix-up, one at a time">Mix it up with me →</button></div>
-    <div class="st-card st-ready"><span class="tag">mixed up</span><b>It is mixed up</b><span>Show it to the app. The camera reads each face, or you paint the colors on a map.</span><span class="spacer"></span><div class="row"><button class="primary" data-ready="scan" title="Show each face of your cube to the camera">Scan it with the camera</button><button data-ready="paint" title="Tap the colors of your cube onto a map">Paint its colors</button></div></div>
-  </div>
-  <div class="st-box st-flipnote">${stFlipPics()}<div><b>Then the cube turns over: yellow on top.</b><span>The basics hold it white on top. Every solve starts with yellow on top. The app stops and shows you the turn before the first move.</span></div></div></div>`;
+  <div class="st-center"><div class="st-box st-ready1">
+    <div class="st-readypic">${stPic(new Cube(),null,'A solved cube')}</div>
+    <div class="st-readytext"><h1>Is your cube solved?</h1>
+      <p>If so, go ahead and scramble it up! Don't worry — you can do this.</p>
+      <p>Then, we'll either scan it with your camera (the easiest way) or you can paint the grid colors by hand.</p>
+      <div class="row"><button class="primary big" data-ready="scan" title="Show each face of your cube to the camera">Scan it with the camera</button><button class="big" data-ready="paint" title="Tap the colors of your cube onto a grid">Paint the colors by hand</button></div></div>
+  </div></div>`;
 // ---------- Track 3 · have solved it ----------
 START_SCREENS['t3-start']=()=>{const ways=[
     {id:'memory',tag:'from memory',name:'With the beginner method',what:'The daisy, then layer by layer. I do not need notes.',next:'Next: check off the steps you know →',go:'t3-check',tip:'Check off the beginner steps'},
@@ -388,7 +388,7 @@ function startWire(el){
   on('[data-finish]',b=>startEnd(b.dataset.finish));
   // The cube question leads to the first solve: the keys page, the connect, or how the app learns the cube.
   on('[data-t2go]',()=>{if(START.src==='screen')startGo('t1-keys');else if(START.src==='smart')startFinish('beginner','bsolve',()=>smartConnectNow());else startGo('t1-ready');});
-  on('[data-ready]',b=>{const a=b.dataset.ready;startFinish('beginner','bsolve',()=>{if(a==='mix'){if(typeof begMixStart==='function')begMixStart();}else if(a==='scan'){if(typeof openScan==='function')openScan();}else if(typeof openPaint==='function')openPaint();});});
+  on('[data-ready]',b=>{const a=b.dataset.ready;startFinish('beginner','bsolve',()=>{if(a==='scan'){if(typeof openScan==='function')openScan();}else if(typeof openPaint==='function')openPaint();});});
   on('[data-way]',b=>{START.way=b.dataset.way;START.check=null;startGo(b.dataset.to);});
   on('[data-step]',b=>{START.check[+b.dataset.step]=+b.dataset.v;startDraw();});
   on('[data-check]',b=>{const a=b.dataset.check;startSaveCheck();if(a==='cfop')startGo('t3-bridge');else if(a==='timer')startFinish('cfop','solve');else startFinish('beginner','learn');});

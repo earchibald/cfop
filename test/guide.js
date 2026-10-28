@@ -1,5 +1,5 @@
-// Solve my cube: the entry cards start the guided solve, the guide stops on a turn-over screen
-// before the first move (white on top to yellow on top), steps part by part through the beginner
+// Solve my cube: the entry cards start the guided solve, the guide stops on a hold screen before
+// the first move (yellow on top, green facing you, the real cube in the player), steps part by part through the beginner
 // plan with the hold on every part, a stage bar and the whole plan, it ends with "You did it", and
 // a new scramble from the seed bar restarts it at part 1.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
@@ -27,30 +27,34 @@ w.addEventListener('load',async()=>{try{
   assert.ok(entry(),'entry view shows the two cards');
   assert.ok($('#tab-bsolve .st-card .primary[data-beg="mix"]'),'Mix it up with me is offered');
   assert.ok($('#tab-bsolve .st-card .primary[data-beg="scan"]'),'Scan it with the camera is offered');
-  assert.ok(/yellow on top/.test($('#tab-bsolve .st-flipnote').textContent),'the entry says the solve starts yellow on top');
+  assert.ok(!$('#tab-bsolve .st-flipnote')&&!/white on top/i.test($('#tab-bsolve').textContent),'no turn-over note, no white on top');
   assert.ok(!$('#tab-bsolve .beg-hold'),'no white-up hold picture');
   assert.ok($('#gdSeed').textContent.includes('guide-test-one'),'entry names the current scramble');
   assert.strictEqual(d.body.dataset.begview,'home','no player on the entry view');
 
-  // Start with this scramble: the turn-over screen first. The cube starts white up, as in the basics.
+  // Start with this scramble: the hold screen first. One line: yellow on top, green facing you.
   $('#gdStart').click();
-  assert.ok(turn(),'the guide opens on the turn-over screen');assert.strictEqual(G().i,0,'it is entry 1');
+  assert.ok(turn(),'the guide opens on the hold screen');assert.strictEqual(G().i,0,'it is entry 1');
   assert.ok(G().parts[0].turn&&G().parts[0].from==='white'&&G().parts[0].to==='yellow','white on top to yellow on top');
-  assert.ok(/Turn it over: yellow on top/.test($('#gdTitle').textContent),'the title says it in large words');
-  assert.ok(/Yellow on top/.test($('#gdTurn .gd-hold').textContent)&&/Green toward you/.test($('#gdTurn .gd-hold').textContent),'the hold: yellow on top, green toward you');
-  assert.ok(/white on top, as in the basics/.test($('#gdTurn').textContent),'it names the change from the basics');
-  assert.ok($('#gdTurnCube svg'),'the picture of the turn');
+  assert.strictEqual($('#gdTitle').textContent.replace(/\s+/g,' ').trim(),'Now, hold the cube with the YELLOW CENTER on top and the GREEN CENTER facing you.','the hold in one line');
+  assert.ok(!/white on top|z2|basics/i.test($('#gdTurn').textContent),'no white on top, no z2, no basics');
+  assert.ok(!$('#gdShow')&&!$('#gdTurnCube'),'no turn picture and no Show me the turn again');
   assert.strictEqual($$('#gdBar .stage').length,8,'stage bar of eight');
-  assert.strictEqual(d.body.dataset.begview,'home','no player over the turn-over screen: its picture is first in view');
-  assert.strictEqual(G().parts[0].before.toFacelets()[4],0,'before the turn-over the top center is white');
-  assert.strictEqual(G().parts[0].after.toFacelets()[4],3,'after the turn-over the top center is yellow');
-  assert.ok(/Yellow is on top/.test($('#gdDone').textContent),'the button says yellow is on top');
-  $('#gdShow').click();assert.ok(turn(),'Show me the turn again stays on the screen');w.stopAuto();
+  assert.strictEqual(d.body.dataset.begview,'player','the player shows the cube');
+  assert.strictEqual(d.body.dataset.gd,'hold','the cube beside the hold');
+  assert.strictEqual(w.eval('seqState.moves.length'),0,'no moves to step');
+  assert.strictEqual(w.cubeAtSeq(0).toFacelets()[4],3,'the player shows the real cube yellow on top');
+  assert.strictEqual(JSON.stringify(w.cubeAtSeq(0).toFacelets()),JSON.stringify(w.applyAlg(w.scr.cube,['z2']).toFacelets()),'the real scramble, held so');
+  assert.strictEqual(G().parts[0].before.toFacelets()[4],0,'before the hold the top center is white');
+  assert.strictEqual(G().parts[0].after.toFacelets()[4],3,'after it the top center is yellow');
+  assert.ok(/Start stage 1: the daisy/.test($('#gdDone').textContent),'the button starts the daisy');
 
   // Yellow is on top: part 1, already turned over, with no z2 in it.
   $('#gdDone').click();
   assert.ok(guide()&&!turn(),'part 1 shows');assert.strictEqual(G().i,1);
   assert.strictEqual(d.body.dataset.begview,'player','the part shows the player');
+  assert.strictEqual(d.body.dataset.gd,'part','the cube beside the part');
+  assert.ok($('#tab-bsolve .gd-row2 .gd-key')&&$('#tab-bsolve .gd-row2 #gdNext'),'the key and Coming up in one row');
   const first=G().parts[1];
   assert.ok(label().includes('stage '+first.stage.n),'the player label names the stage');
   assert.strictEqual(w.eval('seqState.idx'),0,'the player sits before the part');
@@ -58,6 +62,12 @@ w.addEventListener('load',async()=>{try{
   assert.ok($('#gdTitle').textContent.trim().length>0,'the part has a title');
   assert.ok($$('#tab-bsolve .gd-moves .m').length>=1,'at least one move tile');
   assert.ok(!$$('#tab-bsolve .gd-moves .m').some(m=>m.textContent==='z2'),'no z2 in the part');
+  // A tile is a step: a click shows the cube after it, and the player lights it.
+  const tiles=$$('#tab-bsolve .gd-moves .m[data-k]');assert.strictEqual(tiles.length,first.seq.length,'a tile per move');
+  assert.ok(tiles.some(t=>/\bfc c\d\b/.test(t.className)),'the tiles carry face colors');
+  tiles[0].click();assert.strictEqual(w.eval('seqState.idx'),1,'a tile click steps to it');
+  assert.ok(tiles[0].classList.contains('cur'),'the tile is lit');
+  w.eval('seqGo(0)');assert.ok(!tiles[0].classList.contains('cur'),'the light follows the player');
   assert.ok(!w.eval('seqState.moves').includes('z2'),'nor in the player');
   assert.strictEqual(w.cubeAtSeq(0).toFacelets()[4],3,'the part starts yellow up');
   assert.ok(/Yellow on top/.test($('#tab-bsolve .gd-part .gd-hold').textContent),'the hold on the part');
@@ -71,11 +81,11 @@ w.addEventListener('load',async()=>{try{
   w.eval(`guideState.i=${later};gdRender()`);
   const li2=$$('#tab-bsolve .gd-steps > li');assert.strictEqual(li2.length,2,'a later part has two lines');
   assert.ok(/\(.+\)\./.test(li2[1].textContent)&&li2[1].querySelector('.gd-moves'),'its second line names the moves above the tiles');
-  // The white corners are done white on top: a turn-over screen before them, and one after.
+  // The white corners are done white on top: a hold screen before them, and one after.
   const turns=G().parts.filter(x=>x.turn).map(x=>x.to);
-  assert.strictEqual(JSON.stringify(turns),'["yellow","white","yellow"]','three turn-overs: yellow, white for the corners, yellow again');
+  assert.strictEqual(JSON.stringify(turns),'["yellow","white","yellow"]','three holds: yellow, white for the corners, yellow again');
   w.eval(`guideState.i=${G().parts.findIndex((x,i)=>i>0&&x.turn)};gdRender()`);
-  assert.ok(turn()&&/Turn it over: white on top/.test($('#gdTitle').textContent),'the corners turn-over says white on top');
+  assert.ok(turn()&&/hold the cube with the WHITE CENTER on top/.test($('#gdTitle').textContent),'the corners hold says white on top');
   w.eval('guideState.i=1;gdRender();gdLoadPart(true)');
   assert.deepStrictEqual(w.cubeAtSeq(w.seqState.moves.length).toFacelets(),first.after.toFacelets(),'the part ends on its after cube');
   assert.ok($$('#scramble .mt small').length>=1,'beginner tiles carry captions');
@@ -97,7 +107,7 @@ w.addEventListener('load',async()=>{try{
   $('#gdPlanBtn').click();
   assert.ok($$('#gdPlan .gd-ph').length>=8,'the whole plan lists eight stage headings');
   assert.ok($('#gdPlan .gd-prow.cur'),'the current part is marked');
-  $$('#gdPlan .gd-prow')[3].click();assert.strictEqual(G().i,4,'a plan row jumps to its part, past the turn-over');assert.ok(!G().parts[4].turn);
+  $$('#gdPlan .gd-prow')[3].click();assert.strictEqual(G().i,4,'a plan row jumps to its part, past the hold screen');assert.ok(!G().parts[4].turn);
   $('#gdPlanBtn').click();assert.ok(!$('#gdPlan'),'the plan closes');
   // A click on a done stage jumps to its first part.
   $('#gdBar .stage.cur').click();assert.strictEqual(G().i,4,'the current stage does not jump');
@@ -119,12 +129,12 @@ w.addEventListener('load',async()=>{try{
   $('#gdAgain').click();assert.ok(entry(),'Solve again returns to the entry view');
   assert.ok(label().includes('your cube'),'the player holds the user\'s cube again');assert.strictEqual(d.body.dataset.begview,'home','and the entry view, with no player');
 
-  // The virtual cube: one card mixes it up, and the guide starts on the turn-over screen.
+  // The virtual cube: one card mixes it up, and the guide starts on the hold screen.
   const src0=w.cubeSrc;w.cubeSrc=()=>'screen';w.gdRender(); // this file:// page cannot store a choice
   assert.ok(/virtual cube/.test($('#tab-bsolve .gd-entry').textContent)&&!$('#tab-bsolve [data-beg="scan"]'),'the virtual cube has its own card');
   const s0=w.eval('scr.seed');$('#tab-bsolve [data-beg="screen"]').click();
   assert.notStrictEqual(w.eval('scr.seed'),s0,'Mix it up and solve it changes the seed');
-  assert.ok(turn(),'it starts the guide on the turn-over');assert.strictEqual(G().i,0);
+  assert.ok(turn(),'it starts the guide on the hold screen');assert.strictEqual(G().i,0);
   $('#gdDone').click();assert.ok(!$$('#scramble .m').some(m=>m.textContent==='z2'),'the part after has no turn-over');assert.strictEqual(G().i,1);
   assert.strictEqual(w.cubeAtSeq(0).toFacelets()[4],3,'it starts yellow up');
   w.cubeSrc=src0;
@@ -133,7 +143,7 @@ w.addEventListener('load',async()=>{try{
   $('#gdDone').click();$('#gdDone').click();assert.strictEqual(G().i,3);
   const s1=w.eval('scr.seed');$('#newSeed').click();
   assert.notStrictEqual(w.eval('scr.seed'),s1,'New changes the seed');
-  assert.ok(turn(),'the guide still shows, at the turn-over');assert.strictEqual(G().i,0,'New restarts at the start');
+  assert.ok(turn(),'the guide still shows, at the hold screen');assert.strictEqual(G().i,0,'New restarts at the start');
   $('#gdDone').click();
   const n1=G().parts[1].stage.n; // stage 1, unless the daisy is already made on this cube
   assert.ok(new RegExp('^Stage '+n1+' of 8 · .+ · part 1 of \\d+$').test(where()),'New restarts at stage 1 part 1: '+where());
@@ -145,7 +155,7 @@ w.addEventListener('load',async()=>{try{
   w.goTab('learn');
   w.eval(`loadScramble('guide-test-two',parseAlg("R U F' L2 D B R' U2 F L"),true);goTab('bsolve');`);
   assert.ok(turn(),'a cube loaded from another tab starts the guide');assert.strictEqual(G().i,0);
-  assert.strictEqual(d.body.dataset.begview,'home','no player over the turn-over');
+  assert.strictEqual(d.body.dataset.begview,'player','the player shows the cube held for the hold screen');
   // Re-entering the tab shows the current part again.
   $('#gdDone').click();w.goTab('learn');w.goTab('bsolve');
   assert.ok(label().includes(G().parts[1].part.title),'re-entering the tab shows the current part');
@@ -153,6 +163,6 @@ w.addEventListener('load',async()=>{try{
   w.goTab('learn');w.startGuide();assert.ok($('#tab-bsolve').classList.contains('on')&&turn()&&G().i===0,'startGuide opens the guide at the start');
 
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('guide: entry cards, the turn-over screens, the hold, start, stage bar, Done/Previous/Show me, the whole plan, You did it, Solve again, Scramble one, New restarts ok');
+  console.log('guide: entry cards, the hold screens (the real cube in the player), the hold, the tiles as steps, the key row, start, stage bar, Done/Previous/Show me, the whole plan, You did it, Solve again, Scramble one, New restarts ok');
   process.exit(0);
 }catch(e){console.error('guide: FAIL',e.message,errs);process.exit(1);}});

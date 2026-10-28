@@ -102,9 +102,9 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   assert.strictEqual(JSON.parse(w.localStorage.getItem('cw:level')),1);
   assert.strictEqual(JSON.parse(w.localStorage.getItem('cw:cubeSrc')),'screen','the virtual cube is the cube');
   assert.strictEqual($('#cubeChipName').textContent,'Virtual cube','the chip names it');
-  // The guided solve opens on the turn-over: the basics held it white on top, the solve starts yellow on top.
-  assert.ok($('#gdTurn')&&/Turn it over: yellow on top/.test($('#gdTitle').textContent),'the turn-over screen first');
-  assert.ok(/white on top, as in the basics/.test($('#gdTurn').textContent),'it names the change from the basics');
+  // The guided solve opens on the hold: the virtual cube is yellow on top, green facing you, in the player.
+  assert.ok($('#gdTurn')&&/The cube now has the YELLOW CENTER on top and the GREEN CENTER facing you/.test($('#gdTitle').textContent.replace(/\s+/g,' ')),'the hold screen first');
+  assert.strictEqual(d.body.dataset.begview,'player','the cube is in the player');assert.strictEqual(w.cubeAtSeq(0).toFacelets()[4],3,'held yellow on top');
   $('#gdDone').click();
   assert.strictEqual(d.body.dataset.begview,'player','the mixed-up virtual cube is in the player, yellow on top');
   assert.strictEqual(w.cubeAtSeq(0).toFacelets()[4],3,'yellow on top');
@@ -123,17 +123,21 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
     await wait(90);assert.ok(!cube().isSolved(),m+' turns the picture');
     await wait(120);assert.strictEqual(on(),back,'then '+back+' lights');
     await wait(240);assert.strictEqual(on(),'','the lights go out');assert.ok(cube().isSolved(),m+' then '+back+': solved again');}
-  // A regular cube: Your first solve asks how the app learns it, and says yellow goes on top.
+  // A regular cube: Your first solve is one page: mix it up by hand, then scan or paint.
   w.startGo('t2-cube');assert.ok($('#start [data-go="t1-done"]'),'Back from the cube question goes to the basics');
   $('#start .st-pick[data-src="mine"]').click();$('#start [data-t2go]').click();assert.strictEqual($('#start').dataset.screen,'t1-ready');
-  assert.ok($('#start [data-ready="mix"]')&&$('#start [data-ready="scan"]')&&$('#start [data-ready="paint"]'),'mix it up with me, scan, paint');
-  assert.ok(/yellow on top/.test($('#start .st-flipnote').textContent)&&$$('#start .st-flip svg').length===2,'the turn-over in two pictures');
+  assert.ok(/Is your cube solved\?/.test($('#start h1').textContent)&&/scramble it up/.test($('#start').textContent),'is your cube solved? then scramble it up');
+  assert.ok($('#start [data-ready="scan"]')&&$('#start [data-ready="paint"]')&&!$('#start [data-ready="mix"]'),'scan or paint, one page');
+  assert.strictEqual($$('#start .st-readypic svg').length,1,'a small solved cube');assert.ok(!$('#start .st-flipnote')&&!/white on top/i.test($('#start').textContent),'no turn-over note');
   for(const b of $$('#start button'))assert.ok(b.title,'every control has a title: '+b.textContent.trim());
-  $('#start [data-ready="mix"]').click();
-  assert.ok(!d.body.classList.contains('starting'));assert.strictEqual(d.body.dataset.tab,'bsolve');assert.strictEqual(d.body.dataset.begview,'mix','Mix it up with me on Solve my cube');
+  $('#start [data-ready="paint"]').click();
+  assert.ok(!d.body.classList.contains('starting'));assert.strictEqual(d.body.dataset.tab,'bsolve');assert.ok($('#paintBg'),'the paint window on Solve my cube');
   assert.strictEqual(JSON.parse(w.localStorage.getItem('cw:cubeSrc')),'mine');
-  $('#begMix [data-beg="mixEnd"]').click();$('#begMix [data-beg="mixSolve"]').click();
-  assert.ok($('#gdTurn'),'then the solve, on the turn-over screen');
+  // The painted cube: the hold screen, yellow on top, green facing you, on the real cube.
+  const painted=w.eval(`applyAlg(new Cube(),parseAlg("R U2 F' L D B2 R' U F2 L'"))`);w.scrambleFromCube(painted,'Painted cube');
+  assert.ok($('#gdTurn')&&/Now, hold the cube with the YELLOW CENTER on top and the GREEN CENTER facing you\./.test($('#gdTitle').textContent.replace(/\s+/g,' ')),'then the hold screen');
+  assert.strictEqual(JSON.stringify(w.cubeAtSeq(0).toFacelets()),JSON.stringify(w.applyAlg(painted,['z2']).toFacelets()),'the player shows the painted cube, held so');
+  $('#paintCancel').click();
   // A saved level 2 (played but never solved) reads as level 1.
   assert.strictEqual(w.startLevel(2).n,1);assert.ok(/I've never solved one!/.test(w.startLevel(2).name));
   // ----- the cube menu -----

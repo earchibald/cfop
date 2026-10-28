@@ -30,8 +30,8 @@ frames, read 2026-10-27). This branch builds it into the site as a first pass. E
 | 1.3–1.5 Basics: hold, pieces, six moves | `t1-hold`, `t1-pieces`, `t1-moves` | Basics 2, 3 and 4 of 4. One picture for everyone: a drag looks around it, no key turns it, no cube switch. On the pieces page a kind lifts its pieces out and back (see Rework 2), and Find it is a click on the picture. The hold page's two lines are buttons (see Rework 3); the hold and moves pages light stickers with the picture's `fade`. The moves page is the first page with a move letter. Its twelve buttons turn the move and back (see Rework 4). |
 | new · The six moves, short | removed in 1.54.0 | Level 2 is part of level 1 now. |
 | 1.6 Basics learned | `t1-done` | Reaching it marks `beg-0` finished. Next: pick your cube goes to 2.1. |
-| new · Your first solve | `t1-ready` | A regular cube only, after 2.1: It is solved (Mix it up with me) or It is mixed up (scan, paint), and the turn-over in two pictures. Each goes to Solve my cube. |
-| new · The turn-over | `gdTurnHTML` in `js/guide.js` | A screen of its own in the guided solve wherever the top changes: white to yellow before the daisy, yellow to white for the white corners, back to yellow. The cube turns over on the picture again and again. |
+| new · Your first solve | `t1-ready` | A regular cube only, after 2.1, one page (Rework 7): Is your cube solved? A small solved cube; scramble it up; then Scan it with the camera or Paint the colors by hand. Each goes to Solve my cube. |
+| new · The hold screen | `gdHoldHTML` in `js/guide.js` | A screen of its own in the guided solve before the first part and wherever the top changes: "Now, hold the cube with the YELLOW CENTER on top and the GREEN CENTER facing you." The player beside it shows the real cube held that way, to drag round, with Hidden faces (Rework 7). |
 | 2.1 Which cube will you use? | `t2-cube` | Level 1 after the basics (Back goes to them). Regular cube is first and the default, lit with the glow, and goes to Your first solve; Smart cube connects, on Solve my cube; Virtual cube goes through 1.2 first (see Rework 5). |
 | 1.2 Meet the virtual cube | `t1-keys`, `js/screencube.js` | Only after 2.1, for the virtual cube. Two key sets that work at once: A W D X · S E and the numeric keypad's 4 8 6 2 · 5 9, drawn side by side; Shift for prime, drag to look around, double-click to reset. The last turn is in words ("Right face, clockwise"). On a touch screen the keyboard parts are hidden and six buttons, named in words, sit under the cube. |
 | 2.2 Beginner home, no player on top | `lnHomeHTML` in `js/learn.js`, `begCubeLine` in `js/start-app.js` | As drawn from 1.54.0: Up next with the step's goal, the cube line with Change, Start the step and Solve my cube with help; the steps with their statuses beside it. |
@@ -180,6 +180,32 @@ label, and the `START.keysNext` routing.
   up with me and Scan / Paint, the virtual cube a mix-up, a smart cube Connect. Mix it up with me runs
   there now, in place of the cards (`#begMix`). Start with this scramble stays, as one line.
 - `body[data-begview]` is `home`, `mix` or `player` (`ask` is gone).
+
+## Rework 7: one first-solve page, the hold in one line, the cube beside the part (1.55.0)
+
+The owner's words, used as written where they gave them.
+
+- **Your first solve** (`t1-ready`) is one page: "Is your cube solved?" with a small solved cube.
+  "If so, go ahead and scramble it up! Don't worry — you can do this. Then, we'll either scan it with
+  your camera (the easiest way) or you can paint the grid colors by hand." Two buttons: Scan it with
+  the camera, Paint the colors by hand. Mix it up with me is not on this page (it stays on Solve my
+  cube).
+- **The hold screen** takes the place of the turn-over screen. After the scan or the paint: "Now,
+  hold the cube with the YELLOW CENTER on top and the GREEN CENTER facing you." Then Start stage 1:
+  the daisy. No white on top, no z2, no turn picture, no Show me the turn again. The player beside
+  it shows the real scramble held that way: a drag looks around, Hidden faces shows the back. The
+  same screen comes before the white corners (white on top) and after them (yellow again), with
+  the front the real cube has then. The virtual cube reads "The cube now has …".
+- **The part** puts the cube beside the text (`body[data-gd]`, css/start.css): the cube slot, the
+  player and the section give their panels to the page grid with `display: contents`. Row 1: the
+  cube with the step buttons under it, then the part (the stage line, the title, the hold, the
+  steps with their tiles, before and after, the buttons; Open the lesson, Show the whole plan and
+  My cube looks different at its top right). Row 2: the key in one strip across the page, Coming up
+  at its right end. The player's tile list, its label, its Key panel and the seed bar are hidden
+  there: the part holds the moves. Each tile has its face color, a click steps the player to it,
+  and the player lights the tile of the move it shows (`gdTileSync`, on the `cw:step` event that
+  `applySequence` fires). On a phone it is one column: the cube, the step buttons, the part, the key.
+- The captions under the player's tiles no longer cover the face color bar (`.scramble .mt` gap).
 
 ## Planned: the fat moves, in the CFOP intro
 

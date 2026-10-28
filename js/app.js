@@ -227,7 +227,8 @@ function applySequence(){const i=seqState.idx,was=seqState.shown;seqState.shown=
   if(was===i-1&&i>0)showCubeMoved(cubeAtSeq(i-1),seqState.moves[i-1],cubeAtSeq(i));
   else if(was===i+1&&i<seqState.moves.length)showCubeMoved(cubeAtSeq(i+1),invertAlg([seqState.moves[i]]),cubeAtSeq(i));
   else showCube(cubeAtSeq(i));
-  $('#scrub').max=seqState.moves.length;$('#scrub').value=seqState.idx;$('#scrubPos').textContent=seqState.idx+' / '+seqState.moves.length;$$('#scramble .m').forEach((el,i)=>{el.classList.toggle('done',i<seqState.idx);el.classList.toggle('cur',i===seqState.idx-1);});}
+  $('#scrub').max=seqState.moves.length;$('#scrub').value=seqState.idx;$('#scrubPos').textContent=seqState.idx+' / '+seqState.moves.length;$$('#scramble .m').forEach((el,i)=>{el.classList.toggle('done',i<seqState.idx);el.classList.toggle('cur',i===seqState.idx-1);});
+  document.dispatchEvent(new CustomEvent('cw:step',{detail:{idx:i}}));}
 // In beginner mode every tile carries a caption in words (beghome.js: moveCaption), wrapped so the
 // tile itself keeps its text and its classes.
 // Each face move carries its face color as classes, fc and c0 to c5: a bar under the tile (css/app.css).
