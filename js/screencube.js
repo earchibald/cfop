@@ -31,11 +31,12 @@ function screenCube(el,opts={}){
     el.innerHTML=`<svg viewBox="0 0 400 370" aria-hidden="true">${renderCube3D(f,{yaw:sc.view.yaw,pitch:sc.view.pitch,scale:46,n:3,fade:sc.fade,move:a?a.move:null,t:a?a.t:0,lift:a?null:sc.lift,cls:sc.onPick?i=>'pk'+i:null})}</svg>`;};
   sc.draw=draw;
   sc.set=(cube,fade)=>{if(sc.anim){cancelAnimationFrame(sc.anim.raf);sc.anim=null;}sc.cube=cube;if(fade!==undefined)sc.fade=fade;draw();};
-  sc.turn=move=>{const from=sc.anim?sc.anim.to:sc.cube;const to=applyAlg(from,move);
+  // o.dur: the length of the turn in ms (a quarter turn is 260 by default).
+  sc.turn=(move,o={})=>{const from=sc.anim?sc.anim.to:sc.cube;const to=applyAlg(from,move);
     if(sc.anim)cancelAnimationFrame(sc.anim.raf);sc.cube=to;
     const reduce=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
     if(typeof requestAnimationFrame!=='function'||reduce){sc.anim=null;draw();}
-    else{const dur=move.endsWith('2')?380:260,t0=performance.now();sc.anim={from,to,move,t:0,raf:0};
+    else{const dur=o.dur||(move.endsWith('2')?380:260),t0=performance.now();sc.anim={from,to,move,t:0,raf:0};
       const step=()=>{if(!sc.anim)return;const x=Math.min(1,(performance.now()-t0)/dur);sc.anim.t=0.5-0.5*Math.cos(Math.PI*x);
         if(x>=1){sc.anim=null;draw();return;}draw();sc.anim.raf=requestAnimationFrame(step);};
       sc.anim.raf=requestAnimationFrame(step);}
