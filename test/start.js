@@ -1,4 +1,4 @@
-// The onboarding storyboard in the page: the screen cube's keys (js/screencube.js), the cube in the
+// The onboarding storyboard in the page: the virtual cube's keys (js/screencube.js), the cube in the
 // section (js/place.js), the cube chip and menu (js/cubemenu.js), the getting-started pages of all
 // five levels (js/start.js) and their parts in the site (js/start-app.js).
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
@@ -16,12 +16,17 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   let {w,d,errs}=await boot();
   const $=s=>d.querySelector(s),$$=s=>[...d.querySelectorAll(s)],st=()=>JSON.parse(w.localStorage.getItem('cw:llStatus')||'{}');
   assert.deepStrictEqual(errs,[],'no script errors');
-  // ----- the screen cube's keys -----
-  assert.strictEqual(w.screenKeyMove('awdx','KeyS',false),'F','S is the front, clockwise');
-  assert.strictEqual(w.screenKeyMove('awdx','KeyD',true),"R'",'Shift turns the other way');
-  assert.strictEqual(w.screenKeyMove('jil','Comma',false),'D','the J I L , layout');
-  assert.strictEqual(w.screenKeyMove('awdx','KeyQ',false),null,'a key of no face');
-  assert.strictEqual(JSON.stringify(w.screenKeys('kol')),JSON.stringify({L:'K',U:'O',R:';',D:'.',F:'L',B:'P'}));
+  // ----- the virtual cube's keys: A W D X · S E and the numeric keypad, both at once -----
+  assert.deepStrictEqual(Object.keys(w.eval('SCREEN_KEYMAPS')),['awdx','pad'],'two layouts');
+  assert.strictEqual(w.screenKeyMove('KeyS',false),'F','S is the front, clockwise');
+  assert.strictEqual(w.screenKeyMove('KeyD',true),"R'",'Shift turns the other way');
+  assert.strictEqual(w.screenKeyMove('Numpad5',false),'F','keypad 5 is the front');
+  assert.strictEqual(w.screenKeyMove('Numpad9',true),"B'",'keypad 9 is the back');
+  assert.strictEqual(w.screenKeyMove('KeyK',false),null,'the old layouts are gone');assert.strictEqual(w.screenKeyMove('KeyQ',false),null,'a key of no face');
+  assert.strictEqual(JSON.stringify(w.screenKeys('pad')),JSON.stringify({L:'4',U:'8',R:'6',D:'2',F:'5',B:'9'}));
+  const ev=(code,k,shift,lock)=>({code,key:k,shiftKey:shift,getModifierState:m=>m==='NumLock'&&lock});
+  assert.ok(!w.screenKeyShift(ev('Numpad4','4',false,true))&&w.screenKeyShift(ev('Numpad4','ArrowLeft',false,true)),'Shift on the keypad with Num Lock on');
+  assert.ok(!w.screenKeyShift(ev('Numpad4','ArrowLeft',false,false)),'Num Lock off: no Shift');
   // ----- the cube in the section -----
   const slot=$('#cubeSlot');assert.ok(slot&&slot.parentNode===$('main.main'),'one cube slot beside the sections');
   assert.ok(slot.contains($('#player'))&&slot.contains($('#seedBar')),'the player and the seed bar are in it');
@@ -31,7 +36,7 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   assert.strictEqual($$('#start .st-level').length,5,'five levels');
   for(const b of $$('#start button'))assert.ok(b.title,'every control has a title: '+b.textContent.trim());
   // Level 1: the basics first (no cube question, no move letter before the moves page, no keys),
-  // then which cube, the screen cube's keys, then the beginner method.
+  // then which cube, the virtual cube's keys, then the beginner method.
   $('#start [data-level="1"]').click();assert.strictEqual($('#start').dataset.screen,'t1-what');
   const letters=/(^|[^\w])[UDFBRL]['′]?($|[^\w])/;
   for(const s of ['t1-what','t1-hold','t1-pieces']){
@@ -71,9 +76,22 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   assert.ok(/"R prime"/.test($('#start').textContent),'and names the prime');
   $('#start [data-go="t1-done"]').click();assert.strictEqual(st()['beg-0'],'finished','Basics is marked Learned');
   $('#start [data-go="t2-cube"]').click();assert.strictEqual($('#start').dataset.screen,'t2-cube','then the cube question');
+  const picks=$$('#start .st-pick');assert.deepStrictEqual(picks.map(b=>b.dataset.src),['mine','smart','screen']);
+  assert.ok(/^Regular cube/.test(picks[0].querySelector('b').textContent)&&picks[0].getAttribute('aria-pressed')==='true','a regular cube is the default');
+  assert.ok(/Virtual cube/.test(picks[2].textContent)&&/keyboard or numeric keypad/.test(picks[2].textContent),'the virtual cube and its keys');
+  assert.ok(/Chrome/.test(picks[1].textContent),'a browser names the browsers');
+  // In the Mac app's window (its message handler is there) no browser is named.
+  w.webkit={messageHandlers:{bridge:{postMessage:()=>Promise.resolve({})}}};assert.ok(w.inMacApp());w.startGo('t2-cube');
+  assert.ok(!/Chrome|Safari|Edge|browser/.test($('#start').textContent),'the Mac app names no browser');
+  $('#start .st-pick[data-src="smart"]').click();assert.ok(/app looks for your cube/.test($('#start').textContent),'the app looks for the cube');
+  assert.ok(!/Chrome|Safari/.test(w.cubePopActions('smart').text+w.cubePopActions('smart').foot),'nor does the cube menu');
+  delete w.webkit;assert.ok(!w.inMacApp());
   $('#start .st-pick[data-src="screen"]').click();$('#start [data-t2go]').click();assert.strictEqual($('#start').dataset.screen,'t1-keys');
+  assert.strictEqual($$('#start .st-keyset').length,2,'the keyboard and the keypad');assert.ok(/numeric keypad/.test($('#start').textContent));
+  key(w,d,'Numpad5');assert.ok(!w.eval('START').sc.cube.isSolved(),'the keypad turns the virtual cube');key(w,d,'Numpad5',true);
+  assert.ok(w.eval('START').sc.cube.isSolved(),'Shift turns it back');
   key(w,d,'KeyS');key(w,d,'KeyD',true);
-  assert.ok(!w.eval('START').sc.cube.isSolved(),'the keys turn the screen cube');
+  assert.ok(!w.eval('START').sc.cube.isSolved(),'the keys turn the virtual cube');
   assert.strictEqual($('#stLast').textContent,'Right face, counterclockwise','the last turn shows in words');
   $('#start [data-turn="U"]').click();
   $('#start [data-go="t2-screen"]').click();await new Promise(r=>setTimeout(r,10));
@@ -81,13 +99,13 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   assert.strictEqual(d.body.dataset.method,'beginner');assert.strictEqual(d.body.dataset.tab,'learn');
   assert.strictEqual(st()['beg-0'],'finished','Basics is marked Learned');
   assert.strictEqual(JSON.parse(w.localStorage.getItem('cw:level')),1);
-  assert.strictEqual(JSON.parse(w.localStorage.getItem('cw:cubeSrc')),'screen','the screen cube is the cube');
-  assert.strictEqual($('#cubeChipName').textContent,'Screen cube','the chip names it');
-  assert.strictEqual(d.body.dataset.begview,'player','the mixed-up screen cube is in the player');
+  assert.strictEqual(JSON.parse(w.localStorage.getItem('cw:cubeSrc')),'screen','the virtual cube is the cube');
+  assert.strictEqual($('#cubeChipName').textContent,'Virtual cube','the chip names it');
+  assert.strictEqual(d.body.dataset.begview,'player','the mixed-up virtual cube is in the player');
   // The player takes the keys now: a key turns the cube in the section.
   const n0=w.seqState.moves.length;d.dispatchEvent(new w.KeyboardEvent('keydown',{code:'KeyS',bubbles:true}));
   assert.strictEqual(w.seqState.moves.length,n0+1,'a key adds a move to the player');assert.strictEqual(w.seqState.moves[n0],'F');
-  assert.ok($('#begCubeLine')&&/Screen cube/.test($('#begCubeLine').textContent),'the beginner home names the cube');
+  assert.ok($('#begCubeLine')&&/Virtual cube/.test($('#begCubeLine').textContent),'the beginner home names the cube');
   // Level 2: a short six-moves page, then the cube question.
   w.startOpen('level');$('#start [data-level="2"]').click();assert.strictEqual($('#start').dataset.screen,'t2-moves');
   assert.ok(/U D F B R L/.test($('#start').textContent),'level 2 meets the letters');assert.ok(!$('#start .st-dots'),'not a basics page');
@@ -106,9 +124,12 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   w.startClose();
   // ----- the cube menu -----
   $('#cubeChip').click();assert.ok(!$('#cubePop').classList.contains('hidden'),'the chip opens the cube menu');
-  assert.strictEqual($$('#cubePop .csrc').length,3,'three sources');assert.strictEqual($$('#cubePop .cact').length,4,'four actions');
+  assert.deepStrictEqual($$('#cubePop .csrc').map(b=>b.textContent),['Regular cube','Virtual cube','Smart cube'],'three sources');
+  assert.strictEqual($$('#cubePop .cact').length,3,'three actions for the virtual cube: no key layouts');assert.ok(!$('#cubeKeys'));
+  assert.ok(/keyboard or numeric keypad/.test($('#cubePop').textContent),'the keys in words');
   $('#cubePop .csrc[data-src="mine"]').click();assert.strictEqual(JSON.parse(w.localStorage.getItem('cw:cubeSrc')),'mine');
-  assert.ok(/Scan my cube/.test($('#cubePop').textContent),'My cube offers the scan');
+  assert.strictEqual($$('#cubePop .cact').length,4,'four actions for a regular cube');
+  assert.ok(/Scan my cube/.test($('#cubePop').textContent),'a regular cube offers the scan');
   $('#cubePop .cact[data-act="solved"]').click();assert.ok($('#cubePop').classList.contains('hidden'),'an action closes the menu');
   assert.ok(w.eval('scr').cube.isSolved(),'My cube is solved loads a solved cube');
   // ----- the method menu: the level row; all nine Learned: Next on CFOP and the Progress card -----
@@ -166,5 +187,5 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   ({w,d,errs}=await boot({'cw:method':'"cfop"','cw:level':'5'}));
   assert.ok(!d.body.classList.contains('starting'),'a returning visitor sees no level page');
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('start: the screen cube, the cube slot, the cube menu, the five levels, the level row, the CFOP card, the Cross lesson, Still to learn, the timer home ok');process.exit(0);
+  console.log('start: the virtual cube, the cube slot, the cube menu, the five levels, the level row, the CFOP card, the Cross lesson, Still to learn, the timer home ok');process.exit(0);
 }catch(e){console.log('start: FAIL',e.message);console.log(e.stack.split('\n').slice(1,4).join('\n'));process.exit(1);}})();

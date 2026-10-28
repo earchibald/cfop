@@ -25,8 +25,14 @@ const MAC_APP_URL='https://github.com/earchibald/cfop/releases/latest/download/T
 // 'download' (a Mac with neither: offer the app) or 'none'.
 function smartMode(){
   if(typeof navigator!=='undefined'&&navigator.bluetooth)return 'bt';
-  if(typeof BRIDGE!=='undefined'&&BRIDGE)return 'bridge';
+  if((typeof BRIDGE!=='undefined'&&BRIDGE)||(typeof inMacApp==='function'&&inMacApp()))return 'bridge';
   return smartIsMac()?'download':'none';
+}
+// How a smart cube connects here, in one line: the app says nothing of browsers.
+function smartHowWords(){
+  if(typeof inMacApp==='function'&&inMacApp())return 'The app connects to your cube over Bluetooth.';
+  if(smartMode()==='bridge')return 'The Twistwright app connects to your cube.';
+  return 'Chrome and Edge connect directly. Safari connects through the Mac app.';
 }
 // An iPad says Mac too, but has touch.
 function smartIsMac(){const n=typeof navigator==='undefined'?{}:navigator;return /Mac/.test(n.platform||'')&&!(n.maxTouchPoints>1);}
@@ -96,7 +102,7 @@ function openSmart(note){
   $('#smartMac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();smartMacGo();}});
   document.addEventListener('keydown',smartKeys,true);
   smartDraw();smartButtons();
-  if(!ganAvailable())smartStatus('This browser cannot use Bluetooth. Use Chrome or Edge on a computer or an Android phone. On an iPhone or iPad, use the Bluefy browser.');
+  if(!ganAvailable()&&!inMacApp())smartStatus('This browser cannot use Bluetooth. Use Chrome or Edge on a computer or an Android phone. On an iPhone or iPad, use the Bluefy browser.');
   else if(smartConn&&note&&smartCube)smartStatus(note);
   else if(smartConn){smartStatus(`Connected to ${smartConn.name}. Reading the cube.`);smartRead();}
   else if(smartMode()==='bridge')smartStatus('Press Connect, then choose your cube in the list.');

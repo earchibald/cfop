@@ -27,18 +27,18 @@ frames, read 2026-10-27). This branch builds it into the site as a first pass. E
 | 0 · Where each level goes | `LEVELS` in `js/start.js` | The routing table is the code, not a page. |
 | 1.1 Do you have a cube? | removed in 1.49.0 | See "Rework 1" below: the basics come first, the cube question after them. |
 | new · Meet the cube | `t1-what` | Basics 1 of 4. What the cube is: six faces, nine stickers each, solved is one color per face, a turn mixes it. Show me a turn turns one face on the picture and back, with no letter. |
-| 1.3–1.5 Basics: hold, pieces, six moves | `t1-hold`, `t1-pieces`, `t1-moves` | Basics 2, 3 and 4 of 4. One picture for everyone: a drag looks around it, no key turns it, no My cube / Screen cube switch. On the pieces page a kind lifts its pieces out and back (see Rework 2), and Find it is a click on the picture. The hold page's two lines are buttons (see Rework 3); the hold and moves pages light stickers with the picture's `fade`. The moves page is the first page with a move letter. Its twelve buttons turn the move and back (see Rework 4). |
+| 1.3–1.5 Basics: hold, pieces, six moves | `t1-hold`, `t1-pieces`, `t1-moves` | Basics 2, 3 and 4 of 4. One picture for everyone: a drag looks around it, no key turns it, no cube switch. On the pieces page a kind lifts its pieces out and back (see Rework 2), and Find it is a click on the picture. The hold page's two lines are buttons (see Rework 3); the hold and moves pages light stickers with the picture's `fade`. The moves page is the first page with a move letter. Its twelve buttons turn the move and back (see Rework 4). |
 | new · The six moves, short | `t2-moves` | Level 2 only, before 2.1: the letters, the ′, the hold in one line, the same twelve move buttons. It does not mark Basics. |
 | 1.6 Basics learned | `t1-done` | Reaching it marks `beg-0` finished. Next: pick your cube goes to 2.1. |
-| 2.1 Which cube will you use? | `t2-cube` | Level 1 after the basics; level 2 after its short six-moves page (Back goes to it). Smart cube opens the Smart cube window after. Screen cube goes through 1.2 first. |
-| 1.2 Meet the screen cube | `t1-keys`, `js/screencube.js` | Only after 2.1, for the screen cube. The lab's four key layouts, Shift for prime, drag to look around, double-click to reset. The last turn is in words ("Right face, clockwise"). On a touch screen the keyboard parts are hidden and six buttons, named in words, sit under the cube. |
+| 2.1 Which cube will you use? | `t2-cube` | Level 1 after the basics; level 2 after its short six-moves page (Back goes to it). Regular cube is first and the default, lit with the glow; Smart cube opens the Smart cube window after; Virtual cube goes through 1.2 first (see Rework 5). |
+| 1.2 Meet the virtual cube | `t1-keys`, `js/screencube.js` | Only after 2.1, for the virtual cube. Two key sets that work at once: A W D X · S E and the numeric keypad's 4 8 6 2 · 5 9, drawn side by side; Shift for prime, drag to look around, double-click to reset. The last turn is in words ("Right face, clockwise"). On a touch screen the keyboard parts are hidden and six buttons, named in words, sit under the cube. |
 | 2.2 Beginner home, no player on top | `js/place.js`, `begCubeLine` in `js/start-app.js` | The cube line under Up next, with Change (the cube menu). |
 | 2.3 A step, the cube in the section | `js/place.js` | The lessons keep their own pages; the player is beside them, not on top. |
 | 2.4 All learned: on to CFOP | `begCfopCard` | On the Progress tab when Basics and the eight steps are all finished. |
 | L.1 / L.2 The section on top | `js/place.js`, `css/start.css` | One cube slot (`#cubeSlot`) in `main.main`, placed by CSS: `body[data-cube]` is `wide` (Scramble and the other Solve tabs: across the top, with the seed bar), `side` (a sticky column, with a scramble pill), or `none` (Reference, Smart cube, Cheat sheet). Nothing moves in the DOM after the start, because `guide.js` and others write their whole section again. |
 | L.3 Scramble tab (was Solve) | `index.html`, `app.js` | The rail says Scramble; the tab key stays `solve` (saved `cw:tab` values keep working). The plan is a folded "Reveal a CFOP plan for this scramble". |
 | L.4 Skip ahead from the top bar | `startLevelRow` | Your level and Change at the top of the method menu; a Next mark on CFOP when every beginner step is Learned. |
-| L.5 Your cube, from any page | `js/cubemenu.js` | The cube chip after the method chip. Sources: Screen cube, My cube, Smart cube (`cw:cubeSrc`). The seed bar's Scan, Paint and Smart cube are hidden; the menu has them. |
+| L.5 Your cube, from any page | `js/cubemenu.js` | The cube chip after the method chip. Sources: Regular cube, Virtual cube, Smart cube (`cw:cubeSrc`: `mine`, `screen`, `smart`). The seed bar's Scan, Paint and Smart cube are hidden; the menu has them. |
 | 3.1 How do you solve it now? | `t3-start` | Some CFOP goes to 4.1. |
 | 3.2 Check off what you know | `t3-check` | Can do it → finished, Shaky → learning, on `beg-0`…`beg-8`. "From memory" starts all on Can do it. |
 | 3.3 Beginner steps, in CFOP | `t3-bridge` | |
@@ -128,6 +128,27 @@ label, and the `START.keysNext` routing.
   clockwise. A ′ after the letter turns it the other way. We call the marking "prime", so a
   counterclockwise R′ is pronounced "R prime"." Level 2's short page keeps its own one-line intro.
 
+## Rework 5: Regular, Smart and Virtual; the Mac app (1.53.0)
+
+- **The names.** My cube is **Regular cube** and Screen cube is **Virtual cube**, in the chip, the
+  cube menu, the getting-started pages and the F2L guide. The ids stay (`mine`, `screen`), so a
+  saved `cw:cubeSrc` keeps its meaning.
+- **The default.** Regular cube is the first card of "Which cube will you use?" and is chosen at the
+  start; the chosen card has the accent glow, not a plain border.
+- **The keys.** Only A W D X · S E, and the numeric keypad: 4 8 6 2 · 5 9 (left, up, right, down
+  around the front, 9 the back). Both work at once, so there is no layout to choose; the cube menu's
+  Keys action is gone. Shift turns the other way; on the keypad with Num Lock on (Windows sends
+  Shift+4 as a Left arrow) a key that gives no digit counts as Shift (`screenKeyShift`). "Six keys
+  turn the faces" is now "Use the keyboard or numeric keypad to turn the cube faces." The lab keeps
+  its own four layouts.
+- **The Mac app.** `inMacApp()` (`js/bridge.js`: the app's message handler is there) says the page is
+  in the app's own window. There the smart cube text names no browser: "The app connects to your
+  cube over Bluetooth" (`smartHowWords` in `js/smart-ui.js`), and `smartMode()` is `bridge` before
+  the link is open.
+- **Settings.** The app's Twistwright menu has Settings… (Cmd+,), which opens the site's Settings
+  window in the main window (`showSettings` in `mac/Sources/App.swift`). In a browser Cmd+, stays the
+  browser's. It reaches users with the next Mac app release.
+
 ## Planned: the fat moves, in the CFOP intro
 
 The owner asked for a fat moves page after the six moves, then moved it out of the basics: it
@@ -165,7 +186,7 @@ page as drafted:
 
 ## Storage added
 
-`cw:level` (1–5), `cw:cubeSrc` (`screen`, `mine`, `smart`), `cw:screenKeys` (a layout id),
+`cw:level` (1–5), `cw:cubeSrc` (`screen`, `mine`, `smart`), `cw:screenKeys` (a layout id; unused from 1.53.0),
 `cw:known` (`{cross, f2lfeel, oll}`: 0, 1 or 2), `cw:llShow`, `cw:crossLesson`, `cw:timerHome`,
 `cw:hideTime`. Statuses go to the one map, `cw:llStatus`, with the new ids `pllf-<name>` for the
 full PLL.

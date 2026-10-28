@@ -67,6 +67,9 @@ function bridgeConnect(info){
 function bridgeNative(){
   try{const h=window.webkit.messageHandlers.bridge;return h&&typeof h.postMessage==='function'?h:null;}catch(e){return null;}
 }
+// True in the app's own window (Twistwright for macOS), before the link is open too. The app connects
+// a smart cube itself, so the page gives no advice about browsers there.
+function inMacApp(){return !!bridgeNative();}
 // The app's own window has no server to ask and no socket to open. hello answers with
 // {version, bluetooth}; the other messages get no answer of their own, and the app calls
 // window.bridgeEvent(m) for each message back. The link lasts as long as the page.
