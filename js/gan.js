@@ -164,7 +164,8 @@ function ganMacFromData(mfData){
 
 // ----- Web Bluetooth -----
 // Web Bluetooth, or the bridge of the macOS app (bridge.js) where the app serves the page.
-function ganAvailable(){return (typeof navigator!=='undefined'&&!!navigator.bluetooth)||(typeof BRIDGE!=='undefined'&&!!BRIDGE);}
+// The app's own window counts before it answers hello: its message handler is there from the start.
+function ganAvailable(){return (typeof navigator!=='undefined'&&!!navigator.bluetooth)||(typeof BRIDGE!=='undefined'&&!!BRIDGE)||(typeof bridgeNative==='function'&&!!bridgeNative());}
 // Show the browser's device chooser. Needs a click.
 function ganPick(){
   return navigator.bluetooth.requestDevice({

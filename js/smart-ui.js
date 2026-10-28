@@ -25,9 +25,12 @@ const MAC_APP_URL='https://github.com/earchibald/cfop/releases/latest/download/T
 // 'download' (a Mac with neither: offer the app) or 'none'.
 function smartMode(){
   if(typeof navigator!=='undefined'&&navigator.bluetooth)return 'bt';
-  if(typeof BRIDGE!=='undefined'&&BRIDGE)return 'bridge';
+  if((typeof BRIDGE!=='undefined'&&BRIDGE)||smartInApp())return 'bridge';
   return smartIsMac()?'download':'none';
 }
+// The page in the app's own window. Its message handler is there from the start, before the
+// app answers hello (BRIDGE), so a click at once never gets the download.
+function smartInApp(){return typeof bridgeNative==='function'&&!!bridgeNative();}
 // An iPad says Mac too, but has touch.
 function smartIsMac(){const n=typeof navigator==='undefined'?{}:navigator;return /Mac/.test(n.platform||'')&&!(n.maxTouchPoints>1);}
 // The Bluetooth name of a cube as a person says it: GAN12uiM_A1B2 is a GAN 12 ui Maglev,
@@ -102,8 +105,19 @@ function openSmart(note){
   else if(smartMode()==='bridge')smartStatus('Press Connect, then choose your cube in the list.');
   else smartStatus('Press Connect, then choose your cube in the list that the browser shows.');
 }
+// Connect now, for a button that says so ("Connect my cube"): the dialog with the look already
+// begun, as a press of its Connect. Where the page cannot connect, the dialog (or the download).
+function smartConnectNow(){
+  openSmart();
+  const m=smartMode();
+  if(smartConn||(m!=='bt'&&m!=='bridge')||!$('#smartBg'))return;
+  smartStatus(m==='bridge'?'Choose your cube in the list. Turn a face to wake it up.':'Choose your cube in the list that the browser shows.');
+  smartConnect();
+}
 // A Mac that cannot connect: offer the Twistwright app for macOS, which opens this page itself.
+// Never in the app's own window: there the page connects.
 function openSmartDownload(){
+  if(smartInApp()){openSmart();return;}
   const bg=document.createElement('div');bg.className='modal-bg';bg.id='smartBg';
   bg.innerHTML=`<div class="modal smart dl" role="dialog" aria-label="Smart cube on a Mac">
    <button class="close small ghost" id="smartClose" aria-label="Close" title="Close this window (Esc)">✕</button>
