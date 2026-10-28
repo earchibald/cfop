@@ -41,6 +41,16 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
     assert.ok(w.eval('SCREEN').active!==w.eval('START').sc,'the keys do not turn the picture on '+s);}
   key(w,d,'KeyS');assert.ok(w.eval('START').sc.cube.isSolved(),'a key does nothing in the basics');
   w.startGo('t1-what');$('#start [data-demo]').click();assert.ok(!w.eval('START').sc.cube.isSolved(),'Show me a turn turns a face');
+  // The hold: a line lifts its layer with a glow and lights its words; green, then red.
+  w.startGo('t1-hold');assert.ok(!$('#start input[type=checkbox]'),'no checkboxes on the hold page');
+  const hl=f=>$(`#start .st-hl[data-hl="${f}"]`).classList.contains('on');
+  $('#start [data-hold="top"]').click();await new Promise(r=>setTimeout(r,200));
+  assert.ok(hl('U')&&w.eval('START').sc.lift.dir.join()==='0,1,0','white on top lifts the top layer up and lights its words');
+  $('#start [data-hold="front"]').click();await new Promise(r=>setTimeout(r,200));
+  assert.ok(!hl('U')&&hl('F')&&!hl('R')&&w.eval('START').sc.lift.dir.join()==='0,0,1','green toward you: the front layer first');
+  await new Promise(r=>setTimeout(r,2100));
+  assert.ok(!hl('F')&&hl('R')&&w.eval('START').sc.lift.dir.join()==='1,0,0','then red on the right');
+  assert.strictEqual($('#start').dataset.screen,'t1-hold','the page is not drawn again');
   // The pieces: a kind lifts its pieces out with a glow and puts them back; a click finds the edge.
   w.startGo('t1-pieces');const sc=()=>w.eval('START').sc;
   $('#start [data-kind="corners"]').click();assert.strictEqual($('#start').dataset.screen,'t1-pieces','a kind does not draw the page again');

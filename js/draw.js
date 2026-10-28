@@ -76,8 +76,8 @@ function cubePolys(facelets,opts={}){
     // are still counted from the negative end.
     if(cam(nv.map(Math.abs))[2]<0)slabs.reverse();}
   const k=nv.findIndex(v=>v!==0);const polys=[];
-  // lift: {set, t, d}: each piece with a sticker in set (54 indices) moves out from the cube by d·t
-  // cubie widths (0.55 by default), drawn over it as a box of its own with a glow behind it. Its
+  // lift: {set, t, d, dir}: each piece with a sticker in set (54 indices) moves out from the cube by d·t
+  // cubie widths (0.55 by default; along dir, a unit vector, when given: a layer moves as one), drawn over it as a box of its own with a glow behind it. Its
   // place shows the plastic, and the other stickers dim as t grows. 3×3 only, not in a part turn.
   const lift=opts.lift&&opts.lift.t>0&&n===3&&!(opts.move&&opts.t)?opts.lift:null;
   const cubieOf=idx=>{const g=FACE_GEOM[Math.floor(idx/9)],p=idx%9;return [0,1,2].map(t=>g.n[t]+g.r[t]*(p%3-1)+g.d[t]*(Math.floor(p/3)-1));};
@@ -116,7 +116,7 @@ function cubePolys(facelets,opts={}){
 function liftPolys(facelets,lifted,lift,{cam,proj,color,body,cls,labels}){
   const d=(lift.d??0.55)*lift.t,toCam=[0,1,2].map(a=>cam([0,1,2].map(b=>a===b?1:0))[2]);
   const vis=[0,1,2,3,4,5].map(f=>({f,nz:cam(FACE_GEOM[f].n)[2]})).filter(x=>x.nz>=0.02).sort((x,y)=>x.nz-y.nz);
-  const pieces=[...lifted].map(([key,st])=>{const c=key.split(',').map(Number),len=Math.hypot(...c);const C=c.map(x=>x*(1+d/len));return {c,C,st,z:cam(C)[2]};}).sort((x,y)=>x.z-y.z);
+  const pieces=[...lifted].map(([key,st])=>{const c=key.split(',').map(Number),len=Math.hypot(...c);const C=lift.dir?c.map((x,i)=>x+lift.dir[i]*d):c.map(x=>x*(1+d/len));return {c,C,st,z:cam(C)[2]};}).sort((x,y)=>x.z-y.z);
   const out=[],glow=[];
   for(const {c,C,st} of pieces){
     for(const {f} of vis){const g=FACE_GEOM[f],P=[0,1,2].map(t=>C[t]+g.n[t]*0.5);
