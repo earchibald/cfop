@@ -41,6 +41,20 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
     assert.ok(w.eval('SCREEN').active!==w.eval('START').sc,'the keys do not turn the picture on '+s);}
   key(w,d,'KeyS');assert.ok(w.eval('START').sc.cube.isSolved(),'a key does nothing in the basics');
   w.startGo('t1-what');$('#start [data-demo]').click();assert.ok(!w.eval('START').sc.cube.isSolved(),'Show me a turn turns a face');
+  // The pieces: a kind lifts its pieces out with a glow and puts them back; a click finds the edge.
+  w.startGo('t1-pieces');const sc=()=>w.eval('START').sc;
+  $('#start [data-kind="corners"]').click();assert.strictEqual($('#start').dataset.screen,'t1-pieces','a kind does not draw the page again');
+  assert.strictEqual($('#start [data-kind="corners"]').getAttribute('aria-pressed'),'true');assert.ok(sc().lift,'a kind lifts its pieces');
+  await new Promise(r=>setTimeout(r,200));assert.ok(/cwLiftGlow/.test($('#stCube').innerHTML),'the lifted pieces glow');
+  await new Promise(r=>setTimeout(r,2300));assert.ok(!sc().lift&&!/cwLiftGlow/.test($('#stCube').innerHTML),'and go back: a solved cube again');
+  const pick=i=>{const p=$(`#stCube polygon.pk${i}`);assert.ok(p,'sticker '+i+' is on the picture');
+    p.dispatchEvent(new w.MouseEvent('pointerdown',{bubbles:true}));p.dispatchEvent(new w.MouseEvent('pointerup',{bubbles:true}));};
+  assert.ok(/Find and click on/.test($('#start .st-find').textContent));
+  pick(4);assert.ok(/white center/.test($('#stFindSay').textContent)&&/Try again/.test($('#stFindSay').textContent),'a wrong piece is named');assert.ok(!$('#stFound'));
+  pick(19);assert.ok($('#stFound')&&/You found it!/.test($('#stFound').textContent),'the white and green edge brings the callout');
+  assert.ok($('#stFound [data-go="t1-moves"]')&&$('#stPiecesNext .primary'),'with a button to the next page');
+  $('#stFound [data-go="t1-moves"]').click();assert.strictEqual($('#start').dataset.screen,'t1-moves');
+  w.startGo('t1-pieces');assert.ok($('#stFound'),'found stays found');
   for(const s of ['t1-hold','t1-pieces','t1-moves']){$(`#start [data-go="${s}"]`).click();assert.strictEqual($('#start').dataset.screen,s);}
   assert.ok(/U D F B R L/.test($('#start').textContent),'the moves page brings in the letters');
   $('#start [data-go="t1-done"]').click();assert.strictEqual(st()['beg-0'],'finished','Basics is marked Learned');
@@ -62,6 +76,13 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   const n0=w.seqState.moves.length;d.dispatchEvent(new w.KeyboardEvent('keydown',{code:'KeyS',bubbles:true}));
   assert.strictEqual(w.seqState.moves.length,n0+1,'a key adds a move to the player');assert.strictEqual(w.seqState.moves[n0],'F');
   assert.ok($('#begCubeLine')&&/Screen cube/.test($('#begCubeLine').textContent),'the beginner home names the cube');
+  // Level 2: a short six-moves page, then the cube question.
+  w.startOpen('level');$('#start [data-level="2"]').click();assert.strictEqual($('#start').dataset.screen,'t2-moves');
+  assert.ok(/U D F B R L/.test($('#start').textContent),'level 2 meets the letters');assert.ok(!$('#start .st-dots'),'not a basics page');
+  $('#start [data-face="U"]').click();assert.ok(/Up/.test($('#start .st-say').textContent));
+  $('#start [data-go="t2-cube"]').click();assert.strictEqual($('#start').dataset.screen,'t2-cube','then the cube question');
+  $('#start [data-go="t2-moves"]').click();assert.strictEqual($('#start').dataset.screen,'t2-moves','Back goes to the moves');
+  w.startClose();
   // ----- the cube menu -----
   $('#cubeChip').click();assert.ok(!$('#cubePop').classList.contains('hidden'),'the chip opens the cube menu');
   assert.strictEqual($$('#cubePop .csrc').length,3,'three sources');assert.strictEqual($$('#cubePop .cact').length,4,'four actions');

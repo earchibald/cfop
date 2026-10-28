@@ -16,7 +16,7 @@
 //   Level 5, already a speedcuber: one setup page, then the Scramble tab with a large timer.
 const LEVELS=[
   {n:1,name:'Never touched one',sub:'New to the cube. Start with what it is.',goes:'→ Basics',first:'t1-what',tip:'Start with the basics'},
-  {n:2,name:'Played but never solved',sub:'You can turn it. You have not solved it yet.',goes:'→ Beginner method',first:'t2-cube',tip:'Start the beginner method'},
+  {n:2,name:'Played but never solved',sub:'You can turn it. You have not solved it yet.',goes:'→ Beginner method',first:'t2-moves',tip:'Start the beginner method'},
   {n:3,name:'Have solved it',sub:'You can solve it, slowly or with notes.',goes:'→ Check, then CFOP',first:'t3-start',tip:'Review the beginner method'},
   {n:4,name:'Know advanced algorithms',sub:'You know some CFOP: F2L, OLL or PLL.',goes:'→ CFOP sets',first:'t4-sets',tip:'Go to CFOP'},
   {n:5,name:'Already a speedcuber',sub:'You time your solves. You want drills.',goes:'→ CFOP, timer',first:'t5-setup',tip:'Go to CFOP with the timer'}];
@@ -52,7 +52,7 @@ const ST_MOVE_WORDS={
 // user has not met the letters.
 function stMoveSay(m){const w=ST_MOVE_WORDS[m[0]];if(!w)return m;return `${w[0]} face, ${/['′]/.test(m)?'counterclockwise':'clockwise'}`;}
 const ST_HIDDEN={D:'The bottom face is hidden. You see its edge.',B:'The back face is hidden. You see its edge.',L:'The left face is hidden. You see its edge.'};
-const START={on:false,screen:'level',level:null,src:'mine',kind:'edges',face:'R',prime:false,
+const START={on:false,screen:'level',level:null,src:'mine',kind:null,found:false,face:'R',prime:false,
   check:null,sets:null,caseSet:null,quiz:null,five:null,sc:null,last:'—',way:null};
 function startEl(){let el=$('#start');if(el)return el;el=document.createElement('div');el.id='start';el.className='start hidden';
   el.setAttribute('role','region');el.setAttribute('aria-label','Getting started');$('header.top').after(el);return el;}
@@ -126,23 +126,56 @@ START_SCREENS['t1-hold']=()=>`${stBasicsBar(2)}
     <p class="muted">Opposite faces: white and yellow, green and blue, red and orange. Have a cube? Hold yours the same way.</p>
     <div class="st-foot">${stBack('t1-what')}<span class="spacer"></span><button class="primary" data-go="t1-pieces" title="Go on to the pieces">I see it →</button></div></div>
   ${stCubeSide()}</div>`;
-START_SCREENS['t1-pieces']=()=>{const info={centers:['Centers','6 · one color','Light the centers'],edges:['Edges','12 · two colors','Light the edges'],corners:['Corners','8 · three colors','Light the corners']};
+// The pieces: a kind lifts its pieces out of the picture and puts them back (screenCube's bump).
+// Find it is a click on the picture: the white and green edge brings up the callout.
+const ST_KIND_SAY={centers:'A center never moves. It names its face.',edges:'An edge sits between two centers. It has two colors.',corners:'A corner sits where three faces meet. It has three colors.',
+  find:'Top face, the row nearest you. Drag to see it from the side.',none:'Pick a kind, or click a piece on the picture.'};
+const ST_COLOR_NAMES=['white','red','green','yellow','orange','blue'];
+// The faces a sticker's piece touches, U R F D L B: one for a center, two for an edge, three for a corner.
+function stPieceFaces(idx){const g=FACE_GEOM[Math.floor(idx/9)],p=idx%9;const c=[0,1,2].map(t=>g.n[t]+g.r[t]*(p%3-1)+g.d[t]*(Math.floor(p/3)-1));
+  return [0,1,2,3,4,5].filter(f=>FACE_GEOM[f].n.every((v,t)=>!v||v===c[t]));}
+function stColorList(faces){const n=faces.map(f=>ST_COLOR_NAMES[f]);return n.length<3?n.join(' and '):n.slice(0,-1).join(', ')+' and '+n[n.length-1];}
+const ST_FIND=7; // the white and green edge: U 7, F 1 on a solved cube
+function stFoundCallout(){return `<div class="st-callout" id="stFound" role="status"><b>You found it!</b><span>The white and green edge. Its colors match the white center and the green center.</span><button class="primary small" data-go="t1-moves" title="Go on to the moves">Next: the six moves →</button></div>`;}
+function stPiecesNext(){return START.found?`<button class="primary" data-go="t1-moves" title="Go on to the moves">Next: the six moves →</button>`:`<button data-go="t1-moves" data-skip="1" title="Go on to the moves without the puzzle">Skip →</button>`;}
+START_SCREENS['t1-pieces']=()=>{const info={centers:['Centers','6 · one color','Lift out the centers'],edges:['Edges','12 · two colors','Lift out the edges'],corners:['Corners','8 · three colors','Lift out the corners']};
   return `${stBasicsBar(3)}
-  <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 3 of 4</span><h1>Three kinds of pieces</h1><p>Pick a kind. The picture lights those pieces. Drag the picture to find them on the other faces.</p>
+  <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 3 of 4</span><h1>Three kinds of pieces</h1><p>Pick a kind. Those pieces lift out of the picture, then go back. Drag the picture to look around.</p>
     <div class="st-kinds">${Object.entries(info).map(([k,[n,s,t]])=>`<button class="st-kind" data-kind="${k}" aria-pressed="${START.kind===k}" title="${t}"><b>${n}</b><span class="muted">${s}</span></button>`).join('')}</div>
-    <div class="st-box st-find"><span class="st-lbl">Find it</span><span>Find the <b>white and green edge</b>. It sits between the white center and the green center.</span><button class="small" data-kind="find" title="Light this piece on the picture">Show me</button></div>
-    <div class="st-foot">${stBack('t1-hold')}<span class="spacer"></span><button class="primary" data-go="t1-moves" title="Go on to the moves">I found it →</button></div></div>
-  ${stCubeSide()}</div>`;};
+    <div class="st-box st-find"><span class="st-lbl">Find it</span><span>Find and click on the <b>white and green edge</b>. It sits between the white center and the green center.</span><span class="st-small" id="stFindSay" aria-live="polite"></span><button class="small" data-hint="1" title="Lift this piece out of the picture">Show me</button></div>
+    <div class="st-foot">${stBack('t1-hold')}<span class="spacer"></span><span id="stPiecesNext">${stPiecesNext()}</span></div></div>
+  <div class="st-pic"><div class="st-cubewrap"><div class="st-cube" id="stCube"></div>${START.found?stFoundCallout():''}</div><span class="muted st-small" id="stCap"></span></div></div>`;};
+// A click on the picture of the pieces page: the edge to find, or what was clicked and a try again.
+function stPick(idx){if(START.found)return;const faces=stPieceFaces(idx),say=$('#stFindSay');
+  if(faces.length===2&&faces.includes(0)&&faces.includes(2)){stFound();return;}
+  if(START.sc)START.sc.bump(new Set([idx]),{up:300,hold:500,down:360});
+  const kind=['center','edge','corner'][faces.length-1];
+  if(say)say.textContent=`That is the ${stColorList(faces)} ${kind}. ${faces.length===2?'Look for white and green.':'An edge has two colors.'} Try again.`;}
+function stFound(){START.found=true;if(START.sc)START.sc.bump(new Set([ST_FIND]),{stay:true});
+  const say=$('#stFindSay');if(say)say.textContent='';const c=$('#stCap');if(c)c.textContent=ST_KIND_SAY.find;
+  START.kind=null;document.querySelectorAll('#start .st-kind').forEach(x=>x.setAttribute('aria-pressed','false'));
+  const wrap=$('#start .st-cubewrap');if(wrap&&!$('#stFound'))wrap.insertAdjacentHTML('beforeend',stFoundCallout());
+  const nx=$('#stPiecesNext');if(nx)nx.innerHTML=stPiecesNext();
+  document.querySelectorAll('#start [data-go="t1-moves"]').forEach(b=>b.onclick=()=>startGo('t1-moves'));
+  const b=$('#stFound button');if(b)try{b.focus({preventScroll:true});}catch(e){}}
 // The moves page is where the letters come in: the face names first, then one letter for each.
-START_SCREENS['t1-moves']=()=>{const f=START.face,p=START.prime;const w=ST_MOVE_WORDS[f];
+// Level 2 has a short one before the cube question: it can turn a cube, but may not know the letters.
+function stMovesPage(short){const f=START.face,p=START.prime;const w=ST_MOVE_WORDS[f];
   const doIt=w[p?2:1]+` Then ${p?f:f+'′'} turns it back.`;
-  return `${stBasicsBar(4)}
-  <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 4 of 4</span><h1>The six moves</h1><p>Each face has a name, as you hold the cube: up (the top), down (the bottom), front, back, right and left. The guide writes each one as its first letter: <b class="mono">U D F B R L</b>.</p>
+  const intro=short?`<p>The lessons write each move as a letter: <b class="mono">U D F B R L</b>. They are up (the top), down, front, back, right and left, as you hold the cube: white on top, green toward you.</p>`
+    :`<p>Each face has a name, as you hold the cube: up (the top), down (the bottom), front, back, right and left. The guide writes each one as its first letter: <b class="mono">U D F B R L</b>.</p>`;
+  const foot=short?`${stBack('level','← Change my level')}<span class="spacer"></span><button class="primary" data-go="t2-cube" title="Pick the cube to learn with">I know the six moves →</button>`
+    :`${stBack('t1-pieces')}<span class="spacer"></span><button class="primary" data-go="t1-done" title="Finish the basics">I know the six moves →</button>`;
+  return `${short?stBar('Before you start'):stBasicsBar(4)}
+  <div class="st-split"><div class="st-text"><span class="st-lbl">${short?'Before you start':'Basics · 4 of 4'}</span><h1>The six moves</h1>${intro}
     <p>The letter alone turns that face clockwise, as you look straight at that face. A <b>′</b> after the letter turns it the other way.</p>
     <div class="row st-moves">${['U','D','F','B','R','L'].map(x=>`<button class="st-move${p?' prime':''}" data-face="${x}" aria-pressed="${x===f}" title="${ST_MOVE_WORDS[x][0]} face">${x}${p?'′':''}</button>`).join('')}<button class="st-move st-prime" data-prime="1" aria-pressed="${p}" title="Turn the other way">′ other way</button></div>
     <div class="st-box st-say"><span><b class="mono${p?' mod':''}">${f}${p?'′':''}</b> · ${w[0]}</span><span>${esc(doIt)}</span><button class="small" data-show="1" title="Turn the layer on the picture, then back">Show me</button></div>
-    <div class="st-foot">${stBack('t1-pieces')}<span class="spacer"></span><button class="primary" data-go="t1-done" title="Finish the basics">I know the six moves →</button></div></div>
-  ${stCubeSide()}</div>`;};
+    <div class="st-foot">${foot}</div></div>
+  ${stCubeSide()}</div>`;}
+START_SCREENS['t1-moves']=()=>stMovesPage(false);
+START_SCREENS['t2-moves']=()=>stMovesPage(true);
+
 START_SCREENS['t1-done']=()=>{const names=stSteps();
   return `${stBar('Basics',`<span class="st-dots" aria-label="All four parts finished"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>`)}
   <div class="st-center"><div class="st-head"><span class="st-tick" aria-hidden="true">✓</span><h1>You know the basics</h1><p>Basics is marked Learned. Next, pick the cube you learn with. Then solve it one step at a time.</p></div>
@@ -156,7 +189,7 @@ START_SCREENS['t2-cube']=()=>{const cards=[
     {id:'smart',name:'Smart cube',tag:'GAN, Bluetooth',what:'The page sees every turn you make. Hints uncover as you turn.',how:'Chrome or Edge connect directly. Safari needs the Mac app.',note:'Next: the browser asks to connect.',cta:'Connect my cube →'},
     {id:'screen',name:'Screen cube',tag:'no cube needed',what:'Six keys turn the faces. Drag with the mouse to turn the whole cube.',how:'On a phone, buttons under the cube turn it.',note:'Next: the keys, then a mixed-up screen cube.',cta:'Use the screen cube →'}];
   const sel=cards.find(c=>c.id===START.src)||cards[0];
-  return `${stBar('',stBack(START.level===1?'t1-done':'level',START.level===1?'← Back':'← Change my level'))}
+  return `${stBar('',stBack(START.level===1?'t1-done':START.level===2?'t2-moves':'level',START.level<=2?'← Back':'← Change my level'))}
   <div class="st-center"><div class="st-head"><h1>Which cube will you use?</h1><p>Every lesson works with all three. Change it at any time from the chip in the top bar.</p></div>
   <div class="st-three">${cards.map(c=>`<button class="st-card st-pick" data-src="${c.id}" aria-pressed="${c.id===sel.id}" title="${esc(cubeSrcName(c.id))}"><span class="row"><i class="cdot" data-src="${c.id}"></i><span class="tag">${esc(c.tag)}</span></span><b>${esc(c.name)}</b><span>${esc(c.what)}</span><span class="muted">${esc(c.how)}</span></button>`).join('')}</div>
   <div class="st-foot"><span class="muted">${esc(sel.note)}</span><span class="spacer"></span><button class="primary" data-t2go="1" title="Go on">${esc(sel.cta)}</button></div></div>`;};
@@ -269,16 +302,16 @@ function startCubeMount(){const box=$('#stCube');if(!box)return;const scr0=START
   let fade=null,cap='';
   if(scr0==='t1-what')cap='Drag to look around the cube. Double-click to put it back.';
   if(scr0==='t1-hold'){fade=stFaces([4]);cap='Drag to look at the other faces. Double-click and it comes back to white on top, green toward you.';}
-  if(scr0==='t1-pieces'){const k=START.kind;fade=k==='find'?new Set([7,19]):stFaces(ST_PIECES[k]);
-    cap={centers:'A center never moves. It names its face.',edges:'An edge sits between two centers. It has two colors.',corners:'A corner sits where three faces meet. It has three colors.',find:'Top face, the row nearest you. Drag to see it from the side.'}[k];}
-  if(scr0==='t1-moves'){fade=stLayer(START.face);cap=ST_HIDDEN[START.face]||'The lit stickers move with '+START.face+'.';}
+  if(scr0==='t1-pieces')cap=ST_KIND_SAY[START.found?'find':START.kind||'none'];
+  if(scr0==='t1-moves'||scr0==='t2-moves'){fade=stLayer(START.face);cap=ST_HIDDEN[START.face]||'The lit stickers move with '+START.face+'.';}
   // Only the keys page takes the keys: the basics come before the cube question.
   const keys=scr0==='t1-keys';
   // The screen cube keeps its state from page to page; a lit page shows it solved.
   const prev=START.sc,cube=prev&&scr0==='t1-keys'?prev.cube:new Cube();
-  START.sc=screenCube(box,{cube,fade,keys,label:'The screen cube',onMove:m=>{START.last=stMoveSay(m);const l=$('#stLast');if(l)l.textContent=START.last;}});
+  START.sc=screenCube(box,{cube,fade,keys,label:'The screen cube',onPick:scr0==='t1-pieces'?stPick:null,onMove:m=>{START.last=stMoveSay(m);const l=$('#stLast');if(l)l.textContent=START.last;}});
   if(!keys&&SCREEN.active===START.sc)SCREEN.active=null;
   const c=$('#stCap');if(c)c.textContent=cap;
+  if(scr0==='t1-pieces'&&START.found)START.sc.bump(new Set([ST_FIND]),{stay:true});
   // On a touch screen there are no keys: six buttons under the cube turn it.
   if(keys&&typeof matchMedia==='function'&&matchMedia('(hover: none)').matches){const pad=document.createElement('div');pad.className='st-pad';
     pad.innerHTML=['U','D','F','B','R','L'].map(f=>`<button class="small" data-pad="${f}" title="Turn the ${ST_MOVE_WORDS[f][0].toLowerCase()} face">${ST_MOVE_WORDS[f][0]}</button>`).join('');box.after(pad);
@@ -291,11 +324,14 @@ function startWire(el){
   on('[data-go]',b=>{if(b.dataset.go==='t1-done')startMark(['beg-0'],'finished');startGo(b.dataset.go);});
   on('[data-close]',()=>startClose());
   on('[data-paste]',()=>{startClose();openSettings('data');});
-  on('[data-level]',b=>{const l=LEVELS[+b.dataset.level-1];START.level=l.n;START.check=null;START.sets=null;START.quiz=null;START.five=null;startGo(l.first);});
+  on('[data-level]',b=>{const l=LEVELS[+b.dataset.level-1];START.level=l.n;START.found=false;START.kind=null;START.check=null;START.sets=null;START.quiz=null;START.five=null;startGo(l.first);});
   on('[data-layout]',b=>{screenSetLayout(b.dataset.layout);startDraw();});
   on('.st-keys [data-turn]',b=>START.sc&&START.sc.turn(b.dataset.turn));
   on('.st-seg [data-src],.st-pick[data-src]',b=>{START.src=b.dataset.src;startDraw();});
-  on('[data-kind]',b=>{START.kind=b.dataset.kind;startDraw();});
+  // A kind or the hint lifts pieces out and back. The page is not drawn again, so the view stays.
+  on('[data-kind]',b=>{const k=b.dataset.kind;START.kind=k;el.querySelectorAll('.st-kind').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+    const c=$('#stCap');if(c)c.textContent=ST_KIND_SAY[k];if(START.sc)START.sc.bump(stFaces(ST_PIECES[k]));});
+  on('[data-hint]',()=>{const c=$('#stCap');if(c)c.textContent=ST_KIND_SAY.find;if(START.sc)START.sc.bump(new Set([ST_FIND]),{stay:START.found});});
   on('[data-face]',b=>{START.face=b.dataset.face;startDraw();});
   on('[data-prime]',()=>{START.prime=!START.prime;startDraw();});
   on('[data-demo]',()=>{const sc=START.sc;if(!sc)return;sc.turn('R');setTimeout(()=>{if(START.sc===sc)sc.turn("R'");},900);});
