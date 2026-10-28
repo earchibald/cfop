@@ -1,11 +1,11 @@
 # The 2×2
 
-Two methods for the 2×2 (the Rubik's Mini), next to the two 3×3 methods. The chip in the
+Two methods for the 2×2, next to the two 3×3 methods. The chip in the
 top bar chooses a puzzle and a method: `2×2 · Beginner` and `2×2 · Speed`.
 
 | Section | Source | Built |
 |---|---|---|
-| Beginner | "You can do the Rubik's Mini, Solution Guide" (Spin Master, V1-EU-M-2020). The owner's copy: `~/Desktop/65afebcae0a3534d92a9b921_Rubiks_SolutionGuide_2x2-Mini.pdf` | 2026-10-11, `js/mini.js`, the beginner tabs through a pack |
+| Beginner | A five-step layer-by-layer guide (2020) | 2026-10-11, `js/mini.js`, the beginner tabs through a pack |
 | Speed | Ortega (face, OLL, PBL) and CLL, with the algorithms jperm.net lists for the 2×2 (`/lib/2x2oll.js`, `2x2pbl.js`, `2x2cll.js`, read 2026-10-11) | 2026-10-11, `js/speed2.js`, `js/speed-ui.js` |
 
 ## The model
@@ -31,7 +31,7 @@ The guide starts white up and never names centers: the first corner defines the 
 
 | Step | Name | Hold | What the guide says |
 |---|---|---|---|
-| 0 | Get to know your Mini | | Two layers, six faces, eight corners; the six letters, the mark, the 2. |
+| 0 | Get to know your cube | | Two layers, six faces, eight corners; the six letters, the mark, the 2. |
 | 1 | The first two corners | White-red-blue corner at the top front right: white up, red in front, blue right | The second corner (white-blue-orange) goes next to it. In the top layer: hold it on the right, `R' D' R`, then hold the first corner on the left. Twist the bottom until it is at the bottom right of the front. White facing you `R`; facing right `R' D' R`; facing down `D R2`. |
 | 2 | The third corner | The second corner on the left | White-green-orange. Back right with white facing back: `R'`. Back right any other way: `R D'`. Front right but twisted: `R2 D'`. Then the three bottom cases. |
 | 3 | The fourth corner | The third corner on the left | White-green-red. Front right twisted: `R' D' R`. Bottom: white facing down `F D' F' D2` first; facing you `D' R' D R` (Corner in); facing right `R' D' R`. |

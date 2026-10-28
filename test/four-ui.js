@@ -1,5 +1,5 @@
 // The 4×4 in the page: the chooser offers it, the beginner method reuses the beginner tabs with
-// the Master guide's ten steps and a 4×4 picture, paint takes 96 tiles, and the advanced section
+// the 4×4 beginner guide's ten steps and a 4×4 picture, paint takes 96 tiles, and the advanced section
 // plans, drills parity and references.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');

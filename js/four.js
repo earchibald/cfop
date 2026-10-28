@@ -1,4 +1,4 @@
-// ===== The 4×4 cube (the Rubik's Master): a sticker model =====
+// ===== The 4×4 cube: a sticker model =====
 // A 4×4 has no fixed centers, 24 center tiles, 24 edge pieces (wings) and 8 corners. The engine
 // keeps the 96 stickers as an array of colors, index 16*face + 4*row + column, face order
 // U R F D L B, rows top to bottom, columns left to right (the same scheme js/draw.js uses).
@@ -6,7 +6,7 @@
 // position in space, a move turns the stickers of its layers a quarter turn about the face's
 // axis, and the sticker lands where another one was.
 //
-// Notation follows the Rubik's Master guide: a capital letter turns the outside face (R), the
+// Notation follows the 4×4 beginner guide (js/master.js): a capital letter turns the outside face (R), the
 // small letter turns the inside slice next to it (r), and the two together turn both as one
 // (Rr). Rw and 2R are read as Rr and r. x y z turn the whole cube. ' and 2 as usual.
 // FourCube wraps a state so the rest of the app can treat it like a Cube: applyAlg,

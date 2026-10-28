@@ -25,7 +25,7 @@ function rotAxis(p,n,deg){const a=deg*Math.PI/180,c=Math.cos(a),s=Math.sin(a);co
 // (0 is the face's own layer, 1 the slice behind it), and the whole turn in degrees. A
 // clockwise face turn is -90 about the outward normal. The size matters for a small letter:
 // on a 3×3 r is the face and the slice (wide), on a 4×4 it is the inside slice alone, and
-// Rr is both, as the Rubik's Master guide writes it.
+// Rr is both, as the 4×4 beginner guide writes it.
 function moveGeom(move,size){
   const n=size||DRAW_N;let face,depths;
   let m=/^([URFDLB])'([urfdlb])'$/.exec(move);if(m&&m[1].toLowerCase()===m[2])move=m[1]+m[2]+"'";

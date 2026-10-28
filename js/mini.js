@@ -1,6 +1,5 @@
-// ===== The 2×2 beginner method: the Rubik's Mini solution guide =====
-// Source: "You can do the Rubik's Mini, Solution Guide" (Spin Master, V1-EU-M-2020), the current
-// guide at rubiks.com/solve-it. Two layers, five steps: the top layer corner by corner, then the
+// ===== The 2×2 beginner method: a layer-by-layer solution guide =====
+// Two layers, five steps: the top layer corner by corner, then the
 // yellow face, then the yellow corners. The holds, the algorithms and the sayings are the
 // guide's own.
 // Data: MINI_STEPS, MINI_ALGS. miniChunks boxes the named algorithms inside a move list.
@@ -48,7 +47,7 @@ function miniChunks(moves){
 // the step holds it); its `moves` are the guide's answer. Without a setup, the case starts where
 // its own moves, undone, put it.
 const MINI_STEPS=[
-  {n:0,id:'basics',name:'Get to know your Mini',
+  {n:0,id:'basics',name:'Get to know your cube',
    goal:'Know the two layers, the six faces, the eight corners, and the six moves.',
    goals:['Two layers, six faces, eight corners','How to hold the cube','The six moves'],
    what:'A 2×2 cube has two layers, a top layer and a bottom layer. It has 6 faces, and it is made up of 8 corners. Every corner has three colored tiles. There are no centers and no edges.',
@@ -152,7 +151,7 @@ function solveMini(start){
       stage(1,'first',names[0]);
       // The first corner only needs a hold: top front right, white up, red in front, blue right.
       const rot=twoRotationTo(c,x=>placed(x,0,3));
-      if(rot.length)part('Hold your Mini',`Find the ${pn}. Hold the cube so it is at the top front right: white up, red in front, blue on the right. This corner is placed. The dashed moves turn the whole cube.`,rot.join(' '),[],{piece});
+      if(rot.length)part('Hold your cube',`Find the ${pn}. Hold the cube so it is at the top front right: white up, red in front, blue on the right. This corner is placed. The dashed moves turn the whole cube.`,rot.join(' '),[],{piece});
       continue;
     }
     if(k===2)stage(2,'third',names[1]);if(k===3)stage(3,'fourth',names[2]);

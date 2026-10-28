@@ -27,11 +27,9 @@ Third-party code: the site and the app load libraries that are not part of
 this repository, such as cubing.js for scrambles. Each one keeps its own
 license, and this notice does not cover them. THIRD-PARTY.md lists them.
 
-Names and trademarks: Rubik's and Rubik's Cube are trademarks of their owner.
-GAN is a trademark of its owner. Other product names belong to their owners.
+Names and trademarks: GAN is a trademark of its owner. Other product names belong to their owners.
 Twistwright is not affiliated with, sponsored by or endorsed by any of them.
-The names appear only to describe the methods and the cubes that the site
-works with.
+The names appear only to describe the cubes that the site works with.
 
 THE SITE, THE APP AND THE FILES IN THIS REPOSITORY ARE PROVIDED "AS IS",
 WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO

@@ -1,4 +1,4 @@
-// ===== The 2×2 cube (the Rubik's Mini): the corners of the 3×3 model =====
+// ===== The 2×2 cube: the corners of the 3×3 model =====
 // A 2×2 state is a Cube (js/engine.js) whose edges and centers are ignored. Every face move
 // and rotation of the engine works on it. A 2×2 has no centers, so a state is solved when the
 // four corner stickers of every face match: twoSolved. The 24 stickers a 2×2 shows are the

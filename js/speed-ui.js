@@ -135,7 +135,7 @@ function twoRefCard(a,tab){return `<div class="rcard ref-row" data-id="${esc(a.i
 function twoMountRef(){
   $('#tab-sref').innerHTML=`<div class="panel"><h2>2×2 reference</h2><p class="muted">Three ways to solve a 2×2, from easiest to fastest. Click any case to open it: picture, recognition, and buttons to set it on the cube.</p>${refAllBox()}
     <div class="grid2">
-      <div class="tip"><b>The beginner method</b>The Rubik's Mini guide: one layer corner by corner, the yellow face with Up, Over, Down, then the yellow corners with the chant. Two algorithms. About 45 moves. Open it from the chip in the top bar: 2×2 · Beginner.</div>
+      <div class="tip"><b>The beginner method</b>One layer corner by corner, the yellow face with Up, Over, Down, then the yellow corners with the chant. Two algorithms. About 45 moves. Open it from the chip in the top bar: 2×2 · Beginner.</div>
       <div class="tip"><b>Ortega</b>A face of one color (not a layer), then OLL orients the top (7 cases), then PBL permutes both layers at once (5 cases). Twelve algorithms. About 25 moves. The Ortega tab trains it.</div>
       <div class="tip"><b>CLL</b>A whole layer, then one algorithm for the top: 42 cases, nine of them shared with Ortega. About 18 moves. The CLL tab trains it.</div>
       <div class="tip"><b>After CLL: EG</b>A face, then one algorithm that fixes the bottom layer too. EG-1 (43 cases) for a bottom with a bar, EG-2 (43) for a diagonal bottom. Not in the app yet.</div>

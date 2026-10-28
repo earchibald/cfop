@@ -1,6 +1,5 @@
-// ===== Beginner method: the Rubik's solution guide, layer by layer =====
-// Source: "You can do the Rubik's Cube, Solution Guide" (Spin Master, V1-EU-M-2020), the current
-// guide at rubiks.com/solve-it. Three layers, eight steps. The holds, the algorithms and the
+// ===== Beginner method: a solution guide, layer by layer =====
+// Three layers, eight steps. The holds, the algorithms and the
 // sayings are the guide's own.
 // Data: the steps, their goals, the algorithms with their sayings.
 // Solver: solveBeginner(cube) returns the plan a beginner follows, part by part, with only the

@@ -1,14 +1,13 @@
 # Beginner mode
 
-A second method for the 3×3, next to CFOP: the Rubik's solution guide, layer
+A second method for the 3×3, next to CFOP: a solution guide, layer
 by layer in eight steps. The goal is learning, not speed. Wireframes and page
 flows are on the design canvas: https://claude.ai/artifact/Dh15WcK6o3Q2HLCo2mwNJb
 
-**Source.** The current guide, "You can do the Rubik's Cube, Solution Guide"
-(Spin Master, V1-EU-M-2020, rubiks.com/solve-it). The owner's copy:
-`~/Desktop/65afea09c4f7a02afbb9d876_Rubiks_SolutionGuide_3x3-Original.pdf`.
+**Source.** The current (2020) layer-by-layer solution guide. The owner keeps
+the copy; the repo does not name it.
 The method, the holds, the algorithms and the sayings are the guide's own.
-An older Rubik's guide (triggers, yellow up throughout) was the base until
+An older guide (triggers, yellow up throughout) was the base until
 2026-10-11; it is gone.
 
 ## Status
@@ -102,7 +101,7 @@ algorithm that starts with `D'` are both shown, as the guide teaches them.
 | 4 | How a real cube gets in | Three cards: Scan with the camera, Paint the colors, Scramble one for me. Scan first. |
 | 5 | The player's third panel | Progress: the eight squares, cubes solved, up next, Solve my cube. "Time my solves" swaps in the timer. |
 | 6 | Phone home | Learn is the home screen, under the Up next banner and the Your cube cards. The player shows only when moves are loaded. The top bar keeps the mark and the name. |
-| 7 | Which Rubik's guide | The current one (2020, daisy, white corners white up with `D` moves, the sayings). Not the older trigger guide. Decided 2026-10-11. |
+| 7 | Which guide | The current one (2020, daisy, white corners white up with `D` moves, the sayings). Not the older trigger guide. Decided 2026-10-11. |
 
 ## Rules the beginner tabs keep from CFOP
 
