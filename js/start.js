@@ -121,11 +121,21 @@ START_SCREENS['t1-keys']=()=>{const k=screenKeys(SCREEN.layout);const key=(f,wor
     <div class="st-foot"><span class="st-kbd">Try it: press <b class="mono">${esc(k.F)}</b>, then <b class="mono">Shift+${esc(k.F)}</b>.</span><span class="spacer"></span><button class="primary" data-go="t2-screen" title="Go on">Next: a mixed-up screen cube →</button></div></div></div>`;};
 START_SCREENS['t1-hold']=()=>`${stBasicsBar(2)}
   <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 2 of 4</span><h1>Hold it like this</h1><p>Each face has one center sticker. The centers never move. They give each face its color.</p>
-    <label class="st-check" title="Check this when white is on top"><input type="checkbox"> <span><b>White center on top.</b> <span class="muted">The picture shows it this way.</span></span></label>
-    <label class="st-check" title="Check this when green faces you"><input type="checkbox"> <span><b>Green center toward you.</b> <span class="muted">Red is then on your right.</span></span></label>
+    <button class="st-hold" data-hold="top" title="Show the top layer"><span class="st-hl" data-hl="U"><b>White center on top.</b></span> <span class="muted">The picture shows it this way.</span></button>
+    <button class="st-hold" data-hold="front" title="Show the front layer, then the right layer"><span class="st-hl" data-hl="F"><b>Green center toward you.</b></span> <span class="st-hl muted" data-hl="R">Red is then on your right.</span></button>
     <p class="muted">Opposite faces: white and yellow, green and blue, red and orange. Have a cube? Hold yours the same way.</p>
     <div class="st-foot">${stBack('t1-what')}<span class="spacer"></span><button class="primary" data-go="t1-pieces" title="Go on to the pieces">I see it →</button></div></div>
   ${stCubeSide()}</div>`;
+// The hold: a line lifts its layer out of the picture with a glow and back, and its words light up
+// with it. Green toward you shows the front layer, then the right layer (red).
+const ST_HOLD={top:[['U',0]],front:[['F',2],['R',1]]};
+function stHoldShow(key){const sc=START.sc,el=startEl();if(!sc)return;const run=START.holdRun=(START.holdRun||0)+1;
+  el.querySelectorAll('.st-hl.on').forEach(x=>x.classList.remove('on'));
+  const steps=ST_HOLD[key],up=420,hold=1100,down=480,live=()=>START.holdRun===run&&START.sc===sc;
+  const go=i=>{if(!live()||i>=steps.length)return;const [f,fi]=steps[i],hl=el.querySelector(`.st-hl[data-hl="${f}"]`);
+    if(hl)hl.classList.add('on');setTimeout(()=>{if(live()&&hl)hl.classList.remove('on');},up+hold);
+    sc.bump(stLayer(f),{up,hold,down,dir:FACE_GEOM[fi].n,d:0.6,done:()=>go(i+1)});};
+  go(0);}
 // The pieces: a kind lifts its pieces out of the picture and puts them back (screenCube's bump).
 // Find it is a click on the picture: the white and green edge brings up the callout.
 const ST_KIND_SAY={centers:'A center never moves. It names its face.',edges:'An edge sits between two centers. It has two colors.',corners:'A corner sits where three faces meet. It has three colors.',
@@ -332,6 +342,7 @@ function startWire(el){
   on('[data-kind]',b=>{const k=b.dataset.kind;START.kind=k;el.querySelectorAll('.st-kind').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
     const c=$('#stCap');if(c)c.textContent=ST_KIND_SAY[k];if(START.sc)START.sc.bump(stFaces(ST_PIECES[k]));});
   on('[data-hint]',()=>{const c=$('#stCap');if(c)c.textContent=ST_KIND_SAY.find;if(START.sc)START.sc.bump(new Set([ST_FIND]),{stay:START.found});});
+  on('[data-hold]',b=>stHoldShow(b.dataset.hold));
   on('[data-face]',b=>{START.face=b.dataset.face;startDraw();});
   on('[data-prime]',()=>{START.prime=!START.prime;startDraw();});
   on('[data-demo]',()=>{const sc=START.sc;if(!sc)return;sc.turn('R');setTimeout(()=>{if(START.sc===sc)sc.turn("R'");},900);});

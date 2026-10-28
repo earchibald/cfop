@@ -120,6 +120,11 @@ body.starting header.top>*:not(h1){display:none!important}
 .st-dots{display:inline-flex;gap:5px}.st-dots i{width:22px;height:6px;border-radius:3px;background:var(--panel3)}.st-dots i.on{background:var(--accent)}
 .st-check{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);cursor:pointer;line-height:1.45}
 .st-check input{margin-top:4px;width:18px;height:18px}
+.st-hold{display:block;width:100%;text-align:left;padding:12px 11px;border-radius:12px;line-height:1.45;font-weight:inherit}
+.st-hold:hover{border-color:var(--accent)}
+.st-hl{display:inline-block;margin-inline:3px;border-radius:4px;transition:transform .48s ease-in-out,background-color .48s,box-shadow .48s,color .48s}
+.st-hl.on{transform:translateY(-3px) scale(1.03);color:var(--text);background:color-mix(in srgb,var(--accent) 26%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 26%,transparent),0 0 18px 3px color-mix(in srgb,var(--accent) 60%,transparent);transition-duration:.42s}
+@media (prefers-reduced-motion:reduce){.st-hl,.st-hl.on{transition:none}.st-hl.on{transform:none}}
 .st-kinds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .st-kind{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:12px;text-align:left}
 .st-kind[aria-pressed="true"],.st-move[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--panel2))}
