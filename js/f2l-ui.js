@@ -1,10 +1,10 @@
 // ================= The F2L Guide panel =================
-// Guide mode of the F2L tab: the first two layers one pair at a time, on the screen cube, on a real
+// Guide mode of the F2L tab: the first two layers one pair at a time, on the virtual cube, on a real
 // cube read by the scanner or the painter, or on a smart cube. The solvers are in js/f2l.js (shared
 // with the lab); the step logic follows the lab's window (lab/lab.js, labF2L*). See docs/f2l-site.md.
 //
 // The hint is a drill (fgHintTiles): the first move in clear, every other move covered until it is
-// made. On the screen cube and a real cube the user makes a move by a click on the next covered
+// made. On the virtual cube and a real cube the user makes a move by a click on the next covered
 // tile or the Right arrow: the move goes on the player (the layer turns) and on fg.made, the list
 // of moves since the reset point. The Left arrow covers the last move again (fgBack: the player
 // steps back and the guide goes back to the snapshot it took before the move, fg.hist). On a smart
@@ -14,7 +14,7 @@
 // The reset point (fg.base, in the solving frame: the cross color down) is the scramble with the
 // cross solved for you (fgPrepare, as the Live mode does), or the smart cube's state at Set up
 // from current. Return to scramble says the moves back to it (the moves made, undone, or
-// resyncReturn for a smart cube) and covers the screen cube's moves again. Set up from current
+// resyncReturn for a smart cube) and covers the virtual cube's moves again. Set up from current
 // loads the cube as it is as the scramble (scrambleFromCube), so the pairs solved so far stay
 // solved and the guide starts over from here. Read my cube opens the scanner as a refresh scan
 // (fgReadCube): the net starts as the state the guide expects, and two or three faces (or the
@@ -65,7 +65,7 @@ function fgShow(take){
   const go=()=>{if(fg.key!==key){fgReset();fgPrepare();fg.key=key;}fgSequence();fgRead(applyAlg(fg.base,fg.made));};
   if(tablesReady)go();else{fg.working=true;fgDraw();ensureTables(go);}
 }
-// The reset point of the screen cube or a real cube: the scramble in the solving frame, the cross
+// The reset point of the virtual cube or a real cube: the scramble in the solving frame, the cross
 // solved for you (the shortest cross), as the Live mode does. fg.extra is the rotation and the
 // cross moves the player shows dashed.
 function fgPrepare(){
@@ -197,7 +197,7 @@ function fgUse(key){
   const w=s.ways.find(x=>x.key===key);if(!w)return;
   s.moves=w.moves;s.way=key;s.sols=key==='short'?s.sols:[];s.then=null;fgDraw();fgThen(fg.seq);
 }
-// ----- the moves on the screen cube and a real cube -----
+// ----- the moves on the virtual cube and a real cube -----
 // The next covered move, made: on the player, on the list, and read by the guide.
 function fgNextMove(){const s=fg.step,c=fg.cross;if(s&&s.moves.length&&!s.away&&s.n<s.moves.length)return s.moves[s.n];if(!s&&c&&c.moves.length&&!c.away&&c.n<c.moves.length)return c.moves[c.n];return null;}
 function fgMake(m){
@@ -241,7 +241,7 @@ function fgReadCube(){
   if(!re){openScan();return;}
   openScan({n:3,resync:{bases:fgReadBases()},onCube:fgReadBack});
 }
-// The cube read: 'return' says the way back to the reset point (the screen cube goes back too);
+// The cube read: 'return' says the way back to the reset point (the virtual cube goes back too);
 // 'setup' and 'use' make the cube as read the scramble, so the guide starts over from it.
 function fgReadBack(cube,how,info){
   if(how==='return'){
@@ -254,7 +254,7 @@ function fgReadBack(cube,how,info){
   if(!res.ok){fg.back=null;fg.broke=res.errors.join(' ');fgDraw();}
 }
 // ----- Return to scramble, Set up from current -----
-// The way back to the reset point: the moves made, undone (the screen cube goes back too), or the
+// The way back to the reset point: the moves made, undone (the virtual cube goes back too), or the
 // shortest way for a smart cube.
 function fgReturn(){
   if(!fg.X||!fg.base)return;
@@ -263,7 +263,7 @@ function fgReturn(){
   while(fg.made.length)fgBack();
   fg.back=back||'';fg.read='';fgDraw();
 }
-// The cube as it is becomes the scramble. The screen cube and a real cube go through the scramble
+// The cube as it is becomes the scramble. The virtual cube and a real cube go through the scramble
 // finder (the state turned back to white up); a smart cube keeps its own state and starts over.
 function fgSetup(){
   if(!fg.X)return;
@@ -295,7 +295,7 @@ function fgClick(e){
 }
 // ----- the drawing -----
 // The hint as tiles: the moves made dim, the first move in clear, every other move covered until
-// it is made. The next covered move is a button on the screen cube and a real cube. Under each
+// it is made. The next covered move is a button on the virtual cube and a real cube. Under each
 // tile, what the move does to the pair (the arc), where it says something.
 function fgHintTiles(moves,n,arc,click){
   const row=fgEl('div','fg-hint');
@@ -328,7 +328,7 @@ function fgDrawAll(){
   const f=fg,el=fgEl,X=f.X,s=f.step,st=X?f2lStatus(X,f.done):null,color=fgColor(),click=f.src!=='smart';
   // the cube line
   const cl=$('#fgCube');cl.textContent='';
-  const who=f.src==='smart'?(typeof smartNiceName==='function'?smartNiceName(cubeTab.name):'your smart cube'):f.src==='real'?`your cube, ${/^scan/.test(scr.seed)?'scanned':/^paint/.test(scr.seed)?'painted':'read'} ${(scr.seed.match(/-(\d\d)(\d\d)(\d\d)$/)||[]).slice(1,3).join(':')||'earlier'}`:'the screen cube';
+  const who=f.src==='smart'?(typeof smartNiceName==='function'?smartNiceName(cubeTab.name):'your smart cube'):f.src==='real'?`your cube, ${/^scan/.test(scr.seed)?'scanned':/^paint/.test(scr.seed)?'painted':'read'} ${(scr.seed.match(/-(\d\d)(\d\d)(\d\d)$/)||[]).slice(1,3).join(':')||'earlier'}`:'the virtual cube';
   cl.appendChild(el('b',null,`Your cube: ${who}.`));
   cl.appendChild(el('span','muted',f.src==='smart'?' Make each move on the cube: it uncovers as you turn.':f.src==='real'?' Make each move on your cube too: click the next move, or press the Right arrow. Left covers it again.':' Click the next move, or press the Right arrow. Left covers it again.'));
   if(f.back!=null){const p=el('p','fg-back');if(f.read)p.appendChild(el('span',null,f.read+' '));p.appendChild(el('b',null,f.back?'Back to the scramble: ':'The cube is at the scramble.'));if(f.back)p.appendChild(el('code',null,f.back));cl.appendChild(p);}

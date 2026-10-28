@@ -25,7 +25,7 @@ function begAllLearned(){for(let n=0;n<=8;n++)if(llState.status['beg-'+n]!=='fin
 function begCubeLine(){const home=$('#begHome');if(!home)return;let el=$('#begCubeLine');
   if(!el){el=document.createElement('div');el.id='begCubeLine';el.className='panel tight begcube';const next=$('#begNext');if(next)next.after(el);else home.prepend(el);}
   const id=typeof smartLive==='function'&&smartLive()?'smart':cubeSrc();
-  const lines={screen:'Screen cube. It is mixed up and ready. Six keys turn it.',mine:'My cube. Scan it, paint it, or mix it up with me first.',smart:smartLive()?'Smart cube connected. The page sees each turn.':'Smart cube. Not connected yet.'};
+  const lines={screen:'Virtual cube. It is mixed up and ready. The keyboard or the numeric keypad turns it.',mine:'Regular cube. Scan it, paint it, or mix it up with me first.',smart:smartLive()?'Smart cube connected. The page sees each turn.':'Smart cube. Not connected yet.'};
   el.innerHTML=`<i class="cdot" data-src="${id}" aria-hidden="true"></i><span>${esc(lines[id])}</span><button class="small ghost" id="begCubeChange" title="Choose the cube: screen, your own or a smart cube">Change</button>`;
   $('#begCubeChange').onclick=e=>{e.stopPropagation();cubePopOpenNow();};}
 // ---------- the beginner Progress tab: on to CFOP ----------
