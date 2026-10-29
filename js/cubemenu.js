@@ -14,12 +14,22 @@ function smartLive(){return typeof smartConn!=='undefined'&&!!smartConn;}
 function setCubeSrc(id){if(!CUBE_SRCS.some(s=>s.id===id))return;store.set('cubeSrc',id);cubeChipDraw();cubeScreenWire();
   if(cubePopOpen())cubePopDraw();document.dispatchEvent(new CustomEvent('cw:cubesrc',{detail:id}));}
 // A key of the virtual cube turns the cube in the section: the move goes on the player after the
-// step in view (the moves after it drop off), and the layer turns.
+// step in view (the moves after it drop off), and the layer turns. A move on the layer of your move
+// before it joins that move (U then U is U2, U then U' is nothing), so the list reads as the cube
+// now stands. The scramble's moves stay as they are (seqState.yours: where your moves start).
 // src: 'screen' (the keys) or 'smart'. Fires cw:yourmove, so a tab can follow (the Cross tab's
 // Check my plan, js/live.js).
-function cubePlayerTurn(m,src){const i=seqState.idx,ms=parseAlg(m);seqState.moves=seqState.moves.slice(0,i).concat(ms);seqState.idx=i+ms.length;
+function cubePlayerTurn(m,src){const i=seqState.idx,ms=parseAlg(m),from=cubeAtSeq(i);
+  if(seqState.yours==null||seqState.yours>i)seqState.yours=i;
+  let moves=seqState.moves.slice(0,i);
+  for(const x of ms){const j=moves.length-1,y=j>=seqState.yours?seqJoin(moves[j],x):undefined;
+    moves=y===undefined?moves.concat(x):moves.slice(0,j).concat(y?[y]:[]);}
+  seqState.moves=moves;seqState.idx=moves.length;
   if(!/your moves/.test(seqState.label))seqState.label=(seqState.label?seqState.label+' · ':'')+'your moves';
-  renderSequence();applySequence();document.dispatchEvent(new CustomEvent('cw:yourmove',{detail:{moves:ms,src:src||'screen'}}));}
+  renderSequence();applySequence(ms.length===1?{from,move:ms[0]}:null);document.dispatchEvent(new CustomEvent('cw:yourmove',{detail:{moves:ms,src:src||'screen'}}));}
+// Two moves of one layer as one: the move, or null when they undo each other. Undefined: two layers.
+function seqJoin(a,b){const k=m=>m.replace(/['2]$/,'');if(k(a)!==k(b))return undefined;
+  const t=(cubeTabTurns(a)+cubeTabTurns(b))%4;return t?k(b)+['','','2',"'"][t]:null;}
 // A key names the face as the picture shows it; the player holds the cube its own way (js/live.js).
 const cubePlayerScreen={el:null,keys:true,turn:m=>cubePlayerTurn(typeof playerKeyMove==='function'?playerKeyMove(m):m,'screen')};
 // The player takes the virtual cube's keys while Virtual cube is the choice and no other virtual
@@ -29,7 +39,7 @@ function cubeScreenWire(){cubePlayerScreen.el=$('#player');
   else if(SCREEN.active===cubePlayerScreen)SCREEN.active=null;
   document.body.dataset.cubesrc=cubeSrc();}
 function cubeChipDraw(){const id=smartLive()?'smart':cubeSrc();const c=$('#cubeChip');if(!c)return;
-  c.dataset.src=id;$('#cubeChipName').textContent=cubeSrcName(id);}
+  c.dataset.src=id;$('#cubeChipName').textContent=cubeSrcName(id);c.setAttribute('aria-label','Your cube: '+cubeSrcName(id));}
 function cubePopOpen(){const p=$('#cubePop');return !!p&&!p.classList.contains('hidden');}
 function cubePopClose(){const p=$('#cubePop');if(!p)return;p.classList.add('hidden');$('#cubeChip').setAttribute('aria-expanded','false');}
 function cubePopOpenNow(){if(typeof closeMethodPop==='function')closeMethodPop();const p=$('#cubePop'),chip=$('#cubeChip');cubePopDraw();
@@ -85,7 +95,7 @@ function cubeDo(act){
 (function cubeMenuInit(){
   const chip=document.createElement('button');chip.className='cubechip';chip.id='cubeChip';chip.setAttribute('aria-expanded','false');chip.setAttribute('aria-controls','cubePop');
   chip.title='Your cube: choose it, scan it, paint it or connect it';
-  chip.innerHTML='<i class="cdot" aria-hidden="true"></i><span id="cubeChipName">Regular cube</span> <span aria-hidden="true">▾</span>';
+  chip.innerHTML='<i class="cdot" aria-hidden="true"></i><span id="cubeChipName">Regular cube</span> <span class="caret" aria-hidden="true">▾</span>';
   const pop=document.createElement('div');pop.id='cubePop';pop.className='method-pop cube-pop hidden';pop.setAttribute('role','dialog');pop.setAttribute('aria-label','Your cube');
   const mpop=$('#methodPop');mpop.after(chip);chip.after(pop);
   chip.onclick=()=>{if(cubePopOpen())cubePopClose();else cubePopOpenNow();};

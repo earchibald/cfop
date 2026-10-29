@@ -99,7 +99,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   w.setMethod('beginner');
   assert.strictEqual(d.body.dataset.tab,'learn','Learn is the phone home');
   assert.ok($('#begNextTitle')&&$('#tab-learn .lh-steps'),'the phone home shows Up next and the steps');
-  $('#menuBtn').click();assert.strictEqual($$('#menu button').length,5,'the phone menu lists the five beginner tabs');
+  $('#menuBtn').click();assert.strictEqual($$('#menu button[data-tab]').length,5,'the phone menu lists the five beginner tabs');
   assert.deepStrictEqual(errs,[],'no script errors on the phone');
   console.log('method: chooser, chip, rails, progress panel, timer toggle, tab memory ok');process.exit(0);
 }catch(e){console.error('method: FAIL',e.message);process.exit(1);}})();

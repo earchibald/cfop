@@ -327,6 +327,8 @@ details.fold>summary:hover h3{color:var(--text)}
 .menu{position:absolute;top:var(--toph,58px);left:0;right:0;background:var(--panel);border-bottom:1px solid var(--line);padding:8px;display:flex;flex-direction:column;gap:2px;box-shadow:var(--shadow)}
 .menu button{text-align:left;background:transparent;border:1px solid transparent;padding:13px 14px;font-size:16px;border-radius:var(--rb);display:flex;align-items:center;gap:12px}
 .menu button.on{background:var(--panel2);border-color:var(--line);font-weight:600}
+.menu .menu-theme{margin-top:4px;border-top:1px solid var(--line);border-radius:0;color:var(--muted)}
+.menu .menu-ic{width:12px;text-align:center}
 @media (max-width:760px){
   nav.rail,#helpBtn,#refDesktop,.desktop-only{display:none!important}
   .mobile-only{display:inline}
@@ -342,7 +344,13 @@ details.fold>summary:hover h3{color:var(--text)}
   body:not([data-tab="ref"]) #mtitle{display:flex;align-items:center;gap:8px;flex:1;font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #mnav button{flex:1;padding:9px 0;font-family:var(--mono);font-weight:600;font-size:14px;border-radius:var(--rb)}
   #mnav button.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
-  #themeBtn{padding:9px 8px}
+  /* The top bar fits a 320px phone: the cube chip is its dot, Theme is in the menu, and the
+     Reference's jump buttons take a row of their own. */
+  #themeBtn,#cubeChipName,#cubeChip .caret{display:none!important}
+  #cubeChip{padding:7px 8px;gap:0}
+  #settingsBtn{margin-left:auto;padding:9px 8px}
+  body[data-tab="ref"] .top{flex-wrap:wrap;row-gap:6px}
+  body[data-tab="ref"] #mnav{order:9;flex:1 1 100%}
   /* player: cube and timer side by side, the moves below */
   .player{grid-template-columns:1fr 1fr;grid-template-areas:"cube timer" "seq seq";gap:8px}
   .player .cubebox{grid-area:cube}.player .timerpanel,.player .progresspanel,.player .keypanel{grid-area:timer;grid-column:auto;padding:8px}.player .seqpanel{grid-area:seq}
@@ -792,6 +800,7 @@ body[data-kind="beg"][data-key] #progressPanel,body[data-kind="beg"][data-key] .
   .keypanel>span.muted{display:none}
   .keylist{font-size:12px;gap:2px 8px}
 }
+@media (max-width:359px){body[data-kind="beg"] .top h1{display:none!important}}
 
 /* The smart cube tab (cubetab.js): the live cube large in the main panel, every control beside it. The rail button carries a dot while a cube is connected. */
 [data-sec="smart"]{--sec:var(--text)}
@@ -1001,21 +1010,29 @@ body.onboard .foot{padding-bottom:56px}
 /* Save image is an icon on the player cube, so the hold row fits beside it; the title says it. */
 .cubebox .savebtn{font-size:0;gap:0;padding:5px 6px}
 .cubebox .savebtn svg{width:14px;height:14px}
-.vcubewin{position:fixed;z-index:60;width:212px;padding:8px 10px 10px;border:1px solid var(--line);border-radius:var(--rb);background:var(--panel);box-shadow:0 10px 30px rgba(0,0,0,.28);font-size:13px}
+.vcubewin{position:fixed;z-index:60;width:max-content;padding:6px 10px 10px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 12px 32px rgba(0,0,0,.32);font-size:13px}
 .vcubewin[hidden]{display:none}
-.vcubewin .vk-head{display:flex;align-items:center;gap:6px;margin:-2px 0 6px;cursor:move;user-select:none;touch-action:none}
+.vcubewin .vk-head{display:flex;align-items:center;gap:6px;margin:0 -4px 6px 0;cursor:move;user-select:none;touch-action:none;font-size:12px;letter-spacing:.02em;color:var(--muted)}
+.vcubewin .vk-head b{font-weight:600}
 .vcubewin .vk-head .grow{flex:1}
-.vcubewin .vk-close{padding:0 7px;font-size:16px;line-height:1.3}
-.vcubewin .vk-lay{display:flex;margin-bottom:8px}
-.vcubewin .vk-lay button{flex:1;font-size:11px;padding:3px 4px;white-space:nowrap}
-.vcubewin .vk-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:8px}
-.vcubewin .vk-face{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 0 4px;font-family:var(--mono,ui-monospace,monospace);transition:transform .12s,box-shadow .12s}
-.vcubewin .vk-face b{font-size:16px;line-height:1.1}
-.vcubewin .vk-face .vk-key{font-size:10px;color:var(--muted)}
+.vcubewin .vk-close{padding:0 6px;font-size:16px;line-height:1.2}
+.vcubewin .vk-pad{display:grid;grid-template-columns:repeat(3,46px);grid-auto-rows:46px;gap:6px}
+.vcubewin .vk-face,.vcubewin .vk-prime{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:0 0 4px;border-radius:10px;
+  background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;font-family:var(--mono,ui-monospace,monospace);transition:transform .12s,box-shadow .12s,background .12s}
+.vcubewin .vk-face b,.vcubewin .vk-prime b{font-size:17px;font-weight:600;line-height:1.1}
+.vcubewin .vk-key{font-size:9.5px;line-height:1;color:var(--muted)}
+.vcubewin .vk-face::after{content:"";position:absolute;left:9px;right:9px;bottom:3px;height:3px;border-radius:2px;background:var(--face,transparent);box-shadow:0 0 0 1px var(--edge,transparent)}
+.vcubewin .vk-face.c0{--face:var(--sticker-W);--edge:var(--sticker-W-edge)}.vcubewin .vk-face.c1{--face:var(--sticker-R)}.vcubewin .vk-face.c2{--face:var(--sticker-G)}
+.vcubewin .vk-face.c3{--face:var(--sticker-Y)}.vcubewin .vk-face.c4{--face:var(--sticker-O)}.vcubewin .vk-face.c5{--face:var(--sticker-B)}
+.vcubewin .vk-face .vk-key{margin-bottom:3px}
 .vcubewin .vk-face.on{transform:translateY(-2px) scale(1.06);box-shadow:0 0 0 2px var(--accent),0 0 12px 2px color-mix(in srgb,var(--accent) 50%,transparent)}
-.vcubewin .vk-prime{width:100%}
-.vcubewin .vk-prime[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:transparent}
-.vcubewin .vk-note{margin:6px 0 0;font-size:11.5px;line-height:1.35}
+.vcubewin .vk-prime{background:transparent;border-style:dashed;border-bottom-width:1px;color:var(--muted)}
+.vcubewin .vk-prime[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border:1px solid transparent}
+.vcubewin .vk-prime[aria-pressed="true"] .vk-key{color:inherit;opacity:.8}
+.vcubewin .vk-lay{display:flex;gap:4px;margin-top:8px}
+.vcubewin .vk-lay button{flex:1;padding:2px 4px;letter-spacing:.04em;border-radius:999px;border-color:transparent;background:transparent;color:var(--muted);font-family:var(--mono,ui-monospace,monospace);font-size:10px;white-space:nowrap}
+.vcubewin .vk-lay button:hover{color:var(--text)}
+.vcubewin .vk-lay button[aria-pressed="true"]{color:var(--text);border-color:var(--line);background:var(--panel2)}
 /* What to look for (js/crosslook.js): one row per tip; an open row is a card with a small cube. */
 .look-list{display:flex;flex-direction:column;gap:6px}
 .look{border:1px solid var(--line);border-radius:var(--rb);background:var(--panel)}

@@ -139,7 +139,7 @@ let crossTypeTimer=0;
 function crossTyped(){clearTimeout(crossTypeTimer);crossTypeTimer=setTimeout(()=>{
   const v=$('#crossTry').value;let ms;try{ms=parseAlg(v);applyAlg(new Cube(),ms);}catch(e){return;}
   const {cube}=orientedScramble(),pc=phys(cube);LIVE.typing=true;
-  try{setSequence(ms,'your cross plan · '+holdText(pc),pc);}finally{LIVE.typing=false;}
+  try{setSequence(ms,'your cross plan · '+holdText(pc),pc);seqState.yours=0;}finally{LIVE.typing=false;}
   crossCheckNow(true);},250);}
 if(typeof document!=='undefined'){
   playerHoldMount();
