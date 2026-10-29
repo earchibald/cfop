@@ -60,12 +60,13 @@ function stFaceSeen(view,f){return rot3(FACE_GEOM['URFDLB'.indexOf(f)].n,view.ya
 function stMoveCap(view,f){const F=f.toUpperCase();
   const line=stFaceSeen(view,F)?`The lit stickers turn with ${f}.`:`The ${ST_MOVE_WORDS[F][0].toLowerCase()} face is turned away from you. You see its edge.`;
   return stFaceSeen(view,'F')?line:`${line} Front is still the green face. Double-click to put the view back.`;}
-const START={on:false,screen:'level',level:null,src:'mine',kind:null,found:false,first:false,
+// src: the cube on the pages; picked: chosen on a page this pass (only a pick changes the cube at the end).
+const START={on:false,screen:'level',level:null,src:'mine',picked:false,kind:null,found:false,first:false,
   check:null,sets:null,caseSet:null,quiz:null,five:null,sc:null,last:'—',way:null};
 function startEl(){let el=$('#start');if(el)return el;el=document.createElement('div');el.id='start';el.className='start hidden';
   el.setAttribute('role','region');el.setAttribute('aria-label','Getting started');$('header.top').after(el);return el;}
 function startIsOpen(){return START.on;}
-function startOpen(screen){START.on=true;document.body.classList.add('starting');
+function startOpen(screen){START.on=true;if(!START.picked&&typeof cubeSrc==='function')START.src=cubeSrc();document.body.classList.add('starting');
   if(typeof closeMethodPop==='function')closeMethodPop();if(typeof cubePopClose==='function')cubePopClose();if(typeof levelPopClose==='function')levelPopClose();
   startEl().classList.remove('hidden');startGo(screen||'level');if(window.scrollTo)try{window.scrollTo(0,0);}catch(e){}}
 function startClose(){START.on=false;document.body.classList.remove('starting');const el=startEl();el.classList.add('hidden');el.textContent='';
@@ -77,11 +78,11 @@ function startGo(screen){START.screen=screen;startSave();startDraw();const h=$('
 // the choices made on the way, and whether the pages were open. The end of a track clears it.
 // The level page is no place: it keeps the place there was, and closing it marks that place closed.
 function startSave(){if(START.screen==='level'||START.screen==='t1-solve'){const a=store.get('startAt',null);if(a&&a.open&&!START.on){a.open=false;store.set('startAt',a);}return;}
-  store.set('startAt',{screen:START.screen,level:START.level,src:START.src,way:START.way,caseSet:START.caseSet,first:!!START.first,open:START.on});}
+  store.set('startAt',{screen:START.screen,level:START.level,src:START.picked?START.src:null,way:START.way,caseSet:START.caseSet,first:!!START.first,open:START.on});}
 function startSaved(){const a=store.get('startAt',null);return a&&START_SCREENS[a.screen]?a:null;}
 // Back to the saved place, or the level page when there is none.
 function startResume(){const a=startSaved();if(!a){startOpen('level');return;}
-  Object.assign(START,{level:a.level||store.get('level',null),src:a.src||START.src,way:a.way||null,caseSet:a.caseSet==null?null:a.caseSet,first:!!a.first});startOpen(a.screen);}
+  Object.assign(START,{level:a.level||store.get('level',null),src:a.src||START.src,picked:!!a.src,way:a.way||null,caseSet:a.caseSet==null?null:a.caseSet,first:!!a.first});startOpen(a.screen);}
 // The page's name for the level menu: its heading, as the page draws it.
 const START_NAMES={'t1-what':'Meet the cube','t1-hold':'Hold it like this','t1-pieces':'Three kinds of pieces','t1-moves':'The six moves','t1-done':'You know the basics',
   't2-cube':'Which cube will you use?','t1-keys':'Meet your virtual cube','t1-ready':'Your first solve','t3-start':'How do you solve it now?',
@@ -95,8 +96,8 @@ function startPick(n){const l=startLevel(n);if(!l)return;START.level=l.n;store.s
 // no choice of method yet, so it lands on its level's: the beginner method for level 1, else CFOP.
 function startLeave(){startClose();if(START.first&&START.level)setMethod(START.level<3?'beginner':'cfop',{force:true});}
 // The end of a track: the level, the cube source, the method and the section.
-function startFinish(m,tab,after){if(START.level)store.set('level',START.level);if(START.src&&typeof setCubeSrc==='function')setCubeSrc(START.src);
-  START.first=false;startClose();store.set('startAt',null);setMethod(m,{force:true});if(tab)goTab(tab);
+function startFinish(m,tab,after){if(START.level)store.set('level',START.level);if(START.picked&&START.src&&typeof setCubeSrc==='function')setCubeSrc(START.src);
+  START.first=false;START.picked=false;startClose();store.set('startAt',null);setMethod(m,{force:true});if(tab)goTab(tab);
   // The virtual cube starts mixed up, in the player (a beginner sees it at once, not the question).
   if(START.src==='screen'&&!after){newScramble();if(isBeg()&&typeof showBegLetters==='function')showBegLetters();}
   if(after)after();
@@ -498,7 +499,7 @@ function startWire(el){
   on('[data-paste]',()=>{startClose();openSettings('data');});
   on('[data-level]',b=>startPick(+b.dataset.level));
   on('.st-keys [data-turn]',b=>START.sc&&START.sc.turn(b.dataset.turn));
-  on('.st-seg [data-src],.st-pick[data-src]',b=>{START.src=b.dataset.src;startDraw();});
+  on('.st-seg [data-src],.st-pick[data-src]',b=>{START.src=b.dataset.src;START.picked=true;startDraw();});
   // A kind or the hint lifts pieces out and back. The page is not drawn again, so the view stays.
   on('[data-kind]',b=>{const k=b.dataset.kind;START.kind=k;el.querySelectorAll('.st-kind').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
     const c=$('#stCap');if(c)c.textContent=ST_KIND_SAY[k];if(START.sc)START.sc.bump(stFaces(ST_PIECES[k]));});

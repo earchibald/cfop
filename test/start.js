@@ -254,6 +254,12 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   // A second visit: no level page.
   ({w,d,errs}=await boot({'cw:method':'"cfop"','cw:level':'5'}));
   assert.ok(!d.body.classList.contains('starting'),'a returning visitor sees no level page');
+  // A cube picked on the pages once does not come back at a later track's end: only a pick made on
+  // the way changes the cube.
+  w.eval("START.src='screen';START.picked=false;setCubeSrc('mine');startPick(4)");
+  w.eval("startFinish('cfop','solve')");
+  assert.strictEqual(w.eval('cubeSrc()'),'mine','the cube in the menu stays');
+  assert.ok(!w.document.querySelector('#vcubeWin:not([hidden])'),'no virtual cube window');
   assert.deepStrictEqual(errs,[],'no script errors');
   console.log('start: the virtual cube, the cube slot, the cube menu, the four levels, the first solve, the level row, the CFOP card, the Cross lesson, Still to learn, the timer home ok');process.exit(0);
 }catch(e){console.log('start: FAIL',e.message);console.log(e.stack.split('\n').slice(1,4).join('\n'));process.exit(1);}})();

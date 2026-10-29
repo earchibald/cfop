@@ -102,8 +102,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.deepStrictEqual(errs,[],'no script errors on the second visit');
   // ----- phone -----
   ({w,d,errs}=await boot(true,{'cw:method':'"mini"'}));
-  assert.strictEqual(d.body.dataset.tab,'learn');$('#menuBtn').click();assert.strictEqual($$('#menu button').length,5);
-  w.closeMenu();w.setMethod('speed2');$('#menuBtn').click();assert.strictEqual($$('#menu button').length,4,'the phone menu lists the four speed tabs');
+  assert.strictEqual(d.body.dataset.tab,'learn');$('#menuBtn').click();assert.strictEqual($$('#menu button[data-tab]').length,5);
+  w.closeMenu();w.setMethod('speed2');$('#menuBtn').click();assert.strictEqual($$('#menu button[data-tab]').length,4,'the phone menu lists the four speed tabs');
   assert.deepStrictEqual(errs,[],'no script errors on the phone');
   console.log('two-ui: chooser, 2×2 beginner (home, learn, guide, practice, cheat sheet, paint), speed (plans, optimal, Ortega and CLL drills, reference), scramble per puzzle ok');process.exit(0);
 }catch(e){console.error('two-ui: FAIL',e.stack||e.message);process.exit(1);}})();

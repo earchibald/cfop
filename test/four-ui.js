@@ -79,7 +79,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   ({w,d,errs}=await boot(false,{'cw:method':'"speed4"'}));
   assert.strictEqual(d.body.dataset.method,'speed4');assert.ok(w.scr.cube.isFour,'boots with a 4×4 scramble');assert.deepStrictEqual(errs,[]);
   ({w,d,errs}=await boot(true,{'cw:method':'"master"'}));
-  assert.strictEqual(d.body.dataset.tab,'learn');w.closeMenu();w.setMethod('speed4');$('#menuBtn').click();assert.strictEqual($$('#menu button').length,3,'the phone menu lists the three advanced tabs');
+  assert.strictEqual(d.body.dataset.tab,'learn');w.closeMenu();w.setMethod('speed4');$('#menuBtn').click();assert.strictEqual($$('#menu button[data-tab]').length,3,'the phone menu lists the three advanced tabs');
   assert.deepStrictEqual(errs,[],'no script errors on the phone');
   console.log('four-ui: chooser, 4×4 beginner (home, mix-up, learn, guide, practice, cheat sheet, paint), advanced (plan, parity drill, reference), scramble per puzzle ok');process.exit(0);
 }catch(e){console.error('four-ui: FAIL',e.stack||e.message);process.exit(1);}})();

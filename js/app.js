@@ -217,8 +217,8 @@ function thumb3D(cube){const f=cube.toFacelets();return `<svg viewBox="40 30 320
 
 // ---------- sequence (scramble) panel ----------
 // drill: a name when the player shows a case drill instead of the current scramble. Tab changes keep a drill.
-var seqState={moves:[],idx:0,shown:-1,label:'scramble',base:new Cube(),drill:null}; // var: tests read it from the window
-function setSequence(moves,label,base,drill){stopAuto();seqState.shown=-1;seqState.moves=Array.isArray(moves)?moves:parseAlg(moves);seqState.label=label||'';seqState.base=base||puzzleCube();seqState.idx=seqState.moves.length;
+var seqState={moves:[],idx:0,shown:-1,label:'scramble',base:new Cube(),drill:null,yours:null}; // var: tests read it from the window. yours: where your moves start (js/cubemenu.js)
+function setSequence(moves,label,base,drill){stopAuto();seqState.shown=-1;seqState.yours=null;seqState.moves=Array.isArray(moves)?moves:parseAlg(moves);seqState.label=label||'';seqState.base=base||puzzleCube();seqState.idx=seqState.moves.length;
   if(!drill&&seqState.drill){currentLabel=scrLabel;if(/^(ll|f2l|two|four):/.test(timer.scope))setScope(TAB_SCOPE[curTab]||'solve');}
   seqState.drill=drill||null;$('#drillNote').classList.toggle('hidden',!drill);$('#drillName').textContent=drill||'';
   renderSequence();applySequence();document.dispatchEvent(new CustomEvent('cw:sequence',{detail:{drill:seqState.drill}}));}
@@ -236,8 +236,10 @@ function seqFaceColors(base,moves){
   });
 }
 // seqState.shown is the index the picture showed last. One step away from it turns the layer.
-function applySequence(){const i=seqState.idx,was=seqState.shown;seqState.shown=i;
-  if(was===i-1&&i>0)showCubeMoved(cubeAtSeq(i-1),seqState.moves[i-1],cubeAtSeq(i));
+// turn: {from, move}, a move made on the cube that the list took in (cubePlayerTurn): the layer turns by it.
+function applySequence(turn){const i=seqState.idx,was=seqState.shown;seqState.shown=i;
+  if(turn)showCubeMoved(turn.from,turn.move,cubeAtSeq(i));
+  else if(was===i-1&&i>0)showCubeMoved(cubeAtSeq(i-1),seqState.moves[i-1],cubeAtSeq(i));
   else if(was===i+1&&i<seqState.moves.length)showCubeMoved(cubeAtSeq(i+1),invertAlg([seqState.moves[i]]),cubeAtSeq(i));
   else showCube(cubeAtSeq(i));
   $('#scrub').max=seqState.moves.length;$('#scrub').value=seqState.idx;$('#scrubPos').textContent=seqState.idx+' / '+seqState.moves.length;$$('#scramble .m').forEach((el,i)=>{el.classList.toggle('done',i<seqState.idx);el.classList.toggle('cur',i===seqState.idx-1);});
@@ -849,11 +851,16 @@ window.addEventListener('scroll',updateMnav,{passive:true});
 const mobileMQ=matchMedia('(max-width: 760px)');
 function setTopH(){document.documentElement.style.setProperty('--toph',$('.top').getBoundingClientRect().height+'px');}
 window.addEventListener('resize',setTopH);
+// The top bar takes a second row on the phone's Reference (the jump buttons): the page follows it.
+if(typeof ResizeObserver==='function')new ResizeObserver(setTopH).observe($('.top'));
 // On a phone the Reference section is the home screen. The menu opens the other sections.
 function applyMobile(){setTopH();if(mobileMQ.matches)renderMobileRef();goTab(store.get(tabKey(),homeTab()));}
 if(mobileMQ.addEventListener)mobileMQ.addEventListener('change',applyMobile);else if(mobileMQ.addListener)mobileMQ.addListener(applyMobile);
-function renderMenu(){$('#menu').innerHTML=railButtons().map(b=>`<button data-tab="${b.dataset.tab}" data-sec="${b.dataset.tab}" class="${b.dataset.tab===curTab?'on':''}"${b.title?` title="${esc(b.title)}"`:''}><i class="sec-sq"></i>${esc(b.lastChild.textContent)}</button>`).join('');
-  $$('#menu button').forEach(m=>m.onclick=()=>{closeMenu();goTab(m.dataset.tab);window.scrollTo({top:0});});}
+// The phone menu: the sections, then the light or dark look (no room for it in the top bar).
+function renderMenu(){$('#menu').innerHTML=railButtons().map(b=>`<button data-tab="${b.dataset.tab}" data-sec="${b.dataset.tab}" class="${b.dataset.tab===curTab?'on':''}"${b.title?` title="${esc(b.title)}"`:''}><i class="sec-sq"></i>${esc(b.lastChild.textContent)}</button>`).join('')
+    +`<button class="menu-theme" id="menuTheme" title="Switch between the light and the dark look"><span class="menu-ic" aria-hidden="true">◐</span>${themeNow()==='dark'?'Light look':'Dark look'}</button>`;
+  $$('#menu button[data-tab]').forEach(m=>m.onclick=()=>{closeMenu();goTab(m.dataset.tab);window.scrollTo({top:0});});
+  $('#menuTheme').onclick=()=>{toggleTheme();renderMenu();};}
 function openMenu(){renderMenu();$('#menuBg').classList.remove('hidden');$('#menuBtn').setAttribute('aria-expanded','true');}
 function closeMenu(){$('#menuBg').classList.add('hidden');$('#menuBtn').setAttribute('aria-expanded','false');}
 $('#menuBtn').onclick=()=>{if($('#menuBg').classList.contains('hidden'))openMenu();else closeMenu();};
@@ -861,7 +868,9 @@ $('#menuBg').onclick=e=>{if(e.target===e.currentTarget)closeMenu();};
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();});
 
 // ---------- misc ----------
-$('#themeBtn').onclick=()=>{const r=document.documentElement;const cur=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');r.dataset.theme=cur==='dark'?'light':'dark';store.set('theme',r.dataset.theme);};
+function themeNow(){return document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+function toggleTheme(){const r=document.documentElement;r.dataset.theme=themeNow()==='dark'?'light':'dark';store.set('theme',r.dataset.theme);}
+$('#themeBtn').onclick=toggleTheme;;
 (()=>{const t=store.get('theme',null);if(t)document.documentElement.dataset.theme=t;})();
 // The keys card. Beginner mode has no timer, so Space plays there and the timer row is left out.
 function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHidden();

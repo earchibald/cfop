@@ -82,6 +82,13 @@ w.addEventListener('load',async()=>{try{
   keyCode('KeyD');assert.strictEqual(E('seqState.moves[seqState.moves.length-1]'),'R','D is R');
   assert.strictEqual($('#crossTry').value,'R','Check my plan follows the keys');
   keyCode('KeyD',true);assert.strictEqual($('#crossTry').value,'','R then R’: nothing left');
+  // The player list joins a move with your move before it on the same layer; the scramble stays.
+  const nScr=E('seqState.yours');keyCode('KeyW');keyCode('KeyW');
+  assert.deepStrictEqual([...E('seqState.moves.slice(seqState.yours)')],['U2'],'U then U is U2');
+  keyCode('KeyW');assert.deepStrictEqual([...E('seqState.moves.slice(seqState.yours)')],["U'"],'U2 then U is U’');
+  keyCode('KeyW');assert.strictEqual(E('seqState.moves.length'),nScr,'U’ then U: nothing on the list');
+  assert.strictEqual(E('seqState.idx'),nScr,'the step in view is the last move');
+  keyCode('KeyD');keyCode('KeyW');keyCode('KeyW',true);assert.deepStrictEqual([...E('seqState.moves.slice(seqState.yours)')],['R'],'U then U’ after R: R');
   // Typed moves go on the player.
   const inp=$('#crossTry');inp.value="F2 D' R";inp.dispatchEvent(new w.Event('input',{bubbles:true}));
   await until(()=>/^your cross plan/.test(E('seqState.label')),'the typed plan on the player');
@@ -93,6 +100,8 @@ w.addEventListener('load',async()=>{try{
 
   // The Virtual cube chip and the Keys window.
   assert.ok(!$('#vcubeWin')||$('#vcubeWin').hidden,'no window for a regular cube');
+  // A load with the virtual cube kept: the keys work, the window stays closed.
+  assert.ok(!$('#vcubeWin')||$('#vcubeWin').hidden,'no window on its own');
   click($('#vcubeBtn'));assert.strictEqual(E('cubeSrc()'),'screen','the chip turns the virtual cube on');
   assert.strictEqual($('#vcubeBtn').getAttribute('aria-pressed'),'true');const win=$('#vcubeWin');assert.ok(win&&!win.hidden,'the window floats');
   assert.deepStrictEqual($$('#vcubeWin .vk-face').map(b=>b.dataset.f+b.querySelector('.vk-key').textContent),['UW','BE','LA','FS','RD','DX'],'the buttons sit as the keys do');
@@ -106,8 +115,14 @@ w.addEventListener('load',async()=>{try{
   keyCode('KeyD');assert.strictEqual($('#crossTry').value,'','D is no move with the keypad');
   keyCode('Numpad6');assert.strictEqual($('#crossTry').value,'R','6 is R');
   click($('#vcubeWin [data-lay="awdx"]'));
-  // Close: back to a regular cube.
-  click($('#vcubeWin .vk-close'));assert.strictEqual(E('cubeSrc()'),'mine');assert.ok($('#vcubeWin').hidden,'the window goes');
+  // The keys carry the color of the face they turn.
+  assert.ok($('#vcubeWin .vk-face[data-f="F"]').classList.contains('c2'),'F is green');
+  // Close hides the window; the virtual cube stays. The chip shows it again, then turns it off.
+  click($('#vcubeWin .vk-close'));assert.strictEqual(E('cubeSrc()'),'screen','still the virtual cube');assert.ok($('#vcubeWin').hidden,'the window goes');
+  click($('#vcubeBtn'));assert.ok(!$('#vcubeWin').hidden,'the chip shows it again');
+  click($('#vcubeBtn'));assert.strictEqual(E('cubeSrc()'),'mine','the chip turns it off');assert.ok($('#vcubeWin').hidden,'the window goes');
+  // Regular cube from the menu closes it too.
+  click($('#vcubeBtn'));assert.ok(!$('#vcubeWin').hidden);E("setCubeSrc('mine')");assert.ok($('#vcubeWin').hidden,'a regular cube: no window');
 
   assert.deepStrictEqual(errs,[],'no script errors');
   console.log('live: the hold row, the ask, Use my cube, smart turns on the player, Check my plan follows the cube, the keys and the typing ok');process.exit(0);
