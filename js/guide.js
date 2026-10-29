@@ -188,8 +188,9 @@ function gdGuideHTML(){
   const g=guideState,pk=begPack();const e=g.parts[g.i];const p=e.part;const st=e.stage;
   const col=e.held.center?COLOR_NAMES[e.held.center[2]]:''; // a 4×4 state has no centers; its pack writes its own hold line
   const topNote=pk.topNote[st.n]||'';
+  // The badge over the lines names the hold, so the first line says only what to do to get there.
   const hold=pk.holdLine?`<li>${pk.holdLine(e)}${topNote&&e.k===0?' '+esc(topNote):''}</li>`
-    :`<li><b>Hold the cube</b> with ${esc(p.up)} up and <b>${esc(col)} in front</b>.${p.pre?` Turn the whole cube so the ${esc(col)} center faces you (${esc(p.pre)}). The dashed move is this turn.`:' The 3D cube shows this view.'}</li>`;
+    :`<li>${p.pre?`<b>Turn the whole cube</b> so the ${esc(col)} center faces you (${esc(p.pre)}). The dashed move is this turn.`:'<b>Keep this hold.</b> The 3D cube shows this view.'}</li>`;
   const why=gdWhy(e);
   const next=g.parts.slice(g.i+1).find(x=>!x.won);
   const lesson=typeof openLesson==='function'?`<button class="small ghost" id="gdLesson" title="Open the lesson for this stage">Open the lesson</button>`:'';

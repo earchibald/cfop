@@ -110,7 +110,7 @@ START_SCREENS['t1-what']=()=>`${stBasicsBar(1)}
   <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 1 of 4</span><h1>Meet the cube</h1><p>The cube is a puzzle. It has six faces. Each face has nine stickers.</p>
     <ul class="st-rules"><li><b>Solved</b>: each face is one color. The six colors are white, yellow, green, blue, red and orange.</li><li><b>A turn</b>: each face can turn. A turn moves stickers onto the faces next to it.</li><li><b>The puzzle</b>: many turns mix up the colors. You bring each face back to one color.</li></ul>
     <div class="st-box st-say"><span>See one face turn, then turn back.</span><button class="small" data-demo="1" title="Turn one face on the picture, then turn it back">Show me a turn</button></div>
-    <p class="muted">No cube yet? That is fine. The picture is your cube on these pages. After the basics, you pick a regular cube, a smart cube or a virtual cube.</p>
+    <p class="muted">No cube yet? That's fine! The picture is your cube on these pages. After the basics, you pick a regular cube, a smart cube or a virtual cube.</p>
     <div class="st-foot">${stBack('level','← Change my level')}<span class="spacer"></span><button class="primary" data-go="t1-hold" title="Go on to how to hold it">Next: how to hold it →</button></div></div>
   ${stCubeSide()}</div>`;
 // The virtual cube's keys: after the cube question, for the virtual cube. The last turn is in words
@@ -130,6 +130,7 @@ START_SCREENS['t1-hold']=()=>`${stBasicsBar(2)}
   <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 2 of 4</span><h1>Hold it like this</h1><p>Each face has one center sticker. The centers never move. They give each face its color.</p>
     <button class="st-hold" data-hold="top" title="Show the top layer"><span class="st-hl" data-hl="U"><b>White center on top.</b></span> <span class="muted">The picture shows it this way.</span></button>
     <button class="st-hold" data-hold="front" title="Show the front layer, then the right layer"><span class="st-hl" data-hl="F"><b>Green center toward you.</b></span> <span class="st-hl muted" data-hl="R">Red is then on your right.</span></button>
+    <button class="st-hold" data-hold="hands" title="Show where your hands go"><span class="st-hl" data-hl="H"><b>Your hands hold the right and left faces, with your thumbs on the front face.</b></span></button>
     <p class="muted">Opposite faces: white and yellow, green and blue, red and orange. Have a cube? Hold yours the same way.</p>
     <div class="st-foot">${stBack('t1-what')}<span class="spacer"></span><button class="primary" data-go="t1-pieces" title="Go on to the pieces">I see it →</button></div></div>
   ${stCubeSide()}</div>`;
@@ -137,12 +138,59 @@ START_SCREENS['t1-hold']=()=>`${stBasicsBar(2)}
 // with it. Green toward you shows the front layer, then the right layer (red).
 const ST_HOLD={top:[['U',0]],front:[['F',2],['R',1]]};
 function stHoldShow(key){const sc=START.sc,el=startEl();if(!sc)return;const run=START.holdRun=(START.holdRun||0)+1;
-  el.querySelectorAll('.st-hl.on').forEach(x=>x.classList.remove('on'));
+  el.querySelectorAll('.st-hl.on').forEach(x=>x.classList.remove('on'));stHandsOff(sc);
+  if(key==='hands'){stHandsShow(sc,run);return;}
   const steps=ST_HOLD[key],up=420,hold=1100,down=480,live=()=>START.holdRun===run&&START.sc===sc;
   const go=i=>{if(!live()||i>=steps.length)return;const [f,fi]=steps[i],hl=el.querySelector(`.st-hl[data-hl="${f}"]`);
     if(hl)hl.classList.add('on');setTimeout(()=>{if(live()&&hl)hl.classList.remove('on');},up+hold);
     sc.bump(stLayer(f),{up,hold,down,dir:FACE_GEOM[fi].n,d:0.6,done:()=>go(i+1)});};
   go(0);}
+// The shadow hands: the palms on the right and left faces, the fingers back to the back edge, the
+// wrists under the cube, the thumbs on the front face. Each part is a capsule or a round box on one
+// face's plane, in that plane's own units: on a side face u runs from the front edge (0) to the
+// back edge (3), on the front face u is x; v is up. They go through the picture's camera, so a drag
+// takes them along. A part on a face turned away draws behind the cube. d moves the hands out along
+// each face's normal (the bounce in).
+function stCapsule(a,b,r){const ang=Math.atan2(b[1]-a[1],b[0]-a[0]),out=[];
+  for(let i=0;i<=8;i++){const t=ang-Math.PI/2+Math.PI*i/8;out.push([b[0]+r*Math.cos(t),b[1]+r*Math.sin(t)]);}
+  for(let i=0;i<=8;i++){const t=ang+Math.PI/2+Math.PI*i/8;out.push([a[0]+r*Math.cos(t),a[1]+r*Math.sin(t)]);}
+  return out;}
+function stRoundBox(u0,v0,u1,v1,r){const out=[],c=[[u1-r,v1-r,0],[u0+r,v1-r,1],[u0+r,v0+r,2],[u1-r,v0+r,3]];
+  for(const [x,y,k] of c)for(let i=0;i<=4;i++){const t=Math.PI/2*(k+i/4);out.push([x+r*Math.cos(t),y+r*Math.sin(t)]);}
+  return out;}
+const ST_HAND_SIDE=[stRoundBox(0.15,-1.75,2.35,0.95,0.55),stCapsule([1.15,-1.5],[1.35,-2.75],0.72),
+  stCapsule([1.35,1.0],[2.9,1.12],0.28),stCapsule([1.7,0.47],[2.94,0.52],0.28),stCapsule([1.8,-0.06],[2.94,-0.06],0.27),stCapsule([1.8,-0.58],[2.86,-0.66],0.25),
+  stCapsule([0.6,-0.8],[-0.12,-0.6],0.33)];
+const ST_HAND_THUMB=[stCapsule([1.62,-0.6],[0.85,0.35],0.3)];
+// The planes: a side face (s 1 right, -1 left) and the front face, mirrored for the left thumb.
+function stHandParts(){const e=0.04,out=[];
+  for(const s of [1,-1]){out.push({n:[s,0,0],at:(u,v,d)=>[s*(1.5+e+d),v,1.5-u],shapes:ST_HAND_SIDE});
+    out.push({n:[0,0,1],at:(u,v,d)=>[s*u,v,1.5+e+d],shapes:ST_HAND_THUMB});}
+  return out;}
+function stHandsSVG(view,front,h){if(!h||!(h.op>0))return '';
+  const P=p=>{const q=rot3(p,view.yaw,view.pitch);return (200+q[0]*46).toFixed(1)+','+(185-q[1]*46).toFixed(1);};
+  const polys=stHandParts().filter(pt=>(rot3(pt.n,view.yaw,view.pitch)[2]>0)===front)
+    .flatMap(pt=>pt.shapes.map(sh=>`<polygon class="st-hand" points="${sh.map(([u,v])=>P(pt.at(u,v,h.d))).join(' ')}"/>`));
+  return polys.length?`<g class="st-hands" opacity="${h.op.toFixed(3)}">${polys.join('')}</g>`:'';}
+const ST_HANDS_T={in:750,hold:2800,out:450};
+function stBounce(x){const n=7.5625,k=2.75;if(x<1/k)return n*x*x;if(x<2/k)return n*(x-=1.5/k)*x+0.75;if(x<2.5/k)return n*(x-=2.25/k)*x+0.9375;return n*(x-=2.625/k)*x+0.984375;}
+function stHandsOff(sc){if(sc.hands){cancelAnimationFrame(sc.hands.raf);clearTimeout(sc.hands.timer);}
+  if(sc.hands||sc.under||sc.over){sc.hands=null;sc.under=sc.over=null;sc.draw();}}
+// The words light, and the hands drop onto the picture with a bounce, stay a while, then fade.
+function stHandsShow(sc,run){const el=startEl(),T=ST_HANDS_T,op=0.55,live=()=>START.holdRun===run&&START.sc===sc;
+  sc.bump(null);const hl=el.querySelector('.st-hl[data-hl="H"]');if(hl)hl.classList.add('on');
+  const H=sc.hands={d:0,op,raf:0,timer:0};sc.under=v=>stHandsSVG(v,false,sc.hands);sc.over=v=>stHandsSVG(v,true,sc.hands);
+  const end=()=>{if(!live()||sc.hands!==H)return;if(hl)hl.classList.remove('on');stHandsOff(sc);};
+  const reduce=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(typeof requestAnimationFrame!=='function'||reduce){sc.draw();H.timer=setTimeout(end,T.in+T.hold);return;}
+  const t0=performance.now();
+  const step=()=>{if(!live()||sc.hands!==H)return;const e=performance.now()-t0;
+    if(e>=T.in+T.hold+T.out){end();return;}
+    if(e<T.in){const x=e/T.in;H.d=1.4*(1-stBounce(x));H.op=op*Math.min(1,x*3);}
+    else if(e<T.in+T.hold){H.d=0;H.op=op;sc.draw();H.timer=setTimeout(()=>{H.raf=requestAnimationFrame(step);},T.in+T.hold-e);return;}
+    else{const y=(e-T.in-T.hold)/T.out;H.d=0.5*y;H.op=op*(1-y);if(hl)hl.classList.remove('on');}
+    sc.draw();H.raf=requestAnimationFrame(step);};
+  H.raf=requestAnimationFrame(step);}
 // The pieces: a kind lifts its pieces out of the picture and puts them back (screenCube's bump).
 // Find it is a click on the picture: the white and green edge brings up the callout.
 const ST_KIND_SAY={centers:'A center never moves. It names its face.',edges:'An edge sits between two centers. It has two colors.',corners:'A corner sits where three faces meet. It has three colors.',
@@ -212,7 +260,9 @@ function stMoveShow(m){const sc=START.sc,el=startEl();if(!sc)return;const run=ST
   const step=x=>{lit(x);if(say)say.innerHTML=stMoveLine(x);setTimeout(()=>{if(live())sc.turn(x,{dur:T.turn});},T.glow);};
   step(m);
   setTimeout(()=>{if(live())step(back);},T.next);
-  setTimeout(()=>{if(!live())return;lit(null);sc.set(sc.cube,null);},2*T.next);}
+  setTimeout(()=>{if(!live())return;lit(null);sc.set(sc.cube,null);if(cap)cap.textContent=ST_MOVES_CAP;
+    if(say)say.innerHTML=`<b>Last moved:</b>${stMoveLine(m)}<span class="muted">Then <b class="mono">${back.replace("'",'′')}</b> turned it back.</span>`;},2*T.next);}
+const ST_MOVES_CAP='Click a move to see it turn. Drag to look around. Double-click to put the view back.';
 START_SCREENS['t1-moves']=()=>stMovesPage();
 
 START_SCREENS['t1-done']=()=>{const names=stSteps();
@@ -354,7 +404,7 @@ function startCubeMount(){const box=$('#stCube');if(!box)return;const scr0=START
   if(scr0==='t1-what')cap='Drag to look around the cube. Double-click to put it back.';
   if(scr0==='t1-hold'){fade=stFaces([4]);cap='Drag to look at the other faces. Double-click and it comes back to white on top, green toward you.';}
   if(scr0==='t1-pieces')cap=ST_KIND_SAY[START.found?'find':START.kind||'none'];
-  if(scr0==='t1-moves')cap='Click a move to see it turn. Drag to look around. Double-click to put the view back.';
+  if(scr0==='t1-moves')cap=ST_MOVES_CAP;
   // Only the keys page takes the keys: the basics come before the cube question.
   const keys=scr0==='t1-keys';
   // The virtual cube keeps its state from page to page; a lit page shows it solved.

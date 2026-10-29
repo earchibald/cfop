@@ -114,6 +114,12 @@ label, and the `START.keysNext` routing.
 - `stHoldShow` in `js/start.js` runs it: `ST_HOLD` names the layers, `bump(stLayer(f), {dir})` moves
   a layer as one along its face's normal (`renderCube3D`'s `lift.dir`), and `.st-hl.on` lights the
   words for the up and hold of each bump. A new click starts over. The page is not drawn again.
+- **The hands** (1.57.0). A third line: "Your hands hold the right and left faces, with your thumbs
+  on the front face." A click lights it, and shadow hands drop onto the picture with a bounce, stay,
+  then fade: the palms on the right and left faces, the fingers to the back edge, the wrists under
+  the cube, the thumbs on the front face. `stHandsShow` draws them through `screenCube`'s `under` and
+  `over` layers with the picture's camera, so a drag takes them along, and a hand on a face turned
+  away draws behind the cube. `ST_HAND_SIDE` and `ST_HAND_THUMB` are the shapes, `ST_HANDS_T` the times.
 
 ## Rework 4: the moves as two rows (1.52.0)
 
@@ -123,6 +129,8 @@ label, and the `START.keysNext` routing.
 - **A click shows the move and its way back.** U lights its button with the glow, the U layer lights
   on the picture, and U turns. Then U′ lights and turns it back. A click on U′ does U′, then U. The
   line under the buttons names each move in words as it lights. The picture ends solved.
+  Then the box reads "Last moved:" with the move and "Then U′ turned it back.", and the caption
+  under the picture goes back to the page's own (1.57.0).
 - `stMoveShow` in `js/start.js` runs it, with the times in `ST_MOVE_T`; the turn is slower than a
   key's (`screenCube`'s `turn(move, {dur})`). A new click starts over from solved.
 - **The words.** The faces are a list, "with front facing you": Up (the top), Down (the bottom),

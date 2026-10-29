@@ -59,6 +59,16 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   await new Promise(r=>setTimeout(r,2100));
   assert.ok(!hl('F')&&hl('R')&&w.eval('START').sc.lift.dir.join()==='1,0,0','then red on the right');
   assert.strictEqual($('#start').dataset.screen,'t1-hold','the page is not drawn again');
+  // The hands: the line lights, and shadow hands drop onto the picture, then go.
+  w.eval('ST_HANDS_T.in=60;ST_HANDS_T.hold=200;ST_HANDS_T.out=60');
+  $('#start [data-hold="hands"]').click();await new Promise(r=>setTimeout(r,120));
+  assert.ok(hl('H')&&!hl('R')&&!w.eval('START').sc.lift,'the hands line lights; the layers stay in');
+  assert.ok($$('#stCube .st-hands .st-hand').length>10,'shadow hands on the picture');
+  assert.ok(/right and left faces, with your thumbs on the front face/.test($('#start [data-hold="hands"]').textContent));
+  await new Promise(r=>setTimeout(r,400));
+  assert.ok(!hl('H')&&!$('#stCube .st-hand')&&!w.eval('START').sc.hands,'then the hands go');
+  $('#start [data-hold="hands"]').click();$('#start [data-hold="top"]').click();
+  assert.ok(!$('#stCube .st-hand')&&hl('U'),'another line takes the hands off');
   // The pieces: a kind lifts its pieces out with a glow and puts them back; a click finds the edge.
   w.startGo('t1-pieces');const sc=()=>w.eval('START').sc;
   $('#start [data-kind="corners"]').click();assert.strictEqual($('#start').dataset.screen,'t1-pieces','a kind does not draw the page again');
@@ -124,7 +134,9 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
     assert.ok(/Up|Right/.test($('#stMoveSay').textContent)&&(m.length>1)===/counterclockwise/.test($('#stMoveSay').textContent),m+' in words');
     await wait(90);assert.ok(!cube().isSolved(),m+' turns the picture');
     await wait(120);assert.strictEqual(on(),back,'then '+back+' lights');
-    await wait(240);assert.strictEqual(on(),'','the lights go out');assert.ok(cube().isSolved(),m+' then '+back+': solved again');}
+    await wait(240);assert.strictEqual(on(),'','the lights go out');assert.ok(cube().isSolved(),m+' then '+back+': solved again');
+    assert.ok(/^Last moved:/.test($('#stMoveSay').textContent)&&$('#stMoveSay').textContent.includes(m.replace("'",'′')+' ·'),'the box names the last move: '+$('#stMoveSay').textContent);
+    assert.ok(!/lit stickers/.test($('#stCap').textContent),'the caption of the turn goes');}
   // A regular cube: Your first solve is one page: mix it up by hand, then scan or paint.
   w.startGo('t2-cube');assert.ok($('#start [data-go="t1-done"]'),'Back from the cube question goes to the basics');
   $('#start .st-pick[data-src="mine"]').click();$('#start [data-t2go]').click();assert.strictEqual($('#start').dataset.screen,'t1-ready');
