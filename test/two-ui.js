@@ -82,7 +82,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   click($('#twRevealOrtega'));assert.ok(!/>\?</.test($('#twCur-ortega').innerHTML));assert.ok($('#twCur-ortega .big'),'the answer shows');
   click($('#twPlay'));w.seqGo(w.seqState.moves.length);const after=w.cubeAtSeq(w.seqState.moves.length);
   if(ev('timer').scope.startsWith('two:pbl:'))assert.ok(w.twoSolved(after),'a PBL answer solves the cube');else assert.ok(ev('twoTopOriented')(after),'an OLL answer orients the top');
-  click($('#twGrid-ortega .case .stbtn'));assert.ok(/learning/.test($('#twGrid-ortega .case .stbtn').textContent),'status cycles');
+  click($('#twGrid-ortega .case .stbtn'));assert.ok(/Learning/.test($('#twGrid-ortega .case .stbtn').textContent),'status cycles');
   click($('#drillBack'));assert.strictEqual(w.seqState.drill,null);assert.strictEqual(ev('timer').scope,'two');
   // CLL drill and the case window without a Lab button.
   w.goTab('cll');assert.strictEqual($$('#twGrid-cll .case').length,42);

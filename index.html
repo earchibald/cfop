@@ -24,7 +24,7 @@
   <h1><svg class="mark" id="mark" viewBox="-21.17 -23.45 45.63 46.41" aria-hidden="true"></svg>Twistwright</h1>
   <button class="puzzle" id="methodChip" aria-expanded="false" aria-controls="methodPop" title="Puzzle and method"><span class="desktop-only" id="puzzleName">3×3 ·</span><span id="methodName">CFOP</span> <span aria-hidden="true">▾</span></button>
   <div id="methodPop" class="method-pop hidden" role="dialog" aria-label="Choose a puzzle and a method">
-    <div class="row" style="justify-content:space-between;align-items:baseline"><h3>Choose a puzzle and a method</h3><span class="muted" style="font-size:13px">4×4 comes later</span></div>
+    <div class="row" style="justify-content:space-between;align-items:baseline"><h3>Choose a puzzle and a method</h3></div>
     <div class="mdata hidden" id="methodData"><span>Did you use Twistwright in another browser or in the Mac app? Bring your data here.</span><button type="button" class="small" id="methodPaste" title="Paste the data that you copied in the other browser with Settings &gt; Copy my data">Paste my data</button></div>
     <h4 class="mgroup">3×3 cube</h4>
     <div class="mcards">
@@ -211,12 +211,12 @@
         <div id="f2lPlan" style="margin-top:10px"></div>
       </div>
       <div class="panel hidden" id="f2lCases">
-        <p class="muted">The 41 standard cases for the front-right slot. Select cases, then train. The button under each case changes its status: unlearned → learning → finished. Click a case to open its details. Shift-click a case to add it to training or remove it.</p>
+        <p class="muted">The 41 standard cases for the front-right slot. Select cases, then train. The button under each case changes its status: Not started → Learning → Learned. Click a case to open its details. Shift-click a case to add it to training or remove it.</p>
         <div class="row"><button class="primary" id="f2lRandomCase" title="Put a case from the selected ones on the cube">Next case<span class="hk" aria-hidden="true">N</span></button><button id="f2lCaseReveal" title="Show the algorithm for this case, one move at a time">Reveal<span class="hk" aria-hidden="true">H</span></button><select id="f2lGroup" title="Show one group of cases, or all"><option value="all">All groups</option></select></div>
       </div>
       <div class="panel hidden" id="f2lCaseOut"><p class="muted">Press Next case to start a drill. The cube shows the case with a random U turn, so you recognize it and do not memorize the setup. Your scramble is kept. Press Back to scramble to return to it.</p></div>
       <div class="panel hidden" id="f2lCaseList">
-        <div class="row" style="justify-content:space-between"><h3>Cases</h3><span class="legend"><span><i class="unlearned"></i>unlearned</span><span><i style="background:var(--sticker-Y)"></i>learning</span><span><i style="background:var(--sticker-G)"></i>finished</span></span><span><button class="small ghost" id="f2lSelAll" title="Train every case">Select all</button><button class="small ghost" id="f2lSelNone" title="Train no case">None</button><button class="small ghost" id="f2lSelUnlearned" title="Train the unlearned and learning cases only">Not finished</button></span></div>
+        <div class="row" style="justify-content:space-between"><h3>Cases</h3><span class="legend"><span><i class="unlearned"></i>Not started</span><span><i style="background:var(--sticker-Y)"></i>Learning</span><span><i style="background:var(--sticker-G)"></i>Learned</span></span><span><button class="small ghost" id="f2lSelAll" title="Train every case">Select all</button><button class="small ghost" id="f2lSelNone" title="Train no case">None</button><button class="small ghost" id="f2lSelUnlearned" title="Train the cases not yet Learned">Not learned</button></span></div>
         <div class="cases" id="f2lCaseGrid"></div>
       </div>
       <div class="panel hidden" id="f2lStatsPanel"><h3>Per-case times</h3><div class="wide"><table id="f2lStats"></table></div></div>
@@ -225,7 +225,7 @@
     <section class="tab" id="tab-ll" data-sec="ll">
       <div class="panel">
         <div class="row" style="justify-content:space-between">
-          <div><h2>Two-look OLL and PLL</h2><p class="muted" style="margin:0">Select cases, then train. The button under each case changes its status: unlearned → learning → finished. Click a case to open its details. Shift-click a case to add it to training or remove it.</p></div>
+          <div><h2>Two-look OLL and PLL</h2><p class="muted" style="margin:0">Select cases, then train. The button under each case changes its status: Not started → Learning → Learned. Click a case to open its details. Shift-click a case to add it to training or remove it.</p></div>
           <div class="row">
             <select id="llProb" title="Balanced: every case as often. Realistic: as often as it comes up in a solve"><option value="balanced">Balanced</option><option value="realistic">Realistic probability</option></select>
             <label style="font-size:14px" title="Mix the rest of the last layer as a real solve would, not only the pieces of the case"><input type="checkbox" id="llRealState" checked> Realistic rest-of-layer</label>
@@ -235,7 +235,7 @@
       </div>
       <div class="panel" id="llCurrent"><p class="muted">Press Next case to start a drill. The cube shows the case, and the setup moves show in the player for a real cube. Your scramble is kept. Press Back to scramble to return to it.</p></div>
       <div class="panel">
-        <div class="row" style="justify-content:space-between"><h3>Cases</h3><span class="legend"><span><i class="unlearned"></i>unlearned</span><span><i style="background:var(--sticker-Y)"></i>learning</span><span><i style="background:var(--sticker-G)"></i>finished</span></span><span><button class="small ghost" id="llSelAll" title="Train every case">Select all</button><button class="small ghost" id="llSelNone" title="Train no case">None</button><button class="small ghost" id="llSelUnlearned" title="Train the unlearned and learning cases only">Not finished</button></span></div>
+        <div class="row" style="justify-content:space-between"><h3>Cases</h3><span class="legend"><span><i class="unlearned"></i>Not started</span><span><i style="background:var(--sticker-Y)"></i>Learning</span><span><i style="background:var(--sticker-G)"></i>Learned</span></span><span><button class="small ghost" id="llSelAll" title="Train every case">Select all</button><button class="small ghost" id="llSelNone" title="Train no case">None</button><button class="small ghost" id="llSelUnlearned" title="Train the cases not yet Learned">Not learned</button></span></div>
         <div id="llGroups"></div>
       </div>
       <div class="panel"><h3>Per-case times</h3><div class="wide"><table id="llStats"></table></div></div>
@@ -390,6 +390,7 @@
 <script src="js/cubemenu.js"></script>
 <script src="js/start.js"></script>
 <script src="js/start-app.js"></script>
+<script src="js/levelmenu.js"></script>
 <script src="js/speed-ui.js"></script>
 <script src="js/speed4-ui.js"></script>
 <script src="js/glossary.js"></script>

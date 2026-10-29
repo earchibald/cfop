@@ -225,6 +225,44 @@ The owner's words, used as written where they gave them.
   Corners!"). After the last stage, You did it shows as before. The stage bar marks the stage solved
   there, and Coming up on the stage's last part skips the screen.
 
+## Rework 9: the level kept, and in reach from any page (1.58.0)
+
+The owner: the old site was "out of whack" with the onboarding, the level should be one click away
+from anywhere, and the level did not seem to save the beginner walkthrough.
+
+- **The bug.** `cw:level` was written only at the end of a track (`startFinish`), and the page in a
+  track was never kept. Boot calls `setMethod` and so writes `cw:method` on the very first load, so a
+  reload in the middle of the basics was no longer a first visit: it landed on CFOP's Scramble tab with
+  no level and no place. The guided solve was not kept either: a reload put Solve my cube back on its
+  entry cards, on a new scramble.
+- **Kept now.** The level is kept the moment it is picked (`startPick`). The place in a track is kept
+  on every page (`cw:startAt`: the page, the level, the cube source, the way, the case set, whether
+  the pages were open and whether the first visit began them). A reload with the pages open comes
+  back to the same page (`startResume`). The end of a track clears it. The guided solve is kept while
+  it shows a part (`cw:guide`: the method, the scramble's moves, the part; `gdSave`, `gdResume`), and
+  a reload comes back to the same part of the same cube.
+- **Leave for now.** Every page of a track has it at the top right. The place is kept. A track the
+  first visit began lands on its level's method (the beginner method for level 1, else CFOP).
+- **The level chip** (`js/levelmenu.js`), before the method chip on every page: the level's bars and
+  a short name (bars only on a phone; a small accent dot while a track waits). Its menu: Pick up where
+  you left off (names the page), the pages and places of the level's own track (`LEVEL_TRACK`), and
+  the four levels (a click starts that level's track). The method menu keeps its Your level row.
+- **The landing card.** Where a track ends in a section, one quiet card above it: "Getting started ·
+  Done. You are on Solve my cube." with what the section does, and that the chip brings the user back.
+  Got it or another tab closes it.
+- **One look.** A crumb over each section ("3×3 Beginner · Practice", `placeCrumb` in `js/place.js`,
+  drawn by CSS from `data-crumb` so a module that writes its section again keeps it), as the pages
+  have "Getting started · Basics"; none where the cube is across the top. The first heading of a
+  section is 26px, the lesson title 30px, and the lesson's "Step 2 of 8" is the mono eyebrow the Learn
+  home uses ("Lesson · Step 2 of 8").
+- **One set of status words.** Not started, Learning, Learned on every page (`stWord`), as the Learn
+  home and the pages say; the stored values are unchanged. "Not finished" (select) is "Not learned".
+- The method menu's "4×4 comes later" is gone: the 4×4 is there.
+
+**Not changed yet:** the sections' own pacing. The Scramble, Cross, F2L and OLL · PLL tabs still show
+everything at once; the pages show one idea at a time. Candidates: a first-time strip per CFOP tab in
+the pages' style, and the Practice and Progress tabs as the Learn home's cards.
+
 ## Planned: the fat moves, in the CFOP intro
 
 The owner asked for a fat moves page after the six moves, then moved it out of the basics: it
@@ -264,7 +302,8 @@ page as drafted:
 
 `cw:level` (1, 3, 4 or 5; a 2 from before 1.54.0 reads as 1), `cw:cubeSrc` (`screen`, `mine`, `smart`), `cw:screenKeys` (a layout id; unused from 1.53.0),
 `cw:known` (`{cross, f2lfeel, oll}`: 0, 1 or 2), `cw:llShow`, `cw:crossLesson`, `cw:timerHome`,
-`cw:hideTime`. Statuses go to the one map, `cw:llStatus`, with the new ids `pllf-<name>` for the
+`cw:hideTime`. From 1.58.0: `cw:startAt` (the place in a track, see Rework 9) and `cw:guide` (the guided solve's
+part and scramble). Statuses go to the one map, `cw:llStatus`, with the new ids `pllf-<name>` for the
 full PLL.
 
 ## Tests

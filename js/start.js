@@ -55,24 +55,48 @@ const ST_MOVE_WORDS={
 // A turn in words, with no letter: "Right face, clockwise". The keys page shows it.
 function stMoveSay(m){const w=ST_MOVE_WORDS[m[0]];if(!w)return m;return `${w[0]} face, ${/['′]/.test(m)?'counterclockwise':/2/.test(m)?'a half turn':'clockwise'}`;}
 const ST_HIDDEN={D:'The bottom face is hidden. You see its edge.',B:'The back face is hidden. You see its edge.',L:'The left face is hidden. You see its edge.'};
-const START={on:false,screen:'level',level:null,src:'mine',kind:null,found:false,
+const START={on:false,screen:'level',level:null,src:'mine',kind:null,found:false,first:false,
   check:null,sets:null,caseSet:null,quiz:null,five:null,sc:null,last:'—',way:null};
 function startEl(){let el=$('#start');if(el)return el;el=document.createElement('div');el.id='start';el.className='start hidden';
   el.setAttribute('role','region');el.setAttribute('aria-label','Getting started');$('header.top').after(el);return el;}
 function startIsOpen(){return START.on;}
 function startOpen(screen){START.on=true;document.body.classList.add('starting');
-  if(typeof closeMethodPop==='function')closeMethodPop();if(typeof cubePopClose==='function')cubePopClose();
+  if(typeof closeMethodPop==='function')closeMethodPop();if(typeof cubePopClose==='function')cubePopClose();if(typeof levelPopClose==='function')levelPopClose();
   startEl().classList.remove('hidden');startGo(screen||'level');if(window.scrollTo)try{window.scrollTo(0,0);}catch(e){}}
 function startClose(){START.on=false;document.body.classList.remove('starting');const el=startEl();el.classList.add('hidden');el.textContent='';
-  if(SCREEN.active&&SCREEN.active===START.sc)SCREEN.active=null;START.sc=null;if(typeof cubeScreenWire==='function')cubeScreenWire();}
-function startGo(screen){START.screen=screen;startDraw();const h=$('#start h1');if(h){h.setAttribute('tabindex','-1');try{h.focus({preventScroll:true});}catch(e){}}}
+  if(SCREEN.active&&SCREEN.active===START.sc)SCREEN.active=null;START.sc=null;if(typeof cubeScreenWire==='function')cubeScreenWire();
+  startSave();document.dispatchEvent(new CustomEvent('cw:start',{detail:'close'}));}
+function startGo(screen){START.screen=screen;startSave();startDraw();const h=$('#start h1');if(h){h.setAttribute('tabindex','-1');try{h.focus({preventScroll:true});}catch(e){}}
+  document.dispatchEvent(new CustomEvent('cw:start',{detail:screen}));}
+// The place in the pages, kept in cw:startAt so a reload comes back to it: the page, the level and
+// the choices made on the way, and whether the pages were open. The end of a track clears it.
+// The level page is no place: it keeps the place there was, and closing it marks that place closed.
+function startSave(){if(START.screen==='level'||START.screen==='t1-solve'){const a=store.get('startAt',null);if(a&&a.open&&!START.on){a.open=false;store.set('startAt',a);}return;}
+  store.set('startAt',{screen:START.screen,level:START.level,src:START.src,way:START.way,caseSet:START.caseSet,first:!!START.first,open:START.on});}
+function startSaved(){const a=store.get('startAt',null);return a&&START_SCREENS[a.screen]?a:null;}
+// Back to the saved place, or the level page when there is none.
+function startResume(){const a=startSaved();if(!a){startOpen('level');return;}
+  Object.assign(START,{level:a.level||store.get('level',null),src:a.src||START.src,way:a.way||null,caseSet:a.caseSet==null?null:a.caseSet,first:!!a.first});startOpen(a.screen);}
+// The page's name for the level menu: its heading, as the page draws it.
+const START_NAMES={'t1-what':'Meet the cube','t1-hold':'Hold it like this','t1-pieces':'Three kinds of pieces','t1-moves':'The six moves','t1-done':'You know the basics',
+  't2-cube':'Which cube will you use?','t1-keys':'Meet your virtual cube','t1-ready':'Your first solve','t3-start':'How do you solve it now?',
+  't3-check':'Which steps can you do?','t3-bridge':'What you know, in CFOP','t4-sets':'Which CFOP sets do you know?','t4-cases':'Pick the cases','t4-quiz':'The quiz','t5-setup':'Set up, then time'};
+// A level picked, here or in the level menu: kept at once, so a reload in the middle of its track
+// still knows it, then the first page of its track.
+function startPick(n){const l=startLevel(n);if(!l)return;START.level=l.n;store.set('level',l.n);
+  Object.assign(START,{found:false,kind:null,check:null,sets:null,quiz:null,five:null,way:null,caseSet:null});
+  startOpen(l.first);document.dispatchEvent(new CustomEvent('cw:level',{detail:l.n}));}
+// Leave the pages for now: the place is kept. A track the first visit began (START.first) has made
+// no choice of method yet, so it lands on its level's: the beginner method for level 1, else CFOP.
+function startLeave(){startClose();if(START.first&&START.level)setMethod(START.level<3?'beginner':'cfop',{force:true});}
 // The end of a track: the level, the cube source, the method and the section.
 function startFinish(m,tab,after){if(START.level)store.set('level',START.level);if(START.src&&typeof setCubeSrc==='function')setCubeSrc(START.src);
-  startClose();setMethod(m,{force:true});if(tab)goTab(tab);
+  START.first=false;startClose();store.set('startAt',null);setMethod(m,{force:true});if(tab)goTab(tab);
   // The virtual cube starts mixed up, in the player (a beginner sees it at once, not the question).
   if(START.src==='screen'&&!after){newScramble();if(isBeg()&&typeof showBegLetters==='function')showBegLetters();}
   if(after)after();
-  document.dispatchEvent(new CustomEvent('cw:level',{detail:START.level}));}
+  document.dispatchEvent(new CustomEvent('cw:level',{detail:START.level}));
+  if(typeof startLanding==='function')startLanding(tab);}
 // Statuses: '' (not started), 'learning', 'finished' in the one map, llState.status.
 function startMark(ids,v){for(const id of ids){if(v)llState.status[id]=v;else delete llState.status[id];}
   store.set('llStatus',llState.status);if(typeof saveLL==='function')saveLL();
@@ -84,7 +108,9 @@ function startSetKnown(id,v){const k=startKnown();k[id]=v;store.set('known',k);}
 function stPic(cube,fade,label){return `<svg viewBox="0 0 400 370" role="img" aria-label="${esc(label||'A cube')}">${renderCube3D((cube||new Cube()).toFacelets(),{yaw:-32,pitch:28,scale:46,n:3,fade:fade||null})}</svg>`;}
 // The bars of a level: one lit for the first level, all four for the last.
 function stBars(n){const k=LEVELS.indexOf(startLevel(n))+1;return LEVEL_COLORS.map((c,i)=>`<i class="lvbar${i<k?'':' off'}" style="--sec:var(--sticker-${c})"></i>`).join('');}
-function stBar(crumb,right){return `<div class="st-bar"><span class="st-crumb">Getting started${crumb?' · '+esc(crumb):''}</span><span class="spacer"></span>${right||''}</div>`;}
+// Every page of a track can be left for now; the level menu in the top bar comes back to it.
+function stBar(crumb,right){const leave=START.screen!=='level'?`<button class="st-link st-leave" data-close="1" title="Close these pages. Your place is kept: the level menu in the top bar brings you back">Leave for now</button>`:'';
+  return `<div class="st-bar"><span class="st-crumb">Getting started${crumb?' · '+esc(crumb):''}</span><span class="spacer"></span>${right||''}${leave}</div>`;}
 function stBack(to,label){return `<button class="st-link" data-go="${to}" title="${esc(label||'Back')}">${esc(label||'← Back')}</button>`;}
 function stSources(note){const notes={mine:'Scan or paint it later, from the cube chip.',smart:smartInApp()?'The app looks for your cube next.':'The browser asks to connect next.',screen:'The keyboard or the numeric keypad turns it. A drag turns the whole cube.'};
   const order=['mine','smart','screen'].map(id=>CUBE_SRCS.find(s=>s.id===id));
@@ -452,9 +478,9 @@ function startWire(el){
   const on=(sel,fn)=>el.querySelectorAll(sel).forEach(b=>b.onclick=()=>fn(b));
   // The basics are Learned once the last page is passed, before the cube question.
   on('[data-go]',b=>{if(b.dataset.go==='t1-done')startMark(['beg-0'],'finished');startGo(b.dataset.go);});
-  on('[data-close]',()=>startClose());
+  on('[data-close]',()=>startLeave());
   on('[data-paste]',()=>{startClose();openSettings('data');});
-  on('[data-level]',b=>{const l=startLevel(+b.dataset.level);START.level=l.n;START.found=false;START.kind=null;START.check=null;START.sets=null;START.quiz=null;START.five=null;startGo(l.first);});
+  on('[data-level]',b=>startPick(+b.dataset.level));
   on('.st-keys [data-turn]',b=>START.sc&&START.sc.turn(b.dataset.turn));
   on('.st-seg [data-src],.st-pick[data-src]',b=>{START.src=b.dataset.src;startDraw();});
   // A kind or the hint lifts pieces out and back. The page is not drawn again, so the view stays.
@@ -504,3 +530,7 @@ document.addEventListener('keydown',e=>{if(!START.on||document.querySelector('.m
   if(e.key==='Escape'){if(store.get('level',null)!=null&&START.screen==='level'&&!document.querySelector('.modal-bg'))startClose();return;} // Escape still closes a dialog
   e.stopImmediatePropagation();},true); // no preventDefault: Tab, Enter and Space still work on the buttons
 document.addEventListener('keyup',e=>{const t=e.target;if(START.on&&!document.querySelector('.modal-bg')&&t&&t.closest&&t.closest('#start'))e.stopImmediatePropagation();},true);
+// After a load: back to the pages when they were open, as a reload in the middle of a track.
+// boot calls setMethod and so keeps cw:method at once: without this, a reload in the basics landed
+// on the Scramble tab with nothing kept.
+{const a=startSaved();if(a&&a.open)startResume();}

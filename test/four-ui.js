@@ -68,7 +68,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   w.goTab('parity');assert.strictEqual($$('#fwGrid .case').length,3);
   click($('#fwNext'));assert.strictEqual(w.seqState.drill,'4×4 case');assert.ok(/^four:/.test(ev('timer').scope));assert.ok(/\?/.test($('#fwCur').textContent));
   click($('#fwReveal'));assert.ok($('#fwCur .big'));click($('#fwPlay'));w.seqGo(w.seqState.moves.length);assert.ok(w.fourSolved(w.cubeAtSeq(w.seqState.moves.length).toFacelets()),'the answer solves the drill');
-  click($('#fwGrid .case .stbtn'));assert.ok(/learning/.test($('#fwGrid .case .stbtn').textContent));
+  click($('#fwGrid .case .stbtn'));assert.ok(/Learning/.test($('#fwGrid .case .stbtn').textContent));
   click($('#drillBack'));assert.strictEqual(ev('timer').scope,'four');
   w.goTab('fref');assert.ok(/Yau/.test($('#tab-fref').textContent)&&$$('#tab-fref .rcard').length===3);
   d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'2',bubbles:true}));assert.strictEqual(d.body.dataset.tab,'parity');

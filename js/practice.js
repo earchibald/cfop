@@ -133,7 +133,7 @@ function prProgressTableHTML(){
 function prRenderProgress(){
   const sq=$('#prSq');if(!sq)return;const pk=begPack();
   sq.innerHTML=Array.from({length:pk.count},(_,i)=>{const n=i+1,s=begProgress.status(n);
-    return `<i class="${s}" title="Step ${n}: ${esc(pk.steps[n].name)}, ${s||'unlearned'}"></i>`;}).join('');
+    return `<i class="${s}" title="Step ${n}: ${esc(pk.steps[n].name)}, ${stWord(s)}"></i>`;}).join('');
   sq.setAttribute('aria-label',`The ${pk.word} steps`);
   const {finished,learning}=begProgress.counts();
   $('#prText').textContent=finished===pk.count?`All ${pk.word} steps finished.`:finished||learning?

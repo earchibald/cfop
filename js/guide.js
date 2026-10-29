@@ -222,7 +222,7 @@ function gdDoneHTML(){
     ${g.showPlan?`<div class="gd-plan" id="gdPlan">${gdPlanList()}</div>`:''}</div>`;
 }
 function gdRender(){
-  const g=guideState;const root=$('#tab-bsolve');if(!root)return;
+  const g=guideState;gdSave();const root=$('#tab-bsolve');if(!root)return;
   const at=g.view==='guide'&&g.parts[g.i];
   const html=g.view==='guide'?(at.won?gdWonHTML():at.turn?gdHoldHTML():gdGuideHTML()):g.view==='done'?gdDoneHTML():gdEntryHTML();
   root.innerHTML=html;gdPlace();
@@ -293,6 +293,16 @@ document.addEventListener('cw:tab',e=>{
   gdRender();
 });
 
+// The guided solve is kept in cw:guide while it shows a part: the method, the scramble and the
+// part, so a reload comes back to the same part of the same cube. The entry and You did it clear it.
+// A cube with no moves (a painted 4×4) is not kept: its moves could not load it again.
+function gdSave(){const g=guideState;
+  if(g.view==='guide'&&g.plan&&scr.moves.length)store.set('guide',{method,seed:scr.seed,moves:scr.moves.join(' '),i:g.i});else store.set('guide',null);}
+function gdResume(){const s=store.get('guide',null);if(!s||s.method!==method||!isBeg()||!s.moves)return;
+  loadScramble(s.seed,s.moves,true);gdArrived=false;gdBuild();const g=guideState;
+  if(g.view!=='guide'){g.view='entry';g.plan=null;g.parts=[];return;}
+  g.i=Math.min(Math.max(0,s.i|0),g.parts.length-1);}
+gdResume();
 gdRender();
 // Another method: back to the entry view; its own plan is built when the guide starts.
 document.addEventListener('cw:method',()=>{const g=guideState;gdPlace();if(g.view==='entry')return;g.view='entry';g.plan=null;g.parts=[];g.i=0;g.msg='';gdRender();});

@@ -60,7 +60,8 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   assert.strictEqual($('#stDemoLbl').textContent,'Show me another turn');assert.strictEqual($$('#stDemoChips .st-tchip').length,6,'the log');
   assert.ok(!letters.test($('#start').textContent),'no move letter in the log');
   $('#start [data-demoreset]').click();assert.ok($('#start [data-demo]').disabled,'no turn while it turns back');
-  await new Promise(r=>setTimeout(r,250));
+  // The turns go back on a timer: wait for them, up to two seconds (a fixed wait failed under load).
+  for(let t=0;t<40&&!(w.eval('START').sc.cube.isSolved()&&!w.eval('START.demo').length);t++)await new Promise(r=>setTimeout(r,50));
   assert.ok(w.eval('START').sc.cube.isSolved()&&!w.eval('START.demo').length,'Reset cube to Solved turns them back');
   assert.ok($('#stDemoLog').hidden&&$('#start [data-demoreset]').hidden&&$('#stDemoLbl').textContent==='Show me a turn','and the page is as it was');
   $('#start [data-demo]').click();$('#start [data-demo]').click();$('#stCube').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));

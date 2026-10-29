@@ -568,7 +568,10 @@ renderLLGroups();renderF2LGrid();
 // Case status: unlearned -> learning -> finished. A status button shows on each case card and in the case window.
 // Ids: an OLL/PLL case id, or f2l-N for an F2L case.
 const LL_ORDER=['','learning','finished'];
-function stBtn(id){const s=llState.status[id]||'',nm=s||'unlearned';return `<button class="stbtn ${s}" data-st-id="${esc(id)}" title="Status: ${nm}. Click to change it: unlearned, learning, finished" aria-label="Status: ${nm}. Click to change."><i></i>${nm}</button>`;}
+// The words for a status, the same on every page (the Learn home, the getting-started pages): the
+// stored values stay '' (unlearned), learning and finished.
+function stWord(s){return s==='finished'?'Learned':s==='learning'?'Learning':'Not started';}
+function stBtn(id){const s=llState.status[id]||'',nm=stWord(s);return `<button class="stbtn ${s}" data-st-id="${esc(id)}" title="Status: ${nm}. Click to change it: Not started, Learning, Learned" aria-label="Status: ${nm}. Click to change."><i></i>${nm}</button>`;}
 function cycleStatus(id){const cur=llState.status[id]||'';llState.status[id]=LL_ORDER[(LL_ORDER.indexOf(cur)+1)%3];
   if(id.startsWith('f2l-')){f2lState.caseSel.add(+id.slice(4));saveF2L();store.set('llStatus',llState.status);renderF2LGrid();}else if(/^(beg-|mini-|two:)/.test(id)){store.set('llStatus',llState.status);}else{llState.sel.add(id);saveLL();renderLLGroups();}
   renderCaseStats();$$('.modal .stbtn').forEach(b=>{if(b.dataset.stId===id)b.outerHTML=stBtn(id);});document.dispatchEvent(new CustomEvent('cw:status',{detail:id}));}
