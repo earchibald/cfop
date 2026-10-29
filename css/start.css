@@ -223,6 +223,8 @@ div.st-card{border:1px solid var(--line)}.st-ready .row{flex-wrap:wrap;gap:8px}
 .gd-moves .m.done{background:var(--panel2);color:var(--muted)}.gd-moves .m.fc.done::after{background:color-mix(in srgb,var(--face) 55%,transparent)}
 .gd-moves .m.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .gd-steps .gd-moves{row-gap:14px;padding-bottom:6px}
+/* The color bar hangs 7px under a tile: the boxed algorithm leaves room for it inside its border. */
+.gd-moves .trig{padding-bottom:13px}
 /* The key in one strip, and Coming up at its right end. */
 .gd-row2{display:flex;gap:var(--gap);align-items:stretch}
 .gd-key{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:13px;padding:8px 14px}
