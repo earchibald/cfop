@@ -26,17 +26,15 @@ w.addEventListener('load',async()=>{try{
   E("newScramble('live-1')");E("goTab('solve')");
   const on=()=>$$('#viewHold .ht[aria-pressed="true"]').map(b=>b.parentNode.dataset.place+b.dataset.c);
   assert.deepStrictEqual(on(),['up3','front2'],'yellow on top, green in front: the scramble, then z2 to the grip');
-  // White on top: the picture turns, the list stays, and a key names the face as the picture shows it.
+  // White on top: the picture turns, and the list stays.
   const n0=E('seqState.moves.length');
   click($('#viewHold .grp[data-place="up"] .ht[data-c="0"]'));
   assert.deepStrictEqual(on(),['up0','front2'],'white on top, green stays in front');
   assert.strictEqual(E('seqState.moves.length'),n0,'no turn on the list');
-  assert.strictEqual(E("playerKeyMove('U')"),'D',"U as shown is the player's D");
-  assert.strictEqual(E("playerKeyMove(\"R'\")"),"L'","R as shown is the player's L");
-  assert.strictEqual(E("playerKeyMove('F')"),'F','the front stays');
+  assert.deepStrictEqual([...E('playerHeldCube().center')],[0,1,2,3,4,5],'the picture: white up, green in front');
   // A press of the tile that is on: the player's own hold again.
   click($('#viewHold .grp[data-place="up"] .ht[data-c="0"]'));
-  assert.strictEqual(E('PLAYER.hold'),null,'back to the player hold');assert.strictEqual(E("playerKeyMove('U')"),'U');
+  assert.strictEqual(E('PLAYER.hold'),null,'back to the player hold');
   // Net toggles.
   click($('#viewNet'));assert.strictEqual(E('view.mode'),'net');click($('#viewNet'));assert.strictEqual(E('view.mode'),'3d');
 
@@ -70,6 +68,11 @@ w.addEventListener('load',async()=>{try{
   turn("R");assert.strictEqual($('#crossTry').value,'D L','R of the cube is L held upside down');
   turn("R'");assert.strictEqual($('#crossTry').value,'D','a move and its undo come off');
   assert.ok($('#crossTryOut').textContent.length>0,'the check runs');
+  // Held white up by the hold row: the white face is U, after the whole-cube turn to that hold.
+  click($('#viewHold .grp[data-place="up"] .ht[data-c="0"]'));
+  turn('U');assert.strictEqual($('#crossTry').value,'D z2 U','the white face, held up, is U');
+  assert.ok(E('liveInStep(cubeTab.target)'),'still in step');
+  click($('#viewHold .grp[data-place="up"] .ht[data-c="0"]'));
   // A turn while out of step: nothing on the player, the note shows.
   E("cubeTab.target=applyAlg(new Cube(),['L','B'])");const n1=E('seqState.moves.length');
   ev('cw:smartmoves',{moves:['B'],from:E("applyAlg(new Cube(),['L'])"),to:E('cubeTab.target')});
@@ -96,6 +99,17 @@ w.addEventListener('load',async()=>{try{
   assert.strictEqual(inp.value,"F2 D' R",'the typed text stays');
   // Then a key adds to the typed plan.
   keyCode('KeyW');assert.strictEqual(inp.value,"F2 D' R U",'a key adds to the typed plan');
+  // The picture turned by the hold row: a key goes on the list as the picture shows it, after the
+  // whole-cube turn to that hold. The cube on the player is the cube in the picture.
+  click($('#viewHold .grp[data-place="up"] .ht[data-c="0"]'));const n2=E('seqState.moves.length');
+  w.__was=E('playerHeldCube()');
+  keyCode('KeyD');assert.deepStrictEqual([...E(`seqState.moves.slice(${n2})`)],['z2','R'],'yellow up to white up, then R as shown');
+  assert.strictEqual(E('cubeTabKey(displayedCube)'),E("cubeTabKey(applyAlg(window.__was,['R']))"),'the cube in the picture turned R');
+  assert.strictEqual(E('playerHoldView(displayedCube)'),null,'the player now holds the cube as the picture does');
+  assert.deepStrictEqual(on(),['up0','front2'],'the tiles stay');
+  keyCode('KeyD');assert.deepStrictEqual([...E(`seqState.moves.slice(${n2})`)],['z2','R2'],'one turn to the hold: R then R is R2');
+  keyCode('KeyW');assert.deepStrictEqual([...E(`seqState.moves.slice(${n2})`)],['z2','R2','U'],'U is the white face, on top');
+  click($('#viewHold .grp[data-place="up"] .ht[data-c="0"]'));
   E("setCubeSrc('mine')");
 
   // The Virtual cube chip and the Keys window.

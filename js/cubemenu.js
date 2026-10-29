@@ -17,21 +17,24 @@ function setCubeSrc(id){if(!CUBE_SRCS.some(s=>s.id===id))return;store.set('cubeS
 // step in view (the moves after it drop off), and the layer turns. A move on the layer of your move
 // before it joins that move (U then U is U2, U then U' is nothing), so the list reads as the cube
 // now stands. The scramble's moves stay as they are (seqState.yours: where your moves start).
+// `m` names the faces as the picture shows them. When the hold row turns the picture (js/live.js),
+// the whole-cube turn to that hold goes on the list first, so the list reads as you hold the cube.
 // src: 'screen' (the keys) or 'smart'. Fires cw:yourmove, so a tab can follow (the Cross tab's
 // Check my plan, js/live.js).
-function cubePlayerTurn(m,src){const i=seqState.idx,ms=parseAlg(m),from=cubeAtSeq(i);
+function cubePlayerTurn(m,src){const i=seqState.idx,ms=parseAlg(m);
+  const H=typeof playerHoldView==='function'?playerHoldView(cubeAtSeq(i)):null,pre=H?H.moves:[],from=applyAlg(cubeAtSeq(i),pre);
   if(seqState.yours==null||seqState.yours>i)seqState.yours=i;
   let moves=seqState.moves.slice(0,i);
-  for(const x of ms){const j=moves.length-1,y=j>=seqState.yours?seqJoin(moves[j],x):undefined;
+  for(const x of pre.concat(ms)){const j=moves.length-1,y=j>=seqState.yours?seqJoin(moves[j],x):undefined;
     moves=y===undefined?moves.concat(x):moves.slice(0,j).concat(y?[y]:[]);}
   seqState.moves=moves;seqState.idx=moves.length;
   if(!/your moves/.test(seqState.label))seqState.label=(seqState.label?seqState.label+' · ':'')+'your moves';
-  renderSequence();applySequence(ms.length===1?{from,move:ms[0]}:null);document.dispatchEvent(new CustomEvent('cw:yourmove',{detail:{moves:ms,src:src||'screen'}}));}
+  renderSequence();applySequence(ms.length===1?{from,move:ms[0]}:null);document.dispatchEvent(new CustomEvent('cw:yourmove',{detail:{moves:pre.concat(ms),src:src||'screen'}}));}
 // Two moves of one layer as one: the move, or null when they undo each other. Undefined: two layers.
 function seqJoin(a,b){const k=m=>m.replace(/['2]$/,'');if(k(a)!==k(b))return undefined;
   const t=(cubeTabTurns(a)+cubeTabTurns(b))%4;return t?k(b)+['','','2',"'"][t]:null;}
-// A key names the face as the picture shows it; the player holds the cube its own way (js/live.js).
-const cubePlayerScreen={el:null,keys:true,turn:m=>cubePlayerTurn(typeof playerKeyMove==='function'?playerKeyMove(m):m,'screen')};
+// A key names the face as the picture shows it (js/live.js: the hold row).
+const cubePlayerScreen={el:null,keys:true,turn:m=>cubePlayerTurn(m,'screen')};
 // The player takes the virtual cube's keys while Virtual cube is the choice and no other virtual
 // cube (the getting-started pages) has them.
 function cubeScreenWire(){cubePlayerScreen.el=$('#player');
