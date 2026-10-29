@@ -108,7 +108,7 @@ function gdHoldHTML(){
   <div class="panel gd-part gd-holdnow" id="gdTurn">
     <span class="st-lbl">Before stage ${st.n} · ${esc(st.name)}</span>
     <h2 id="gdTitle">${virt?`The cube now has ${where}.`:`Now, hold the cube with ${where}.`}</h2>
-    <p class="muted">The picture shows your cube held this way. Drag it to look around. <b>Hidden faces</b> shows the back, the left and the bottom.</p>
+    <p class="muted">The picture shows your cube held this way. Drag it to look around. <b>Hidden faces</b> mirrors the back, the left and the bottom.</p>
     <div class="gd-actions"><button class="big primary" id="gdDone" title="Go to the first part of stage ${st.n}">Start stage ${st.n}: ${esc(name)} →</button>${g.i?'<button class="ghost" id="gdPrev" title="Go back one part">← Previous part</button>':''}</div>
   </div>`;
 }
@@ -123,7 +123,7 @@ function gdWonHTML(){
   <div class="panel gd-part gd-holdnow gd-won" id="gdStageWon">
     <span class="st-lbl">Stage ${st.n} of ${pk.count} · solved</span>
     <h2 id="gdTitle">You solved the ${esc(gdTitleCase(pk.short[st.n-1]))}!</h2>
-    <p class="muted">The picture shows your cube now. Drag it to look around. <b>Hidden faces</b> shows the back, the left and the bottom.</p>
+    <p class="muted">The picture shows your cube now. Drag it to look around. <b>Hidden faces</b> mirrors the back, the left and the bottom.</p>
     <div class="gd-actions"><button class="big primary" id="gdDone" title="Go to stage ${next?next.stage.n:''}: ${esc(next?next.stage.name:'')}">Move on to ${esc(nextName)} →</button><button class="ghost" id="gdPrev" title="Go back one part">← Previous part</button></div>
   </div>`;
 }
@@ -222,7 +222,7 @@ function gdDoneHTML(){
     ${g.showPlan?`<div class="gd-plan" id="gdPlan">${gdPlanList()}</div>`:''}</div>`;
 }
 function gdRender(){
-  const g=guideState;const root=$('#tab-bsolve');if(!root)return;
+  const g=guideState;gdSave();const root=$('#tab-bsolve');if(!root)return;
   const at=g.view==='guide'&&g.parts[g.i];
   const html=g.view==='guide'?(at.won?gdWonHTML():at.turn?gdHoldHTML():gdGuideHTML()):g.view==='done'?gdDoneHTML():gdEntryHTML();
   root.innerHTML=html;gdPlace();
@@ -293,6 +293,16 @@ document.addEventListener('cw:tab',e=>{
   gdRender();
 });
 
+// The guided solve is kept in cw:guide while it shows a part: the method, the scramble and the
+// part, so a reload comes back to the same part of the same cube. The entry and You did it clear it.
+// A cube with no moves (a painted 4×4) is not kept: its moves could not load it again.
+function gdSave(){const g=guideState;
+  if(g.view==='guide'&&g.plan&&scr.moves.length)store.set('guide',{method,seed:scr.seed,moves:scr.moves.join(' '),i:g.i});else store.set('guide',null);}
+function gdResume(){const s=store.get('guide',null);if(!s||s.method!==method||!isBeg()||!s.moves)return;
+  loadScramble(s.seed,s.moves,true);gdArrived=false;gdBuild();const g=guideState;
+  if(g.view!=='guide'){g.view='entry';g.plan=null;g.parts=[];return;}
+  g.i=Math.min(Math.max(0,s.i|0),g.parts.length-1);}
+gdResume();
 gdRender();
 // Another method: back to the entry view; its own plan is built when the guide starts.
 document.addEventListener('cw:method',()=>{const g=guideState;gdPlace();if(g.view==='entry')return;g.view='entry';g.plan=null;g.parts=[];g.i=0;g.msg='';gdRender();});

@@ -61,8 +61,8 @@ w.addEventListener('load',async()=>{try{
   $('#drillBack').click();assert.ok(!drill(),'Back to scramble');
 
   // The status button cycles; the lesson and the list follow.
-  click($('#tab-learn .stbtn'));assert.strictEqual($('#tab-learn .stbtn').textContent,'learning');
-  click($('#tab-learn .stbtn'));assert.strictEqual($('#tab-learn .stbtn').textContent,'finished','two taps: finished');
+  click($('#tab-learn .stbtn'));assert.strictEqual($('#tab-learn .stbtn').textContent,'Learning');
+  click($('#tab-learn .stbtn'));assert.strictEqual($('#tab-learn .stbtn').textContent,'Learned','two taps: finished');
   assert.ok($('#lnMark').disabled,'Mark finished is off for a finished step');
   assert.strictEqual($('#tab-learn h2').textContent,'The white corners','the lesson stays open');
   click($('#tab-learn button[data-ln="list"]'));
@@ -111,7 +111,7 @@ w.addEventListener('load',async()=>{try{
   click($('#tab-learn .ln-mv[data-m="D\'"]'));assert.ok(/hidden here/.test($('#lnGoalCap').textContent));
   w.lnRestoreGoal();assert.ok(!w.lnTurn.on&&$('#lnGoalSvg .ln-front')&&!$('#tab-learn .ln-pic').dataset.turn,'the picture returns');
   click($('#lnMark'));assert.strictEqual(w.begProgress.status(0),'finished','Mark finished sets the status');
-  assert.strictEqual($('#tab-learn .stbtn').textContent,'finished','the lesson button follows');
+  assert.strictEqual($('#tab-learn .stbtn').textContent,'Learned','the lesson button follows');
   click($('#tab-learn button[data-ln="list"]'));nx=w.begProgress.next();
   assert.strictEqual(nx.n,1);assert.strictEqual(nextTitle(),'The daisy');assert.ok(card(1).classList.contains('cur'));
 

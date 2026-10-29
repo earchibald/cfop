@@ -23,7 +23,14 @@ function placeInit(){
 }
 function placeSeed(){const el=$('#scrPillSeed');if(el&&typeof scr!=='undefined')el.textContent=scr.seed||'';}
 function placePlayer(){const tab=typeof curTab!=='undefined'?curTab:'solve';document.body.dataset.cube=placeKind(tab);placeSeed();}
-document.addEventListener('cw:tab',placePlayer);
-document.addEventListener('cw:method',placePlayer);
+// The crumb over the section, as the getting-started pages have one: the method and the section
+// ("3×3 Beginner · Practice"). CSS draws it from the section's data-crumb, so a module that writes its
+// section again keeps it.
+function placeCrumb(){const tab=typeof curTab!=='undefined'?curTab:'solve',sec=$('#tab-'+tab);if(!sec)return;
+  const b=document.querySelector(`nav.rail button[data-tab="${tab}"]`),name=b?b.textContent.replace(/^\d+/,'').trim():'';
+  const m=($('#puzzleName')?$('#puzzleName').textContent.replace(/·/,'').trim()+' ':'')+($('#methodName')?$('#methodName').textContent.trim():'');
+  sec.dataset.crumb=name?`${m} · ${name}`:m;}
+document.addEventListener('cw:tab',()=>{placePlayer();placeCrumb();});
+document.addEventListener('cw:method',()=>{placePlayer();placeCrumb();});
 document.addEventListener('cw:scramble',placeSeed);
-placeInit();
+placeInit();placeCrumb();

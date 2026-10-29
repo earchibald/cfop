@@ -129,7 +129,7 @@ var begProgress={ // var: tests read it from the window
 function begStepLabel(s){return s.n===0?'Basics, '+s.name:'Step '+s.n+', '+s.name;}
 function renderProgress(){
   const sq=$('#progSq');if(!sq)return;const pk=begPack(),N=pk.count;
-  sq.innerHTML=Array.from({length:N},(_,i)=>{const n=i+1,s=begProgress.status(n);return `<i class="${s}" title="Step ${n}: ${esc(pk.steps[n].name)}, ${s||'unlearned'}"></i>`;}).join('');
+  sq.innerHTML=Array.from({length:N},(_,i)=>{const n=i+1,s=begProgress.status(n);return `<i class="${s}" title="Step ${n}: ${esc(pk.steps[n].name)}, ${stWord(s)}"></i>`;}).join('');
   sq.setAttribute('aria-label',`The ${pk.word} steps`);
   const {finished,learning}=begProgress.counts();
   $('#progText').textContent=finished===N?`All ${pk.word} steps finished.`:finished||learning?`${finished} step${finished===1?'':'s'} finished${learning?`, ${learning} in learning`:''}.`:'No steps finished yet.';
@@ -171,7 +171,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&methodPopOpen()){cl
 // boot: the first visit asks the cube level (js/start.js); with no level picker, the popover opens once
 const begFirstVisit=store.get('method',null)==null;
 setMethod(method,{force:true});
-if(begFirstVisit)setTimeout(()=>{if(typeof startOpen==='function'&&store.get('level',null)==null)startOpen('level');else openMethodPop();},300);
+if(begFirstVisit)setTimeout(()=>{if(typeof startIsOpen==='function'&&startIsOpen())return;if(typeof startOpen==='function'&&store.get('level',null)==null){START.first=true;startOpen('level');}else openMethodPop();},300);
 // The first visit also offers the data from another browser or the Mac app (js/transfer.js).
 if(begFirstVisit)$('#methodData').classList.remove('hidden');
 $('#methodPaste').onclick=()=>{closeMethodPop();openSettings('data');};

@@ -601,7 +601,7 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
 .ln-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
 .ln-link{background:none;border:0;padding:0;color:var(--link);font-size:13px;font-weight:500}
 .ln-link:hover{text-decoration:underline}
-.ln-of{font-size:13px;margin:4px 0 2px}
+.ln-of{display:block;margin:6px 0 2px}
 .ln-st{display:inline-flex;align-items:center;gap:6px}.ln-st .stbtn{margin-top:0;font-size:14px;padding:4px 12px 4px 8px}
 .ln-hint{font-size:12px}
 .ln-what{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:20px}

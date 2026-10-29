@@ -210,7 +210,7 @@ const lnView={n:null,why:new Set(),hlT:0}; // n: the open lesson, or null for th
 // The beginner home, as the onboarding storyboard draws it (Beginner home): Up next with the step's
 // goal on a picture, the cube in use (#begCubeLine, js/start-app.js) and the two ways on, the lesson
 // or a solve with help; beside it the steps, each with its status. A click on a step opens its lesson.
-const LN_ST_WORD={'':'Not started',learning:'Learning',finished:'Learned'};
+const LN_ST_WORD={'':stWord(''),learning:stWord('learning'),finished:stWord('finished')};
 function lnStName(s){return s.n===0?'Basics':s.name.replace(/^The /,'').replace(/^./,c=>c.toUpperCase());}
 function lnHomeHTML(){
   const pk=begPack(),nx=begProgress.next(),N=pk.count;
@@ -249,8 +249,8 @@ function lnSixMoves(){
 }
 function lnLessonHTML(n){
   const pk=begPack();const s=pk.steps[n];const st=lnStatus(n);const prev=pk.steps[n-1],next=pk.steps[n+1];
-  const head=`<div class="panel ln-head"><div class="ln-title"><button class="ln-link" data-ln="list" title="Back to the list of steps">← All steps</button><div class="mono muted ln-of">${n===0?'Basics':`Step ${n} of ${pk.count}`}</div><h2>${esc(s.name)}</h2></div>
-    <div class="row ln-nav"><span class="ln-st">${stBtn(begStatusId(n))}<span class="muted ln-hint">tap to change</span></span>${prev?`<button class="small" data-ln="open" data-n="${prev.n}" title="Open ${esc(lnStepNo(prev))}: ${esc(prev.name)}">← ${esc(lnStepNo(prev))}</button>`:''}${next?`<button class="small primary" data-ln="open" data-n="${next.n}" title="Open ${esc(lnStepNo(next))}: ${esc(next.name)}">${esc(lnStepNo(next))} →</button>`:''}</div></div>`;
+  const head=`<div class="panel ln-head"><div class="ln-title"><button class="ln-link" data-ln="list" title="Back to the list of steps">← All steps</button><span class="st-lbl ln-of">${n===0?'Lesson · Basics':`Lesson · Step ${n} of ${pk.count}`}</span><h2>${esc(s.name)}</h2></div>
+    <div class="row ln-nav"><span class="ln-st">${stBtn(begStatusId(n))}</span>${prev?`<button class="small" data-ln="open" data-n="${prev.n}" title="Open ${esc(lnStepNo(prev))}: ${esc(prev.name)}">← ${esc(lnStepNo(prev))}</button>`:''}${next?`<button class="small primary" data-ln="open" data-n="${next.n}" title="Open ${esc(lnStepNo(next))}: ${esc(next.name)}">${esc(lnStepNo(next))} →</button>`:''}</div></div>`;
   const goal=s.goals?`<ul class="ln-goals">${s.goals.map(g=>`<li>${esc(g)}</li>`).join('')}</ul>`:`<p class="muted">${esc(s.goal)}</p>`;
   const used=new Set(),marked=!!(s.kinds||s.marks);
   const tapNote=marked?`<p class="muted ln-small">${n===0?'Tap a kind of piece to see it on the goal cube.':'Tap an underlined word to see those pieces on the goal cube.'}</p>`:'';
