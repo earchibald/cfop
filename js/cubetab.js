@@ -350,8 +350,11 @@ function cubeTabPath(from,to){
 // The moves on the way go on the list, tab in view or not. Five or more apart, the moves are not
 // known, and the list keeps what it has.
 function cubeTabShow(cube){
-  const moved=cubeTabPath(cubeTab.target||cubeTab.shown,cube);
+  const was=cubeTab.target||cubeTab.shown,moved=cubeTabPath(was,cube);
   if(moved&&moved.length)cubeTabRecord(moved);
+  // The rest of the page follows the cube from here (js/live.js): the moves as the cube names them,
+  // null when they are not known.
+  if(!moved||moved.length)document.dispatchEvent(new CustomEvent('cw:smartmoves',{detail:{moves:moved,from:was,to:cube}}));
   if(!moved||moved.length)cubeTabStir(); // the cube changed; a state read again with no turn is not a turn
   const still=(typeof reducedMotion==='function'&&reducedMotion())||typeof requestAnimationFrame!=='function';
   const path=still||!cubeTabShown()?null:moved;

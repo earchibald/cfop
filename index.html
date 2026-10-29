@@ -56,9 +56,10 @@
   <section class="player" id="player">
     <div class="panel tight cubebox">
       <svg id="cube" viewBox="0 0 400 360" aria-label="Cube view"></svg>
-      <div class="viewbtns"><button id="viewTop" title="Look at the cube from above">Top</button><button id="viewBottom" title="Look at the cube from below, where the cross is">Bottom</button><button id="viewNet" title="The six faces unfolded flat">Net</button></div>
+      <div class="viewbtns" id="viewHold"><span class="lbl" title="The color on top as you hold the cube">Top</span><span class="grp" data-place="up"></span><span class="lbl" title="The color toward you as you hold the cube">Front</span><span class="grp" data-place="front"></span><button id="viewNet" aria-pressed="false" title="The six faces unfolded flat. Press again for the cube">Net</button></div>
       <button class="animbtn" id="animBtn" aria-pressed="false" title="Turn the layer on the cube for each move (A)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6"/><path d="M18 3v4h-4"/><path d="M20 12a8 8 0 0 1-13.7 5.6"/><path d="M6 21v-4h4"/></svg>Animate<span class="hk" aria-hidden="true">A</span></button>
       <button class="animbtn hidbtn" id="hiddenBtn" aria-pressed="false" title="Show the hidden faces: the back, left and bottom, as in a mirror behind the cube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8l8-4 8 4-8 4z"/><path d="M4 8v8l8 4v-8"/><path d="M20 8v8l-8 4" stroke-dasharray="2 2.4"/></svg>Hidden faces</button>
+      <button class="animbtn vcubebtn" id="vcubeBtn" aria-pressed="false" title="Turn the cube here with the keys or the buttons of a small window, as a virtual cube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M7 11h1M11 11h2M16 11h1M8 14h8"/></svg>Virtual cube</button>
       <button class="savebtn" id="saveImgBtn" title="Save the cube picture as an image file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>Save image</button>
       <div class="draghint" id="dragHint" aria-hidden="true"><svg viewBox="0 0 24 16"><path d="M3 12a9 9 0 0 1 18 0"/><path d="M3 12l-1.6-3.2M3 12l3.3-1.3"/><path d="M21 12l1.6-3.2M21 12l-3.3-1.3"/></svg><span>Drag to rotate</span></div>
     </div>
@@ -161,8 +162,14 @@
     <!-- CROSS -->
     <section class="tab" id="tab-cross" data-sec="cross">
       <div class="panel">
+        <h2>Check my plan</h2>
+        <p class="muted">Type the moves you would use. The checker applies them to the scramble and tells you if the cross is solved, how many moves you used, and the gap to optimal.</p>
+        <div class="row"><input id="crossTry" class="mono" style="flex:1;min-width:220px" placeholder="e.g. F2 D' R L' F" title="Type your own cross moves to check them"><button id="crossCheck" title="Does this make the cross? How does it compare with the best?">Check</button></div>
+        <div id="crossTryOut" style="margin-top:8px"></div>
+      </div>
+      <div class="panel">
         <h2>Cross tuning</h2>
-        <p class="muted">The cube on the left shows the full scramble. Plan the cross in your head, then check against every optimal solution. Use the Bottom view to inspect the cross directly.</p>
+        <p class="muted">The player cube shows the full scramble. Plan the cross in your head, then check against every optimal solution. To see the cross, drag the cube, or press white on top in the row on the cube.</p>
         <div class="row">
           <button class="primary" id="crossNew" title="A new scramble to train the cross on">New cross scramble<span class="hk" aria-hidden="true">N</span></button>
           <label title="How many moves the best cross takes">Difficulty <select id="crossDiff"><option value="any">any</option><option value="easy">easy (≤5)</option><option value="hard">hard (≥7)</option></select></label>
@@ -171,12 +178,6 @@
         </div>
         <div class="row" style="margin-top:10px"><span>Optimal length: <b class="big" id="crossOpt">—</b></span><span class="muted" id="crossCount"></span></div>
         <div id="crossSols" style="margin-top:8px"></div>
-      </div>
-      <div class="panel">
-        <h3>Check my plan</h3>
-        <p class="muted">Type the moves you would use. The checker applies them to the scramble and tells you if the cross is solved, how many moves you used, and the gap to optimal.</p>
-        <div class="row"><input id="crossTry" class="mono" style="flex:1;min-width:220px" placeholder="e.g. F2 D' R L' F" title="Type your own cross moves to check them"><button id="crossCheck" title="Does this make the cross? How does it compare with the best?">Check</button></div>
-        <div id="crossTryOut" style="margin-top:8px"></div>
       </div>
       <div class="panel">
         <h3>What to look for</h3>
@@ -388,6 +389,9 @@
 <script src="js/guide.js"></script>
 <script src="js/practice.js"></script>
 <script src="js/cubemenu.js"></script>
+<script src="js/live.js"></script>
+<script src="js/vcube.js"></script>
+<script src="js/crosslook.js"></script>
 <script src="js/start.js"></script>
 <script src="js/start-app.js"></script>
 <script src="js/levelmenu.js"></script>

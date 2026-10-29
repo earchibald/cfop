@@ -14,9 +14,9 @@ const SCREEN={active:null};
 function screenKeyChar(code){return code.startsWith('Key')?code.slice(3):code.startsWith('Numpad')?code.slice(6):code;}
 // The key of each face in a layout: {L:'A', U:'W', ...}.
 function screenKeys(id){const m=SCREEN_KEYMAPS[id]||SCREEN_KEYMAPS.awdx;const out={};SCREEN_KEY_FACES.forEach((f,i)=>out[f]=screenKeyChar(m.codes[i]));return out;}
-// The move a key makes ("R", "R'"), or null, from either layout. The key alone turns the face
-// clockwise; Shift the other way.
-function screenKeyMove(code,shift){for(const m of Object.values(SCREEN_KEYMAPS)){const i=m.codes.indexOf(code);if(i>=0)return SCREEN_KEY_FACES[i]+(shift?"'":'');}return null;}
+// The move a key makes ("R", "R'"), or null, from either layout, or from layout `only` (an id of
+// SCREEN_KEYMAPS). The key alone turns the face clockwise; Shift the other way.
+function screenKeyMove(code,shift,only){for(const m of only&&SCREEN_KEYMAPS[only]?[SCREEN_KEYMAPS[only]]:Object.values(SCREEN_KEYMAPS)){const i=m.codes.indexOf(code);if(i>=0)return SCREEN_KEY_FACES[i]+(shift?"'":'');}return null;}
 // Shift on the keypad: with Num Lock on, Windows sends Shift+4 as a Left arrow with no Shift, so a
 // keypad key that gives no digit counts as Shift.
 function screenKeyShift(e){return e.shiftKey||(/^Numpad\d$/.test(e.code)&&!/^\d$/.test(e.key)&&!!e.getModifierState&&e.getModifierState('NumLock'));}
@@ -44,7 +44,7 @@ function screenCube(el,opts={}){
         if(x>=1){sc.anim=null;draw();return;}draw();sc.anim.raf=requestAnimationFrame(step);};
       sc.anim.raf=requestAnimationFrame(step);}
     if(sc.onMove)sc.onMove(move,to);return to;};
-  sc.resetView=()=>{sc.view={...SCREEN_VIEW};draw();};
+  sc.resetView=()=>{sc.view={...(opts.view||SCREEN_VIEW)};draw();}; // back to the view it opened with
   // Lift the pieces with a sticker in `set` out of the cube, with a glow: out, a hold, and back in.
   // o: up, hold, down (ms), stay (stay out), dir and d (see renderCube3D's lift), done(). A new bump or
   // null stops the one before.
@@ -80,5 +80,5 @@ function screenCube(el,opts={}){
 document.addEventListener('keydown',e=>{const sc=SCREEN.active;if(!sc||!sc.keys||!sc.el.isConnected)return;
   if(e.ctrlKey||e.metaKey||e.altKey)return;const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return;
   if(sc.el.closest('.hidden,[hidden],.tab:not(.on)'))return;
-  const m=screenKeyMove(e.code,screenKeyShift(e));if(!m)return;
+  const m=screenKeyMove(e.code,screenKeyShift(e),sc.layout);if(!m)return; // sc.layout: one layout only (the player's Keys window)
   e.preventDefault();e.stopImmediatePropagation();sc.turn(m);},true);

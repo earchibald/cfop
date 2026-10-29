@@ -135,7 +135,9 @@ final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     var central: CBCentralManager?
     var peripherals: [String: CBPeripheral] = [:]
     var macs: [String: String] = [:]
-    var owners: [String: BridgeClient] = [:]
+    // The pages that use each cube. The main window and the lab can both hold one: each gets every
+    // value, and the link drops only when the last of them lets go.
+    var owners: [String: [BridgeClient]] = [:]
     var pendingServices: [String: Int] = [:]
     var writes: [String: [(seq: Int, client: BridgeClient)]] = [:]
     // Every page on the bridge, and the pages that look for cubes now. The scan runs while one does.
@@ -200,10 +202,13 @@ final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
             stopScan(for: c); onChange()
         case "connect":
             guard let p = peripherals[id] else { c.error("The cube is not in the list any more. Look for it again.", id: id); return }
-            owners[id] = c; p.delegate = self
-            if p.state == .connected { sendConnected(p) } else { central?.connect(p) }
+            if !(owners[id] ?? []).contains(where: { $0 === c }) { owners[id, default: []].append(c) }
+            p.delegate = self
+            // Another page has the cube already: this page gets connected now, the others hear nothing.
+            if p.state == .connected { sendConnected(p, to: c) } else { central?.connect(p) }
         case "disconnect":
-            if let p = peripherals[id] { central?.cancelPeripheralConnection(p) }
+            owners[id]?.removeAll { $0 === c }
+            if (owners[id] ?? []).isEmpty, let p = peripherals[id] { owners[id] = nil; central?.cancelPeripheralConnection(p) }
         case "notify":
             guard let p = peripherals[id], let ch = characteristic(p, msg["char"] as? String) else { c.error("No such characteristic.", id: id); return }
             p.setNotifyValue(true, for: ch)
@@ -232,9 +237,13 @@ final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     // A page went away, or the window loaded another page: drop the cubes it connected and its
     // scan, as Safari does when a tab closes.
     func release(_ c: BridgeClient) {
-        for (id, o) in owners where o === c {
-            owners[id] = nil; writes[id] = nil
-            if let p = peripherals[id] { central?.cancelPeripheralConnection(p) }
+        for (id, list) in owners where list.contains(where: { $0 === c }) {
+            let left = list.filter { $0 !== c }
+            writes[id]?.removeAll { $0.client === c }
+            if left.isEmpty {
+                owners[id] = nil; writes[id] = nil
+                if let p = peripherals[id] { central?.cancelPeripheralConnection(p) }
+            } else { owners[id] = left }
         }
         stopScan(for: c)
         onChange()
@@ -253,12 +262,14 @@ final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     func deviceMessage(_ id: String, _ p: CBPeripheral) -> [String: Any] {
         ["ev": "device", "id": id, "name": p.name ?? "GAN cube", "mac": macs[id] as Any? ?? NSNull()]
     }
-    func sendConnected(_ p: CBPeripheral) {
+    // To `to` alone, or to every page that waits for the cube.
+    func sendConnected(_ p: CBPeripheral, to: BridgeClient? = nil) {
         let id = p.identifier.uuidString
         let services: [[String: Any]] = (p.services ?? []).map {
             ["uuid": fullUUID($0.uuid), "chars": ($0.characteristics ?? []).map { fullUUID($0.uuid) }]
         }
-        owners[id]?.send(["ev": "connected", "id": id, "services": services])
+        let m: [String: Any] = ["ev": "connected", "id": id, "services": services]
+        if let c = to { c.send(m) } else { owners[id]?.forEach { $0.send(m) } }
         onChange()
     }
 
@@ -287,12 +298,12 @@ final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     func centralManager(_ c: CBCentralManager, didConnect p: CBPeripheral) { p.discoverServices(nil) }
     func centralManager(_ c: CBCentralManager, didFailToConnect p: CBPeripheral, error: Error?) {
         let id = p.identifier.uuidString
-        owners[id]?.error(error?.localizedDescription ?? "The connection did not start.", id: id)
+        owners[id]?.forEach { $0.error(error?.localizedDescription ?? "The connection did not start.", id: id) }
         owners[id] = nil
     }
     func centralManager(_ c: CBCentralManager, didDisconnectPeripheral p: CBPeripheral, error: Error?) {
         let id = p.identifier.uuidString
-        owners[id]?.send(["ev": "gone", "id": id])
+        owners[id]?.forEach { $0.send(["ev": "gone", "id": id]) }
         owners[id] = nil; writes[id] = nil
         onChange()
     }
@@ -313,7 +324,8 @@ final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     func peripheral(_ p: CBPeripheral, didUpdateValueFor ch: CBCharacteristic, error: Error?) {
         guard let v = ch.value else { return }
         let id = p.identifier.uuidString
-        owners[id]?.send(["ev": "value", "id": id, "char": fullUUID(ch.uuid), "data": toHex(v)])
+        let m: [String: Any] = ["ev": "value", "id": id, "char": fullUUID(ch.uuid), "data": toHex(v)]
+        owners[id]?.forEach { $0.send(m) }
     }
     func peripheral(_ p: CBPeripheral, didWriteValueFor ch: CBCharacteristic, error: Error?) {
         let id = p.identifier.uuidString
@@ -323,7 +335,7 @@ final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
         else { w.client.send(["ev": "written", "seq": w.seq]) }
     }
     func peripheral(_ p: CBPeripheral, didUpdateNotificationStateFor ch: CBCharacteristic, error: Error?) {
-        if let e = error { owners[p.identifier.uuidString]?.error(e.localizedDescription, id: p.identifier.uuidString) }
+        if let e = error { owners[p.identifier.uuidString]?.forEach { $0.error(e.localizedDescription, id: p.identifier.uuidString) } }
     }
 }
 

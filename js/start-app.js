@@ -58,9 +58,16 @@ function crossLessonShow(part){const sec=$('#tab-cross');if(!sec)return;const bo
   const lt=$('#crossLessonLight');if(lt)lt.onclick=()=>crossLessonLight();
   const rv=$('#crossLessonReveal');if(rv)rv.onclick=()=>{if(!crossState.revealed)$('#crossReveal').click();focusPlayer();};
   if(part===0&&curTab==='cross')crossLessonLight();}
-// The white edge stickers of the cube in view, lit; the rest dim.
-function crossLessonLight(){if(typeof displayedCube==='undefined'||!displayedCube||displayedCube.isFour)return;const f=displayedCube.toFacelets(),lit=new Set();
-  for(let i=0;i<54;i++)if(f[i]===0&&[1,3,5,7].includes(i%9))lit.add(i);showCube(displayedCube,lit);}
+// The white edges of the cube in view, both stickers of each, lit and lifted out with the button in
+// one short bump (CROSS_LIGHT_T.bump ms); they stay lit for CROSS_LIGHT_T.stay ms, then the cube
+// shows as it was. A step of the player ends it.
+const CROSS_LIGHT_T={bump:500,stay:2000};
+let crossLightTimer=0;
+function crossLessonLight(){if(typeof displayedCube==='undefined'||!displayedCube||displayedCube.isFour)return;const cube=displayedCube,f=cube.toFacelets(),lit=new Set();
+  for(let i=0;i<54;i++)if(f[i]===0&&[1,3,5,7].includes(i%9))pieceStickers(i).forEach(j=>lit.add(j));
+  clearTimeout(crossLightTimer);showCube(cube,lit);const T=CROSS_LIGHT_T;mainBump(lit,{up:T.bump*0.4,hold:T.bump*0.2,down:T.bump*0.4});
+  const b=$('#crossLessonLight');if(b){b.classList.add('bumping');setTimeout(()=>b.classList.remove('bumping'),T.bump);}
+  crossLightTimer=setTimeout(()=>{if(displayedCube===cube&&fadeSet===lit)showCube(cube);},T.bump+T.stay);}
 // ---------- OLL · PLL: what to show ----------
 const LL_SHOW=[['left','Still to learn','Cases you are learning or have not started'],['learning','Learning','Cases you are learning'],['learned','Learned','Cases you know'],['all','All','Every case']];
 function llShow(){return store.get('llShow','all');}

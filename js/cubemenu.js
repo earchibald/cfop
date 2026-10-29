@@ -15,10 +15,13 @@ function setCubeSrc(id){if(!CUBE_SRCS.some(s=>s.id===id))return;store.set('cubeS
   if(cubePopOpen())cubePopDraw();document.dispatchEvent(new CustomEvent('cw:cubesrc',{detail:id}));}
 // A key of the virtual cube turns the cube in the section: the move goes on the player after the
 // step in view (the moves after it drop off), and the layer turns.
-function cubePlayerTurn(m){const i=seqState.idx;seqState.moves=seqState.moves.slice(0,i).concat(parseAlg(m));seqState.idx=i+1;
+// src: 'screen' (the keys) or 'smart'. Fires cw:yourmove, so a tab can follow (the Cross tab's
+// Check my plan, js/live.js).
+function cubePlayerTurn(m,src){const i=seqState.idx,ms=parseAlg(m);seqState.moves=seqState.moves.slice(0,i).concat(ms);seqState.idx=i+ms.length;
   if(!/your moves/.test(seqState.label))seqState.label=(seqState.label?seqState.label+' · ':'')+'your moves';
-  renderSequence();applySequence();}
-const cubePlayerScreen={el:null,keys:true,turn:m=>cubePlayerTurn(m)};
+  renderSequence();applySequence();document.dispatchEvent(new CustomEvent('cw:yourmove',{detail:{moves:ms,src:src||'screen'}}));}
+// A key names the face as the picture shows it; the player holds the cube its own way (js/live.js).
+const cubePlayerScreen={el:null,keys:true,turn:m=>cubePlayerTurn(typeof playerKeyMove==='function'?playerKeyMove(m):m,'screen')};
 // The player takes the virtual cube's keys while Virtual cube is the choice and no other virtual
 // cube (the getting-started pages) has them.
 function cubeScreenWire(){cubePlayerScreen.el=$('#player');
@@ -40,7 +43,7 @@ function cubePopActions(id){
     text:'Use the keyboard or numeric keypad to turn the cube faces: '+SCREEN_KEYMAPS.awdx.name+', or '+SCREEN_KEYMAPS.pad.name+' on the keypad. Shift turns the other way. Drag to turn the whole cube.',
     acts:[cubeAct('Mix it up','A new scramble','Mix the virtual cube up','mix',{key:'N',main:true}),cubeAct('Make it solved','Back to the start','Put the virtual cube back to solved','solved'),
       cubeAct('Paint a state','Set each color','Paint the virtual cube by hand','paint')],
-    foot:'The virtual cube draws inside each section that needs it. It is never on top of the page.'};
+    foot:'The virtual cube draws inside each section that needs it. The Keys window floats over the page: drag it where you like.'};
   if(id==='smart'){const live=smartLive();return {
     head:live?(typeof smartNiceName==='function'&&smartConn.name?smartNiceName(smartConn.name):'Smart cube')+(smartConn.battery!=null?' · '+smartConn.battery+'%':''):'Not connected',
     text:live?'Connected. The page sees every turn. The live view is on the Smart cube tab.':'Connect a GAN smart cube. '+smartHowWords(),

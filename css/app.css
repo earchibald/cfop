@@ -98,9 +98,21 @@ body.cube-drag,body.cube-drag *{user-select:none!important;-webkit-user-select:n
 .cubebox .draghint.hidden{display:flex!important;opacity:0}
 @keyframes draghint{0%,100%{transform:translateX(-3px)}50%{transform:translateX(3px)}}
 @media (prefers-reduced-motion:reduce){.cubebox .draghint svg{animation:none}}
-.cubebox .viewbtns{position:absolute;top:8px;right:8px;display:flex;border:1px solid var(--line);border-radius:var(--rb);overflow:hidden;background:var(--panel)}
-.cubebox .viewbtns button{padding:3px 9px;font-size:12px;border:0;border-radius:0;background:transparent}
-.cubebox .viewbtns button+button{border-left:1px solid var(--line)}
+/* The hold row (js/live.js): small color tiles, Top then Front, and Net. */
+.cubebox .viewbtns{position:absolute;top:8px;right:8px;display:flex;align-items:center;gap:4px;padding:3px 4px 3px 7px;border:1px solid var(--line);border-radius:var(--rb);background:var(--panel)}
+.cubebox .viewbtns .lbl{font-size:11px;color:var(--muted);cursor:help}
+.cubebox .viewbtns .grp{display:inline-flex;gap:3px;margin-right:4px}
+.cubebox .viewbtns .ht{width:16px;height:16px;padding:0;border-radius:3px;border:1px solid var(--sticker-line);background:var(--c);display:inline-flex;align-items:center;justify-content:center}
+.cubebox .viewbtns .ht:hover{border-color:var(--muted)}
+.cubebox .viewbtns .ht[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:1px}
+.cubebox .viewbtns.held .ht[aria-pressed="true"]{outline-style:solid;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+body.cba .cubebox .viewbtns .ht::after{content:attr(data-cb);font:700 9px/1 var(--mono,ui-monospace,monospace);color:#15161a}
+body.cba .cubebox .viewbtns .ht[data-cb="R"]::after,body.cba .cubebox .viewbtns .ht[data-cb="B"]::after{color:#fff}
+.cubebox .viewbtns #viewNet{padding:2px 8px;font-size:12px;border:1px solid var(--line);border-radius:4px;background:transparent}
+.cubebox .viewbtns #viewNet[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+/* The note under the moves while a smart cube is not at the cube shown (js/live.js). */
+.livenote{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 6px;padding:6px 9px;border-radius:var(--rb);background:color-mix(in srgb,var(--accent) 12%,transparent);font-size:13px}
+.livenote[hidden]{display:none}
 /* move tiles: a prime move is colored whole, so it reads at a glance */
 .scramble{display:flex;flex-wrap:wrap;gap:4px 5px;font-family:var(--mono);font-size:18px;line-height:1.3}
 .m{min-width:28px;text-align:center}
@@ -273,6 +285,13 @@ details.fold>summary:hover h3{color:var(--text)}
   .spoil:hover .sp-btn{color:var(--text)}
 }
 .sp-m.on,.refall .sp-m{background:none;box-shadow:none;color:inherit;user-select:auto}
+/* A move in text with the color of the face it turns (spoilAlg with a base): the bar of the
+   player's tiles, under the letter. A covered move shows no color: the color tells the face. */
+.mfc{position:relative}
+.mfc::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:3px;border-radius:2px;background:var(--face);box-shadow:0 0 0 1px var(--edge,transparent);pointer-events:none}
+.sp-m.mfc:not(.on)::after{display:none}.refall .sp-m.mfc::after{display:block}
+.mfc.c0{--face:var(--sticker-W);--edge:var(--sticker-W-edge)}.mfc.c1{--face:var(--sticker-R)}.mfc.c2{--face:var(--sticker-G)}
+.mfc.c3{--face:var(--sticker-Y)}.mfc.c4{--face:var(--sticker-O)}.mfc.c5{--face:var(--sticker-B)}
 .spoil.open .sp-btn,.refall .sp-btn{display:none}
 .refall .spoil{cursor:inherit}
 .refall-box{display:inline-flex;align-items:center;gap:6px;font-weight:500;cursor:pointer;margin-top:4px}
@@ -972,3 +991,53 @@ body.onboard .foot{padding-bottom:56px}
 .migrate-note{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 10px);z-index:60;display:flex;align-items:center;gap:12px;padding:8px 8px 8px 16px;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;background:var(--primary);color:var(--primary-ink);border-radius:var(--r);box-shadow:var(--shadow);font-size:14px;line-height:1.4}
 .migrate-note button{font:inherit;font-weight:500;padding:4px 12px;border-radius:999px;border:0;background:var(--primary-ink);color:var(--primary);cursor:pointer;flex:none}
 .onboard-bar button{font:inherit;font-weight:500;padding:4px 12px;border-radius:999px;border:0;background:var(--accent-ink);color:var(--accent);cursor:pointer}
+/* A button that bumps with the pieces it lights (Light the white edges): up and glowing, then back. */
+#crossLessonLight{transition:transform .2s ease-in-out,box-shadow .2s ease-in-out}
+#crossLessonLight.bumping{transform:translateY(-3px) scale(1.06);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 26%,transparent),0 0 18px 3px color-mix(in srgb,var(--accent) 60%,transparent)}
+#cube{--lift-glow:var(--accent)}
+/* The Virtual cube chip on the player cube, over Hidden faces, and its Keys window (js/vcube.js). */
+.cubebox .vcubebtn{bottom:38px}
+@media (max-width:760px){.cubebox .vcubebtn{right:4px;bottom:30px}}
+/* Save image is an icon on the player cube, so the hold row fits beside it; the title says it. */
+.cubebox .savebtn{font-size:0;gap:0;padding:5px 6px}
+.cubebox .savebtn svg{width:14px;height:14px}
+.vcubewin{position:fixed;z-index:60;width:212px;padding:8px 10px 10px;border:1px solid var(--line);border-radius:var(--rb);background:var(--panel);box-shadow:0 10px 30px rgba(0,0,0,.28);font-size:13px}
+.vcubewin[hidden]{display:none}
+.vcubewin .vk-head{display:flex;align-items:center;gap:6px;margin:-2px 0 6px;cursor:move;user-select:none;touch-action:none}
+.vcubewin .vk-head .grow{flex:1}
+.vcubewin .vk-close{padding:0 7px;font-size:16px;line-height:1.3}
+.vcubewin .vk-lay{display:flex;margin-bottom:8px}
+.vcubewin .vk-lay button{flex:1;font-size:11px;padding:3px 4px;white-space:nowrap}
+.vcubewin .vk-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:8px}
+.vcubewin .vk-face{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 0 4px;font-family:var(--mono,ui-monospace,monospace);transition:transform .12s,box-shadow .12s}
+.vcubewin .vk-face b{font-size:16px;line-height:1.1}
+.vcubewin .vk-face .vk-key{font-size:10px;color:var(--muted)}
+.vcubewin .vk-face.on{transform:translateY(-2px) scale(1.06);box-shadow:0 0 0 2px var(--accent),0 0 12px 2px color-mix(in srgb,var(--accent) 50%,transparent)}
+.vcubewin .vk-prime{width:100%}
+.vcubewin .vk-prime[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.vcubewin .vk-note{margin:6px 0 0;font-size:11.5px;line-height:1.35}
+/* What to look for (js/crosslook.js): one row per tip; an open row is a card with a small cube. */
+.look-list{display:flex;flex-direction:column;gap:6px}
+.look{border:1px solid var(--line);border-radius:var(--rb);background:var(--panel)}
+.look.open{border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.look-row{display:flex;align-items:baseline;gap:10px;width:100%;padding:8px 12px;border:0;background:transparent;text-align:left;border-radius:var(--rb)}
+.look-row b{white-space:nowrap}
+.look-row .muted{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.look-chev{color:var(--muted)}
+.look-card{padding:0 12px 12px}
+.look-card>p{margin:0 0 8px}
+.look-plans{margin-bottom:8px}
+.look-body{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.look-cube{width:210px;height:194px;flex:none;cursor:grab;touch-action:none}
+.look-cube svg{width:100%;height:100%}
+.look-cube{--lift-glow:var(--accent)}
+.look-side{flex:1;min-width:220px}
+.look-part,.look-join{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-bottom:8px}
+.look-part .st-lbl,.look-join .st-lbl{min-width:120px}
+.look-join{padding-top:6px;border-top:1px dashed var(--line)}
+.look-join .muted{flex-basis:100%;font-size:13px}
+.scramble .m.cx{text-decoration:line-through;text-decoration-thickness:2px;opacity:.55}
+.look-ctl{gap:6px;margin:4px 0 6px}
+.look-say{margin:0 0 4px;font-weight:500}
+.look-why{margin:0;font-size:13.5px}
+@media (max-width:760px){.look-row{flex-wrap:wrap}.look-row .muted{flex-basis:100%;white-space:normal}.look-cube{width:170px;height:157px}}

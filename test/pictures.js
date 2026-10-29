@@ -68,7 +68,7 @@ w.addEventListener('load',async()=>{try{
   assert.strictEqual(polys()-before,27,'27 more stickers on the player');
   assert.strictEqual(w.localStorage.getItem('cw:hidden'),'true','saved in cw:hidden');
   $('#viewNet').click();assert.ok($('#hiddenBtn').classList.contains('hidden'),'no chip on the net');
-  $('#viewTop').click();$('#hiddenBtn').click();assert.strictEqual(polys(),before,'off again');
+  $('#viewNet').click();$('#hiddenBtn').click();assert.strictEqual(polys(),before,'off again');
 
   // The PLL details: Top and Side. The side view has the top layer bright, the rest dim.
   ev("openCaseModal(modalForPLL(PLL_FULL.find(p=>p.name==='T')))");
