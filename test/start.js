@@ -48,7 +48,23 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
     assert.ok(!$('#start [data-src]')&&!$('#start .st-keys'),'no cube question on '+s);
     assert.ok(w.eval('SCREEN').active!==w.eval('START').sc,'the keys do not turn the picture on '+s);}
   key(w,d,'KeyS');assert.ok(w.eval('START').sc.cube.isSolved(),'a key does nothing in the basics');
-  w.startGo('t1-what');$('#start [data-demo]').click();assert.ok(!w.eval('START').sc.cube.isSolved(),'Show me a turn turns a face');
+  // Show me a turn: a random turn per click that stays; the log; Reset cube to Solved turns them back.
+  w.startGo('t1-what');w.eval('ST_DEMO_T.turn=20;ST_DEMO_T.back=15');
+  assert.ok(/^Show me a turn$/.test($('#stDemoLbl').textContent)&&$('#start [data-demoreset]').hidden&&$('#stDemoLog').hidden,'one button at first');
+  assert.ok(/Drag to look around the cube/.test($('#start .st-hints').textContent)&&$$('#start .st-hints > span').length===2,'the two hints');
+  assert.ok(/a virtual cube in the browser\./.test($('#start').textContent),'the virtual cube in the browser');
+  for(let i=0;i<6;i++)$('#start [data-demo]').click();
+  const demo=w.eval('START.demo');assert.strictEqual(demo.length,6,'six clicks, six turns');
+  const axis=f=>'UDRLFB'.indexOf(f)>>1;assert.ok(demo.every((m,i)=>!i||axis(m[0])!==axis(demo[i-1][0])),'never the same axis twice in a row: '+demo.join(' '));
+  assert.ok(!w.eval('START').sc.cube.isSolved(),'the turns stay');
+  assert.strictEqual($('#stDemoLbl').textContent,'Show me another turn');assert.strictEqual($$('#stDemoChips .st-tchip').length,6,'the log');
+  assert.ok(!letters.test($('#start').textContent),'no move letter in the log');
+  $('#start [data-demoreset]').click();assert.ok($('#start [data-demo]').disabled,'no turn while it turns back');
+  await new Promise(r=>setTimeout(r,250));
+  assert.ok(w.eval('START').sc.cube.isSolved()&&!w.eval('START.demo').length,'Reset cube to Solved turns them back');
+  assert.ok($('#stDemoLog').hidden&&$('#start [data-demoreset]').hidden&&$('#stDemoLbl').textContent==='Show me a turn','and the page is as it was');
+  $('#start [data-demo]').click();$('#start [data-demo]').click();$('#stCube').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));
+  await new Promise(r=>setTimeout(r,150));assert.ok(w.eval('START').sc.cube.isSolved(),'a double-click turns them back too');
   // The hold: a line lifts its layer with a glow and lights its words; green, then red.
   w.startGo('t1-hold');assert.ok(!$('#start input[type=checkbox]'),'no checkboxes on the hold page');
   const hl=f=>$(`#start .st-hl[data-hl="${f}"]`).classList.contains('on');

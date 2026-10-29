@@ -26,7 +26,7 @@ frames, read 2026-10-27). This branch builds it into the site as a first pass. E
 | 0 · Welcome: your cube level | `js/start.js` (`START_SCREENS.level`) | Opens on a first visit (no `cw:method`, no `cw:level`) in place of the method menu. From 1.56.1 the heading is "How do you feel about solving cubes?", then "Pick one. It should do you right. It's easy to jump around later." Also: Paste my data, and Skip: look around first. |
 | 0 · Where each level goes | `LEVELS` in `js/start.js` | The routing table is the code, not a page. Four levels from 1.54.0 (see Rework 6); the ids stay 1, 3, 4, 5. |
 | 1.1 Do you have a cube? | removed in 1.49.0 | See "Rework 1" below: the basics come first, the cube question after them. |
-| new · Meet the cube | `t1-what` | Basics 1 of 4. What the cube is: six faces, nine stickers each, solved is one color per face, a turn mixes it. Show me a turn turns one face on the picture and back, with no letter. |
+| new · Meet the cube | `t1-what` | Basics 1 of 4. What the cube is: six faces, nine stickers each, solved is one color per face, a turn mixes it. Show me a turn turns one face at random (either way, or a half turn; never the axis of the turn before), and the turns stay: from the second click it is Show me another turn, and the cube mixes up. The log shows each turn as its face's color and an arrow, with no letter, and the last one in words. Reset cube to Solved, or a double-click on the picture, turns them back, one each 200 ms (`stDemoTurn`, `stDemoReset`, `ST_DEMO_T`; 1.57.0). Under the picture, two hints: Drag to look around the cube, Double-click to put it back. |
 | 1.3–1.5 Basics: hold, pieces, six moves | `t1-hold`, `t1-pieces`, `t1-moves` | Basics 2, 3 and 4 of 4. One picture for everyone: a drag looks around it, no key turns it, no cube switch. On the pieces page a kind lifts its pieces out and back (see Rework 2), and Find it is a click on the picture. The hold page's two lines are buttons (see Rework 3); the hold and moves pages light stickers with the picture's `fade`. The moves page is the first page with a move letter. Its twelve buttons turn the move and back (see Rework 4). |
 | new · The six moves, short | removed in 1.54.0 | Level 2 is part of level 1 now. |
 | 1.6 Basics learned | `t1-done` | Reaching it marks `beg-0` finished. Next: pick your cube goes to 2.1. |
@@ -86,7 +86,7 @@ label, and the `START.keysNext` routing.
 **Open, settled in 1.50.0:**
 
 - Level 2 gets a short six-moves page before the cube question: yes (`t2-moves`).
-- Show me a turn on page 1: one face and back, as it is.
+- Show me a turn on page 1: one face and back, as it is. (1.57.0: random turns that stay, a log, and Reset cube to Solved.)
 - On a phone the picture goes above the text: yes, on every page with a picture beside the text.
 
 ## Rework 2: pieces you can see and find (1.50.0)

@@ -53,7 +53,7 @@ const ST_MOVE_WORDS={
   R:['Right','Turn the right face up, away from you.','Turn the right face down, toward you.'],
   L:['Left','Turn the left face down, toward you.','Turn the left face up, away from you.']};
 // A turn in words, with no letter: "Right face, clockwise". The keys page shows it.
-function stMoveSay(m){const w=ST_MOVE_WORDS[m[0]];if(!w)return m;return `${w[0]} face, ${/['′]/.test(m)?'counterclockwise':'clockwise'}`;}
+function stMoveSay(m){const w=ST_MOVE_WORDS[m[0]];if(!w)return m;return `${w[0]} face, ${/['′]/.test(m)?'counterclockwise':/2/.test(m)?'a half turn':'clockwise'}`;}
 const ST_HIDDEN={D:'The bottom face is hidden. You see its edge.',B:'The back face is hidden. You see its edge.',L:'The left face is hidden. You see its edge.'};
 const START={on:false,screen:'level',level:null,src:'mine',kind:null,found:false,
   check:null,sets:null,caseSet:null,quiz:null,five:null,sc:null,last:'—',way:null};
@@ -108,11 +108,39 @@ function stBasicsBar(n){return stBar('Basics',`<span class="st-dots" aria-label=
 function stCubeSide(){return `<div class="st-pic"><div class="st-cube" id="stCube"></div><span class="muted st-small" id="stCap"></span></div>`;}
 START_SCREENS['t1-what']=()=>`${stBasicsBar(1)}
   <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 1 of 4</span><h1>Meet the cube</h1><p>The cube is a puzzle. It has six faces. Each face has nine stickers.</p>
-    <ul class="st-rules"><li><b>Solved</b>: each face is one color. The six colors are white, yellow, green, blue, red and orange.</li><li><b>A turn</b>: each face can turn. A turn moves stickers onto the faces next to it.</li><li><b>The puzzle</b>: many turns mix up the colors. You bring each face back to one color.</li></ul>
-    <div class="st-box st-say"><span>See one face turn, then turn back.</span><button class="small" data-demo="1" title="Turn one face on the picture, then turn it back">Show me a turn</button></div>
-    <p class="muted">No cube yet? That's fine! The picture is your cube on these pages. After the basics, you pick a regular cube, a smart cube or a virtual cube.</p>
+    <ul class="st-rules"><li><b>Solved</b>: each face is all one color. The six colors are white, yellow, green, blue, red and orange.</li><li><b>A turn</b>: any face can turn. A turn moves stickers onto the faces next to it.</li><li><b>The puzzle</b>: many turns mix up the colors (a "scramble"). The goal is to bring all the colors together until the cube is <b>Solved</b>.</li></ul>
+    <div class="st-demo"><div class="st-demorow"><button class="st-showturn" data-demo="1" title="Turn one face of the picture. Each click turns one more"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4.5h-4.5"/></svg><span id="stDemoLbl">Show me a turn</span></button>
+      <button class="st-link" data-demoreset="1" hidden title="Turn the moves back, fast, to a solved cube">Reset cube to Solved</button></div>
+      <div class="st-demolog" id="stDemoLog" hidden aria-live="polite"><span class="st-small" id="stDemoLast"></span><span class="st-tchips" id="stDemoChips"></span></div></div>
+    <p class="muted">No cube yet? That's fine! The picture is your cube on these pages. After the basics, you pick a regular cube, a smart cube or a virtual cube ${typeof smartInApp==='function'&&smartInApp()?'in the app':'in the browser'}.</p>
     <div class="st-foot">${stBack('level','← Change my level')}<span class="spacer"></span><button class="primary" data-go="t1-hold" title="Go on to how to hold it">Next: how to hold it →</button></div></div>
-  ${stCubeSide()}</div>`;
+  <div class="st-pic"><div class="st-cube" id="stCube"></div><div class="st-hints"><span><svg viewBox="0 0 24 16" aria-hidden="true"><path d="M3 12a9 9 0 0 1 18 0"/><path d="M3 12l-1.6-3.2M3 12l3.3-1.3"/><path d="M21 12l1.6-3.2M21 12l-3.3-1.3"/></svg>Drag to look around the cube</span><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v9.5l-2-2a1.6 1.6 0 0 0-2.3 2.3L9.5 18A6 6 0 0 0 14 20h0a5 5 0 0 0 5-5v-3.5a1.5 1.5 0 0 0-3 0V11M9 9.5V3a1.5 1.5 0 0 1 3 0v7M12 10V8.5a1.5 1.5 0 0 1 3 0V11"/></svg>Double-click to put it back</span></div></div></div>`;
+// Show me a turn: each click turns one face of the picture at random, a quarter turn either way or
+// a half turn, never on the axis of the turn before (so no two turns cancel). The turns stay: the cube mixes up as the clicks
+// go on, and the log shows each one as its face's color and an arrow (no move letter in the
+// basics). Reset cube to Solved, or a double-click, turns them back fast, the last one first.
+const ST_DEMO_T={turn:520,back:200};
+const ST_DEMO_COLOR={U:'W',R:'R',F:'G',D:'Y',L:'O',B:'B'};
+const ST_AXIS={U:0,D:0,R:1,L:1,F:2,B:2};
+function stDemoPick(last){const faces='URFDLB'.split('').filter(f=>!last||ST_AXIS[f]!==ST_AXIS[last[0]]);
+  return faces[Math.floor(Math.random()*faces.length)]+['',"'",'2'][Math.floor(Math.random()*3)];}
+function stDemoChip(m,cls){return `<span class="st-tchip${cls?' '+cls:''}" title="${esc(stMoveSay(m))}"><i style="--sec:var(--sticker-${ST_DEMO_COLOR[m[0]]})"></i>${m.endsWith("'")?'↺':m.endsWith('2')?'↻↻':'↻'}</span>`;}
+function stDemoDraw(){const d=START.demo||[],log=$('#stDemoLog'),lbl=$('#stDemoLbl'),rs=$('#start [data-demoreset]'),btn=$('#start [data-demo]');
+  if(lbl)lbl.textContent=d.length?'Show me another turn':'Show me a turn';
+  if(rs){rs.hidden=!d.length;rs.disabled=!!START.demoBack;}if(btn)btn.disabled=!!START.demoBack;
+  if(!log)return;log.hidden=!d.length;
+  const last=$('#stDemoLast');if(last)last.innerHTML=d.length?`<b>${d.length} ${d.length===1?'turn':'turns'}.</b> Last: ${esc(stMoveSay(d[d.length-1]))}.`:'';
+  const ch=$('#stDemoChips');if(ch)ch.innerHTML=d.map((m,i)=>stDemoChip(m,i===d.length-1?'new':'')).join('');}
+function stDemoTurn(){const sc=START.sc;if(!sc||START.demoBack)return;const d=START.demo=START.demo||[];
+  const m=stDemoPick(d[d.length-1]);d.push(m);sc.turn(m,{dur:m.endsWith('2')?ST_DEMO_T.turn*1.35:ST_DEMO_T.turn});
+  const b=$('#start [data-demo]');if(b){b.classList.remove('spin');void b.offsetWidth;b.classList.add('spin');}
+  stDemoDraw();}
+function stDemoReset(){const sc=START.sc,d=START.demo||[];if(!sc||START.demoBack||!d.length)return;
+  const run=START.demoBack={};const live=()=>START.demoBack===run&&START.sc===sc;stDemoDraw();
+  const next=()=>{if(!live())return;const m=d.pop();
+    if(!m){START.demoBack=null;stDemoDraw();return;}
+    sc.turn(invertAlg([m]),{dur:ST_DEMO_T.back*0.85});stDemoDraw();setTimeout(next,ST_DEMO_T.back);};
+  next();}
 // The virtual cube's keys: after the cube question, for the virtual cube. The last turn is in words
 // (stMoveSay).
 // The six keys of a layout on a three-by-three grid, as they sit on the keys: up and back on the
@@ -401,7 +429,7 @@ function startDraw(){const el=startEl();const f=START_SCREENS[START.screen]||STA
   el.dataset.screen=START.screen;el.innerHTML=f();startWire(el);}
 function startCubeMount(){const box=$('#stCube');if(!box)return;const scr0=START.screen;
   let fade=null,cap='';
-  if(scr0==='t1-what')cap='Drag to look around the cube. Double-click to put it back.';
+  if(scr0==='t1-what'){START.demo=[];START.demoBack=null;}
   if(scr0==='t1-hold'){fade=stFaces([4]);cap='Drag to look at the other faces. Double-click and it comes back to white on top, green toward you.';}
   if(scr0==='t1-pieces')cap=ST_KIND_SAY[START.found?'find':START.kind||'none'];
   if(scr0==='t1-moves')cap=ST_MOVES_CAP;
@@ -412,6 +440,7 @@ function startCubeMount(){const box=$('#stCube');if(!box)return;const scr0=START
   START.sc=screenCube(box,{cube,fade,keys,label:'The virtual cube',onPick:scr0==='t1-pieces'?stPick:null,onMove:m=>{START.last=stMoveSay(m);const l=$('#stLast');if(l)l.textContent=START.last;}});
   if(!keys&&SCREEN.active===START.sc)SCREEN.active=null;
   const c=$('#stCap');if(c)c.textContent=cap;
+  if(scr0==='t1-what')box.addEventListener('dblclick',stDemoReset);
   if(scr0==='t1-pieces'&&START.found)START.sc.bump(new Set([ST_FIND]),{stay:true});
   // On a touch screen there are no keys: six buttons under the cube turn it.
   if(keys&&typeof matchMedia==='function'&&matchMedia('(hover: none)').matches){const pad=document.createElement('div');pad.className='st-pad';
@@ -434,7 +463,7 @@ function startWire(el){
   on('[data-hint]',()=>{const c=$('#stCap');if(c)c.textContent=ST_KIND_SAY.find;if(START.sc)START.sc.bump(new Set([ST_FIND]),{stay:START.found});});
   on('[data-hold]',b=>stHoldShow(b.dataset.hold));
   on('[data-mv]',b=>stMoveShow(b.dataset.mv));
-  on('[data-demo]',()=>{const sc=START.sc;if(!sc)return;sc.turn('R');setTimeout(()=>{if(START.sc===sc)sc.turn("R'");},900);});
+  on('[data-demo]',stDemoTurn);on('[data-demoreset]',stDemoReset);
   on('[data-finish]',b=>startEnd(b.dataset.finish));
   // The cube question leads to the first solve: the keys page, the connect, or how the app learns the cube.
   on('[data-t2go]',()=>{if(START.src==='screen')startGo('t1-keys');else if(START.src==='smart')startFinish('beginner','bsolve',()=>smartConnectNow());else startGo('t1-ready');});
