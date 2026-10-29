@@ -713,47 +713,18 @@ button.big{padding:12px 20px;font-size:17px;min-height:48px;font-family:var(--sa
   #prSteps button{font-size:12px;padding:5px 7px}
 }
 
-/* ---------- beginner: the home (js/beghome.js: Up next, Your cube, Mix it up with me) and the player dress ---------- */
-/* body[data-begview] is ask, mix or player. The home shows on the Learn home and during a mix-up; the
-   player and the seed bar show only when moves are loaded, the seed bar only in the letters view. */
-.beghome{display:flex;flex-direction:column;gap:var(--gap)}
-body:not([data-kind="beg"]) #begHome,body[data-kind="beg"][data-begview="player"] #begHome,
-body[data-kind="beg"]:not([data-begview="mix"]):not([data-tab="learn"]) #begHome,
-body[data-kind="beg"]:not([data-begview="mix"])[data-lesson] #begHome{display:none}
-body[data-begview="mix"] #begNext,body[data-begview="mix"] #begAsk,body:not([data-begview="mix"]) #begMix{display:none}
+/* ---------- beginner: Mix it up with me (js/beghome.js, on Solve my cube) and the player dress ---------- */
+/* body[data-begview] is home, mix or player. The player and the seed bar show only when moves are
+   loaded, the seed bar only in the letters view. The Learn home is css/start.css (.lh). */
 body[data-kind="beg"]:not([data-begview="player"]) .player,body[data-kind="beg"]:not([data-begletters]) .seedbar,
 body[data-kind="beg"] #drillNote,body:not([data-kind="beg"]) #begBar{display:none}
 .begbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14px;padding:8px 14px}
 .begbar>span{flex:1;min-width:200px}
 .beg-kicker{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}
 .beg-small{font-size:13px}
-.beg-next{display:flex;flex-wrap:wrap;align-items:center;gap:16px 28px;padding:20px 24px;border-color:color-mix(in srgb,var(--accent) 70%,var(--line));
-  background:linear-gradient(115deg,color-mix(in srgb,var(--accent) 18%,var(--panel)),var(--panel) 62%);box-shadow:inset 6px 0 0 var(--accent),0 10px 30px color-mix(in srgb,var(--accent) 18%,transparent)}
-.beg-next .beg-kicker{background:var(--accent);color:var(--accent-ink);padding:2px 9px;border-radius:999px;font-weight:600}
-.beg-next-body{flex:999 1 420px;min-width:0;display:flex;flex-direction:column;gap:8px}
-.beg-next-body h2{font-size:30px;letter-spacing:-.025em}
-.beg-next-body p{font-size:17px}
-.beg-next-body p{margin:0}
-.beg-next .psq i{width:14px;height:14px;border-radius:3px}
 .psq i.cur{outline:2px solid var(--accent);outline-offset:1px}
-.beg-next-count{font-size:13px}
-.beg-ask{display:flex;flex-wrap:wrap;gap:18px 28px;align-items:stretch;padding:18px 22px}
-.beg-hold{flex:0 0 240px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
-.beg-hold p{margin:0;font-size:14px}
 .beg-pic{width:200px}
 .beg-pic svg{display:block;width:100%;height:auto}
-.beg-q{flex:999 1 480px;min-width:0;display:flex;flex-direction:column;gap:14px}
-.beg-q h2{margin-bottom:4px}
-.beg-q>div>p{margin:0}
-.beg-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.beg-card{display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:12px;border:2px solid var(--line);background:var(--panel2)}
-.beg-card .row{gap:12px}
-.beg-card .row b{font-size:18px}
-.beg-card p{margin:0;font-size:14px}
-.beg-card button{text-align:left;padding:11px 16px;font-size:15px}
-.beg-card button.primary{font-size:16px;padding:12px 16px}
-.beg-face{width:45px}
-.beg-known{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 14px;border-radius:12px;border:1px solid var(--good);background:color-mix(in srgb,var(--good) 12%,var(--panel))}
 .beg-mix{display:flex;flex-wrap:wrap;gap:20px 36px;padding:20px 24px}
 .beg-mix-pic{flex:0 0 300px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
 .beg-mix-pic svg{display:block;width:280px;max-width:100%;height:auto}
@@ -770,7 +741,7 @@ body[data-kind="beg"] #drillNote,body:not([data-kind="beg"]) #begBar{display:non
 .beg-key-line{display:flex;flex-wrap:wrap;gap:6px 24px;padding:12px 16px;border-radius:12px;background:var(--panel2);font-size:14px}
 .beg-mix-done h2{font-size:26px}
 /* the player in beginner dress: a caption under every tile, a Key panel, plain words */
-.scramble .mt{display:inline-flex;flex-direction:column;align-items:center;gap:1px}
+.scramble .mt{display:inline-flex;flex-direction:column;align-items:center;gap:12px}
 .scramble .mt small{font-family:var(--sans);font-size:10.5px;color:var(--muted);line-height:1.1;white-space:nowrap}
 .scramble .mt .m{min-width:36px}
 body[data-kind="beg"] .scramble{gap:6px 8px}
@@ -791,16 +762,7 @@ body[data-kind="beg"][data-key] #progressPanel,body[data-kind="beg"][data-key] .
   body[data-kind="beg"] .top .mark{width:22px}
   body[data-kind="beg"] #mtitle{display:none!important}
   body[data-kind="beg"] .top .spacer{display:block}
-  .beg-next{padding:14px 16px;gap:10px}
-  .beg-next-body h2{font-size:20px}
-  .beg-next .psq{display:none}
-  .beg-next-act{width:100%}.beg-next-act .primary{flex:1}
-  .beg-ask{padding:14px 16px;gap:12px}
-  .beg-hold{flex-basis:100%;flex-direction:row;text-align:left;gap:12px}
   .beg-pic{width:86px;flex:none}
-  .beg-hold p{font-size:13px}
-  .beg-cards{grid-template-columns:1fr}
-  .beg-card{padding:12px}
   .beg-mix{padding:14px 16px;gap:12px}
   .beg-mix-pic{flex-basis:100%}
   .beg-mix-pic svg{width:220px}

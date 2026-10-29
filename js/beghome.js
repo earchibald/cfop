@@ -1,14 +1,16 @@
-// ===== Beginner mode: the home (Up next, Your cube, Mix it up with me) and the player dress =====
-// Loads after beginner-ui.js and before learn.js, guide.js and practice.js. Fills #begHome, #begBar
-// and wires #keyPanel. Owns the beginner view, body[data-begview]:
-//   ask     the question "What does your cube look like right now?" No moves are loaded, no player.
-//   mix     the walkthrough "Mix it up with me": one turn at a time, in words, with a picture.
+// ===== Beginner mode: Mix it up with me and the player dress =====
+// Loads after beginner-ui.js and before learn.js, guide.js and practice.js. Fills #begBar and
+// #begMix (a box that Solve my cube draws while a mix-up runs) and wires #keyPanel. The home itself
+// is the Learn section's own page (lnHomeHTML in js/learn.js, from 1.54.0). Owns the beginner view,
+// body[data-begview]:
+//   home    no moves are loaded, no player: the Learn home, or Solve my cube's entry.
+//   mix     the walkthrough "Mix it up with me", on Solve my cube: one turn at a time, in words.
 //   player  moves are loaded (a lesson's Show, the guided solve, Practice, or the letters view).
 // A beginner holds the cube white up, green in front. The scramble is never shown with a hidden z2:
-// step 1 of the guided solve turns the cube over as its own first instruction (js/guide.js).
+// the guided solve stops on a turn-over screen before its first move (js/guide.js).
 // Globals the other modules use: showBegScr() (app.js calls it from showScr in beginner mode),
-// showBegLetters(), setBegView(v), begYourCubeHTML() (guide.js reuses the cards), moveCaption(m)
-// (app.js puts it under every tile in beginner mode), begState and begMix (tests read them).
+// showBegLetters(), setBegView(v), begMixStart(), renderBegMix(), moveCaption(m) (app.js puts it
+// under every tile in beginner mode), begState and begMix (tests read them).
 // All markup is built from fixed strings and the method data; every dynamic string goes through esc(),
 // as in every other beginner module (no build step, no templating library, a static site).
 
@@ -49,7 +51,7 @@ function setBegView(v){
 function showBegScr(){
   if(begState.letters){showBegLetters();return;}
   setSequence(scr.moves,'your cube · seed '+scr.seed+' · white on top, green in front');
-  setBegView(begMix.on?'mix':'ask');
+  setBegView(begMix.on?'mix':'home');
 }
 // "Show the scramble as letters": the player and the seed bar, for people who know the letters.
 function showBegLetters(){
@@ -74,51 +76,16 @@ function begSolveNow(){
   if(typeof startGuide==='function')startGuide();
 }
 
-// ---------- Up next ----------
-function begNextText(s){return s.n===0?begPack().basics:s.goal;}
-function renderBegNext(){
-  const el=$('#begNext');if(!el)return;
-  const pk=begPack(),N=pk.count;const nx=begProgress.next();const {finished}=begProgress.counts();
-  const any=pk.steps.some(s=>begProgress.status(s.n));
-  const sq=Array.from({length:N},(_,i)=>{const n=i+1;return `<i class="${esc(begProgress.status(n))}${nx&&nx.n===n?' cur':''}"></i>`;}).join('');
-  const title=nx?`${nx.n===0?'Basics':'Step '+nx.n}: ${esc(nx.name)}`:`All ${pk.word} steps finished`;
-  const text=nx?esc(begNextText(nx)):'Solve your own cube below. '+esc(pk.next.text);
-  el.innerHTML=`<div class="beg-next-body"><div class="row beg-next-row"><span class="beg-kicker">Up next</span><span class="psq" aria-hidden="true">${sq}</span><span class="muted beg-next-count">${finished} of ${N} steps finished</span></div><h2 id="begNextTitle">${title}</h2><p id="begNextText">${text}</p></div>
-  <div class="row beg-next-act"><button class="primary big" id="begContinue" title="${nx?`Open the lesson: ${nx.n===0?'Basics':'Step '+nx.n}, ${esc(nx.name)}`:'Open Solve my cube'}">${nx?(any?'Continue':'Start'):'Solve my cube'} →</button>${nx?'<button id="begPick" title="Show the list of steps and pick one">Pick another step</button>':''}</div>`;
-  $('#begContinue').onclick=()=>{if(!nx){goTab('bsolve');return;}if(typeof openLesson==='function')openLesson(nx.n);};
-  const pickBtn=$('#begPick');if(pickBtn)pickBtn.onclick=()=>{goTab('learn');if(typeof lnShowList==='function')lnShowList();};
-}
-
-// ---------- Your cube ----------
-function begFaceThumb(p){return `<span class="face beg-face${p.length===4?' f2':p.length===16?' f4':''}" aria-hidden="true">${[...p].map(ch=>`<i class="${ch}"></i>`).join('')}</span>`;}
-function begHoldPic(){return `<svg viewBox="40 30 320 300" aria-hidden="true">${renderCube3D(puzzleCube().toFacelets(),{yaw:-32,pitch:28,scale:48})}</svg>`;}
-// The question and the two cards. guide.js shows the same cards on the Solve my cube tab.
-function begYourCubeHTML(){
-  const pk=begPack(),two=puzzleN()===2;const paintOk=typeof openPaint==='function';const scanOk=pk.scan&&typeof openScan==='function';
-  const known=begState.known&&scr.seed;
-  const mixed=scanOk?`<button class="primary" data-beg="scan" title="Show each face of your cube to the camera">Scan it with the camera</button><button data-beg="paint"${paintOk?'':' disabled'} title="Tap the colors of your cube onto a map">Paint the colors instead</button><span class="muted beg-small">No camera? Paint works on every device.</span>`
-    :`<button class="primary" data-beg="paint"${paintOk?'':' disabled'} title="Tap the colors of your cube onto a map">Paint the colors</button><span class="muted beg-small">Tap the ${6*puzzleN()*puzzleN()} tiles as you see them. It takes a moment.</span>`;
-  return `<div class="beg-hold"><div class="beg-pic">${begHoldPic()}</div><p><b>Hold it like this.</b> ${esc(pk.holdText)} The picture always shows the cube the way you hold it.</p></div>
-  <div class="beg-q">
-    <div><h2>What does your cube look like right now?</h2><p class="muted">Pick one. The app needs to see your cube before it can guide you.</p></div>
-    <div class="beg-cards">
-      <div class="beg-card"><div class="row">${begFaceThumb(two?'RWBG':puzzleN()===4?'RWBYGOGRWBYROGWB':'RWBYGOGRW')}<b>It is mixed up</b></div><p>Show it to the app. The app then tells you every turn, one part at a time.</p>${mixed}</div>
-      <div class="beg-card"><div class="row">${begFaceThumb(two?'WWWW':'W'.repeat(puzzleN()*puzzleN()))}<b>It is solved</b></div><p>Mix it up with me. I say each turn in plain words, one at a time. Then you solve it with the lessons.</p><button class="primary" data-beg="mix" title="The app says each turn of a mix-up in plain words, one at a time">Mix it up with me</button><button data-beg="screen" title="Mix up the cube on the screen only, then solve it with the guide">Practice on the screen only</button><span class="muted beg-small">Or mix it up any way you like, then scan it.</span></div>
-    </div>
-    ${known?`<div class="beg-known"><span><b>Your mixed-up cube is loaded:</b> <span class="mono">${esc(scr.seed)}</span>.</span><button class="primary" data-beg="solveNow" title="Open Solve my cube and start on this cube">Solve it, part by part →</button></div>`:''}
-    <div class="muted beg-small">Know the letters already? <button class="ln-link" data-beg="letters" title="Show the mix-up as move letters in the player">Show the scramble as letters</button>. The seed, length and history live there too.</div>
-  </div>`;
-}
-function renderBegAsk(){const el=$('#begAsk');if(el)el.innerHTML=begYourCubeHTML();}
-
 // ---------- Mix it up with me ----------
+// The mix-up runs on Solve my cube, in place of its cards (guide.js draws #begMix).
 function begMixStart(){
   begMix.own=true;newScramble();begMix.own=false;
   Object.assign(begMix,{on:true,i:0,moves:scr.moves.slice()});begState.known=false;
-  setBegView('mix');renderBegMix();window.scrollTo({top:0});
+  if(curTab!=='bsolve')goTab('bsolve');
+  setBegView('mix');if(typeof gdRender==='function')gdRender();else renderBegMix();try{window.scrollTo({top:0});}catch(e){}
 }
 // known: the mix-up ended, so the cube on the screen is the user's own.
-function begMixEnd(known){begMix.on=false;if(known)begState.known=true;setBegView('ask');renderBegAsk();}
+function begMixEnd(known){begMix.on=false;if(known)begState.known=true;setBegView('home');if(typeof gdRender==='function')gdRender();}
 function begMixCubeAt(i){return applyAlg(puzzleCube(),begMix.moves.slice(0,i));}
 // The camera turns to show a face the normal view hides. The cube itself stays as held.
 const BEG_MIX_VIEW={L:{yaw:32,pitch:28,cap:'Seen from the left.'},B:{yaw:-148,pitch:28,cap:'Seen from behind.'},D:{yaw:-32,pitch:-34,cap:'Seen from below.'}};
@@ -146,16 +113,16 @@ function renderBegMix(){
   const n=begMix.moves.length,i=begMix.i;
   if(i>=n){
     el.innerHTML=`<div class="beg-mix-pic"><svg id="begMixCube" viewBox="20 10 360 340" aria-hidden="true">${begMixPicSVG(begMixCubeAt(n),null)}</svg><span class="muted beg-small">Still white on top, green facing you.</span></div>
-    <div class="beg-mix-body beg-mix-done"><span class="beg-kicker">Turn ${n} of ${n} done</span><h2>Your cube is mixed up. Keep holding it white on top.</h2><p>The app saw every turn, so it knows your cube. Start the solve now, or learn the basics first. When a step needs you to hold the cube another way, that step says so before its first move.</p>
-    <div class="row beg-mix-act"><button class="primary big" data-beg="mixSolve" title="Open Solve my cube and start on this cube">Start solving, part by part →</button><button data-beg="mixLearn" title="Open the Basics lesson first">Learn first: Basics</button><button class="ghost" data-beg="mixBack" title="Go back to the last turn">← Back</button></div></div>`;
+    <div class="beg-mix-body beg-mix-done"><span class="st-lbl">Turn ${n} of ${n} done</span><h2>Your cube is mixed up</h2><p>The app saw every turn, so it knows your cube. Keep holding it white on top for now.</p>${puzzleN()===3?'<p><b>Next: yellow on top.</b> The solve starts with the cube turned over. The app stops and shows you the turn before the first move.</p>':''}
+    <div class="row beg-mix-act"><button class="primary big" data-beg="mixSolve" title="Start the guided solve on this cube">Start my solve →</button><button class="ghost" data-beg="mixBack" title="Go back to the last turn">← Back</button></div></div>`;
     return;
   }
   const m=begMix.moves[i];const v=begMixView(m);const f=m[0];
   el.innerHTML=`<div class="beg-mix-pic"><svg id="begMixCube" viewBox="20 10 360 340" aria-hidden="true">${begMixPicSVG(begMixCubeAt(i),m)}</svg><span class="muted beg-small">${v.cap?esc(v.cap)+' ':''}The face that turns is bright. The rest is dim. The arrow shows the way.</span></div>
   <div class="beg-mix-body">
-    <div class="row beg-mix-top"><span class="mono muted">Turn ${i+1} of ${n}</span><span class="beg-prog" aria-hidden="true"><i style="width:${Math.round(100*i/n)}%"></i></span><button class="ln-link" data-beg="letters" title="Show the whole mix-up as move letters in the player">Show all ${n} as letters</button><button class="ln-link" data-beg="mixStop" title="Stop the mix-up and go back to the question">Stop</button></div>
+    <div class="row beg-mix-top"><span class="st-lbl">Mix it up with me · turn ${i+1} of ${n}</span><span class="beg-prog" aria-hidden="true"><i style="width:${Math.round(100*i/n)}%"></i></span><button class="ln-link" data-beg="letters" title="Show the whole mix-up as move letters in the player">Show all ${n} as letters</button><button class="ln-link" data-beg="mixStop" title="Stop the mix-up and go back">Stop</button></div>
     <div class="beg-mix-turn"><span class="beg-tile${m.includes("'")?' mod':''}">${esc(m)}</span><div><h2 id="begMixTitle">${esc(begTurnTitle(m))}</h2><span class="beg-mix-sub">${esc(begTurnText(m))}</span></div></div>
-    <p class="muted">Hold the rest of the cube still. Only the one face moves. The picture shows the result when you press Next.</p>
+    <p class="muted">Hold the cube white on top, green toward you. Only the one face moves. The picture shows the result when you press Next.</p>
     <div class="row beg-mix-act"><button data-beg="mixBack"${i?'':' disabled'} title="Go back one turn">← Back</button><button class="primary big" data-beg="mixNext" title="Turn made: show the next turn">Next turn →</button><button class="ghost" data-beg="mixEnd" title="Skip the turns one by one and show the end of the mix-up">Skip to the end</button></div>
     <div class="beg-key-line"><span><b class="mono">${esc(f.toUpperCase())}</b> is the ${esc(BEG_FACE_WORD[f.toUpperCase()])} face. The six letters: U top, D bottom, F front, B back, R right, L left.</span>${puzzleN()===4?'<span>Two letters, like <b class="mono">Rr</b>, turn the face and the slice behind it as one.</span>':''}<span><b class="mono mod">${esc(f)}'</b> with a mark means counterclockwise.</span><span><b class="mono">${esc(f)}2</b> with a 2 means twice: a half turn.</span></div>
   </div>`;
@@ -192,7 +159,6 @@ function begAction(a){
   else if(a==='mixEnd')begMixGo(begMix.moves.length);
   else if(a==='mixStop')begMixEnd(false);
   else if(a==='mixSolve'){begMixEnd(true);if(typeof startGuide==='function')startGuide();}
-  else if(a==='mixLearn'){begMixEnd(true);if(typeof openLesson==='function')openLesson(0);}
 }
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-beg]');if(!b||b.disabled)return;begAction(b.dataset.beg);});
 
@@ -208,16 +174,12 @@ setKey(store.get('begKey',true));
 // ---------- events ----------
 document.addEventListener('cw:sequence',()=>{if(isBeg())setBegView('player');});
 document.addEventListener('cw:scramble',()=>{
-  if(begMix.on&&!begMix.own){begMix.on=false;if(document.body.dataset.begview==='mix')setBegView('ask');}
+  if(begMix.on&&!begMix.own){begMix.on=false;if(document.body.dataset.begview==='mix')setBegView('home');if(typeof gdRender==='function')gdRender();}
   // A cube from the scan or paint dialog is the user's own cube. A new seed is not.
   begState.known=!!document.querySelector('.modal-bg');
-  renderBegAsk();
 });
-document.addEventListener('cw:status',renderBegNext);
-document.addEventListener('cw:method',()=>{renderBegNext();renderBegAsk();stopAuto();renderBegBar();});
+document.addEventListener('cw:method',()=>{if(begMix.on){begMix.on=false;setBegView('home');}stopAuto();renderBegBar();});
 document.addEventListener('cw:tab',()=>{if(begState.letters){begState.letters=false;if(!seqState.drill)showForTab();}});
 
-// boot. paint.js loads later, so the cards render again once every script is in.
-renderBegNext();renderBegAsk();
-window.addEventListener('load',renderBegAsk);
+// boot
 if(isBeg())showForTab();

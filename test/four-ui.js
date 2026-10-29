@@ -27,12 +27,12 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.ok(w.scr.moves.length===40&&w.scr.moves.every(m=>/^(?:[UDLRFB]|Uu|Rr|Ff)['2]?$/.test(m)),'a 4×4 scramble: '+w.scr.moves.join(' '));
   assert.ok(w.scr.cube.isFour,'the scramble state is a 4×4');
   assert.strictEqual($('#progSq').children.length,10,'ten progress squares');
-  assert.strictEqual($$('#tab-learn .bstep').length,11,'Basics plus ten steps in Learn');assert.ok(/the ten steps/.test($('#tab-learn').textContent));
-  assert.ok($$('#begAsk .face.f4').length===2,'4×4 face thumbs');assert.ok($('#begAsk [data-beg="scan"]'),'the 4×4 home offers the camera');
-  click($('#begAsk [data-beg="letters"]'));w.seqGo(w.seqState.moves.length);assert.strictEqual(stickers(),48,'a 4×4 shows 48 stickers');
+  assert.strictEqual($$('#tab-learn .lh-step').length,11,'Basics plus ten steps in Learn');assert.ok(/0 of 11 learned/.test($('#tab-learn .lh-steps').textContent));
+  await sleep(5);w.goTab('bsolve');assert.ok($('#tab-bsolve [data-beg="scan"]'),'the 4×4 offers the camera');
+  w.showBegLetters();w.seqGo(w.seqState.moves.length);assert.strictEqual(stickers(),48,'a 4×4 shows 48 stickers');
   assert.ok($$('#scramble .mt small').some(el=>/2 layers|inside/.test(el.textContent)),'captions name the two-layer and inside turns');
   // the mix-up walkthrough names a wide turn
-  click($('#begAsk [data-beg="mix"]'));assert.strictEqual(d.body.dataset.begview,'mix');const titles=[];for(let i=0;i<12;i++){titles.push($('#begMixTitle').textContent);click($('#begMix [data-beg="mixNext"]'));}
+  w.goTab('bsolve');click($('#tab-bsolve [data-beg="mix"]'));assert.strictEqual(d.body.dataset.begview,'mix');const titles=[];for(let i=0;i<12;i++){titles.push($('#begMixTitle').textContent);click($('#begMix [data-beg="mixNext"]'));}
   assert.ok(titles.some(t=>/two layers|inside/.test(t)),'the walkthrough says "two layers" or "inside": '+titles.join(' / '));click($('#begMix [data-beg="mixStop"]'));
   // a lesson with the guide's own algorithm, and the basics with three kinds of piece
   w.openLesson(1);assert.ok(/Step 1 of 10/.test($('#tab-learn .ln-of').textContent));assert.ok(/Rr/.test($('#tab-learn .ln-algs').textContent));
@@ -42,7 +42,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   w.openLesson(7);assert.ok(/parity/i.test($('#tab-learn').textContent),'the yellow cross lesson teaches the parity');
   // the guided solve, part by part to the end
   w.startGuide();assert.strictEqual(ev('guideState').view,'guide');assert.strictEqual($$('#gdBar .stage').length,10);assert.ok(/Stage 1 of 10/.test($('#gdWhere').textContent));
-  const n=ev('guideState').parts.length;assert.ok(n>=30&&n<=80,'a plan of many parts: '+n);
+  const n=ev('guideState').parts.length,np=ev('guideState').parts.filter(x=>!x.won).length;assert.ok(np>=30&&np<=80,'a plan of many parts: '+np);
   for(let i=0;i<n;i++)click($('#gdDone'));
   assert.strictEqual(ev('guideState').view,'done');assert.ok(/Try Advanced/.test($('#gdCfop').textContent));
   assert.ok(w.fourSolved(w.applyAlg(w.scr.cube,ev('guideState').plan.moves).toFacelets()),'the plan solves the scramble');

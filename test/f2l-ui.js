@@ -39,7 +39,7 @@ w.addEventListener('load',async()=>{try{
   assert.ok($('#seqLabel').textContent.includes('seed '+seed),'the player keeps the seed');
   assert.deepStrictEqual(moves().slice(0,scr.length),scr,'the scramble comes first');
   assert.ok($$('#scramble .m').slice(scr.length).every(e=>e.classList.contains('rot')),'the solved part is dashed');
-  assert.ok(/the screen cube/.test($('#fgCube').textContent),'the cube line names the screen');
+  assert.ok(/the virtual cube/.test($('#fgCube').textContent),'the cube line names the screen');
   assert.ok(/cross on the bottom: made/.test($('#fgCross').textContent),'the cross is made');
   assert.strictEqual($$('#fgChips .fg-chip').length,4,'four chips');
   await settled();

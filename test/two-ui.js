@@ -34,12 +34,12 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const scr2=w.scr.moves.join(' ');
   assert.strictEqual($('#progSq').children.length,5,'five progress squares');
   assert.ok(/Basics/.test($('#progNext').textContent));
-  assert.strictEqual($$('#tab-learn .bstep').length,6,'Basics plus five steps in Learn');
-  assert.ok(/the five steps/.test($('#tab-learn').textContent));
-  assert.ok($('#begAsk .beg-cards'),'the home asks about the cube');assert.ok($('#begAsk [data-beg="scan"]'),'the camera scan reads a 2×2 too');assert.ok($('#begAsk [data-beg="paint"]'),'paint as well');
-  assert.ok($$('#begAsk .face.f2').length===2,'2×2 face thumbs');
+  assert.strictEqual($$('#tab-learn .lh-step').length,6,'Basics plus five steps in Learn');
+  assert.ok(/0 of 6 learned/.test($('#tab-learn .lh-steps').textContent));
+  await sleep(5);w.goTab('bsolve');assert.ok($('#tab-bsolve [data-beg="scan"]'),'the camera scan reads a 2×2 too');assert.ok($('#tab-bsolve [data-beg="paint"]'),'paint as well');
+  assert.ok(!$('#tab-bsolve .st-flipnote'),'no yellow-on-top note: the 2×2 guide starts white on top');
   // The letters view draws a 2×2 in the player.
-  click($('#begAsk [data-beg="letters"]'));assert.strictEqual(d.body.dataset.begview,'player');
+  w.showBegLetters();assert.strictEqual(d.body.dataset.begview,'player');
   w.seqGo(w.seqState.moves.length);assert.strictEqual(stickers(),12,'a 2×2 shows 12 stickers');
   // A lesson, its goal and a case drill.
   w.openLesson(1);assert.ok(/Step 1 of 5/.test($('#tab-learn .ln-of').textContent));assert.ok(/first two corners/i.test($('#tab-learn h2').textContent));
@@ -49,7 +49,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   // The guided solve on the 2×2 scramble, part by part to the end.
   w.startGuide();assert.strictEqual(d.body.dataset.tab,'bsolve');assert.strictEqual(ev('guideState').view,'guide');
   assert.strictEqual($$('#gdBar .stage').length,5,'five stages');assert.ok(/Stage \d of 5/.test($('#gdWhere').textContent));
-  const n=ev('guideState').parts.length;assert.ok(n>=4&&n<=14,'a plan of a few parts: '+n);
+  const n=ev('guideState').parts.length,np=ev('guideState').parts.filter(x=>!x.won).length;assert.ok(np>=4&&np<=14,'a plan of a few parts: '+np);
   for(let i=0;i<n;i++)click($('#gdDone'));
   assert.strictEqual(ev('guideState').view,'done');assert.ok(/You did it/.test($('#gdWin').textContent));assert.ok(/Try Speed/.test($('#gdCfop').textContent));
   assert.ok(w.twoSolved(w.applyAlg(w.scr.cube,ev('guideState').plan.moves)),'the plan solves the scramble');

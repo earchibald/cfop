@@ -28,7 +28,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   };
   // ----- the 2x2: the beginner home offers the scan, and the top bar button opens it -----
   assert.strictEqual(d.body.dataset.puzzle,'2x2');
-  assert.ok($('#begAsk [data-beg="scan"]'),'the 2x2 home offers the camera');
+  w.goTab('bsolve');assert.ok($('#tab-bsolve [data-beg="scan"]'),'the 2x2 Solve my cube offers the camera');
   assert.ok(!$('#camBtn').classList.contains('three-only'),'the Scan cube button shows for every puzzle');
   click($('#camBtn'));await sleep(50);
   assert.ok($('#scanBg'),'the dialog opens');assert.strictEqual(ev("scanN"),2);

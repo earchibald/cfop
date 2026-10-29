@@ -11,7 +11,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const moves=()=>$$('#scramble .m').map(e=>e.textContent);
 const drill=()=>!$('#drillNote').classList.contains('hidden');
 const click=el=>{assert.ok(el,'nothing to click');el.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));};
-const card=n=>$(`#tab-learn .bstep[data-n="${n}"]`);
+const card=n=>$(`#tab-learn .lh-step[data-n="${n}"]`);
 const cont=()=>$('#begContinue');
 const nextTitle=()=>$('#begNextTitle').textContent;
 const stepName=nx=>nx.n===0?'Basics':'Step '+nx.n;
@@ -21,13 +21,12 @@ w.addEventListener('load',async()=>{try{
   w.setMethod('beginner');
   assert.strictEqual(d.body.dataset.tab,'learn','the beginner home is Learn');
   assert.ok($('#tab-learn').classList.contains('on'),'the Learn tab is on');
-  assert.strictEqual($$('#tab-learn .bstep').length,9,'nine step cards');
-  assert.strictEqual(nextTitle(),'Basics: Get to know your cube','Up next names the basics');
-  assert.strictEqual(cont().textContent,'Start →','the first visit says Start');
-  assert.ok(card(0).classList.contains('cur'),'the basics card is up next');
-  assert.ok(/Corner in, left · Corner in, right/.test(card(3).textContent),'step 3 names its algorithms');
-  assert.ok(/Moving Left · Moving Right/.test(card(4).textContent),'step 4 names its moves');
-  assert.strictEqual(card(5).querySelector('.tag').textContent,'unlearned');
+  assert.strictEqual($$('#tab-learn .lh-step').length,9,'nine steps');
+  assert.strictEqual(nextTitle(),'Get to know your cube','Up next names the basics');
+  assert.strictEqual(cont().textContent,'Start the basics →','the first visit starts the basics');
+  assert.ok(card(0).classList.contains('cur'),'the basics are up next');
+  assert.ok(/White corners/.test(card(3).textContent)&&/Middle layer/.test(card(4).textContent),'the steps by short name');
+  assert.strictEqual(card(5).querySelector('.lh-st').textContent,'Not started');
   assert.ok(!d.body.dataset.lesson,'no lesson open');
 
   // A lesson: header, algorithms, cases.
@@ -68,10 +67,10 @@ w.addEventListener('load',async()=>{try{
   assert.strictEqual($('#tab-learn h2').textContent,'The white corners','the lesson stays open');
   click($('#tab-learn button[data-ln="list"]'));
   assert.ok(!d.body.dataset.lesson,'the list clears the lesson flag');
-  assert.strictEqual(card(3).querySelector('.tag').textContent,'finished','the card chip follows');
+  assert.strictEqual(card(3).querySelector('.lh-st').textContent,'Learned','the status follows');
   let nx=w.begProgress.next();assert.strictEqual(nx.n,0,'the basics are still next');
-  assert.strictEqual(cont().textContent,'Continue →','after a status change the button says Continue');
-  assert.ok(nextTitle().startsWith(stepName(nx)+':'),'Up next names the next step');
+  assert.strictEqual(nextTitle(),nx.name,'Up next names the next step');
+  assert.ok(new RegExp(stepName(nx)==='Basics'?'Up next · Basics':'Up next · '+stepName(nx)).test($('#tab-learn .lh-next').textContent));
 
   // Mark finished on the basics: the next step moves on.
   click(cont());assert.strictEqual($('#tab-learn h2').textContent,'Get to know your cube','Continue opens the basics');
@@ -114,7 +113,7 @@ w.addEventListener('load',async()=>{try{
   click($('#lnMark'));assert.strictEqual(w.begProgress.status(0),'finished','Mark finished sets the status');
   assert.strictEqual($('#tab-learn .stbtn').textContent,'finished','the lesson button follows');
   click($('#tab-learn button[data-ln="list"]'));nx=w.begProgress.next();
-  assert.strictEqual(nx.n,1);assert.strictEqual(nextTitle(),'Step 1: The daisy');assert.ok(card(1).classList.contains('cur'));
+  assert.strictEqual(nx.n,1);assert.strictEqual(nextTitle(),'The daisy');assert.ok(card(1).classList.contains('cur'));
 
   // The goal pictures come from a real solve: each step's goal holds.
   const g=w.lnGoals().map(c=>c.toFacelets());
@@ -183,9 +182,13 @@ w.addEventListener('load',async()=>{try{
   assert.deepStrictEqual(w.cubeAtSeq(9).toFacelets(),w.lnFrame(8).toFacelets(),'it ends on the solved cube');
 
   // Show me CFOP switches the method.
-  w.goTab('learn');assert.ok(!$('#tab-learn button[data-ln="list"]'),'the Learn rail button returns to the step list');click($('#tab-learn button[data-ln="next"]'));
+  w.goTab('learn');assert.ok(!$('#tab-learn button[data-ln="list"]'),'the Learn rail button returns to the step list');
+  assert.ok(!$('#tab-learn button[data-ln="next"]'),'no CFOP button while a step is still to learn');
+  w.startMark([0,1,2,3,4,5,6,7,8].map(n=>'beg-'+n),'finished');
+  assert.strictEqual(nextTitle(),'You can solve the cube','all nine learned');assert.ok(/9 of 9 learned/.test($('#tab-learn .lh-steps').textContent));
+  click($('#tab-learn button[data-ln="next"]'));
   assert.strictEqual(d.body.dataset.method,'cfop','Show me CFOP switches');
 
   assert.deepStrictEqual(errs,[],'no script errors');
   console.log('learn: step list, lessons, drills, status, goals, cheat sheet, glossary ok');process.exit(0);
-}catch(e){console.error('learn: FAIL',e.message,errs);process.exit(1);}});
+}catch(e){console.error('learn: FAIL',e.message,errs,e.stack.split('\n').slice(1,3).join(' | '));process.exit(1);}});
