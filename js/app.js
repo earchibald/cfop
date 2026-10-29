@@ -36,10 +36,22 @@ function setAnim(on){anim.on=!!on;store.set('animate',anim.on);if(!on)stopAnim()
 function renderAnimBtn(){const b=$('#animBtn');if(!b)return;const on=animOn();b.setAttribute('aria-pressed',String(on));b.title=on?'Moves turn on the cube. Press to show each move at once (A).':'Each move shows at once. Press to turn the layer on the cube (A).';}
 function stopAnim(){if(anim.raf){cancelAnimationFrame(anim.raf);anim.raf=0;}anim.move=null;}
 function reducedMotion(){try{return matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){return false;}}
-function showCube(cube,fade){stopAnim();displayedCube=cube;fadeSet=fade||null;drawMain();}
+function showCube(cube,fade){stopAnim();mainBump(null,{quiet:true});displayedCube=cube;fadeSet=fade||null;drawMain();}
+// Lift the pieces with a sticker in `set` out of the player cube, with a glow, and put them back, as
+// the virtual cube's bump does (js/screencube.js). o: up, hold, down (ms), done(). null stops it; a
+// step of the player stops it too.
+let mainLift=null;
+function mainBump(set,o={}){const L0=mainLift;if(L0){cancelAnimationFrame(L0.raf);clearTimeout(L0.timer);mainLift=null;if(!set&&!o.quiet)drawMain();}
+  if(!set)return;const up=o.up??420,hold=o.hold??1300,down=o.down??480,L={set,t:0,raf:0,timer:0};mainLift=L;
+  const end=()=>{if(mainLift!==L)return;mainLift=null;drawMain();if(o.done)o.done();};
+  if(typeof requestAnimationFrame!=='function'||reducedMotion()||view.mode!=='3d'){L.t=1;drawMain();L.timer=setTimeout(end,up+hold);return;}
+  const t0=performance.now();
+  const step=()=>{if(mainLift!==L)return;const e=performance.now()-t0;if(e>=up+hold+down){end();return;}
+    const x=e<up?e/up:e<up+hold?1:1-(e-up-hold)/down;L.t=0.5-0.5*Math.cos(Math.PI*x);drawMain();L.raf=requestAnimationFrame(step);};
+  L.raf=requestAnimationFrame(step);}
 // Show `cube` by turning `move` on `from` first. The picture ends on `cube`, as showCube would.
 function showCubeMoved(from,move,cube,fade){
-  displayedCube=cube;fadeSet=fade||null;
+  mainBump(null,{quiet:true});displayedCube=cube;fadeSet=fade||null;
   if(!animOn()||view.mode!=='3d'||reducedMotion()||typeof requestAnimationFrame!=='function'){stopAnim();drawMain();return;}
   stopAnim();const half=move.endsWith('2');let dur=half?420:300;if(auto.on)dur=Math.min(dur,autoMs()*0.7);
   anim.from=from;anim.move=move;anim.t=0;const t0=performance.now();
@@ -58,11 +70,12 @@ function hiddenOn(){return !!store.get('hidden',false);}
 // The smart cube window (js/cubetab.js) follows the same setting.
 function setHidden(on){store.set('hidden',!!on);drawMain();if(typeof cubeTabHiddenDraw==='function')cubeTabHiddenDraw();}
 function view3D(){return hiddenOn()?{yaw:view.yaw,pitch:view.pitch,hidden:true,scale:40}:{yaw:view.yaw,pitch:view.pitch};}
+// The hold row under the cube (js/live.js) turns the picture: rot, or a turned cube on the net.
 function drawMain(){
-  const f=displayedCube.toFacelets();const svg=$('#cube');
-  if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');svg.innerHTML=renderNet(f,{fade:fadeSet});}
-  else if(anim.move&&anim.t<1){svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(anim.from.toFacelets(),{...view3D(),fade:fadeSet,move:anim.move,t:Math.max(anim.t,0.01)});}
-  else{svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(f,{...view3D(),fade:fadeSet});}
+  const f=displayedCube.toFacelets();const svg=$('#cube');const H=typeof playerHoldView==='function'?playerHoldView(displayedCube):null,v={...view3D(),...(H?{rot:H.rot}:{})};
+  if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');svg.innerHTML=H?renderNet(applyAlg(displayedCube,H.moves).toFacelets(),{}):renderNet(f,{fade:fadeSet});}
+  else if(anim.move&&anim.t<1){svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(anim.from.toFacelets(),{...v,fade:fadeSet,move:anim.move,t:Math.max(anim.t,0.01)});}
+  else{svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(f,{...v,fade:fadeSet,lift:mainLift});}
   drawDragHint();
 }
 // The mark: the solved cube in the player view, half way through R. The same code draws
@@ -313,9 +326,10 @@ $('#newSeed').onclick=()=>newScramble();$('#reScramble').onclick=()=>newScramble
 $('#seed').addEventListener('keydown',e=>{if(e.key==='Enter')newScramble($('#seed').value.trim()||undefined);});
 $('#histBtn').onclick=()=>$('#history').classList.toggle('hidden');
 // view controls
-$('#viewTop').onclick=()=>{view.mode='3d';view.yaw=-32;view.pitch=28;drawMain();};
-$('#viewBottom').onclick=()=>{view.mode='3d';view.yaw=-32;view.pitch=-34;drawMain();};
-$('#viewNet').onclick=()=>{view.mode='net';drawMain();};
+// The hold tiles beside Net are js/live.js's. Net shows the six faces flat; a second press puts the
+// cube back.
+function setViewNet(on){view.mode=on?'net':'3d';if(!on){view.yaw=-32;view.pitch=28;}$('#viewNet').setAttribute('aria-pressed',String(on));drawMain();}
+$('#viewNet').onclick=()=>setViewNet(view.mode!=='net');
 // Drag to rotate. preventDefault and body.cube-drag keep the drag from selecting page text.
 (()=>{let drag=null;const svg=$('#cube');const stop=()=>{drag=null;document.body.classList.remove('cube-drag');};
 svg.addEventListener('pointerdown',e=>{if(view.mode!=='3d')return;e.preventDefault();drag={x:e.clientX,y:e.clientY,yaw:view.yaw,pitch:view.pitch};document.body.classList.add('cube-drag');if(svg.setPointerCapture)svg.setPointerCapture(e.pointerId);});
@@ -495,20 +509,26 @@ function renderPlan(){
 const crossState={revealed:false,sol:null};
 function refreshCross(){if(!tablesReady){$('#crossOpt').textContent='…';ensureTables(()=>refreshCross());return;}
   const {cube}=orientedScramble();const sol=solveCross(cube,$('#crossPlus1').checked?1:0,60);crossState.sol=sol;$('#crossOpt').textContent=sol.optimal;$('#crossCount').textContent=`${sol.solutions.length} plan${sol.solutions.length>1?'s':''} found · ${holdText(phys(cube))}`;
-  // Revealed: one plan per line as a spoiler (spoilAlg): the first move in clear, a bar on each move after it.
-  $('#crossSols').innerHTML=crossState.revealed?`<ol class="sol-list">${sol.solutions.map((s,i)=>`<li class="sol"><code class="alg">${spoilAlg(s)}</code><button type="button" class="small sol-play" data-i="${i}" title="Put this plan in the player and step through it on the cube">Step through on cube</button></li>`).join('')}</ol><p class="muted" style="margin-top:6px">Click a line to reveal its next move. Step through puts the plan on the cube.</p>`:'<p class="muted">Hidden. Plan it yourself first, then reveal.</p>';
+  // Revealed: one plan per line as a spoiler (spoilAlg): the first move in clear, a bar on each move after it. Each move as it shows
+  // carries its face color, as held (phys).
+  const pcx=phys(cube);
+  $('#crossSols').innerHTML=crossState.revealed?`<ol class="sol-list">${sol.solutions.map((s,i)=>`<li class="sol"><code class="alg">${spoilAlg(s,false,pcx)}</code><button type="button" class="small sol-play" data-i="${i}" title="Put this plan in the player and step through it on the cube">Step through on cube</button></li>`).join('')}</ol><p class="muted" style="margin-top:6px">Click a line to reveal its next move. Step through puts the plan on the cube.</p>`:'<p class="muted">Hidden. Plan it yourself first, then reveal.</p>';
   $$('#crossSols .sol-play').forEach(el=>el.onclick=()=>{const {phys:pc}=orientedScramble();setSequence(parseAlg(sol.solutions[+el.dataset.i]),'cross plan · '+holdText(pc),pc);seqState.idx=0;applySequence();focusPlayer();});
   $('#crossTryOut').innerHTML='';}
 $('#crossReveal').onclick=()=>{crossState.revealed=!crossState.revealed;refreshCross();};
 $('#crossPlus1').onchange=refreshCross;$('#crossColor').onchange=()=>{store.set('crossColor',$('#crossColor').value);if(!seqState.drill)showForTab();refreshCross();planState.plan=null;renderLLGroups();renderF2LGrid();if(mobileMQ.matches)renderMobileRef();$('#planOut').innerHTML='<p class="muted">Cross color changed. Press Plan.</p>';};
 $('#crossNew').onclick=()=>{ensureTables(()=>{const diff=$('#crossDiff').value;for(let k=0;k<200;k++){const seed=randomSeedName();const moves=randomMoveScramble(seed,scrLen());const c=toFrame(applyAlg(new Cube(),moves));const d=buildCrossTable()[crossIndex(c)];if(diff==='any'||(diff==='easy'&&d<=5)||(diff==='hard'&&d>=7)){newScramble(seed);return;}}newScramble();});};
-$('#crossCheck').onclick=()=>{let ms;try{ms=parseAlg($('#crossTry').value);applyAlg(new Cube(),ms);}catch(e){$('#crossTryOut').innerHTML='<span style="color:var(--warn)">'+esc(badMoveText(e))+'</span>';return;}
+// Check my plan. quiet: the moves are on the player already (js/live.js: made on the cube, or typed),
+// so the player stays as it is.
+$('#crossCheck').onclick=()=>crossCheckNow(false);
+function crossCheckNow(quiet){let ms;try{ms=parseAlg($('#crossTry').value);applyAlg(new Cube(),ms);}catch(e){$('#crossTryOut').innerHTML='<span style="color:var(--warn)">'+esc(badMoveText(e))+'</span>';return;}
+  if(!ms.length){$('#crossTryOut').innerHTML='';return;}
   const {cube}=orientedScramble();const c=applyAlg(cube,ms);const ok=crossSolved(c);const opt=crossState.sol?crossState.sol.optimal:'?';const n=ms.filter(m=>!'xyz'.includes(m[0])).length;
   let msg=ok?`<b style="color:var(--good)">Cross solved</b> in ${n} moves. Optimal is ${opt}. ${n>opt?`Gap: ${n-opt}.`:'That is optimal.'}`:`<b style="color:var(--warn)">Cross not solved.</b> `;
   if(!ok){const d=buildCrossTable()[crossIndex(c)];msg+=`After your moves the cross is ${d} move${d===1?'':'s'} from solved. Solved edges: ${[4,5,6,7].filter(e=>c.ep[e]===e&&c.eo[e]===0).map(e=>EDGE_NAMES[e]).join(' ')||'none'}.`;}
   const pairsSolved=SLOTS.filter(s=>slotSolved(c,s)).map(s=>s.name);if(ok&&pairsSolved.length)msg+=` Bonus: pair${pairsSolved.length>1?'s':''} ${pairsSolved.join(', ')} already in. That is an x-cross.`;
-  $('#crossTryOut').innerHTML=msg;const pc=phys(cube);setSequence(ms,'your cross plan · '+holdText(pc),pc);};
-$('#crossTips').innerHTML=CROSS_TIPS.map(t=>`<div class="tip"><b>${esc(t.t)}</b>${esc(t.d)}</div>`).join('');
+  $('#crossTryOut').innerHTML=msg;if(quiet)return;const pc=phys(cube);setSequence(ms,'your cross plan · '+holdText(pc),pc);}
+// What to look for: js/crosslook.js draws CROSS_TIPS as cards.
 
 // ---------- F2L tab ----------
 const f2lState={mode:'guide',key:null,cube:null,extra:[],plan:null,caseSel:new Set(F2L_CASES.map(c=>c.n)),curCase:null,caseSetup:null,caseAUF:''};
@@ -775,10 +795,14 @@ function modalForF2L(f){const c=caseState(f.alg);const cpos=c.cp.indexOf(4),epos
 // "Show all moves" uncovers every Reference tab (cw:refAll).
 const isRot=m=>/^[xyz]/.test(m);
 // short: the button reads "5 more" instead of "Reveal 5 more moves", for a line that must fit a row on the phone.
-function spoilAlg(alg,short){const t=alg.trim().split(/\s+/);let k=0;while(k<t.length-1&&isRot(t[k]))k++; // a lead rotation is a hold: show the turn after it too
-  const units=[];let rot=[];for(const m of t.slice(k+1)){rot.push(m);if(!isRot(m)){units.push(rot.join(' '));rot=[];}} // a rotation goes with the turn after it
-  if(!units.length)return esc(alg);if(rot.length)units[units.length-1]+=' '+rot.join(' ');
-  return `<span class="spoil" title="Click to reveal the next move">${esc(t.slice(0,k+1).join(' '))} <span class="sp-rest">${units.map(u=>`<span class="sp-m">${esc(u)}</span>`).join(' ')}</span> <button type="button" class="small sp-btn${short?' sp-short':''}" title="Show the rest of the moves">${spoilLeft(units.length,short)}</button></span>`;}
+// base (a Cube, optional): each move as it shows carries the color of the face it turns, as the
+// player's tiles do (seqFaceColors; the bar is css/app.css .mfc). A covered move shows no color.
+function spoilAlg(alg,short,base){const t=alg.trim().split(/\s+/);let k=0;while(k<t.length-1&&isRot(t[k]))k++; // a lead rotation is a hold: show the turn after it too
+  const fc=base?seqFaceColors(base,t):null,cls=i=>fc&&fc[i]>=0?` mfc c${fc[i]}`:'';
+  const units=[];let rot=[];for(let i=k+1;i<t.length;i++){const m=t[i];rot.push(m);if(!isRot(m)){units.push([rot.join(' '),i]);rot=[];}} // a rotation goes with the turn after it
+  if(!units.length)return esc(alg);if(rot.length)units[units.length-1][0]+=' '+rot.join(' ');
+  const lead=fc?`${t.slice(0,k).map(esc).join(' ')}${k?' ':''}<span class="sp-0${cls(k)}">${esc(t[k])}</span>`:esc(t.slice(0,k+1).join(' '));
+  return `<span class="spoil" title="Click to reveal the next move">${lead} <span class="sp-rest">${units.map(([u,i])=>`<span class="sp-m${cls(i)}">${esc(u)}</span>`).join(' ')}</span> <button type="button" class="small sp-btn${short?' sp-short':''}" title="Show the rest of the moves">${spoilLeft(units.length,short)}</button></span>`;}
 function spoilLeft(n,short){return short?`${n} more`:`Reveal ${n} more move${n>1?'s':''}`;}
 function spoilSync(s){const left=s.querySelectorAll('.sp-m:not(.on)').length,btn=s.querySelector('.sp-btn');s.classList.toggle('open',!left);
   if(left&&btn)btn.textContent=spoilLeft(left,btn.classList.contains('sp-short'));s.title=left?'Click to reveal the next move':'Click to cover the moves again';}
@@ -850,7 +874,7 @@ function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHi
 // (setHidden, cw:hidden), the same settings as the chips on the cube. Timer: 15 s inspection (cw:insp), the
 // same as the box by the timer. Pictures: Play case animations (cw:playPics, js/loop.js). Color Blind Assist: a
 // letter on each sticker (cw:cba, body.cba). Phone: the Reference section goes on to the next stage
-// when a case's details close (cw:refNext). Smart cube: the move trail right to left or left to right (cw:trailDir, js/trail.js). Your data: Copy my data and Paste my data (js/transfer.js); openSettings('data') opens on it and pastes. With a Listen log, a button copies it for a report. It shows the version, under the buttons, so a report
+// when a case's details close (cw:refNext). Smart cube: the move trail right to left or left to right (cw:trailDir, js/trail.js), and the ask at connect (cw:smartAsk, js/live.js). Your data: Copy my data and Paste my data (js/transfer.js); openSettings('data') opens on it and pastes. With a Listen log, a button copies it for a report. It shows the version, under the buttons, so a report
 // can name it. While it is open, keys go to the window only: Esc cancels and Enter saves.
 function openSettings(open){if($('#setBg'))return;
   const bg=document.createElement('div');bg.className='modal-bg ask-bg';bg.id='setBg';
@@ -873,6 +897,8 @@ function openSettings(open){if($('#setBg'))return;
     <h3>Smart cube</h3>
     <label class="setrow" title="The last move on the left, the older moves to its right. Off: the last move on the right, so the moves read as an algorithm"><input type="checkbox" id="setTrailRtl"${typeof trailDir!=='function'||trailDir()==='rtl'?' checked':''}> Last move on the left</label>
     <p class="muted">The moves beside the live cube, and in the lab. Off, the moves read left to right, as an algorithm does.</p>
+    <label class="setrow" title="When a smart cube connects and it is not at the cube on the page, ask to make it the scramble. Off: keep the scramble"><input type="checkbox" id="setSmartAsk"${store.get('smartAsk',true)?' checked':''}> Ask to use my cube as the scramble</label>
+    <p class="muted">Off, the page keeps its scramble when a cube connects. Use my cube, under the player, makes it the scramble at any time.</p>
     <h3>Scrambles</h3>
     <p class="muted" id="setScr">${esc(rsStatus())}</p>
     <h3>Phone</h3>
@@ -886,7 +912,7 @@ function openSettings(open){if($('#setBg'))return;
   </div>`;
   const close=()=>{document.removeEventListener('keydown',keys,true);document.removeEventListener('keyup',keys,true);bg.remove();$('#settingsBtn').focus();};
   const save=()=>{setAnim($('#setAnim').checked);if($('#setHidden').checked!==hiddenOn())setHidden($('#setHidden').checked);store.set('insp',$('#setInsp').checked);$('#inspChk').checked=$('#setInsp').checked;store.set('refNext',$('#setRefNext').checked);store.set('playPics',$('#setPlayPics').checked);setCba($('#setCba').checked);
-    store.set('trailDir',$('#setTrailRtl').checked?'rtl':'ltr');if(typeof cubeTabMovesDraw==='function')cubeTabMovesDraw();close();};
+    store.set('trailDir',$('#setTrailRtl').checked?'rtl':'ltr');store.set('smartAsk',$('#setSmartAsk').checked);if(typeof cubeTabMovesDraw==='function')cubeTabMovesDraw();close();};
   const keys=e=>{if(e.key==='Tab')return;e.stopPropagation();if(e.type!=='keydown')return;
     // Enter in Your data belongs to its box and its buttons.
     if(e.key==='Escape'){e.preventDefault();close();}else if(e.key==='Enter'&&!(e.target.closest&&e.target.closest('#setData'))){e.preventDefault();save();}};

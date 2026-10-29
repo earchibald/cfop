@@ -221,3 +221,7 @@ function renderNet(facelets,opts={}){
     out+=netRect(facelets[c.idx],c.x,c.y,c.s,c.s,`rx="3"${faded?' opacity="0.22"':''} stroke="var(--sticker-line)" stroke-width="1"`).replace(/<text /,faded?'<text opacity="0.22" ':'<text ');}
   return out;
 }
+// Every sticker of the piece that sticker idx (0..53) sits on: one for a center, two for an edge,
+// three for a corner.
+function pieceStickers(idx){const at=i=>{const g=FACE_GEOM[Math.floor(i/9)],p=i%9;return [0,1,2].map(t=>g.n[t]+g.r[t]*(p%3-1)+g.d[t]*(Math.floor(p/3)-1)).join();};
+  const k=at(idx),out=[];for(let i=0;i<54;i++)if(at(i)===k)out.push(i);return out;}

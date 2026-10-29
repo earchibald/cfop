@@ -472,6 +472,17 @@ the Smart cube tab) starts nothing: before 1.47.3 that look brought up the
 question at launch, ahead of the Set Up window. When the state leaves
 `notAsked`, the page fires `cw:bridge` and the tab looks again.
 
+### Two pages, one cube
+
+The main window and the lab can use one cube at the same time (1.59.0). The
+bridge keeps a list of the pages that connected each cube (`owners` in
+`Bridge.swift`): every value and every drop goes to each of them. A page that
+connects a cube another page has already gets `connected` at once. A page's
+disconnect, or a page that closes, drops the Bluetooth link only when it was
+the last page on that cube. Before 1.59.0 each cube had one owner: the lab took
+the cube from the main window, or the other way round, and the page that lost
+it heard nothing more. That needs a new build of the app.
+
 ### The page side
 
 `js/bridge.js` probes `/bridge/info` when the page is at a loopback address,

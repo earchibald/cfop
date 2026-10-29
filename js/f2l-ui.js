@@ -91,7 +91,10 @@ function fgSmartRead(){
   const held=cubeTabHeld(cubeTab.target);if(!held)return;
   fg.held=held;const X=reframe(held);
   if(!fg.base)fg.base=X;
-  if(seqState.label!=='your smart cube, as held')setSequence([],'your smart cube, as held',held);else showCube(held);
+  // A turn or a few since the last picture turn their layers, as the player does (Animate).
+  if(seqState.label!=='your smart cube, as held')setSequence([],'your smart cube, as held',held);
+  else{const was=displayedCube,same=was&&!was.isFour&&was.center.join()===held.center.join(),path=same?cubeTabPath(was,held):null;
+    if(path&&path.length)showCubeMoved(applyAlg(was,path.slice(0,-1)),path[path.length-1],held);else if(!path)showCube(held);}
   fgRead(X);
 }
 // ----- the state machine (the lab's labF2LRead) -----

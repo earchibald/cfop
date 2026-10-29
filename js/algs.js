@@ -108,13 +108,26 @@ const F2L_WHY={
   'Corner up, edge in slot':"The edge is in its slot, but the corner is on top. Lift the edge out with a trigger that also catches the corner, so the two pieces pair up on the way out. Then insert the pair.",
   'Both in slot':"Both pieces are in the slot, but at least one is wrong. Take them out with R U' R' or R U R', which puts them on top as a known case. Then solve that case. These are the longest cases, so avoid them: look ahead and do not insert a pair that is wrong.",
 };
-// Cross technique notes
+// Cross technique notes. s: the one line on the row. demo: the card's cube (js/crosslook.js), in the
+// solving frame (the cross on D): setup from solved, then one or more plans to play. A plan with
+// parts plays the parts one after the other and shows where they cancel when they are joined.
+// lit: the cross edges, and the pieces of a slot (FR) where the plan makes a pair too. The setups
+// start with R U R' U2 F' U' F L U2 L' B U B' U', which mixes the rest of the cube and keeps the
+// cross, so only the cross pieces differ from a scramble's.
+const CROSS_MIX="R U R' U2 F' U' F L U2 L' B U B' U'";
 const CROSS_TIPS=[
-  {t:'Count before you turn',d:'Every cross is 8 moves or fewer. If your plan is 9+, there is a better one. The solver below shows all optimal plans. Compare yours with them and find which piece you handled first that cost moves.'},
-  {t:'Solve pieces together, not one at a time',d:'Look for a move that improves two edges at once. A D move or an F2 that places one edge often also lines up another. The optimal plans show this: in most of them no single move "finishes" a piece until the end.'},
-  {t:'Ignore the centers until the end',d:'Build the cross relative to itself. Place edges so they are correct relative to each other, then one D move aligns them to the centers. The solver counts this D move; so should you.'},
-  {t:'Edge flipped in place',d:'A cross edge in the D layer with the wrong color down costs 3 moves if you solve it alone (e.g. F D R\' D\' for the DF... pattern). Look first for a plan that fixes it while it moves another edge.'},
-  {t:'Plan the last move for the next pair',d:'Several optimal plans usually exist. Prefer the one that ends with the first F2L pair visible, or that ends with a move you can turn fast (R or U, not B).'},
-  {t:'Keep rotations out',d:'Practice cross with no cube rotations: use L, R, F, B, D only. The solver never outputs a rotation.'},
+  {t:'Count before you turn',s:'Every cross takes 8 moves or fewer.',d:'Every cross is 8 moves or fewer. If your plan is 9+, there is a better one. The solver above shows all optimal plans. Compare yours with them and find which piece you handled first that cost moves.',
+    demo:{setup:CROSS_MIX+" L2 R D L B' F' R2",plans:[{name:'7 moves',moves:"R2 F B L' D' R' L2"}],say:'This cross takes 7 moves. 40 plans are this short.'}},
+  {t:'Solve pieces together, not one at a time',s:'One move can help two edges.',d:'Look for a move that improves two edges at once. A D move or an F2 that places one edge often also lines up another. The optimal plans show this: in most of them no single move "finishes" a piece until the end.',
+    demo:{setup:CROSS_MIX+" R2 F' U",plans:[{name:'One at a time',parts:[{name:'the right edge',moves:"U' R2"},{name:'then the front edge',moves:"R2 F R2"}]},{name:'Together',moves:"U' F R2"}],
+      say:'One at a time takes 5 moves. Joined, R2 then R2 cancel, and 3 moves are left: the best plan.'}},
+  {t:'Ignore the centers until the end',s:'Build the cross, then line it up.',d:'Build the cross relative to itself. Place edges so they are correct relative to each other, then one D move aligns them to the centers. The solver counts this D move; so should you.',
+    demo:{setup:CROSS_MIX+" D F2 U' L2 R'",plans:[{name:'5 moves',moves:"R L2 U F2 D'"}],say:'After four moves the edges sit in a ring on the bottom, each next to the right ones. The last D\u2032 lines up all four at once.'}},
+  {t:'Edge flipped in place',s:'A flipped edge costs 4 moves alone.',d:'A cross edge in its place with the wrong color down costs 4 moves if you solve it alone, as F D\u2032 L D does for the front edge. Look first for a plan that fixes it while it moves another edge.',
+    demo:{setup:CROSS_MIX+" D' L' D F'",plans:[{name:'4 moves',moves:"F D' L D"}],say:'F takes the edge out. D\u2032 moves the cross away, L puts the edge back the right way round, and D brings the cross back.'}},
+  {t:'Plan the last move for the next pair',s:'Of two short plans, pick the one that helps F2L.',d:'Several optimal plans usually exist. Prefer the one that ends with the first F2L pair visible, or that ends with a move you can turn fast (R or U, not B).',
+    demo:{setup:"U2 D B D2 B' U R",plans:[{name:'Ends with a pair',moves:"R' B D2 B' D'",slot:'FR'},{name:'Another 5',moves:"R B R2 F D"}],lit:['FR'],say:'Both plans take 5 moves. The first one also puts the front right pair in its slot.'}},
+  {t:'Keep rotations out',s:'Turn B, not the whole cube.',d:'Practice cross with no cube rotations: use L, R, F, B, D only. The solver never outputs a rotation.',
+    demo:{setup:CROSS_MIX+" B2",plans:[{name:'1 move',moves:'B2'}],say:'The back edge is on top at the back. B2 puts it in. No y turn first.'}},
 ];
 
