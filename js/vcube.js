@@ -5,7 +5,7 @@
 // keys work all the same. Close hides the window; the chip shows it again, and a press of the chip
 // with the window open turns the virtual cube off. Its six keys sit as the keys do (U and B on top,
 // L F R across, D under), each with its key and a bar of the color of the face it turns, as the
-// picture shows it (playerKeyMove). The Shift key in the corner makes the next presses turn the
+// picture shows it (playerHeldCube). The Shift key in the corner makes the next presses turn the
 // other way, as Shift does. One layout of keys at a time, A W D X · S E or the keypad
 // 4 8 6 2 · 5 9 (cw:vcubeKeys): the keys of the other layout keep their own shortcuts. The head
 // drags the window; its place is kept (cw:vcubeWin) and kept on the screen. The first time it sits

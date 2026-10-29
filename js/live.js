@@ -1,8 +1,10 @@
 // ===== Your moves: the player follows the cube in your hands =====
 // The hold row on the player cube (Top: white, yellow; Front: green, orange, blue, red) turns the
-// picture to the way you hold the cube. No turn goes on the list, and the keys of the virtual cube
-// name the faces as the picture shows them (playerKeyMove). A press of the tile that is on puts
-// the picture back as the player holds it (PLAYER.hold null).
+// picture to the way you hold the cube. A press of a tile puts no turn on the list. The keys of the
+// virtual cube and the turns of a smart cube name the faces as the picture shows them: at your
+// first move, the whole-cube turn to the hold goes on the list before it (cubePlayerTurn), so the
+// list reads as you hold the cube. A press of the tile that is on puts the picture back as the
+// player holds it (PLAYER.hold null).
 // A smart cube's turns go on the player as your moves, as the virtual cube's keys do (cw:smartmoves
 // from js/cubetab.js, cubePlayerTurn), while the cube on the page is the cube in your hands
 // (liveInStep). When it is not, a note under the moves says so, with Use my cube. When a cube
@@ -27,14 +29,8 @@ function playerHoldView(P){
   const moves=(CUBE_TAB_HOLDS.find(h=>applyAlg(P,h.moves).center.join()===t.cube.center.join())||{moves:[]}).moves;
   return {rot:quatMat(quatMul(t.q,liveConj(hp.q))),moves};
 }
-// A face move as the picture shows it (a key of the virtual cube), named as the player holds the
-// cube: the face with the same center.
-function playerKeyMove(m){
-  const P=displayedCube,H=playerHoldView(P);if(!H||!/^[URFDLB]/.test(m))return m;
-  const D=applyAlg(P,H.moves);return FACE_NAMES[P.center.indexOf(D.center[FACE_NAMES.indexOf(m[0])])]+m.slice(1);
-}
-// The cube as the picture shows it.
-function playerHeldCube(){const P=displayedCube;if(!P||P.isFour||!P.center)return null;const H=playerHoldView(P);return H?applyAlg(P,H.moves):P;}
+// The cube as the picture shows it: `P`, or the cube on the player by default.
+function playerHeldCube(P=displayedCube){if(!P||P.isFour||!P.center)return null;const H=playerHoldView(P);return H?applyAlg(P,H.moves):P;}
 // The tiles: one press sets that color on top (the front stays where it can) or in front (the top
 // stays where it can, else white goes on top). A press of a tile that is on goes back to the
 // player's own hold.
@@ -75,7 +71,7 @@ function liveSmartMoves(d){
   if(!liveOn()||liveFgOwns())return liveNoteDraw();
   if(!d.from){liveConnected(d.to);return liveNoteDraw();}
   if(d.moves&&liveInStep(d.from)){
-    for(const m of d.moves){const P=livePlayerCube();cubePlayerTurn(FACE_NAMES[P.center.indexOf(FACE_NAMES.indexOf(m[0]))]+m.slice(1),'smart');}
+    for(const m of d.moves){const P=playerHeldCube(livePlayerCube());cubePlayerTurn(FACE_NAMES[P.center.indexOf(FACE_NAMES.indexOf(m[0]))]+m.slice(1),'smart');}
   }
   liveNoteDraw();
 }
