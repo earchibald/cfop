@@ -108,7 +108,7 @@ function gdHoldHTML(){
   <div class="panel gd-part gd-holdnow" id="gdTurn">
     <span class="st-lbl">Before stage ${st.n} · ${esc(st.name)}</span>
     <h2 id="gdTitle">${virt?`The cube now has ${where}.`:`Now, hold the cube with ${where}.`}</h2>
-    <p class="muted">The picture shows your cube held this way. Drag it to look around. <b>Hidden faces</b> shows the back, the left and the bottom.</p>
+    <p class="muted">The picture shows your cube held this way. Drag it to look around. <b>Hidden faces</b> mirrors the back, the left and the bottom.</p>
     <div class="gd-actions"><button class="big primary" id="gdDone" title="Go to the first part of stage ${st.n}">Start stage ${st.n}: ${esc(name)} →</button>${g.i?'<button class="ghost" id="gdPrev" title="Go back one part">← Previous part</button>':''}</div>
   </div>`;
 }
@@ -123,7 +123,7 @@ function gdWonHTML(){
   <div class="panel gd-part gd-holdnow gd-won" id="gdStageWon">
     <span class="st-lbl">Stage ${st.n} of ${pk.count} · solved</span>
     <h2 id="gdTitle">You solved the ${esc(gdTitleCase(pk.short[st.n-1]))}!</h2>
-    <p class="muted">The picture shows your cube now. Drag it to look around. <b>Hidden faces</b> shows the back, the left and the bottom.</p>
+    <p class="muted">The picture shows your cube now. Drag it to look around. <b>Hidden faces</b> mirrors the back, the left and the bottom.</p>
     <div class="gd-actions"><button class="big primary" id="gdDone" title="Go to stage ${next?next.stage.n:''}: ${esc(next?next.stage.name:'')}">Move on to ${esc(nextName)} →</button><button class="ghost" id="gdPrev" title="Go back one part">← Previous part</button></div>
   </div>`;
 }

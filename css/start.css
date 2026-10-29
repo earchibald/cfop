@@ -144,8 +144,17 @@ body.starting header.top>*:not(h1){display:none!important}
 .st-hl{display:inline-block;margin-inline:3px;border-radius:4px;transition:transform .48s ease-in-out,background-color .48s,box-shadow .48s,color .48s}
 .st-hl.on{transform:translateY(-3px) scale(1.03);color:var(--text);background:color-mix(in srgb,var(--accent) 26%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 26%,transparent),0 0 18px 3px color-mix(in srgb,var(--accent) 60%,transparent);transition-duration:.42s}
 @media (prefers-reduced-motion:reduce){.st-hl,.st-hl.on{transition:none}.st-hl.on{transform:none}}
-/* The shadow hands on the hold page's picture (stHandsShow): one flat color, the group's opacity over it. */
-.st-hand{fill:var(--text)}
+/* The fingertip pads on the hold page's picture (stHandsShow): a pad in the text color with a rim in the panel color (dark on light, light on dark), the
+   group being shown with an accent ring. */
+.st-pad{fill:color-mix(in srgb,var(--text) 84%,transparent);stroke:var(--panel);stroke-width:2.5;stroke-linejoin:round}
+.st-pad.now{stroke:var(--accent);stroke-width:3;filter:drop-shadow(0 0 5px color-mix(in srgb,var(--accent) 75%,transparent))}
+/* The opposite colors: three pairs of swatches, a two-way arrow between each. */
+.st-opp{display:flex;flex-direction:column;gap:8px;line-height:1.45}
+.st-pairs{display:flex;flex-wrap:wrap;gap:8px}
+.st-pair{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-size:14px;font-weight:600}
+.st-pair svg{width:24px;height:12px;fill:none;stroke:var(--muted);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.st-sw{display:inline-flex;align-items:center;gap:5px}
+.st-sw i{width:14px;height:14px;border-radius:4px;background:var(--sec);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
 .st-kinds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .st-kind{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:12px;text-align:left}
 .st-kind[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--panel2))}
@@ -160,8 +169,11 @@ body.starting header.top>*:not(h1){display:none!important}
 .st-showturn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .st-showturn.spin svg{animation:stSpin .55s ease-out}
 @keyframes stSpin{from{transform:rotate(-200deg)}to{transform:none}}
-.st-demolog{display:flex;flex-direction:column;gap:7px}
+.st-demolog{display:flex;flex-direction:column;gap:7px;min-height:52px}
+/* Before the first turn the log and Reset keep their room, so the first turn moves nothing. */
+.st-demolog.off,.st-link.off{visibility:hidden}
 .st-tchips{display:flex;flex-wrap:wrap;gap:5px}
+.st-tmore{align-self:center;font-size:13px;color:var(--muted);padding-right:2px}
 .st-tchip{display:inline-flex;align-items:center;gap:4px;padding:2px 7px 2px 5px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);font-size:14px;line-height:1.3}
 .st-tchip i{width:12px;height:12px;border-radius:3px;background:var(--sec);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
 .st-tchip.new{border-color:var(--accent)}

@@ -114,12 +114,18 @@ label, and the `START.keysNext` routing.
 - `stHoldShow` in `js/start.js` runs it: `ST_HOLD` names the layers, `bump(stLayer(f), {dir})` moves
   a layer as one along its face's normal (`renderCube3D`'s `lift.dir`), and `.st-hl.on` lights the
   words for the up and hold of each bump. A new click starts over. The page is not drawn again.
-- **The hands** (1.57.0). A third line: "Your hands hold the right and left faces, with your thumbs
-  on the front face." A click lights it, and shadow hands drop onto the picture with a bounce, stay,
-  then fade: the palms on the right and left faces, the fingers to the back edge, the wrists under
-  the cube, the thumbs on the front face. `stHandsShow` draws them through `screenCube`'s `under` and
-  `over` layers with the picture's camera, so a drag takes them along, and a hand on a face turned
-  away draws behind the cube. `ST_HAND_SIDE` and `ST_HAND_THUMB` are the shapes, `ST_HANDS_T` the times.
+- **The hands** (1.57.0; fingertips from 1.58.1). The shadow hands of 1.57.0 looked uncanny, so
+  1.58.1 shows fingertips instead, placed from photos of a real left-hand hold (the right mirrors
+  it). Four lines, lit one at a time: "Thumbs on the front face." "Index fingers on top." "Middle and
+  ring fingers on the back." "Pinkies under the cube." With each, a pair of pads (a dark oval with a
+  white rim, the current group ringed in the accent) drops onto the picture with a bounce, and the
+  picture turns to where they can be seen: the back for the middle and ring fingers, the bottom for
+  the pinkies. Then it turns back to white on top, green toward you, holds, and the pads fade.
+  `stHandsShow` runs it through `screenCube`'s `over` layer; `ST_FINGERS` places the pads on their
+  faces, `ST_FINGER_STEPS` the groups and their views, `ST_HANDS_T` the times. A pad on a face turned
+  away is not drawn. Another line, or leaving the page mid-turn, puts the view back.
+- **The opposite colors** (1.58.1): "Each center always has the same opposite:" and three pairs of
+  swatches with a two-way arrow (`ST_OPPOSITE`, `stOppPair`).
 
 ## Rework 4: the moves as two rows (1.52.0)
 
@@ -262,6 +268,25 @@ from anywhere, and the level did not seem to save the beginner walkthrough.
 **Not changed yet:** the sections' own pacing. The Scramble, Cross, F2L and OLL · PLL tabs still show
 everything at once; the pages show one idea at a time. Candidates: a first-time strip per CFOP tab in
 the pages' style, and the Practice and Progress tabs as the Learn home's cards.
+
+## Rework 10: owner notes on the basics (1.58.1)
+
+- **Meet the cube.** Show me a turn makes quarter turns only: a half turn confused a newcomer. The
+  first turn made the page jump (the log appeared, the text grew, and the centered picture moved
+  down): the log and Reset cube to Solved now keep their room from the start (`.off` is
+  `visibility:hidden`), and the log shows the last eight turns on one row with "+N" before them. The
+  rules read "When the cube is **Solved**, each face is all one color." "A turn: any face can
+  turn." "The puzzle: As you may have already discovered, many turns add up to a **Scrambled**
+  cube." "After the basics, you can pick a regular cube, a smart cube or a virtual cube": each of
+  the three has a glossary tip (`regular-cube`, `virtual-cube` beside `smart-cube`).
+- **The hold page.** The opposite colors as swatch pairs, and fingertips for the hands (Rework 3).
+- **The moves page.** The caption goes by the way the picture is turned now (`stMoveCap`,
+  `stFaceSeen`): a face turned away is "turned away from you. You see its edge."; one in view is
+  "The lit stickers turn with B."; with green turned away it adds "Front is still the green face.
+  Double-click to put the view back."
+- **Your first solve** (regular cube): "Don't worry. You got this!"
+- **The guided solve** hold and stage-solved screens: "**Hidden faces** mirrors the back, the left and
+  the bottom."
 
 ## Planned: the fat moves, in the CFOP intro
 

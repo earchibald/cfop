@@ -5,13 +5,16 @@
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
 function fakeStorage(seed){const m=new Map(Object.entries(seed||{}));return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear(),map:m};}
+// A frame still waiting when a window closes fires on the closed window and throws in jsdom; so does
+// one the page's observers ask for as close empties the body. close cancels the waiting frames, and
+// no new one starts after it.
 function boot(seed){
   const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
   const dom=new JSDOM(html,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,url:'file://'+path.join(__dirname,'..','index.html'),virtualConsole:vc,
-    beforeParse(w){w.matchMedia=()=>({matches:false,addEventListener(){},addListener(){}});w.scrollTo=()=>{};Object.defineProperty(w,'localStorage',{value:fakeStorage(seed)});}});
+    beforeParse(w){const ids=new Set(),r=w.requestAnimationFrame.bind(w),c=w.cancelAnimationFrame.bind(w);w.requestAnimationFrame=f=>{const id=r(t=>{ids.delete(id);f(t);});ids.add(id);return id;};w.cancelAnimationFrame=id=>{ids.delete(id);c(id);};w.rafIds=ids;w.matchMedia=()=>({matches:false,addEventListener(){},addListener(){}});w.scrollTo=()=>{};Object.defineProperty(w,'localStorage',{value:fakeStorage(seed)});}});
   const w=dom.window;w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=function(){};
   return new Promise(res=>w.addEventListener('load',()=>setTimeout(()=>{const d=w.document;
-    res({w,d,errs,$:s=>d.querySelector(s),$$:s=>[...d.querySelectorAll(s)],get:k=>JSON.parse(w.localStorage.getItem('cw:'+k)),saved:()=>Object.fromEntries(w.localStorage.map),close:()=>w.close()});},450)));
+    res({w,d,errs,$:s=>d.querySelector(s),$$:s=>[...d.querySelectorAll(s)],get:k=>JSON.parse(w.localStorage.getItem('cw:'+k)),saved:()=>Object.fromEntries(w.localStorage.map),close:()=>{for(const id of [...w.rafIds])w.cancelAnimationFrame(id);w.close();w.requestAnimationFrame=()=>0;}});},450)));
 }
 (async()=>{try{
   // ----- a first visit: the level picker, and the level kept at once -----

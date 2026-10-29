@@ -50,12 +50,15 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   key(w,d,'KeyS');assert.ok(w.eval('START').sc.cube.isSolved(),'a key does nothing in the basics');
   // Show me a turn: a random turn per click that stays; the log; Reset cube to Solved turns them back.
   w.startGo('t1-what');w.eval('ST_DEMO_T.turn=20;ST_DEMO_T.back=15');
-  assert.ok(/^Show me a turn$/.test($('#stDemoLbl').textContent)&&$('#start [data-demoreset]').hidden&&$('#stDemoLog').hidden,'one button at first');
+  const off=sel=>$(sel).classList.contains('off');
+  assert.ok(/^Show me a turn$/.test($('#stDemoLbl').textContent)&&off('#start [data-demoreset]')&&off('#stDemoLog'),'one button at first; the log keeps its room');
   assert.ok(/Drag to look around the cube/.test($('#start .st-hints').textContent)&&$$('#start .st-hints > span').length===2,'the two hints');
-  assert.ok(/a virtual cube in the browser\./.test($('#start').textContent),'the virtual cube in the browser');
+  assert.ok(/you can pick a regular cube, a smart cube or a virtual cube in the browser\./.test($('#start').textContent),'the virtual cube in the browser');
+  assert.ok(/When the cube is Solved, each face is all one color/.test($('#start .st-rules').textContent)&&!/onto the faces next to it/.test($('#start').textContent),'the rules');
+  await new Promise(r=>setTimeout(r,80));assert.deepStrictEqual($$('#start .gl').map(g=>g.dataset.gl).filter(g=>/cube$/.test(g)).sort(),['regular-cube','smart-cube','virtual-cube'],'each kind of cube has its tip');
   for(let i=0;i<6;i++)$('#start [data-demo]').click();
   const demo=w.eval('START.demo');assert.strictEqual(demo.length,6,'six clicks, six turns');
-  const axis=f=>'UDRLFB'.indexOf(f)>>1;assert.ok(demo.every((m,i)=>!i||axis(m[0])!==axis(demo[i-1][0])),'never the same axis twice in a row: '+demo.join(' '));
+  assert.ok(demo.every(m=>!m.endsWith('2')),'no half turns: '+demo.join(' '));const axis=f=>'UDRLFB'.indexOf(f)>>1;assert.ok(demo.every((m,i)=>!i||axis(m[0])!==axis(demo[i-1][0])),'never the same axis twice in a row: '+demo.join(' '));
   assert.ok(!w.eval('START').sc.cube.isSolved(),'the turns stay');
   assert.strictEqual($('#stDemoLbl').textContent,'Show me another turn');assert.strictEqual($$('#stDemoChips .st-tchip').length,6,'the log');
   assert.ok(!letters.test($('#start').textContent),'no move letter in the log');
@@ -63,7 +66,7 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   // The turns go back on a timer: wait for them, up to two seconds (a fixed wait failed under load).
   for(let t=0;t<40&&!(w.eval('START').sc.cube.isSolved()&&!w.eval('START.demo').length);t++)await new Promise(r=>setTimeout(r,50));
   assert.ok(w.eval('START').sc.cube.isSolved()&&!w.eval('START.demo').length,'Reset cube to Solved turns them back');
-  assert.ok($('#stDemoLog').hidden&&$('#start [data-demoreset]').hidden&&$('#stDemoLbl').textContent==='Show me a turn','and the page is as it was');
+  assert.ok(off('#stDemoLog')&&off('#start [data-demoreset]')&&$('#stDemoLbl').textContent==='Show me a turn','and the page is as it was');
   $('#start [data-demo]').click();$('#start [data-demo]').click();$('#stCube').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));
   await new Promise(r=>setTimeout(r,150));assert.ok(w.eval('START').sc.cube.isSolved(),'a double-click turns them back too');
   // The hold: a line lifts its layer with a glow and lights its words; green, then red.
@@ -76,16 +79,25 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   await new Promise(r=>setTimeout(r,2100));
   assert.ok(!hl('F')&&hl('R')&&w.eval('START').sc.lift.dir.join()==='1,0,0','then red on the right');
   assert.strictEqual($('#start').dataset.screen,'t1-hold','the page is not drawn again');
-  // The hands: the line lights, and shadow hands drop onto the picture, then go.
-  w.eval('ST_HANDS_T.in=60;ST_HANDS_T.hold=200;ST_HANDS_T.out=60');
-  $('#start [data-hold="hands"]').click();await new Promise(r=>setTimeout(r,120));
-  assert.ok(hl('H')&&!hl('R')&&!w.eval('START').sc.lift,'the hands line lights; the layers stay in');
-  assert.ok($$('#stCube .st-hands .st-hand').length>10,'shadow hands on the picture');
-  assert.ok(/right and left faces, with your thumbs on the front face/.test($('#start [data-hold="hands"]').textContent));
-  await new Promise(r=>setTimeout(r,400));
-  assert.ok(!hl('H')&&!$('#stCube .st-hand')&&!w.eval('START').sc.hands,'then the hands go');
-  $('#start [data-hold="hands"]').click();$('#start [data-hold="top"]').click();
-  assert.ok(!$('#stCube .st-hand')&&hl('U'),'another line takes the hands off');
+  // The fingers: each group's words light in turn, and its pads drop onto the picture; the picture
+  // turns to show the back and the bottom, then turns back, and the pads go.
+  assert.strictEqual($$('#start .st-pair').length,3,'the opposite colors as three pairs');
+  assert.ok(/White.*Yellow/.test($$('#start .st-pair')[0].textContent)&&$$('#start .st-pair svg').length===3,'with an arrow between each');
+  assert.ok(/Thumbs on the front face.*Index fingers on top.*Middle and ring fingers on the back.*Pinkies under the cube/.test($('#start [data-hold="hands"]').textContent),'the four finger lines');
+  w.eval('ST_HANDS_T.view=40;ST_HANDS_T.in=40;ST_HANDS_T.gap=60;ST_HANDS_T.hold=150;ST_HANDS_T.out=40');
+  const view=()=>w.eval('START').sc.view;
+  $('#start [data-hold="hands"]').click();await new Promise(r=>setTimeout(r,60));
+  assert.ok(hl('T')&&!hl('I')&&!hl('R')&&!w.eval('START').sc.lift,'the thumbs line lights first; the layers stay in');
+  assert.strictEqual($$('#stCube .st-fingers .st-pad').length,2,'two thumb pads on the picture');
+  const seen={};let maxYaw=-999;
+  for(let t=0;t<80&&w.eval('START').sc.hands;t++){await new Promise(r=>setTimeout(r,15));maxYaw=Math.max(maxYaw,view().yaw);
+    for(const g of 'TIMP')if(hl(g))seen[g]=true;}
+  assert.ok(seen.I&&seen.M&&seen.P,'each line lights in turn');
+  assert.ok(maxYaw>90,'the picture turns to show the back');
+  assert.ok(!hl('P')&&!$('#stCube .st-pad')&&!w.eval('START').sc.hands,'then the pads go');
+  assert.deepStrictEqual({...view()},{...w.eval('SCREEN_VIEW')},'and the picture is back: white on top, green toward you');
+  $('#start [data-hold="hands"]').click();await new Promise(r=>setTimeout(r,30));$('#start [data-hold="top"]').click();
+  assert.ok(!$('#stCube .st-pad')&&hl('U')&&!hl('T'),'another line takes the pads off');
   // The pieces: a kind lifts its pieces out with a glow and puts them back; a click finds the edge.
   w.startGo('t1-pieces');const sc=()=>w.eval('START').sc;
   $('#start [data-kind="corners"]').click();assert.strictEqual($('#start').dataset.screen,'t1-pieces','a kind does not draw the page again');
@@ -154,6 +166,12 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
     await wait(240);assert.strictEqual(on(),'','the lights go out');assert.ok(cube().isSolved(),m+' then '+back+': solved again');
     assert.ok(/^Last moved:/.test($('#stMoveSay').textContent)&&$('#stMoveSay').textContent.includes(m.replace("'",'′')+' ·'),'the box names the last move: '+$('#stMoveSay').textContent);
     assert.ok(!/lit stickers/.test($('#stCap').textContent),'the caption of the turn goes');}
+  // The caption goes by the way the picture is turned: the back is turned away at first; turned
+  // round, it is in view, and the caption says the letters still go with the colors.
+  $('#start .st-move[data-mv="B"]').click();assert.ok(/back face is turned away/.test($('#stCap').textContent),'B: the back is turned away');
+  await wait(450);w.eval('START').sc.view.yaw=150;$('#start .st-move[data-mv="B"]').click();
+  assert.ok(/lit stickers turn with B/.test($('#stCap').textContent)&&/Front is still the green face/.test($('#stCap').textContent),'turned round: the back is in view: '+$('#stCap').textContent);
+  await wait(450);w.eval('START').sc.resetView();
   // A regular cube: Your first solve is one page: mix it up by hand, then scan or paint.
   w.startGo('t2-cube');assert.ok($('#start [data-go="t1-done"]'),'Back from the cube question goes to the basics');
   $('#start .st-pick[data-src="mine"]').click();$('#start [data-t2go]').click();assert.strictEqual($('#start').dataset.screen,'t1-ready');

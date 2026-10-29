@@ -139,7 +139,11 @@ const GLOSSARY=[
   {id:'seed',term:'Seed',match:/\bseeds?\b/i,
    def:'A word that picks a scramble in Twistwright. The same seed always gives the same scramble, so you can repeat or share one.'},
   {id:'smart-cube',term:'Smart cube',match:/\bsmart cubes?\b/i,
-   def:'A cube with a sensor inside that counts each turn and sends it to a phone or a computer with Bluetooth. Twistwright reads GAN smart cubes, such as the GAN 12 ui.'}
+   def:'A cube with a sensor inside that counts each turn and sends it to a phone or a computer with Bluetooth. Twistwright reads GAN smart cubes, such as the GAN 12 ui.'},
+  {id:'regular-cube',term:'Regular cube',match:/\bregular cubes?\b/i,see:['smart-cube','virtual-cube'],
+   def:'A cube with nothing electronic inside, the kind most people have. Twistwright cannot see it turn. So you scan it with the camera or paint its colors in, then you turn it by hand as the app shows each move.'},
+  {id:'virtual-cube',term:'Virtual cube',match:/\bvirtual cubes?\b/i,see:['smart-cube','regular-cube'],
+   def:'A cube on the screen. Six keys on the keyboard or the numeric keypad turn its faces, and a drag turns the whole cube. You need no real cube to learn with it.'}
 ];
 const GLOSSARY_BY_ID=Object.fromEntries(GLOSSARY.map(g=>[g.id,g]));
 

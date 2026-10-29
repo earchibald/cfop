@@ -54,7 +54,12 @@ const ST_MOVE_WORDS={
   L:['Left','Turn the left face down, toward you.','Turn the left face up, away from you.']};
 // A turn in words, with no letter: "Right face, clockwise". The keys page shows it.
 function stMoveSay(m){const w=ST_MOVE_WORDS[m[0]];if(!w)return m;return `${w[0]} face, ${/['′]/.test(m)?'counterclockwise':/2/.test(m)?'a half turn':'clockwise'}`;}
-const ST_HIDDEN={D:'The bottom face is hidden. You see its edge.',B:'The back face is hidden. You see its edge.',L:'The left face is hidden. You see its edge.'};
+// The caption of a move on the moves page, as the picture is turned now (a drag turns it): a face
+// turned away is hidden, and with green turned away the letters still go with the colors.
+function stFaceSeen(view,f){return rot3(FACE_GEOM['URFDLB'.indexOf(f)].n,view.yaw,view.pitch)[2]>0.15;}
+function stMoveCap(view,f){const F=f.toUpperCase();
+  const line=stFaceSeen(view,F)?`The lit stickers turn with ${f}.`:`The ${ST_MOVE_WORDS[F][0].toLowerCase()} face is turned away from you. You see its edge.`;
+  return stFaceSeen(view,'F')?line:`${line} Front is still the green face. Double-click to put the view back.`;}
 const START={on:false,screen:'level',level:null,src:'mine',kind:null,found:false,first:false,
   check:null,sets:null,caseSet:null,quiz:null,five:null,sc:null,last:'—',way:null};
 function startEl(){let el=$('#start');if(el)return el;el=document.createElement('div');el.id='start';el.className='start hidden';
@@ -134,31 +139,33 @@ function stBasicsBar(n){return stBar('Basics',`<span class="st-dots" aria-label=
 function stCubeSide(){return `<div class="st-pic"><div class="st-cube" id="stCube"></div><span class="muted st-small" id="stCap"></span></div>`;}
 START_SCREENS['t1-what']=()=>`${stBasicsBar(1)}
   <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 1 of 4</span><h1>Meet the cube</h1><p>The cube is a puzzle. It has six faces. Each face has nine stickers.</p>
-    <ul class="st-rules"><li><b>Solved</b>: each face is all one color. The six colors are white, yellow, green, blue, red and orange.</li><li><b>A turn</b>: any face can turn. A turn moves stickers onto the faces next to it.</li><li><b>The puzzle</b>: many turns mix up the colors (a "scramble"). The goal is to bring all the colors together until the cube is <b>Solved</b>.</li></ul>
+    <ul class="st-rules"><li>When the cube is <b>Solved</b>, each face is all one color. The six colors are white, yellow, green, blue, red and orange.</li><li><b>A turn</b>: any face can turn.</li><li><b>The puzzle</b>: As you may have already discovered, many turns add up to a <b>Scrambled</b> cube. The goal is to bring all the colors together until the cube is <b>Solved</b>.</li></ul>
     <div class="st-demo"><div class="st-demorow"><button class="st-showturn" data-demo="1" title="Turn one face of the picture. Each click turns one more"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4.5h-4.5"/></svg><span id="stDemoLbl">Show me a turn</span></button>
-      <button class="st-link" data-demoreset="1" hidden title="Turn the moves back, fast, to a solved cube">Reset cube to Solved</button></div>
-      <div class="st-demolog" id="stDemoLog" hidden aria-live="polite"><span class="st-small" id="stDemoLast"></span><span class="st-tchips" id="stDemoChips"></span></div></div>
-    <p class="muted">No cube yet? That's fine! The picture is your cube on these pages. After the basics, you pick a regular cube, a smart cube or a virtual cube ${typeof smartInApp==='function'&&smartInApp()?'in the app':'in the browser'}.</p>
+      <button class="st-link off" data-demoreset="1" disabled title="Turn the moves back, fast, to a solved cube">Reset cube to Solved</button></div>
+      <div class="st-demolog off" id="stDemoLog" aria-live="polite"><span class="st-small" id="stDemoLast"></span><span class="st-tchips" id="stDemoChips"></span></div></div>
+    <p class="muted">No cube yet? That's fine! The picture is your cube on these pages. After the basics, you can pick a regular cube, a smart cube or a virtual cube ${typeof smartInApp==='function'&&smartInApp()?'in the app':'in the browser'}.</p>
     <div class="st-foot">${stBack('level','← Change my level')}<span class="spacer"></span><button class="primary" data-go="t1-hold" title="Go on to how to hold it">Next: how to hold it →</button></div></div>
   <div class="st-pic"><div class="st-cube" id="stCube"></div><div class="st-hints"><span><svg viewBox="0 0 24 16" aria-hidden="true"><path d="M3 12a9 9 0 0 1 18 0"/><path d="M3 12l-1.6-3.2M3 12l3.3-1.3"/><path d="M21 12l1.6-3.2M21 12l-3.3-1.3"/></svg>Drag to look around the cube</span><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v9.5l-2-2a1.6 1.6 0 0 0-2.3 2.3L9.5 18A6 6 0 0 0 14 20h0a5 5 0 0 0 5-5v-3.5a1.5 1.5 0 0 0-3 0V11M9 9.5V3a1.5 1.5 0 0 1 3 0v7M12 10V8.5a1.5 1.5 0 0 1 3 0V11"/></svg>Double-click to put it back</span></div></div></div>`;
-// Show me a turn: each click turns one face of the picture at random, a quarter turn either way or
-// a half turn, never on the axis of the turn before (so no two turns cancel). The turns stay: the cube mixes up as the clicks
+// Show me a turn: each click turns one face of the picture at random, a quarter turn either way (no
+// half turns: they confuse a newcomer), never on the axis of the turn before (so no two turns cancel). The turns stay: the cube mixes up as the clicks
 // go on, and the log shows each one as its face's color and an arrow (no move letter in the
 // basics). Reset cube to Solved, or a double-click, turns them back fast, the last one first.
-const ST_DEMO_T={turn:520,back:200};
+const ST_DEMO_T={turn:520,back:200},ST_DEMO_CHIPS=8;
 const ST_DEMO_COLOR={U:'W',R:'R',F:'G',D:'Y',L:'O',B:'B'};
 const ST_AXIS={U:0,D:0,R:1,L:1,F:2,B:2};
 function stDemoPick(last){const faces='URFDLB'.split('').filter(f=>!last||ST_AXIS[f]!==ST_AXIS[last[0]]);
-  return faces[Math.floor(Math.random()*faces.length)]+['',"'",'2'][Math.floor(Math.random()*3)];}
+  return faces[Math.floor(Math.random()*faces.length)]+['',"'"][Math.floor(Math.random()*2)];}
 function stDemoChip(m,cls){return `<span class="st-tchip${cls?' '+cls:''}" title="${esc(stMoveSay(m))}"><i style="--sec:var(--sticker-${ST_DEMO_COLOR[m[0]]})"></i>${m.endsWith("'")?'↺':m.endsWith('2')?'↻↻':'↻'}</span>`;}
 function stDemoDraw(){const d=START.demo||[],log=$('#stDemoLog'),lbl=$('#stDemoLbl'),rs=$('#start [data-demoreset]'),btn=$('#start [data-demo]');
   if(lbl)lbl.textContent=d.length?'Show me another turn':'Show me a turn';
-  if(rs){rs.hidden=!d.length;rs.disabled=!!START.demoBack;}if(btn)btn.disabled=!!START.demoBack;
-  if(!log)return;log.hidden=!d.length;
+  if(rs){rs.classList.toggle('off',!d.length);rs.disabled=!d.length||!!START.demoBack;}if(btn)btn.disabled=!!START.demoBack;
+  if(!log)return;log.classList.toggle('off',!d.length);
   const last=$('#stDemoLast');if(last)last.innerHTML=d.length?`<b>${d.length} ${d.length===1?'turn':'turns'}.</b> Last: ${esc(stMoveSay(d[d.length-1]))}.`:'';
-  const ch=$('#stDemoChips');if(ch)ch.innerHTML=d.map((m,i)=>stDemoChip(m,i===d.length-1?'new':'')).join('');}
+  // The last turns only, on one row: the log keeps its height, so nothing on the page moves.
+  const ch=$('#stDemoChips'),k=Math.max(0,d.length-ST_DEMO_CHIPS);
+  if(ch)ch.innerHTML=(k?`<span class="st-tmore" title="${k} earlier ${k===1?'turn':'turns'}">+${k}</span>`:'')+d.slice(k).map((m,i)=>stDemoChip(m,k+i===d.length-1?'new':'')).join('');}
 function stDemoTurn(){const sc=START.sc;if(!sc||START.demoBack)return;const d=START.demo=START.demo||[];
-  const m=stDemoPick(d[d.length-1]);d.push(m);sc.turn(m,{dur:m.endsWith('2')?ST_DEMO_T.turn*1.35:ST_DEMO_T.turn});
+  const m=stDemoPick(d[d.length-1]);d.push(m);sc.turn(m,{dur:ST_DEMO_T.turn});
   const b=$('#start [data-demo]');if(b){b.classList.remove('spin');void b.offsetWidth;b.classList.add('spin');}
   stDemoDraw();}
 function stDemoReset(){const sc=START.sc,d=START.demo||[];if(!sc||START.demoBack||!d.length)return;
@@ -180,12 +187,18 @@ START_SCREENS['t1-keys']=()=>{const k=screenKeys('awdx'),n=screenKeys('pad');
     <div class="st-keysets st-kbd">${stKeyGrid('awdx',SCREEN_KEYMAPS.awdx.where)}${stKeyGrid('pad',SCREEN_KEYMAPS.pad.where)}</div>
     <ul class="st-rules"><li class="st-kbd"><b>Key alone</b>: the face turns clockwise.</li><li class="st-kbd"><b>Shift + key</b>: it turns the other way.</li><li><b>Drag</b>: the whole cube turns. No face moves.</li></ul>
     <div class="st-foot"><span class="st-kbd">Try it: press <b class="mono">${esc(k.F)}</b> or <b class="mono">${esc(n.F)}</b>, then <b class="mono">Shift+${esc(k.F)}</b>.</span><span class="spacer"></span><button class="primary" data-go="t1-solve" title="Mix up the virtual cube and solve it with the app">Next: your first solve →</button></div></div></div>`;};
+// The opposite colors as pairs of swatches with a two-way arrow between them.
+const ST_OPPOSITE=[['W','Y'],['G','B'],['R','O']];
+const ST_COLOR_WORD={W:'White',Y:'Yellow',G:'Green',B:'Blue',R:'Red',O:'Orange'};
+function stOppPair(a,b){const sw=c=>`<span class="st-sw"><i style="--sec:var(--sticker-${c})"></i>${ST_COLOR_WORD[c]}</span>`;
+  return `<span class="st-pair" aria-label="${ST_COLOR_WORD[a]} is opposite ${ST_COLOR_WORD[b].toLowerCase()}">${sw(a)}<svg viewBox="0 0 28 12" aria-hidden="true"><path d="M3 6h22M8 1.5 3 6l5 4.5M20 1.5 25 6l-5 4.5"/></svg>${sw(b)}</span>`;}
 START_SCREENS['t1-hold']=()=>`${stBasicsBar(2)}
   <div class="st-split"><div class="st-text"><span class="st-lbl">Basics · 2 of 4</span><h1>Hold it like this</h1><p>Each face has one center sticker. The centers never move. They give each face its color.</p>
     <button class="st-hold" data-hold="top" title="Show the top layer"><span class="st-hl" data-hl="U"><b>White center on top.</b></span> <span class="muted">The picture shows it this way.</span></button>
     <button class="st-hold" data-hold="front" title="Show the front layer, then the right layer"><span class="st-hl" data-hl="F"><b>Green center toward you.</b></span> <span class="st-hl muted" data-hl="R">Red is then on your right.</span></button>
-    <button class="st-hold" data-hold="hands" title="Show where your hands go"><span class="st-hl" data-hl="H"><b>Your hands hold the right and left faces, with your thumbs on the front face.</b></span></button>
-    <p class="muted">Opposite faces: white and yellow, green and blue, red and orange. Have a cube? Hold yours the same way.</p>
+    <button class="st-hold" data-hold="hands" title="Show where your fingers go"><span class="st-hl" data-hl="T"><b>Thumbs on the front face.</b></span> <span class="st-hl muted" data-hl="I">Index fingers on top.</span> <span class="st-hl muted" data-hl="M">Middle and ring fingers on the back.</span> <span class="st-hl muted" data-hl="P">Pinkies under the cube.</span></button>
+    <div class="st-opp"><span>Each center always has the same opposite:</span><span class="st-pairs">${ST_OPPOSITE.map(([a,b])=>stOppPair(a,b)).join('')}</span></div>
+    <p class="muted">Have a cube? Hold yours the same way.</p>
     <div class="st-foot">${stBack('t1-what')}<span class="spacer"></span><button class="primary" data-go="t1-pieces" title="Go on to the pieces">I see it →</button></div></div>
   ${stCubeSide()}</div>`;
 // The hold: a line lifts its layer out of the picture with a glow and back, and its words light up
@@ -199,52 +212,55 @@ function stHoldShow(key){const sc=START.sc,el=startEl();if(!sc)return;const run=
     if(hl)hl.classList.add('on');setTimeout(()=>{if(live()&&hl)hl.classList.remove('on');},up+hold);
     sc.bump(stLayer(f),{up,hold,down,dir:FACE_GEOM[fi].n,d:0.6,done:()=>go(i+1)});};
   go(0);}
-// The shadow hands: the palms on the right and left faces, the fingers back to the back edge, the
-// wrists under the cube, the thumbs on the front face. Each part is a capsule or a round box on one
-// face's plane, in that plane's own units: on a side face u runs from the front edge (0) to the
-// back edge (3), on the front face u is x; v is up. They go through the picture's camera, so a drag
-// takes them along. A part on a face turned away draws behind the cube. d moves the hands out along
-// each face's normal (the bounce in).
-function stCapsule(a,b,r){const ang=Math.atan2(b[1]-a[1],b[0]-a[0]),out=[];
-  for(let i=0;i<=8;i++){const t=ang-Math.PI/2+Math.PI*i/8;out.push([b[0]+r*Math.cos(t),b[1]+r*Math.sin(t)]);}
-  for(let i=0;i<=8;i++){const t=ang+Math.PI/2+Math.PI*i/8;out.push([a[0]+r*Math.cos(t),a[1]+r*Math.sin(t)]);}
-  return out;}
-function stRoundBox(u0,v0,u1,v1,r){const out=[],c=[[u1-r,v1-r,0],[u0+r,v1-r,1],[u0+r,v0+r,2],[u1-r,v0+r,3]];
-  for(const [x,y,k] of c)for(let i=0;i<=4;i++){const t=Math.PI/2*(k+i/4);out.push([x+r*Math.cos(t),y+r*Math.sin(t)]);}
-  return out;}
-const ST_HAND_SIDE=[stRoundBox(0.15,-1.75,2.35,0.95,0.55),stCapsule([1.15,-1.5],[1.35,-2.75],0.72),
-  stCapsule([1.35,1.0],[2.9,1.12],0.28),stCapsule([1.7,0.47],[2.94,0.52],0.28),stCapsule([1.8,-0.06],[2.94,-0.06],0.27),stCapsule([1.8,-0.58],[2.86,-0.66],0.25),
-  stCapsule([0.6,-0.8],[-0.12,-0.6],0.33)];
-const ST_HAND_THUMB=[stCapsule([1.62,-0.6],[0.85,0.35],0.3)];
-// The planes: a side face (s 1 right, -1 left) and the front face, mirrored for the left thumb.
-function stHandParts(){const e=0.04,out=[];
-  for(const s of [1,-1]){out.push({n:[s,0,0],at:(u,v,d)=>[s*(1.5+e+d),v,1.5-u],shapes:ST_HAND_SIDE});
-    out.push({n:[0,0,1],at:(u,v,d)=>[s*u,v,1.5+e+d],shapes:ST_HAND_THUMB});}
-  return out;}
-function stHandsSVG(view,front,h){if(!h||!(h.op>0))return '';
+// The fingers: a pad for each fingertip, where a real hold puts them (from photos of a left hand;
+// the right hand mirrors it): the thumb on the front face, the index finger on top near the back,
+// the middle and ring fingers on the back face, the pinky under the cube. Each pad is an oval on one
+// face's plane: u runs out from the middle toward the hand's side, v is the other direction in the
+// plane (up on the front and back, away from you on the top and bottom). They go through the
+// picture's camera, so a drag takes them along; a pad on a face turned away is not drawn. d moves a
+// pad out along its face's normal (the bounce in).
+const ST_FINGERS=[{g:'T',f:'F',u:0.92,v:-0.05,rx:0.5,ry:0.4},{g:'I',f:'U',u:0.92,v:0.85,rx:0.48,ry:0.38},
+  {g:'M',f:'B',u:0.92,v:0.5,rx:0.46,ry:0.36},{g:'M',f:'B',u:0.92,v:-0.45,rx:0.46,ry:0.36},{g:'P',f:'D',u:0.85,v:-0.2,rx:0.42,ry:0.33}];
+const ST_FINGER_PLANE={F:{n:[0,0,1],at:(x,v,o)=>[x,v,o]},B:{n:[0,0,-1],at:(x,v,o)=>[x,v,-o]},
+  U:{n:[0,1,0],at:(x,v,o)=>[x,o,-v]},D:{n:[0,-1,0],at:(x,v,o)=>[x,-o,-v]}};
+// Each group in turn: its words light, the picture turns to where its pads can be seen, and the pads
+// drop in with a bounce. Then the picture turns back to white on top, green toward you.
+const ST_FINGER_STEPS=[{g:'T'},{g:'I'},{g:'M',view:{yaw:150,pitch:22}},{g:'P',view:{yaw:-20,pitch:-50}}];
+const ST_HANDS_T={view:650,in:520,gap:650,hold:2200,out:450};
+function stFingersSVG(view,H){if(!H)return '';const out=[];
   const P=p=>{const q=rot3(p,view.yaw,view.pitch);return (200+q[0]*46).toFixed(1)+','+(185-q[1]*46).toFixed(1);};
-  const polys=stHandParts().filter(pt=>(rot3(pt.n,view.yaw,view.pitch)[2]>0)===front)
-    .flatMap(pt=>pt.shapes.map(sh=>`<polygon class="st-hand" points="${sh.map(([u,v])=>P(pt.at(u,v,h.d))).join(' ')}"/>`));
-  return polys.length?`<g class="st-hands" opacity="${h.op.toFixed(3)}">${polys.join('')}</g>`:'';}
-const ST_HANDS_T={in:750,hold:2800,out:450};
+  for(const fg of ST_FINGERS){const st=H.pads[fg.g];if(!st||!(st.op>0))continue;const pl=ST_FINGER_PLANE[fg.f];
+    if(rot3(pl.n,view.yaw,view.pitch)[2]<=0.05)continue;
+    for(const s of [-1,1]){const pts=[];
+      for(let i=0;i<24;i++){const t=2*Math.PI*i/24;pts.push(P(pl.at(s*(fg.u+fg.rx*Math.cos(t)),fg.v+fg.ry*Math.sin(t),1.54+st.d)));}
+      out.push(`<polygon class="st-pad${H.now===fg.g?' now':''}" opacity="${st.op.toFixed(3)}" points="${pts.join(' ')}"/>`);}}
+  return out.length?`<g class="st-fingers">${out.join('')}</g>`:'';}
 function stBounce(x){const n=7.5625,k=2.75;if(x<1/k)return n*x*x;if(x<2/k)return n*(x-=1.5/k)*x+0.75;if(x<2.5/k)return n*(x-=2.25/k)*x+0.9375;return n*(x-=2.625/k)*x+0.984375;}
-function stHandsOff(sc){if(sc.hands){cancelAnimationFrame(sc.hands.raf);clearTimeout(sc.hands.timer);}
+function stHandsOff(sc){const H=sc.hands;if(H){cancelAnimationFrame(H.raf);clearTimeout(H.timer);if(H.turned)sc.view={...SCREEN_VIEW};}
   if(sc.hands||sc.under||sc.over){sc.hands=null;sc.under=sc.over=null;sc.draw();}}
-// The words light, and the hands drop onto the picture with a bounce, stay a while, then fade.
-function stHandsShow(sc,run){const el=startEl(),T=ST_HANDS_T,op=0.55,live=()=>START.holdRun===run&&START.sc===sc;
-  sc.bump(null);const hl=el.querySelector('.st-hl[data-hl="H"]');if(hl)hl.classList.add('on');
-  const H=sc.hands={d:0,op,raf:0,timer:0};sc.under=v=>stHandsSVG(v,false,sc.hands);sc.over=v=>stHandsSVG(v,true,sc.hands);
-  const end=()=>{if(!live()||sc.hands!==H)return;if(hl)hl.classList.remove('on');stHandsOff(sc);};
+function stHandsLit(el,g){el.querySelectorAll('[data-hold="hands"] .st-hl').forEach(x=>x.classList.toggle('on',g===true||x.dataset.hl===g));}
+function stHandsShow(sc,run){const el=startEl(),T=ST_HANDS_T;sc.bump(null);
+  const H=sc.hands={pads:{},now:null,raf:0,timer:0,turned:false};sc.under=null;sc.over=v=>stFingersSVG(v,sc.hands);
+  const live=()=>START.holdRun===run&&START.sc===sc&&sc.hands===H;
+  const end=()=>{if(!live())return;stHandsLit(el,null);stHandsOff(sc);};
   const reduce=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(typeof requestAnimationFrame!=='function'||reduce){sc.draw();H.timer=setTimeout(end,T.in+T.hold);return;}
-  const t0=performance.now();
-  const step=()=>{if(!live()||sc.hands!==H)return;const e=performance.now()-t0;
-    if(e>=T.in+T.hold+T.out){end();return;}
-    if(e<T.in){const x=e/T.in;H.d=1.4*(1-stBounce(x));H.op=op*Math.min(1,x*3);}
-    else if(e<T.in+T.hold){H.d=0;H.op=op;sc.draw();H.timer=setTimeout(()=>{H.raf=requestAnimationFrame(step);},T.in+T.hold-e);return;}
-    else{const y=(e-T.in-T.hold)/T.out;H.d=0.5*y;H.op=op*(1-y);if(hl)hl.classList.remove('on');}
-    sc.draw();H.raf=requestAnimationFrame(step);};
-  H.raf=requestAnimationFrame(step);}
+  // No motion: every pad at once, the picture as it is, then they go.
+  if(typeof requestAnimationFrame!=='function'||reduce){for(const st of ST_FINGER_STEPS)H.pads[st.g]={d:0,op:1};
+    stHandsLit(el,true);sc.draw();H.timer=setTimeout(end,T.in+T.hold);return;}
+  const tween=(ms,f,next)=>{const t0=performance.now();
+    const step=()=>{if(!live())return;const x=Math.min(1,(performance.now()-t0)/Math.max(1,ms));f(x);sc.draw();if(x<1)H.raf=requestAnimationFrame(step);else next();};
+    H.raf=requestAnimationFrame(step);};
+  const ease=x=>x<0.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
+  const turn=(to,next)=>{const from={...sc.view};if(Math.abs(from.yaw-to.yaw)<1&&Math.abs(from.pitch-to.pitch)<1){next();return;}
+    H.turned=true;tween(T.view,x=>{const e=ease(x);sc.view={yaw:from.yaw+(to.yaw-from.yaw)*e,pitch:from.pitch+(to.pitch-from.pitch)*e};},next);};
+  const wait=(ms,next)=>{H.timer=setTimeout(()=>{if(live())next();},ms);};
+  const go=i=>{if(!live())return;
+    if(i>=ST_FINGER_STEPS.length){H.now=null;stHandsLit(el,null);
+      turn(SCREEN_VIEW,()=>{H.turned=false;wait(T.hold,()=>tween(T.out,x=>{for(const k in H.pads)H.pads[k].op=1-x;},end));});return;}
+    const st=ST_FINGER_STEPS[i];
+    turn(st.view||SCREEN_VIEW,()=>{H.now=st.g;stHandsLit(el,st.g);const p=H.pads[st.g]={d:1.3,op:0};
+      tween(T.in,x=>{p.d=1.3*(1-stBounce(x));p.op=Math.min(1,x*3);},()=>wait(T.gap,()=>go(i+1)));});};
+  go(0);}
 // The pieces: a kind lifts its pieces out of the picture and puts them back (screenCube's bump).
 // Find it is a click on the picture: the white and green edge brings up the callout.
 const ST_KIND_SAY={centers:'A center never moves. It names its face.',edges:'An edge sits between two centers. It has two colors.',corners:'A corner sits where three faces meet. It has three colors.',
@@ -310,7 +326,7 @@ function stMoveShow(m){const sc=START.sc,el=startEl();if(!sc)return;const run=ST
   const f=m[0],back=m.endsWith("'")?f:f+"'",live=()=>START.moveRun===run&&START.sc===sc,T=ST_MOVE_T;
   const btn=x=>el.querySelector(`.st-move[data-mv="${x}"]`),say=$('#stMoveSay'),cap=$('#stCap');
   const lit=x=>{el.querySelectorAll('.st-move.on').forEach(b=>b.classList.remove('on'));const b=x&&btn(x);if(b)b.classList.add('on');};
-  sc.set(new Cube(),stMoveLayers(f));if(cap)cap.textContent=ST_HIDDEN[f.toUpperCase()]||'The lit stickers turn with '+f+'.';
+  sc.set(new Cube(),stMoveLayers(f));if(cap)cap.textContent=stMoveCap(sc.view,f);
   const step=x=>{lit(x);if(say)say.innerHTML=stMoveLine(x);setTimeout(()=>{if(live())sc.turn(x,{dur:T.turn});},T.glow);};
   step(m);
   setTimeout(()=>{if(live())step(back);},T.next);
@@ -343,7 +359,7 @@ START_SCREENS['t1-ready']=()=>`${stBar('Your first solve',stBack('t2-cube'))}
   <div class="st-center"><div class="st-box st-ready1">
     <div class="st-readypic">${stPic(new Cube(),null,'A solved cube')}</div>
     <div class="st-readytext"><h1>Is your cube solved?</h1>
-      <p>If so, go ahead and scramble it up! Don't worry — you can do this.</p>
+      <p>If so, go ahead and scramble it up! Don't worry. You got this!</p>
       <p>Then, we'll either scan it with your camera (the easiest way) or you can paint the grid colors by hand.</p>
       <div class="row"><button class="primary big" data-ready="scan" title="Show each face of your cube to the camera">Scan it with the camera</button><button class="big" data-ready="paint" title="Tap the colors of your cube onto a grid">Paint the colors by hand</button></div></div>
   </div></div>`;
