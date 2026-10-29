@@ -28,8 +28,10 @@ function screenCube(el,opts={}){
   const sc={el,cube:opts.cube||new Cube(),fade:opts.fade||null,view:{...(opts.view||SCREEN_VIEW)},anim:null,lift:null,keys:opts.keys!==false,onMove:opts.onMove||null,onPick:opts.onPick||null,label:opts.label||'The virtual cube'};
   el.classList.add('screencube');el.setAttribute('role','img');el.setAttribute('aria-label',sc.label);
   if(!el.title)el.title='Drag to look around the cube. Double-click to put it back.';
+  // sc.under and sc.over: functions of the view that give more SVG behind and in front of the cube
+  // (the hold page's shadow hands).
   const draw=()=>{const a=sc.anim,f=(a?a.from:sc.cube).toFacelets();
-    el.innerHTML=`<svg viewBox="0 0 400 370" aria-hidden="true">${renderCube3D(f,{yaw:sc.view.yaw,pitch:sc.view.pitch,scale:46,n:3,fade:sc.fade,move:a?a.move:null,t:a?a.t:0,lift:a?null:sc.lift,cls:sc.onPick?i=>'pk'+i:null})}</svg>`;};
+    el.innerHTML=`<svg viewBox="0 0 400 370" aria-hidden="true">${sc.under?sc.under(sc.view):''}${renderCube3D(f,{yaw:sc.view.yaw,pitch:sc.view.pitch,scale:46,n:3,fade:sc.fade,move:a?a.move:null,t:a?a.t:0,lift:a?null:sc.lift,cls:sc.onPick?i=>'pk'+i:null})}${sc.over?sc.over(sc.view):''}</svg>`;};
   sc.draw=draw;
   sc.set=(cube,fade)=>{if(sc.anim){cancelAnimationFrame(sc.anim.raf);sc.anim=null;}sc.cube=cube;if(fade!==undefined)sc.fade=fade;draw();};
   // o.dur: the length of the turn in ms (a quarter turn is 260 by default).

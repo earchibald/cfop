@@ -73,7 +73,7 @@ w.addEventListener('load',async()=>{try{
   assert.ok(/Yellow on top/.test($('#tab-bsolve .gd-part .gd-hold').textContent),'the hold on the part');
   // A daisy part: two lines. The hold, then one line names the moves above the tiles.
   const li=$$('#tab-bsolve .gd-steps > li');assert.strictEqual(li.length,2,'a daisy part has two lines');
-  assert.ok(/Hold the cube/.test(li[0].textContent),'the hold line');
+  assert.ok(/^(Turn the whole cube|Keep this hold)/.test(li[0].textContent)&&!/Hold the cube with/.test(li[0].textContent),'the hold line, not the hold again: '+li[0].textContent);
   assert.ok(/^(Flip|Turn) .*the \w+-white edge .*\(.+\)\./.test(li[1].textContent),'the second line names the edge and its moves');
   assert.ok(li[1].querySelector('.gd-moves'),'the tiles sit under the second line');
   // A part in a later stage has the same two lines.

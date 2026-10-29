@@ -126,11 +126,31 @@ body.starting header.top>*:not(h1){display:none!important}
 .st-hl{display:inline-block;margin-inline:3px;border-radius:4px;transition:transform .48s ease-in-out,background-color .48s,box-shadow .48s,color .48s}
 .st-hl.on{transform:translateY(-3px) scale(1.03);color:var(--text);background:color-mix(in srgb,var(--accent) 26%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 26%,transparent),0 0 18px 3px color-mix(in srgb,var(--accent) 60%,transparent);transition-duration:.42s}
 @media (prefers-reduced-motion:reduce){.st-hl,.st-hl.on{transition:none}.st-hl.on{transform:none}}
+/* The shadow hands on the hold page's picture (stHandsShow): one flat color, the group's opacity over it. */
+.st-hand{fill:var(--text)}
 .st-kinds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .st-kind{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:12px;text-align:left}
 .st-kind[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--panel2))}
 .st-box{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--panel);line-height:1.45}
 .st-box.st-find button,.st-box.st-say button{align-self:flex-start}
+/* Meet the cube: Show me a turn, its log, and the two hints under the picture (stDemoTurn). */
+.st-demo{display:flex;flex-direction:column;gap:10px}
+.st-demorow{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.st-showturn{display:inline-flex;align-items:center;gap:10px;padding:12px 22px 12px 18px;border-radius:999px;font-size:16px;font-weight:600;border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 16%,var(--panel2));color:var(--text);box-shadow:0 0 0 0 transparent;transition:transform .2s,box-shadow .2s,background-color .2s}
+.st-showturn:hover:not(:disabled){transform:translateY(-1px);background:color-mix(in srgb,var(--accent) 26%,var(--panel2));box-shadow:0 8px 22px -8px color-mix(in srgb,var(--accent) 80%,transparent)}
+.st-showturn:disabled{opacity:.55;cursor:default}
+.st-showturn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.st-showturn.spin svg{animation:stSpin .55s ease-out}
+@keyframes stSpin{from{transform:rotate(-200deg)}to{transform:none}}
+.st-demolog{display:flex;flex-direction:column;gap:7px}
+.st-tchips{display:flex;flex-wrap:wrap;gap:5px}
+.st-tchip{display:inline-flex;align-items:center;gap:4px;padding:2px 7px 2px 5px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);font-size:14px;line-height:1.3}
+.st-tchip i{width:12px;height:12px;border-radius:3px;background:var(--sec);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+.st-tchip.new{border-color:var(--accent)}
+.st-hints{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:14px;font-weight:600;color:var(--text)}
+.st-hints span{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:999px;background:var(--panel2);border:1px solid var(--line)}
+.st-hints svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--accent)}
+@media (prefers-reduced-motion:reduce){.st-showturn,.st-showturn:hover{transition:none;transform:none}.st-showturn.spin svg{animation:none}}
 /* The moves: U D F B R L over U′ … L′. A click lights the move, then the way back (stMoveShow). */
 .st-moves{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;max-width:420px}
 .st-moves .st-move{font-family:var(--mono);font-size:18px;font-weight:600;min-width:0;padding:10px 0;transition:transform .48s ease-in-out,background-color .48s,box-shadow .48s,border-color .48s}
