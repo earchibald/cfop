@@ -131,6 +131,41 @@ function questHoldPick(cur,place,c){
   return want.sort((a,b)=>score(a)-score(b))[0]||cur;
 }
 
+// ----- the drill -----
+// A case drilled on the real cube, whatever state it is in: the picture starts as the case, set up
+// as the cube is held, and each turn of the real cube turns the picture. The picture's state is the
+// case's state times the moves made since the start: setup · P0⁻¹ · P, with P0 the real cube at the
+// start and P the real cube now. The moves between two pictures are the moves between the two real
+// states, so the layer turns, the list and the stage work as they do for the real cube. When the
+// picture is solved, "Solved" shows for QUEST_SOLVED_MS, then the case comes again.
+const QUEST_SOLVED_MS=2500;
+// The cases there are: the two-look OLL and PLL (js/algs.js ALG_DB) and the full PLL. {id, name, alg}.
+function questDrillCases(){
+  const out=[];
+  if(typeof ALG_DB!=='undefined')for(const g of Object.values(ALG_DB))for(const c of g)out.push({id:c.id,name:c.name,alg:c.alg});
+  if(typeof PLL_FULL!=='undefined')for(const c of PLL_FULL)out.push({id:'pll-'+c.name,name:c.name+' perm',alg:c.alg});
+  return out;
+}
+// A case by its id or its name, in any case: 'co-sune', 'Sune', 'T perm'. null when there is none.
+function questDrillFind(name){
+  const k=String(name||'').trim().toLowerCase(),all=questDrillCases();
+  return all.find(c=>c.id.toLowerCase()===k)||all.find(c=>c.name.toLowerCase()===k)||null;
+}
+// The case's state, as the real cube must be for the case to show as held: the inverse of the
+// algorithm from solved, in the held frame, then turned to the cube's own frame by the hold (H X H⁻¹,
+// so a held R is the real face that the hold puts on the right). An algorithm whose whole-cube
+// turns do not cancel (V perm has a y in it) leaves the centers turned: its face turns, each named
+// as the cube is held at that point, are the algorithm and then its whole-cube turn undone, so the
+// case is that turn, then the inverse (r X): its centers sit home.
+function questDrillSetup(alg,hold){
+  let X=applyAlg(new Cube(),invertAlg(alg));
+  if(X.center.join()!=='0,1,2,3,4,5'){const back=Object.values(QUEST_HOLDS).find(h=>h.cube.mul(X).center.join()==='0,1,2,3,4,5');if(back)X=back.cube.mul(X);}
+  const H=(hold||QUEST_HOLD_FIRST).cube;
+  return H.mul(X).mul(H.inverse());
+}
+// The picture for the real state: setup · P0⁻¹ · P.
+function questDrillState(d,real){return d.setup.mul(d.p0.inverse()).mul(real);}
+
 // ----- the hidden faces -----
 // As draw.js draws them (hiddenFacePolys): each face that looks away from the eye has a mirror out
 // along its normal, dist past the face, and its stickers show on it from behind, as in a mirror.
@@ -160,10 +195,11 @@ function questMirrorReach(){return Math.hypot(1.5+QUEST_MIRROR.dist,1.5);}
 // The color of a move's face as held: the center on that face of the held cube.
 const QUEST_HEX=['#f3f2ec','#d8283b','#14a85f','#ffd21e','#ff6a1c','#2c6fdc'];
 function questMoveColor(m,heldCube){const f='URFDLB'.indexOf(m[0]);return f<0?'#8f8f97':QUEST_HEX[(heldCube?heldCube.center:[0,1,2,3,4,5])[f]];}
-// The lines of the floating panel: the link, the stage, the last moves. Plain data; render.js draws it.
+// The lines of the floating panel: the link, the stage (or the drill, while one runs: its case and
+// the count solved), the last moves. Plain data; render.js draws it.
 function questPanel(s){
   const head=s.name?s.name+(s.battery!=null?' · '+s.battery+'%':''):'No cube';
-  const stage=s.stage?(s.stage.name+(s.stage.sub?' · '+s.stage.sub:'')):'';
+  const stage=s.drill?s.drill:s.stage?(s.stage.name+(s.stage.sub?' · '+s.stage.sub:'')):'';
   const moves=(s.moves||[]).slice(-12);
   return {head,status:s.status||'',stage,moves,count:(s.moves||[]).length,tilt:!!s.tilt,hint:s.hint||''};
 }
@@ -175,7 +211,9 @@ function questPanel(s){
 // fingertip that goes through a button's face presses it once. Sizes in meters: w and h a button,
 // tile a hold tile (square), gap between two, group between two groups.
 const QUEST_BAR={w:0.05,h:0.04,tile:0.04,gap:0.007,group:0.024,hover:0.03,armed:0.012,deep:0.04};
-// s: {tilt, moves (a count), panel, hidden, top, front (the hold's colors), exit (armed)}.
+// A third row has the drill: Drill Sune, or Stop drill while one runs.
+// s: {tilt, moves (a count), panel, hidden, top, front (the hold's colors), exit (armed), drill
+// (one runs), drillName (the case the button starts)}.
 function questBarButtons(s){
   const tile=(place,c)=>({id:(place==='up'?'top-':'front-')+QUEST_COLOR_NAMES[c],label:place==='up'?'Top':'Front',row:1,tile:true,
     color:QUEST_HEX[c],on:(place==='up'?s.top:s.front)===c,group:c===QUEST_FRONTS[0]});
@@ -189,6 +227,7 @@ function questBarButtons(s){
     {id:'panel',label:s.panel?'Hide panel':'Show panel',row:0},
     ...QUEST_TOPS.map(c=>tile('up',c)),...QUEST_FRONTS.map(c=>tile('front',c)),
     {id:'exit',label:s.exit?'Poke again':'Exit',row:1,group:true,warn:!!s.exit},
+    {id:'drill',label:s.drill?'Stop drill':'Drill '+(s.drillName||'Sune'),on:!!s.drill,row:2},
   ];
 }
 // Where each button sits, in the row's frame (x right, y up, from the middle of the first row):

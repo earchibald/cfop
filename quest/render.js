@@ -1,7 +1,7 @@
 // ================= Quest cube lab: the renderer =================
 // WebGL 2 with no library: one box mesh for the cubies (and the hands and controllers in VR), one
-// quad for the stickers (and the hidden faces' mirrors), two textured quads: the floating panel and
-// the rows of buttons. The same code draws the flat
+// quad for the stickers (and the hidden faces' mirrors), three textured quads: the floating panel,
+// the rows of buttons and a drill's Solved card. The same code draws the flat
 // preview on the page and each eye in a WebXR session: drawScene(proj, view) takes the matrices
 // that XRView gives (or that the page builds for the preview).
 //
@@ -45,8 +45,8 @@ function questRenderer(gl){
     return mesh(P,N,I);})();
   const quad=mesh([-0.5,-0.5,0,0.5,-0.5,0,0.5,0.5,0,-0.5,0.5,0],[0,0,1,0,0,1,0,0,1,0,0,1],[0,1,2,0,2,3]);
   const texture=()=>{const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);return t;};
-  const panelTex=texture(),barTex=texture();
-  let panelReady=false,barReady=false;
+  const panelTex=texture(),barTex=texture(),toastTex=texture();
+  let panelReady=false,barReady=false,toastReady=false;
 
   // The model matrix of every cubie and sticker for one frame. s: {cube (a Cube or null), anim
   // ({move, t} or null), model (the cube's matrix: place, turn, scale), hidden (the faces whose
@@ -114,8 +114,20 @@ function questRenderer(gl){
       if(words.length>1){x.fillText(words[0],l+w/2,t+h/2-17);x.fillText(words.slice(1).join(' '),l+w/2,t+h/2+19);}else x.fillText(b.label,l+w/2,t+h/2);});
     gl.bindTexture(gl.TEXTURE_2D,barTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,bc);barReady=true;
   }
+  // A drill's Solved card: the word large, a line under it. Drawn again only when its words change.
+  const tc=typeof document!=='undefined'?document.createElement('canvas'):null;
+  let toastKey='';
+  function toast(lines){
+    if(!tc)return;const key=JSON.stringify(lines);if(key===toastKey&&toastReady)return;toastKey=key;
+    tc.width=1024;tc.height=384;const x=tc.getContext('2d');x.clearRect(0,0,1024,384);
+    x.fillStyle='rgba(22,74,44,0.94)';x.beginPath();x.roundRect?x.roundRect(4,4,1016,376,56):x.rect(4,4,1016,376);x.fill();
+    x.strokeStyle='#3cb371';x.lineWidth=8;x.stroke();
+    x.textAlign='center';x.textBaseline='middle';x.fillStyle='#f1f0ea';x.font='700 150px system-ui,sans-serif';x.fillText(lines.text,512,160);
+    x.fillStyle='rgba(241,240,234,0.8)';x.font='500 48px system-ui,sans-serif';x.fillText(lines.sub.slice(0,40),512,296);
+    gl.bindTexture(gl.TEXTURE_2D,toastTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,tc);toastReady=true;
+  }
   // One eye, or the preview. scene: {cube, anim, model, hidden, panel: {model, lines} or null, bar:
-  // {model, buttons, rects} or null, extras: [{m, c}]}.
+  // {model, buttons, rects} or null, toast: {model, lines: {text, sub}} or null, extras: [{m, c}]}.
   function drawScene(proj,view,scene){
     gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.disable(gl.BLEND);gl.depthMask(true);
     gl.useProgram(lit);gl.uniformMatrix4fv(L.proj,false,proj);gl.uniformMatrix4fv(L.view,false,view);gl.uniform1f(L.alpha,1);gl.uniform1f(L.lit,1);
@@ -132,6 +144,7 @@ function questRenderer(gl){
       gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,t);gl.uniform1i(T.tex,0);gl.bindVertexArray(quad.vao);gl.drawElements(gl.TRIANGLES,quad.n,gl.UNSIGNED_SHORT,0);};
     if(scene.panel&&pc){panel(scene.panel.lines);flat(scene.panel.model,panelTex);}
     if(scene.bar&&bc){bar(scene.bar.buttons,scene.bar.rects);flat(scene.bar.model,barTex);}
+    if(scene.toast&&tc){toast(scene.toast.lines);flat(scene.toast.model,toastTex);}
     gl.bindVertexArray(null);
   }
   return {drawScene,cubeParts};

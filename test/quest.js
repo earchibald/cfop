@@ -1,7 +1,8 @@
 // The Quest cube lab (quest/): the pure part (matrices, the cubies and stickers, every move's turn
 // lands on the next state, the moves between states, the 24 holds and the tiles, the hidden faces'
-// mirrors, the two rows of buttons), then the page over a fake bridge (the list, a connect, a turn
-// on the list, the stage, the hold tiles, the tilt, Hidden faces, no demo and no keys), then a fake
+// mirrors, the rows of buttons, the drill: every case in every hold), then the page over a fake bridge (the list, a connect, a turn
+// on the list, the stage, the hold tiles, the tilt, Hidden faces, no demo and no keys, Drill Sune solved
+// on the cube and the case again), then a fake
 // WebXR session (the cube placed in front of the head, a grip carries it, a select away brings it
 // back, A toggles the tilt, the stick sizes the cube, the panel, Hidden faces, the hold tiles, Exit
 // by two pokes or the left stick, VR draws the floor and the controllers but not the hands).
@@ -87,10 +88,13 @@ function pure(){
   // the hands: the rows of buttons and the poke
   const BAR=run('QUEST_BAR'),hit=run('questBarHit'),poke=run('questPoke'),free=run('questHandFree');
   const buttons=run('questBarButtons')({tilt:true,moves:3,panel:true,hidden:false,top:0,front:2}),R6=run('questBarLayout')(buttons);
-  assert.strictEqual(buttons.map(b=>b.id).join(),'tilt,level,clear,hidden,smaller,larger,panel,top-white,top-yellow,front-green,front-orange,front-blue,front-red,exit');
+  assert.strictEqual(buttons.map(b=>b.id).join(),'tilt,level,clear,hidden,smaller,larger,panel,top-white,top-yellow,front-green,front-orange,front-blue,front-red,exit,drill');
+  assert.strictEqual(buttons[buttons.length-1].label,'Drill Sune','the third row starts a drill');
+  assert.strictEqual(run('questBarButtons')({drill:true}).find(b=>b.id==='drill').label,'Stop drill','and stops it');
   assert.ok(buttons.find(b=>b.id==='top-white').on&&buttons.find(b=>b.id==='front-green').on&&!buttons.find(b=>b.id==='front-red').on,'the hold\'s tiles are on');
   R6.forEach((r,i)=>assert.strictEqual(hit([r.x,r.y,0],R6),i,buttons[i].id+' under its center'));
   assert.ok(R6[7].y<R6[0].y-BAR.h,'the hold is on the second row');
+  assert.ok(R6[R6.length-1].y<R6[7].y-BAR.h,'the drill is on the third row');
   const cx=i=>R6[i].x;
   assert.strictEqual(hit([cx(0)+BAR.w/2+BAR.gap/2,0,0],R6),-1,'nothing in the gap');
   assert.strictEqual(hit([cx(2),BAR.h,0],R6),-1,'nothing over the row');
@@ -108,7 +112,33 @@ function pure(){
   assert.ok(center([0,1,0],0.15,true)[1]<1-0.15/3*run('questMirrorReach')(),'with the hidden faces the rows sit under the mirrors');
   assert.ok(free([0,1,0],[]),'one hand is free');assert.ok(free([0,1,0],[[0.4,1,0]]),'a hand far from the other is free');
   assert.ok(!free([0,1,0],[[0.1,1,0]]),'two hands together hold the real cube');
+  drill();
   console.log('quest pure ok');
+}
+// The drill: every case, set up in every hold, is solved by its algorithm done as held (a whole-cube
+// turn of the algorithm's own is all that is left); the picture follows the real cube's moves.
+function drill(){
+  const run=require('./vm-load')('js/engine.js','js/algs.js','js/stage.js','js/draw.js','lab/smack.js','quest/core.js');
+  const Cube=run('Cube'),applyAlg=run('applyAlg'),holds=Object.values(run('QUEST_HOLDS')),setup=run('questDrillSetup'),find=run('questDrillFind');
+  const cases=run('questDrillCases')(),turns=holds.map(h=>h.cube);
+  assert.ok(cases.length>=37,'the two-look OLL and PLL and the full PLL: '+cases.length);
+  for(const c of cases)for(const h of holds){
+    const s=setup(c.alg,h);assert.strictEqual(s.center.join(),'0,1,2,3,4,5',c.id+' in '+h.id+': the centers home');
+    assert.ok(!s.isSolved(),c.id+' is no solved cube');
+    const after=applyAlg(s.mul(h.cube),c.alg);
+    assert.ok(turns.some(t=>after.equals(t)),c.id+' in '+h.id+': the algorithm as held solves it');
+  }
+  assert.strictEqual(find('Sune').id,'co-sune');assert.strictEqual(find('co-sune').name,'Sune');assert.strictEqual(find(' t PERM ').id,'pll-T','by name, in any case');
+  assert.strictEqual(find('nothing'),null);
+  // the case reads as itself on the cube as held
+  const stage=run('cfopStage'),held=run('questHeld');
+  for(const id of ['white-green','yellow-green','yellow-red'])assert.strictEqual(stage(held(setup("R U R' U R U2 R'",run('QUEST_HOLDS')[id]),run('QUEST_HOLDS')[id])).name,'Sune','Sune shows as Sune, held '+id);
+  // the picture: the case, then the moves made on the real cube since the start
+  const p0=applyAlg(new Cube(),"F R2 D' L B U2"),d={setup:setup("R U R' U R U2 R'"),p0};
+  assert.ok(run('questDrillState')(d,p0).equals(d.setup),'at the start the picture is the case');
+  const p1=applyAlg(p0,"R U R' U R U2 R'");assert.ok(run('questDrillState')(d,p1).isSolved(),'the Sune on the real cube solves the picture');
+  assert.ok(run('questDrillState')(d,applyAlg(p0,['L'])).equals(applyAlg(d.setup,['L'])),'a turn of the real cube turns the picture');
+  assert.strictEqual(run('questPanel')({drill:'Drill: Sune · 2 solved',stage:{name:'Cross'}}).stage,'Drill: Sune · 2 solved','the panel says the drill in place of the stage');
 }
 
 const html=fs.readFileSync(path.join(__dirname,'..','quest','index.html'),'utf8');
@@ -200,6 +230,35 @@ async function page(){
   // no demo and no keys: the cube is the real one
   assert.ok(!$('#demo'),'no Demo cube');
   const before=Q().target;d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'F',bubbles:true}));assert.ok(Q().target.equals(before),'a key turns nothing');
+  // Drill Sune: the picture is a Sune as held, whatever the real cube shows; the cube's turns turn it
+  const real0=Q().real;assert.ok(real0&&real0.equals(c3)&&!real0.isSolved(),'the real cube is mixed');
+  Q().solvedMs=80;assert.strictEqual($('#drill').textContent,'Drill Sune');
+  click($('#drill'));const D=Q().drill;assert.ok(D&&D.c.id==='co-sune','Drill Sune starts');
+  assert.ok(Q().shown.equals(D.setup)&&D.p0.equals(real0),'the picture is the Sune, from the cube as it is');
+  assert.strictEqual(Q().moves.length,0,'the list starts empty');assert.strictEqual(Q().stage.name,'Sune','the stage reads Sune');
+  assert.ok($('#drill').textContent==='Stop drill'&&$('#drill').getAttribute('aria-pressed')==='true','the chip stops it');
+  // the Sune on the real cube, as held (yellow up, red in front): each held face is the real face the hold puts there
+  const FN=['U','R','F','D','L','B'],real=m=>FN[Q().hold.cube.center[FN.indexOf(m[0])]]+m.slice(1);
+  let r=real0;
+  for(const m of "R U R' U R U2 R'".split(' ')){r=w.applyAlg(r,[real(m)]);set(r);dev.notify(moveMsg());assert.ok(await until(()=>Q().real.equals(r)),'the cube turns '+m);}
+  assert.strictEqual(Q().moves.join(' '),"R U R' U R U2 R'",'the list reads the Sune as held');
+  assert.ok(Q().target.isSolved()&&Q().drill.solved,'the picture is solved');
+  assert.ok(!$('#toast').hidden&&/Sune comes again/.test($('#toast').textContent),'Solved shows: '+$('#toast').textContent);
+  assert.strictEqual($('#drillNote').textContent,'1 solved','one solved');
+  assert.ok(await until(()=>!Q().drill.solved),'then the case comes again');
+  assert.ok($('#toast').hidden&&Q().shown.equals(D.setup)&&Q().drill.p0.equals(r)&&!Q().moves.length,'the Sune, from the cube as it is now, and an empty list');
+  // a turn turns the picture, not the case
+  r=w.applyAlg(r,[real('R')]);set(r);dev.notify(moveMsg());assert.ok(await until(()=>Q().moves.join()==='R'),'a turn goes on the list');
+  assert.ok(Q().target.equals(w.applyAlg(D.setup,[real('R')])),'and turns the picture');
+  // a new hold: the case again, set up for it
+  click(tile('up',0));assert.strictEqual(Q().hold.id,'white-red');
+  assert.ok(Q().shown.equals(w.questDrillSetup("R U R' U R U2 R'",Q().hold))&&!Q().moves.length,'the Sune as the new hold has it');
+  assert.strictEqual(Q().stage.name,'Sune','and it reads Sune');
+  // Stop drill: the real cube again
+  click($('#drill'));assert.ok(!Q().drill&&Q().shown.equals(r),'Stop drill: the picture is the real cube');
+  assert.strictEqual($('#drill').textContent,'Drill Sune');assert.strictEqual($('#drillNote').textContent,'');
+  // any case by name, for the voice to come
+  w.questDrill('T perm');assert.strictEqual(Q().drill.c.id,'pll-T','a drill by name');w.questDrill(null);assert.ok(!Q().drill&&Q().shown.equals(r));
   click($('#disconnect'));assert.ok(!Q().conn&&!$('#connect').hidden,'Disconnect');
   w.close();console.log('quest page ok');
 }
@@ -262,7 +321,7 @@ async function xr(){
   tip('left',[0,1.1,-0.3]);tip('right',[0.3,1.3,-0.3]);step();
   const sc=()=>scenes[scenes.length-1];
   assert.ok(/Poke a button/.test(sc().panel.lines.hint),'the hint speaks to the hands: '+sc().panel.lines.hint);
-  assert.ok(sc().bar&&sc().bar.buttons.length===14,'the rows of buttons are drawn');
+  assert.ok(sc().bar&&sc().bar.buttons.length===15,'the rows of buttons are drawn');
   assert.strictEqual(sc().bar.buttons.slice(0,7).map(b=>b.id).join(),'tilt,level,clear,hidden,smaller,larger,panel');
   const ids=sc().bar.buttons.map(b=>b.id),at=id=>ids.indexOf(id);
   const barAt=(i,z)=>{const c=w.questBarCenterNow(x),r=sc().bar.rects[i];return [c[0]+r.x,c[1]+r.y,c[2]+z];};
@@ -295,6 +354,17 @@ async function xr(){
   assert.ok(sc().bar.buttons[at('top-yellow')].on,'its tile is on');
   press(at('front-blue'));assert.strictEqual(Q().hold.id,'yellow-blue','a front tile');
   press(at('top-white'));press(at('front-green'));assert.strictEqual(Q().hold.id,'white-green','back to white up, green front');
+  // Drill Sune on the third row: the picture is the case; solved, a card shows, then the case again
+  press(at('drill'));const DX=Q().drill;assert.ok(DX&&Q().shown.equals(DX.setup),'a poke on Drill Sune: the picture is a Sune');
+  assert.strictEqual(sc().bar.buttons[at('drill')].label,'Stop drill');assert.ok(sc().bar.buttons[at('drill')].on);
+  assert.strictEqual(sc().panel.lines.stage,'Drill: Sune · 0 solved','the panel says the drill');assert.ok(!sc().toast,'no card yet');
+  const realY=DX.p0.mul(DX.setup.inverse()); // the real state that solves the picture
+  Q().solvedMs=40;w.questShow(realY);step();
+  assert.ok(Q().drill.solved&&sc().toast&&sc().toast.lines.text==='Solved!','solved in the picture: the card shows');
+  assert.ok(w.m4Point(sc().toast.model,[0,0,0])[2]>x.pos[2],'in front of the cube, toward the user');
+  assert.strictEqual(sc().panel.lines.stage,'Drill: Sune · 1 solved');
+  await sleep(80);step();assert.ok(!sc().toast&&Q().shown.equals(DX.setup),'then the case again');
+  press(at('drill'));assert.ok(!Q().drill&&Q().shown.equals(realY)&&Q().real.equals(realY),'Stop drill: the real cube');
   // Exit: the first poke asks, a second ends the session; another button in between, or a wait, takes the ask back
   press(at('exit'));assert.ok(Q().xr,'one poke on Exit does not end the session');
   assert.strictEqual(sc().bar.buttons[at('exit')].label,'Poke again','Exit asks for a second poke');

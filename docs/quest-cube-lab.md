@@ -30,6 +30,7 @@ one action is a bad step: do not add a control that needs it.
   behind or from the side. A button lights while a fingertip is near it and flashes on the press.
 - Exit asks for a second poke within 3 s ("Poke again"), so a stray fingertip does not end the
   session. The headset's own menu button ends it too.
+- A third row has Drill Sune (below: Drill a case).
 - Hidden faces draws the faces turned away from you as in a mirror out past each face, as the
   site's `draw.js` does (`questMirror`, `questHiddenFaces`). The rows then sit lower, clear of the
   mirrors. It is the site's setting, `cw:hidden`.
@@ -43,7 +44,27 @@ one action is a bad step: do not add a control that needs it.
   press: hidden faces), X clear, Y panel, the left stick's press ends the session.
 
 The flat page has the same hold tiles and Hidden faces under the cube. It has no demo cube and no
-keys: the cube is always the real one.
+keys: the cube is the real one, or a drill.
+
+## Drill a case
+
+Drill Sune (the third row in the session, a chip on the page) puts a Sune on the picture, whatever
+state the real cube is in. Each turn of the real cube turns the picture. When the picture is
+solved, "Solved!" shows for 2.5 s (a card in front of the cube in the session), the count goes up,
+and the Sune comes again, from the real cube as it is then. Stop drill puts the real cube back in
+the picture.
+
+The picture is the case's state times the moves made since the start: `setup · P0⁻¹ · P`
+(`questDrillState`), with P0 the real cube at the start and P the real cube now. The moves between
+two pictures are the moves between the two real states, so the layer turns, the move list (as held)
+and the stage work unchanged. The case is set up as the cube is held (`questDrillSetup`: the
+inverse of the algorithm from solved, turned to the cube's own frame by the hold, `H X H⁻¹`), so a
+Sune is on the top you hold up. A new hold sets the case up again. `test/quest.js` checks every case
+in every hold: the algorithm done as held solves it.
+
+`questDrill(name)` takes any case of the two-look OLL and PLL and the full PLL by its name or id
+(`questDrillFind`: 'Sune', 'T perm', 'co-sune'), for the voice commands to come. Open: a random
+AUF on each new case, and a choice of case in the headset.
 
 Open on a headset: how well hand tracking sees a hand that holds a cube, and whether the row is in a
 good place to reach.
