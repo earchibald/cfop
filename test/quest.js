@@ -72,13 +72,29 @@ function pure(){
 }
 
 const html=fs.readFileSync(path.join(__dirname,'..','quest','index.html'),'utf8');
+const SHIM=fs.readFileSync(path.join(__dirname,'..','quest','android','shim.js'),'utf8');
+// The Java side of the Quest app (BleBridge.java) as a page sees it: TwistwrightAndroid.post(json)
+// answers hello with text, hands every other message to a fake bridge, and the events come back
+// through window.bridgeEvent.
+function fakeAndroid(bridge,opts={}){
+  const ws=new bridge.FakeWebSocket('android');const sent=[];let win=null;
+  ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.ev!=='hello'&&win&&win.bridgeEvent)win.bridgeEvent(m);};
+  return {sent,install(w){win=w;w.TwistwrightAndroid={post(json){
+    assert.strictEqual(typeof json,'string','the page sends text, as a JavascriptInterface takes it');
+    const m=JSON.parse(json);sent.push(m);
+    if(m.op==='hello')return JSON.stringify({version:'0.1.0',bluetooth:opts.bluetooth||'poweredOn'});
+    ws.send(json);return null;}};}};
+}
 function fakeStorage(){const m=new Map();return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear()};}
 // opts.xr: a navigator.xr; opts.storage: a localStorage
 function boot(bridge,opts={}){
   const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
-  const dom=new JSDOM(html,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,url:'file://'+path.join(__dirname,'..','quest','index.html'),virtualConsole:vc,
+  // In the Quest app the page gets shim.js first in its head, as MainActivity.withShim puts it.
+  const src=opts.android?html.replace(/<head[^>]*>/i,h=>h+'<script>'+SHIM+'</script>'):html;
+  const dom=new JSDOM(src,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,url:'file://'+path.join(__dirname,'..','quest','index.html'),virtualConsole:vc,
     beforeParse(w){Object.defineProperty(w,'localStorage',{value:opts.storage||fakeStorage()});
       if(opts.xr)Object.defineProperty(w.navigator,'xr',{value:opts.xr});
+      if(opts.android){opts.android.install(w);w.fetch=async()=>({ok:false});return;}
       w.BRIDGE_LOCAL=true;w.WebSocket=bridge.FakeWebSocket;w.fetch=async u=>u==='/bridge/info'?{ok:true,json:async()=>bridgeInfo()}:{ok:false};}});
   const w=dom.window;
   return new Promise(res=>w.addEventListener('load',()=>setTimeout(()=>res({w,d:w.document,errs}),300)));
@@ -212,4 +228,43 @@ async function notAsked(){
   console.log('quest notAsked ok');
 }
 
-(async()=>{pure();await page();await xr();await notAsked();console.log('quest ok');})().catch(e=>{console.error(e);process.exit(1);});
+// The Quest app (quest/android/): with no DOM, shim.js puts the Java object behind the message
+// handler that bridge.js looks for, and a cube reads and writes through it; then the page in the
+// app, before the headset has asked for Bluetooth: the words name the headset, and Connect asks.
+async function android(){
+  const bare=require('./vm-load')();bare('this.window=this');bare(SHIM);
+  assert.strictEqual(bare('typeof webkit'),'undefined','no Java object: the shim does nothing');
+  const run=require('./vm-load')('js/engine.js','js/gan.js');
+  const g=run('this');Object.assign(g,{setTimeout,clearTimeout,AbortController});g.window=g;
+  const Cube=run('Cube'),applyAlg=run('applyAlg');
+  const c1=applyAlg(new Cube(),['R','U2',"B'"]);
+  const dev=fakeDevice(4,MAC,{cp:[...c1.cp],co:[...c1.co],ep:[...c1.ep],eo:[...c1.eo]},{name:'GAN12uiM_A1B2'});
+  const and=fakeAndroid(fakeBridge([{id:'AB:12:34:5C:9D:E1',gen:4,dev,mac:MAC}]));and.install(g);
+  g.fetch=()=>{throw new Error('the app asks no server');};
+  run(SHIM);run(fs.readFileSync(path.join(__dirname,'..','js','bridge.js'),'utf8'));
+  const link=await run('bridgeStart')();
+  assert.ok(link&&link.native,'bridge.js takes the shim as the app\'s message handler');
+  assert.strictEqual(link.version,'0.1.0','hello\'s text answer is read');assert.strictEqual(link.bluetooth,'poweredOn');
+  assert.strictEqual(JSON.stringify(and.sent[0]),'{"op":"hello"}','hello first');
+  const found=[];const stop=link.scan(d=>found.push(d));
+  assert.ok(await until(()=>found.some(d=>d.mac===MAC)),'the scan comes back through bridgeEvent');stop();
+  const conn=await run('ganOpen')(run('bridgeDevice')(link,{id:'AB:12:34:5C:9D:E1',name:'GAN12uiM_A1B2',mac:MAC}),MAC,()=>{});
+  assert.ok((await conn.readState(2000)).equals(c1),'the state comes through the app');
+  await conn.send('reset');assert.ok(and.sent.some(m=>m.op==='write'&&/^[0-9a-f]+$/.test(m.data)),'a write goes to the app as hex');
+  conn.close();
+  // the page in the app
+  const dev2=fakeDevice(4,MAC,Object.assign({},SOLVED),{name:'GAN12uiM_A1B2'});
+  const and2=fakeAndroid(fakeBridge([{id:'p1',gen:4,dev:dev2,mac:MAC}],{bluetooth:'notAsked'}),{bluetooth:'notAsked'});
+  const {w,d,errs}=await boot(null,{android:and2});const $=s=>d.querySelector(s);
+  assert.deepStrictEqual(errs,[]);
+  assert.strictEqual($('#way').textContent,'Quest app 0.1.0','the way names the app');
+  assert.ok(await until(()=>/The headset then asks/.test($('#status').textContent)),'the status names the headset: '+$('#status').textContent);
+  assert.ok(!and2.sent.some(m=>m.op==='scan'&&!m.auto),'no scan that asks before a press');
+  $('#connect').click();
+  assert.ok(await until(()=>and2.sent.some(m=>m.op==='scan'&&!m.auto)),'Connect sends the scan that asks');
+  assert.ok(await until(()=>d.querySelectorAll('#listItems button').length===1),'and the cube is listed');
+  await sleep(50);w.close();
+  console.log('quest android ok');
+}
+
+(async()=>{pure();await page();await xr();await notAsked();await android();console.log('quest ok');})().catch(e=>{console.error(e);process.exit(1);});

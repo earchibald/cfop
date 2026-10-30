@@ -97,6 +97,8 @@ function questHoldSet(id){qs.hold=QUEST_HOLDS[id]||QUEST_HOLDS.white;questSet('c
 function questMacs(){return questGet('cw:ganMac',{})||{};}
 function questSaveMac(name,mac){const m=questMacs();if(mac)m[name]=mac;else delete m[name];questSet('cw:ganMac',m);}
 function questFix(name){const e=(questGet('cw:ganFix',{})||{})[name];return e&&typeof ganFixLoad==='function'?ganFixLoad(e.fix):null;}
+// The page in the Quest app (quest/android/): the cube comes over the headset's own Bluetooth.
+function questInApp(){return typeof window!=='undefined'&&!!window.TwistwrightAndroid;}
 function questWB(){return !!navigator.bluetooth&&!/[?&]bridge=1/.test(location.search);}
 // The chooser: the browser's own with Web Bluetooth, else a list on the page of the cubes the
 // Mac app hears. auto: the look with no click; the last cube is taken as soon as it is heard.
@@ -104,10 +106,12 @@ async function questPick(auto){
   if(questWB())return auto?null:ganPick();
   const link=BRIDGE||await bridgeStart();
   if(!link)throw new Error('No way to a cube. Run quest/run.sh on the Mac, then open http://localhost:27272/quest/ in the headset.');
-  if(link.bluetooth==='unauthorized')throw new Error('macOS did not allow Bluetooth for Twistwright. Allow it in System Settings, Privacy & Security, Bluetooth.');
-  if(link.bluetooth==='poweredOff')throw new Error('Bluetooth is off on the Mac. Turn it on, then press Connect.');
-  // The look with no click never brings up the macOS question: a press of Connect does, on the Mac's screen.
-  if(auto&&link.bluetooth==='notAsked')throw new Error('Press Connect. macOS then asks on the Mac whether Twistwright may use Bluetooth: allow it there.');
+  const app=questInApp();
+  if(link.bluetooth==='unauthorized')throw new Error(app?'The headset did not allow Bluetooth for this app. Allow Nearby devices for Twistwright Cube Lab in Settings, Apps, Permissions.':'macOS did not allow Bluetooth for Twistwright. Allow it in System Settings, Privacy & Security, Bluetooth.');
+  if(link.bluetooth==='poweredOff')throw new Error(app?'Bluetooth is off on the headset. Turn it on in the Quick Settings, then press Connect.':'Bluetooth is off on the Mac. Turn it on, then press Connect.');
+  // The look with no click never brings up the question: a press of Connect does, on the Mac's
+  // screen or in the headset.
+  if(auto&&link.bluetooth==='notAsked')throw new Error(app?'Press Connect. The headset then asks whether the app may find nearby devices: allow it.':'Press Connect. macOS then asks on the Mac whether Twistwright may use Bluetooth: allow it there.');
   const last=questGet('cw:questCube',null);
   const row=$('#list');row.hidden=false;$('#listItems').textContent='';
   $('#listNote').textContent=auto&&last?`Looking for ${last}. Turn a face to wake the cube up.`:'Looking for cubes. Turn a face to wake the cube up.';
@@ -217,7 +221,7 @@ function questButtons(){
   $('#level').disabled=!qs.raw;
   $('#name').textContent=qs.name?qs.name+(qs.battery!=null?' · '+qs.battery+'%':''):'';
   $('#enterAR').disabled=!qs.support.ar||!qs.r;$('#enterVR').disabled=!qs.support.vr||!qs.r;
-  $('#way').textContent=questWB()?'Web Bluetooth':BRIDGE?'Mac app bridge'+(BRIDGE.version?' '+BRIDGE.version:''):'none';
+  $('#way').textContent=questWB()?'Web Bluetooth':BRIDGE?(questInApp()?'Quest app':'Mac app bridge')+(BRIDGE.version?' '+BRIDGE.version:''):'none';
   $('#way').className=questWB()||BRIDGE?'ok':'no';
 }
 async function questProbeXR(){

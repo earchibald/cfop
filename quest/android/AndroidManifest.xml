@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Twistwright on a Meta Quest (quest/android/): a 2D window, the pages in a WebView, the cube over
+     Android Bluetooth. versionName is the app's version: raise it with any change a user can see,
+     and versionCode with every build that goes on a headset over an older one. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.twistwright.quest"
+    android:versionCode="1"
+    android:versionName="0.1.0">
+
+    <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="34" />
+
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+    <!-- Android 12 and later: the Nearby devices question. Earlier: Bluetooth and location. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
+    <!-- The pages are built in; the fonts come from the web. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:label="Twistwright Cube Lab"
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
+        android:allowBackup="false"
+        android:hardwareAccelerated="true">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|density|uiMode">
+            <!-- The window's first size in the headset. -->
+            <layout android:defaultWidth="1280dp" android:defaultHeight="800dp" android:gravity="center" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
