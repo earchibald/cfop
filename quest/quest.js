@@ -16,15 +16,17 @@
 // or red; questHoldPick), and Hidden faces (the faces turned away, as in a mirror; questMirror).
 // In the session both are on the second row of buttons under the cube, with Exit.
 //
-// A drill (Drill Sune; questDrill('T perm') takes any two-look or PLL case by name): the picture
-// starts as the case, set up as the cube is held, whatever state the real cube is in, and each turn
-// of the real cube turns the picture. Solved in the picture, "Solved" shows for 2.5 s, then the case
-// comes again. The end of the drill puts the real cube back in the picture.
+// Drill mode (questDrillMode): a drill of a case, and the voice (quest/voice.js) listens for case
+// names until Drill mode ends. A name said ("T perm", "Sune") drills that case; questDrill('T perm')
+// does the same in code. The picture starts as the case, set up as the cube is held, whatever state
+// the real cube is in, and each turn of the real cube turns the picture. Solved in the picture,
+// "Solved" shows for 2.5 s, then the case comes again. The end of the drill puts the real cube back
+// in the picture.
 //
 // Storage: cw:ganMac (the site's map from cube name to MAC address), cw:ganFix (the site's
 // correction for a cube whose count is off), cw:questCube (the last cube's name, connected by
 // itself when the bridge hears it), cw:questHold (the hold's id, 'white-green'), cw:questTilt,
-// cw:hidden (the site's Hidden faces).
+// cw:hidden (the site's Hidden faces), cw:questDrill (the case Drill mode starts with: the last one drilled).
 const $=s=>document.querySelector(s);
 const qs={conn:null,busy:false,pickSeq:0,wb:false,listEnd:null,macWait:null,
   shown:null,target:null,queue:[],anim:null,moves:[],colors:[],stage:null,
@@ -65,12 +67,19 @@ function questDrilled(real){
   if(!d.p0)d.p0=real;
   return questDrillState(d,real);
 }
+// Drill mode on: the last case drilled (Sune the first time), and the voice listens for another.
+// Off: the voice stops and the real cube comes back.
+function questDrillMode(on){
+  if(on){questDrill(questGet('cw:questDrill',QUEST_DRILL_FIRST));questVoiceStart();}
+  else{questVoiceStop();questDrill(null);}
+}
 // Start a drill of a case (an id or a name: 'Sune', 'T perm'), or end it with none. The end puts
 // the real cube back in the picture.
 function questDrill(name){
-  const c=name?questDrillFind(name):null;
+  const c=name?questDrillFind(name)||questDrillFind(QUEST_DRILL_FIRST):null;
   if(qs.drill)clearTimeout(qs.drill.timer);
   if(!c){qs.drill=null;questView(qs.real,true);questDrillDraw();return;}
+  questSet('cw:questDrill',c.id);
   qs.drill={c,setup:null,p0:null,solved:false,reps:0,timer:0};
   questDrillAgain();
 }
@@ -90,7 +99,7 @@ function questDrillCheck(){
 function questDrillWords(){const d=qs.drill;return d?`Drill: ${d.c.name} · ${d.reps} solved`:'';}
 function questDrillDraw(){
   const d=qs.drill,b=$('#drill');
-  b.setAttribute('aria-pressed',String(!!d));b.textContent=d?'Stop drill':'Drill '+questDrillFind(QUEST_DRILL_FIRST).name;
+  b.setAttribute('aria-pressed',String(!!d));b.textContent=d?'Stop drill':'Drill mode';
   $('#drillNote').textContent=d?d.reps+' solved':'';
   $('#toast').hidden=!(d&&d.solved);
   if(d)$('#toastSub').textContent=`${d.c.name} comes again.`;
@@ -129,7 +138,8 @@ function questMovesDraw(){
 }
 function questClear(){qs.moves=[];qs.colors=[];questMovesDraw();}
 function questPanelLines(){
-  const p=questPanel({name:qs.name,battery:qs.battery,status:qs.status,stage:qs.stage,drill:questDrillWords(),moves:qs.moves,tilt:qs.tilt&&!!qs.q,hint:questHint()});
+  const p=questPanel({name:qs.name,battery:qs.battery,status:qs.status,stage:qs.stage,drill:questDrillWords(),moves:qs.moves,tilt:qs.tilt&&!!qs.q,
+    hint:qs.drill&&questVoiceWords()||questHint()}); // in Drill mode, what the voice heard
   p.moves=p.moves.map((m,i)=>({m,color:qs.colors[qs.moves.length-p.moves.length+i]||'#8f8f97'}));
   return p;
 }
@@ -327,7 +337,7 @@ function questDragSetup(){
 // The cube floats 45 cm in front of the head and a little below it, turned to face the user, 15
 // cm on an edge (about 2.7 times a real cube). Hands first, since the user holds the real cube: two
 // rows of buttons under the cube (Tilt, Level, Clear, Hidden faces, Smaller, Larger, the panel;
-// then the hold's Top and Front tiles, and Exit, which asks for a second poke; then Drill Sune) take a poke of an
+// then the hold's Top and Front tiles, and Exit, which asks for a second poke; then Drill mode) take a poke of an
 // index fingertip; a pinch near the cube carries it; a pinch held QUEST_HOLD_MS away from it, by a
 // hand with no other hand near, brings it back in front (a short pinch does nothing, so a hand on
 // the real cube sends nothing). The hands are not drawn. Controllers second: a grip near the cube
@@ -387,7 +397,7 @@ function questBarDo(id){
   if(id==='tilt')questTilt(!qs.tilt);else if(id==='level')questLevel();else if(id==='clear')questClear();
   else if(id==='smaller')questSize(x,0.8);else if(id==='larger')questSize(x,1.25);else if(id==='panel')x.panel=!x.panel;
   else if(id==='hidden')questHidden(!qs.hidden);
-  else if(id==='drill')questDrill(qs.drill?null:QUEST_DRILL_FIRST);
+  else if(id==='drill')questDrillMode(!qs.drill);
   else if(hold)questHoldTile(hold[1]==='top'?'up':'front',QUEST_COLOR_NAMES.indexOf(hold[2]));
   else if(id==='exit'){if(questExitArmed(x))questExit();else x.exitT=x.t;}
   if(id!=='exit'&&x)x.exitT=0;
@@ -397,7 +407,7 @@ function questExit(){const x=qs.xr;if(!x)return;const p=x.session.end();if(p&&p.
 function questBarState(){
   const x=qs.xr;
   return questBarButtons({tilt:qs.tilt,moves:qs.moves.length,panel:!x||x.panel,hidden:qs.hidden,top:qs.hold.top,front:qs.hold.front,exit:questExitArmed(x),
-    drill:!!qs.drill,drillName:questDrillFind(QUEST_DRILL_FIRST).name});
+    drill:!!qs.drill});
 }
 function questBarCenterNow(x){return questBarCenter(x.pos,x.edge,qs.hidden);}
 function questJoint(frame,src,name,ref){const j=src.hand&&src.hand.get(name),p=j&&frame.getJointPose&&frame.getJointPose(j,ref);if(!p)return null;const t=p.transform.position;return [t.x,t.y,t.z];}
@@ -480,7 +490,7 @@ function questStart(){
   questHoldMount();
   questTilt(questGet('cw:questTilt',true));questHoldSet(questHoldFind(questGet('cw:questHold','white-green')));questHidden(questGet('cw:hidden',false)===true);
   $('#tilt').onchange=e=>questTilt(e.target.checked);$('#hidden').onclick=()=>questHidden(!qs.hidden);
-  $('#drill').onclick=()=>questDrill(qs.drill?null:QUEST_DRILL_FIRST);questDrillDraw();
+  $('#drill').onclick=()=>questDrillMode(!qs.drill);questDrillDraw();
   $('#connect').onclick=()=>questConnect();$('#disconnect').onclick=questDisconnect;
   $('#level').onclick=questLevel;$('#clear').onclick=questClear;
   $('#enterAR').onclick=()=>questEnterXR('immersive-ar');$('#enterVR').onclick=()=>questEnterXR('immersive-vr');

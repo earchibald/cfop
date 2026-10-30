@@ -30,7 +30,7 @@ one action is a bad step: do not add a control that needs it.
   behind or from the side. A button lights while a fingertip is near it and flashes on the press.
 - Exit asks for a second poke within 3 s ("Poke again"), so a stray fingertip does not end the
   session. The headset's own menu button ends it too.
-- A third row has Drill Sune (below: Drill a case).
+- A third row has Drill mode (below: Drill a case), which also listens for case names.
 - Hidden faces draws the faces turned away from you as in a mirror out past each face, as the
   site's `draw.js` does (`questMirror`, `questHiddenFaces`). The rows then sit lower, clear of the
   mirrors. It is the site's setting, `cw:hidden`.
@@ -48,11 +48,43 @@ keys: the cube is the real one, or a drill.
 
 ## Drill a case
 
-Drill Sune (the third row in the session, a chip on the page) puts a Sune on the picture, whatever
-state the real cube is in. Each turn of the real cube turns the picture. When the picture is
-solved, "Solved!" shows for 2.5 s (a card in front of the cube in the session), the count goes up,
-and the Sune comes again, from the real cube as it is then. Stop drill puts the real cube back in
-the picture.
+Drill mode (the third row in the session, a chip on the page) puts a case on the picture, whatever
+state the real cube is in: the last case drilled (`cw:questDrill`), Sune the first time. Each turn
+of the real cube turns the picture. When the picture is solved, "Solved!" shows for 2.5 s (a card
+in front of the cube in the session), the count goes up, and the case comes again, from the real
+cube as it is then. Stop drill puts the real cube back in the picture.
+
+### The voice
+
+While Drill mode is on, the page listens (`quest/voice.js`). A case name drills that case: every
+two-look OLL and PLL case and every PLL ("T perm", "Sune", "anti sune", "headlights", "chameleon",
+"double sune", "U a perm", "G a perm"). The same name, "again" or "next" sets the case up again.
+"Stop drill" ends Drill mode; "stop" alone does nothing, so a misheard word does not end it. The
+panel's last line (the line under the cube on the page) says what was heard and what it did.
+
+The site's Listen matcher reads the words (`js/listen-match.js`, shared with the Reference and the
+Smart cube tab). A sure name wins. A tie between the sets ("T" alone) goes to the set of the case
+drilled now; with none, the line asks.
+
+The Quest Browser has no speech recognition (`webkitSpeechRecognition` is not there), so on the
+headset the page hears through Vosk in WebAssembly, on the headset itself: vosk-browser and Alpha
+Cephei's small US English model (Apache-2.0, `THIRD-PARTY.md`), about 47 MB in `quest/voice/`,
+which git ignores. `scripts/quest-voice.js` fetches them, pinned in `package.json` under
+`"questVoice"`; `quest/run.sh` runs it. Vosk is told the phrases it may hear (`questVoiceGrammar`:
+each name, "perm" after a PLL name, the commands, and `[unk]` for the rest), so talk names nothing.
+A letter alone is left out there: Vosk hears "uh" as U. Each OLL letter case has a name to say. The
+model loads once, when Drill mode first starts (about a second on a Mac; more on the headset), and
+stays for the next drill. A browser with its own speech recognition (Chrome or Safari on a Mac)
+uses that; `?voice=vosk` or `?voice=speech` picks one.
+
+Start Drill mode once on the flat page before the session, so the microphone question comes up
+there. The Quest app's WebView has no microphone, so the app says the voice is for the Quest
+Browser, and its build leaves `quest/voice/` out.
+
+Checked: `test/quest.js` (every name of every case, the grammar, the commands, a fake recognizer
+and a fake Vosk on the page), and headless Chrome with the real model, a case name spoken by macOS
+`say` into a fake microphone. Not yet tried: the headset's microphone, and Vosk's speed on the
+headset.
 
 The picture is the case's state times the moves made since the start: `setup · P0⁻¹ · P`
 (`questDrillState`), with P0 the real cube at the start and P the real cube now. The moves between
@@ -63,8 +95,8 @@ Sune is on the top you hold up. A new hold sets the case up again. `test/quest.j
 in every hold: the algorithm done as held solves it.
 
 `questDrill(name)` takes any case of the two-look OLL and PLL and the full PLL by its name or id
-(`questDrillFind`: 'Sune', 'T perm', 'co-sune'), for the voice commands to come. Open: a random
-AUF on each new case, and a choice of case in the headset.
+(`questDrillFind`: 'Sune', 'T perm', 'co-sune'); the voice calls it. Open: a random AUF on each
+new case.
 
 Open on a headset: how well hand tracking sees a hand that holds a cube, and whether the row is in a
 good place to reach.

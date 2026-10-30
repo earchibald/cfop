@@ -81,7 +81,8 @@ mkdir -p "$OUT/assets/site" "$OUT/classes" "$OUT/dex"
 for p in index.html css js assets lab quest onboard THIRD-PARTY.md vendor; do
   if [ -e "$ROOT/$p" ]; then cp -R "$ROOT/$p" "$OUT/assets/site/"; fi
 done
-rm -rf "$OUT/assets/site/quest/android" "$OUT/assets/site/quest/run.sh" "$OUT/assets/site/lab/run.sh"
+# quest/voice/ (the Quest Browser's speech model, 47 MB) stays out: the WebView has no microphone here.
+rm -rf "$OUT/assets/site/quest/android" "$OUT/assets/site/quest/run.sh" "$OUT/assets/site/quest/voice" "$OUT/assets/site/lab/run.sh"
 find "$OUT/assets" -name .DS_Store -delete
 cp -R app "$OUT/assets/site/app"
 cp shim.js "$OUT/assets/shim.js"

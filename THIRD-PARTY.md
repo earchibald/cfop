@@ -67,3 +67,19 @@ MIT license:
 
 random-uint-below is released into the public domain under the Unlicense.
 `scripts/vendor.js` keeps its `LICENSE.md` at `vendor/random-uint-below/`.
+
+## Apache-2.0: the Quest page's voice
+
+The Quest cube lab (`quest/`) hears case names in Drill mode with Vosk, on the
+headset itself, since the Quest Browser has no speech recognition.
+`scripts/quest-voice.js` fetches two files into `quest/voice/`, which git
+ignores; `quest/run.sh` runs it. The site, the Pages deploy and the Mac app do
+not use them. `package.json` pins both under `"questVoice"`.
+
+| Part | Version | License | Source |
+|---|---|---|---|
+| vosk-browser (`quest/voice/vosk.js`, as published on npm, with Vosk and Kaldi built to WebAssembly inside) | 0.0.8 | Apache-2.0 | https://github.com/ccoreilly/vosk-browser |
+| Vosk small US English model (`quest/voice/model.tar.gz`) | vosk-model-small-en-us-0.15 | Apache-2.0 | https://alphacephei.com/vosk/models |
+
+The Apache License 2.0 is at https://www.apache.org/licenses/LICENSE-2.0. The
+files are as published, with no change.

@@ -28,6 +28,8 @@ case "$STATE" in
   *) echo "No headset found. Plug it in with a USB-C data cable, put it on, and allow USB debugging. adb said: $STATE" >&2; exit 1;;
 esac
 echo "Headset: $(adb shell getprop ro.product.model 2>/dev/null | tr -d '\r') ($(adb get-serialno))"
+# The speech recognizer and model for Drill mode's voice (the Quest Browser has none): once, about 47 MB.
+node scripts/quest-voice.js || echo "The speech model did not download: Drill mode works, but it does not hear case names."
 # shellcheck disable=SC2086
 if [ "$APP" = 1 ]; then lab/run.sh --no-open $PASS; fi
 adb reverse tcp:27272 tcp:27272 >/dev/null

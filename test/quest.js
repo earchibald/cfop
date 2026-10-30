@@ -1,8 +1,9 @@
 // The Quest cube lab (quest/): the pure part (matrices, the cubies and stickers, every move's turn
 // lands on the next state, the moves between states, the 24 holds and the tiles, the hidden faces'
 // mirrors, the rows of buttons, the drill: every case in every hold), then the page over a fake bridge (the list, a connect, a turn
-// on the list, the stage, the hold tiles, the tilt, Hidden faces, no demo and no keys, Drill Sune solved
-// on the cube and the case again), then a fake
+// on the list, the stage, the hold tiles, the tilt, Hidden faces, no demo and no keys, Drill mode: Sune solved
+// on the cube and the case again, case names said to a fake speech recognizer), the voice through a fake
+// Vosk (the grammar, a name, the model kept; no model, a blocked microphone), then a fake
 // WebXR session (the cube placed in front of the head, a grip carries it, a select away brings it
 // back, A toggles the tilt, the stick sizes the cube, the panel, Hidden faces, the hold tiles, Exit
 // by two pokes or the left stick, VR draws the floor and the controllers but not the hands).
@@ -89,7 +90,7 @@ function pure(){
   const BAR=run('QUEST_BAR'),hit=run('questBarHit'),poke=run('questPoke'),free=run('questHandFree');
   const buttons=run('questBarButtons')({tilt:true,moves:3,panel:true,hidden:false,top:0,front:2}),R6=run('questBarLayout')(buttons);
   assert.strictEqual(buttons.map(b=>b.id).join(),'tilt,level,clear,hidden,smaller,larger,panel,top-white,top-yellow,front-green,front-orange,front-blue,front-red,exit,drill');
-  assert.strictEqual(buttons[buttons.length-1].label,'Drill Sune','the third row starts a drill');
+  assert.strictEqual(buttons[buttons.length-1].label,'Drill mode','the third row starts a drill');
   assert.strictEqual(run('questBarButtons')({drill:true}).find(b=>b.id==='drill').label,'Stop drill','and stops it');
   assert.ok(buttons.find(b=>b.id==='top-white').on&&buttons.find(b=>b.id==='front-green').on&&!buttons.find(b=>b.id==='front-red').on,'the hold\'s tiles are on');
   R6.forEach((r,i)=>assert.strictEqual(hit([r.x,r.y,0],R6),i,buttons[i].id+' under its center'));
@@ -113,6 +114,7 @@ function pure(){
   assert.ok(free([0,1,0],[]),'one hand is free');assert.ok(free([0,1,0],[[0.4,1,0]]),'a hand far from the other is free');
   assert.ok(!free([0,1,0],[[0.1,1,0]]),'two hands together hold the real cube');
   drill();
+  voice();
   console.log('quest pure ok');
 }
 // The drill: every case, set up in every hold, is solved by its algorithm done as held (a whole-cube
@@ -141,6 +143,41 @@ function drill(){
   assert.strictEqual(run('questPanel')({drill:'Drill: Sune · 2 solved',stage:{name:'Cross'}}).stage,'Drill: Sune · 2 solved','the panel says the drill in place of the stage');
 }
 
+// The drill's voice (quest/voice.js): every case of the drill by its names, the words Vosk is told,
+// the commands, a tie between sets, talk.
+function voice(){
+  const run=require('./vm-load')('js/engine.js','js/algs.js','js/stage.js','js/draw.js','lab/smack.js','quest/core.js','js/listen-match.js','quest/voice.js');
+  const cat=run('questVoiceCatalog()'),g=run('questVoiceGrammar')(cat),act=run('questVoiceAction'),vcase=run('questVoiceCase'),cmd=run('questVoiceCommand');
+  assert.ok(cat.length&&!cat.some(e=>e.set==='f2l'),'two-look OLL and PLL and the full PLL, no F2L');
+  const ids=new Set(cat.map(e=>vcase(e).id));
+  for(const c of run('questDrillCases()'))assert.ok(ids.has(c.id),'a name drills '+c.id);
+  // every name of every case, as a dictation gives it, drills that case, with the drill in its set or the other
+  let n=0;
+  for(const e of cat)for(const s of e.say)for(const sec of [e.set,e.set==='oll'?'pll':'oll']){
+    const text=e.set==='pll'?s+' perm':s;if(s.length===1&&e.set==='oll'&&sec!==e.set)continue; // a letter alone goes to the set drilled
+    const a=act([text],null,sec,cat),h=a.hit;
+    assert.ok(h&&vcase(h).id===vcase(e).id,`"${text}" (drilling ${sec}) drills ${vcase(e).id}: `+(h?vcase(h).id:JSON.stringify((a.choices||[]).map(c=>c.id))));n++;}
+  assert.ok(n>100,'names checked: '+n);
+  // the words Vosk is told: each one the small English model has, no letter alone, the commands
+  for(const w of ['antisune','oll','sooney','chamelion'])assert.ok(!g.some(p=>p.split(' ').includes(w)),'no '+w+': the model has no such word');
+  assert.ok(!g.some(p=>/^[a-z]$/.test(p)),'no letter alone');
+  for(const p of ['sune','anti sune','headlights','chameleon','t perm','u a perm','g a perm','stop drill','again','[unk]'])assert.ok(g.includes(p),'the grammar has "'+p+'"');
+  for(const p of g.filter(p=>p!=='[unk]'&&!cmd(p)&&!/^(first|second|third)$/.test(p))){const a=act([p],null,null,cat);assert.ok(a.hit||a.choices,'"'+p+'" names a case');}
+  // commands
+  for(const t of ['stop drill','Stop the drill please','end drill','exit drill mode'])assert.strictEqual(cmd(t),'stop',t);
+  for(const t of ['again','next','one more','Reset'])assert.strictEqual(cmd(t),'again',t);
+  for(const t of ['stop','T perm','again and again'])assert.strictEqual(cmd(t),null,'"'+t+'" is no command');
+  assert.strictEqual(act(['stop drill'],null,'oll',cat).cmd,'stop');
+  // "T" alone: the set drilled now; with none, the line asks, and the next words pick
+  assert.strictEqual(vcase(act(['t'],null,'oll',cat).hit).id,'co-T','T while an OLL case: the T OLL');
+  assert.strictEqual(vcase(act(['t'],null,'pll',cat).hit).id,'pll-T','T while a PLL case: the T perm');
+  const ask=act(['t'],null,null,cat);assert.ok(!ask.hit&&ask.choices.length===2,'with no drill, T asks');
+  assert.strictEqual(vcase(act(['the perm'],ask.choices,null,cat).pick).id,'pll-T','"the perm" picks');
+  assert.ok(!act(['I have two dogs and a cat'],null,'oll',cat).hit,'talk names nothing');
+  for(const sec of [null,'pll'])assert.strictEqual(vcase(act(['double sune a'],null,sec,cat).hit).id,'co-H','a stray word after "double sune": the longer name wins');
+  assert.strictEqual(run('questVoiceClean')('[unk] t perm [unk]'),'t perm');
+}
+
 const html=fs.readFileSync(path.join(__dirname,'..','quest','index.html'),'utf8');
 const SHIM=fs.readFileSync(path.join(__dirname,'..','quest','android','shim.js'),'utf8');
 // The Java side of the Quest app (BleBridge.java) as a page sees it: TwistwrightAndroid.post(json)
@@ -161,22 +198,41 @@ function boot(bridge,opts={}){
   const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
   // In the Quest app the page gets shim.js first in its head, as MainActivity.withShim puts it.
   const src=opts.android?html.replace(/<head[^>]*>/i,h=>h+'<script>'+SHIM+'</script>'):html;
-  const dom=new JSDOM(src,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,url:'file://'+path.join(__dirname,'..','quest','index.html'),virtualConsole:vc,
+  const dom=new JSDOM(src,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,url:'file://'+path.join(__dirname,'..','quest','index.html')+(opts.query||''),virtualConsole:vc,
     beforeParse(w){Object.defineProperty(w,'localStorage',{value:opts.storage||fakeStorage()});
+      if(opts.speech)w.SpeechRecognition=opts.speech.R;
+      if(opts.vosk)opts.vosk.install(w);
       if(opts.xr)Object.defineProperty(w.navigator,'xr',{value:opts.xr});
       if(opts.bluetooth)Object.defineProperty(w.navigator,'bluetooth',{value:opts.bluetooth});
       if(opts.android){opts.android.install(w);w.fetch=async()=>({ok:false});return;}
-      w.BRIDGE_LOCAL=true;w.WebSocket=bridge.FakeWebSocket;w.fetch=async u=>u==='/bridge/info'?{ok:true,json:async()=>bridgeInfo()}:{ok:false};}});
+      w.BRIDGE_LOCAL=true;w.WebSocket=bridge.FakeWebSocket;w.fetch=async u=>u==='/bridge/info'?{ok:true,json:async()=>bridgeInfo()}:/model\.tar\.gz$/.test(u)&&opts.vosk&&opts.vosk.missing?{ok:false,status:404}:{ok:false};}});
   const w=dom.window;
   return new Promise(res=>w.addEventListener('load',()=>setTimeout(()=>res({w,d:w.document,errs}),300)));
+}
+// The browser's speech recognition: each new recognizer is kept; say() gives the last one a result.
+function fakeSpeech(){
+  const recs=[];
+  class R{constructor(){recs.push(this);this.starts=0;this.stopped=false;}start(){this.starts++;}stop(){this.stopped=true;}}
+  const say=(text,final=true)=>{const res=[{transcript:text}];res.isFinal=final;recs[recs.length-1].onresult({resultIndex:0,results:[res]});};
+  return {R,recs,say};
+}
+// Vosk, the microphone and the page's audio. opts.missing: no model on the server; opts.blocked: the microphone is refused.
+function fakeVosk(opts={}){
+  const f={models:0,k:null,removed:0,stopped:0,...opts};
+  f.install=w=>{
+    if(!f.missing)w.Vosk={createModel:async url=>{f.models++;f.url=url;return {KaldiRecognizer:class{constructor(rate,g){f.rate=rate;f.grammar=JSON.parse(g);f.h={};f.k=this;}on(e,fn){f.h[e]=fn;}acceptWaveform(){}remove(){f.removed++;}}};}};
+    Object.defineProperty(w.navigator,'mediaDevices',{value:{getUserMedia:async()=>{if(f.blocked)throw Object.assign(new Error('denied'),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){f.stopped++;}}]};}}});
+    w.AudioContext=class{constructor(){this.sampleRate=48000;this.state='running';this.destination={};}createMediaStreamSource(){return {connect(){},disconnect(){}};}
+      createScriptProcessor(){return {connect(){},disconnect(){}};}close(){return Promise.resolve();}resume(){return Promise.resolve();}};};
+  return f;
 }
 const moveMsg=()=>Uint8Array.from([0x01,...Array(19).fill(0)]); // a gen 4 move message
 
 async function page(){
   const cube={};const set=c=>Object.assign(cube,{cp:[...c.cp],co:[...c.co],ep:[...c.ep],eo:[...c.eo]});set(SOLVED);
   const dev=fakeDevice(4,MAC,cube,{name:'GAN12uiM_A1B2'});
-  const storage=fakeStorage();
-  const {w,d,errs}=await boot(fakeBridge([{id:'p1',gen:4,dev,mac:MAC}]),{storage});
+  const storage=fakeStorage(),speech=fakeSpeech();
+  const {w,d,errs}=await boot(fakeBridge([{id:'p1',gen:4,dev,mac:MAC}]),{storage,speech});
   const $=s=>d.querySelector(s),$$=s=>[...d.querySelectorAll(s)],Q=()=>w.questState();
   const click=el=>{assert.ok(el,'element to click');el.dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true}));};
   const change=(el,v)=>{if(typeof v==='boolean')el.checked=v;else el.value=v;el.dispatchEvent(new w.Event('change',{bubbles:true}));};
@@ -230,10 +286,12 @@ async function page(){
   // no demo and no keys: the cube is the real one
   assert.ok(!$('#demo'),'no Demo cube');
   const before=Q().target;d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'F',bubbles:true}));assert.ok(Q().target.equals(before),'a key turns nothing');
-  // Drill Sune: the picture is a Sune as held, whatever the real cube shows; the cube's turns turn it
+  // Drill mode: the picture is a Sune as held, whatever the real cube shows; the cube's turns turn it
   const real0=Q().real;assert.ok(real0&&real0.equals(c3)&&!real0.isSolved(),'the real cube is mixed');
-  Q().solvedMs=80;assert.strictEqual($('#drill').textContent,'Drill Sune');
-  click($('#drill'));const D=Q().drill;assert.ok(D&&D.c.id==='co-sune','Drill Sune starts');
+  Q().solvedMs=80;assert.strictEqual($('#drill').textContent,'Drill mode');assert.ok($('#voice').hidden,'no voice line yet');
+  click($('#drill'));const D=Q().drill;assert.ok(D&&D.c.id==='co-sune','Drill mode starts with Sune');
+  assert.ok(speech.recs.length===1&&speech.recs[0].starts===1&&speech.recs[0].continuous,'and listens, until it ends');
+  assert.ok(!$('#voice').hidden&&/Say a case name/.test($('#voice').textContent),'the line asks for a case name: '+$('#voice').textContent);
   assert.ok(Q().shown.equals(D.setup)&&D.p0.equals(real0),'the picture is the Sune, from the cube as it is');
   assert.strictEqual(Q().moves.length,0,'the list starts empty');assert.strictEqual(Q().stage.name,'Sune','the stage reads Sune');
   assert.ok($('#drill').textContent==='Stop drill'&&$('#drill').getAttribute('aria-pressed')==='true','the chip stops it');
@@ -254,9 +312,26 @@ async function page(){
   click(tile('up',0));assert.strictEqual(Q().hold.id,'white-red');
   assert.ok(Q().shown.equals(w.questDrillSetup("R U R' U R U2 R'",Q().hold))&&!Q().moves.length,'the Sune as the new hold has it');
   assert.strictEqual(Q().stage.name,'Sune','and it reads Sune');
-  // Stop drill: the real cube again
-  click($('#drill'));assert.ok(!Q().drill&&Q().shown.equals(r),'Stop drill: the picture is the real cube');
-  assert.strictEqual($('#drill').textContent,'Drill Sune');assert.strictEqual($('#drillNote').textContent,'');
+  // the voice: a case name drills it, as held, from the cube as it is
+  speech.say('so what',false);assert.ok(/Heard so far/.test($('#voice').textContent)&&Q().drill.c.id==='co-sune','an early guess only shows');
+  speech.say('T perm');assert.strictEqual(Q().drill.c.id,'pll-T','"T perm" drills the T perm');
+  assert.ok(Q().shown.equals(w.questDrillSetup(Q().drill.c.alg,Q().hold))&&Q().drill.p0.equals(r)&&!Q().moves.length,'set up as held, from the cube as it is');
+  assert.ok(/Drilling T perm\..*Heard: "T perm"/.test($('#voice').textContent),'the line: '+$('#voice').textContent);
+  assert.strictEqual(storage.getItem('cw:questDrill'),'"pll-T"','the case is kept');
+  assert.ok(/Drilling T perm/.test(w.questPanelLines().hint),'the panel says it too');
+  speech.say('headlights');assert.strictEqual(Q().drill.c.id,'co-U','"headlights": the U OLL');
+  speech.say('T');assert.strictEqual(Q().drill.c.id,'co-T','"T" while an OLL case: the T OLL');
+  r=w.applyAlg(r,[real('R')]);set(r);dev.notify(moveMsg());assert.ok(await until(()=>Q().moves.length===1),'a turn');
+  speech.say('again');assert.ok(Q().drill.c.id==='co-T'&&!Q().moves.length&&Q().drill.p0.equals(r),'"again": the case again, from the cube as it is');
+  speech.say('I have two dogs');assert.ok(Q().drill.c.id==='co-T'&&/No case name heard/.test($('#voice').textContent),'talk changes nothing');
+  speech.say('stop');assert.ok(Q().drill,'"stop" alone does not end the drill');
+  // "stop drill": the real cube again, and the microphone off
+  speech.say('stop drill');assert.ok(!Q().drill&&Q().shown.equals(r),'"stop drill": the picture is the real cube');
+  assert.ok(speech.recs[0].stopped&&!w.questVoiceOn(),'and the listening stops');
+  assert.strictEqual($('#drill').textContent,'Drill mode');assert.strictEqual($('#drillNote').textContent,'');assert.ok($('#voice').hidden);
+  // Drill mode again: the last case drilled, a new recognizer; the chip ends it
+  click($('#drill'));assert.ok(Q().drill.c.id==='co-T'&&speech.recs.length===2,'Drill mode starts with the last case');
+  click($('#drill'));assert.ok(!Q().drill&&speech.recs[1].stopped&&Q().shown.equals(r),'Stop drill: the real cube, the listening off');
   // any case by name, for the voice to come
   w.questDrill('T perm');assert.strictEqual(Q().drill.c.id,'pll-T','a drill by name');w.questDrill(null);assert.ok(!Q().drill&&Q().shown.equals(r));
   click($('#disconnect'));assert.ok(!Q().conn&&!$('#connect').hidden,'Disconnect');
@@ -354,8 +429,9 @@ async function xr(){
   assert.ok(sc().bar.buttons[at('top-yellow')].on,'its tile is on');
   press(at('front-blue'));assert.strictEqual(Q().hold.id,'yellow-blue','a front tile');
   press(at('top-white'));press(at('front-green'));assert.strictEqual(Q().hold.id,'white-green','back to white up, green front');
-  // Drill Sune on the third row: the picture is the case; solved, a card shows, then the case again
-  press(at('drill'));const DX=Q().drill;assert.ok(DX&&Q().shown.equals(DX.setup),'a poke on Drill Sune: the picture is a Sune');
+  // Drill mode on the third row: the picture is the case; solved, a card shows, then the case again
+  press(at('drill'));const DX=Q().drill;assert.ok(DX&&Q().shown.equals(DX.setup),'a poke on Drill mode: the picture is a Sune');
+  step();assert.ok(/no microphone/.test(sc().panel.lines.hint),'no microphone here: the panel says so: '+sc().panel.lines.hint);
   assert.strictEqual(sc().bar.buttons[at('drill')].label,'Stop drill');assert.ok(sc().bar.buttons[at('drill')].on);
   assert.strictEqual(sc().panel.lines.stage,'Drill: Sune · 0 solved','the panel says the drill');assert.ok(!sc().toast,'no card yet');
   const realY=DX.p0.mul(DX.setup.inverse()); // the real state that solves the picture
@@ -476,4 +552,32 @@ async function android(){
   console.log('quest android ok');
 }
 
-(async()=>{pure();await page();await xr();await notAsked();await questBrowser();await android();console.log('quest ok');})().catch(e=>{console.error(e);process.exit(1);});
+// The voice through Vosk (?voice=vosk, as on the Quest Browser): the microphone, the model told the
+// phrases, a name, the model kept for the next drill; a server with no model; a blocked microphone.
+async function vosk(){
+  const f=fakeVosk(),{w,d,errs}=await boot(fakeBridge([]),{vosk:f,query:'?voice=vosk'});
+  const $=s=>d.querySelector(s),Q=()=>w.questState();
+  assert.deepStrictEqual(errs,[]);
+  $('#drill').click();assert.ok(Q().drill&&Q().drill.c.id==='co-sune');
+  assert.ok(await until(()=>!!f.k),'the recognizer starts');
+  assert.ok(/voice\/model\.tar\.gz$/.test(f.url)&&f.rate===48000,'the model from quest/voice/, at the audio rate');
+  assert.ok(f.grammar.includes('sune')&&f.grammar.includes('[unk]')&&f.grammar.includes('t perm'),'told the phrases');
+  assert.ok(/Say a case name/.test($('#voice').textContent),$('#voice').textContent);
+  f.h.partialresult({result:{partial:'g a'}});assert.ok(/Heard so far.*g a/.test($('#voice').textContent));
+  f.h.result({result:{text:'[unk] g a perm'}});assert.strictEqual(Q().drill.c.id,'pll-Ga','"G a perm" drills the Ga perm');
+  f.h.result({result:{text:''}});assert.strictEqual(Q().drill.c.id,'pll-Ga','nothing heard: nothing changes');
+  $('#drill').click();assert.ok(!Q().drill&&f.removed===1&&f.stopped===1,'Stop drill: the recognizer goes, the microphone off');
+  const k1=f.k;$('#drill').click();assert.ok(await until(()=>f.k!==k1),'again');assert.strictEqual(f.models,1,'the model is loaded once');
+  assert.strictEqual(Q().drill.c.id,'pll-Ga','with the last case');
+  $('#drill').click();w.close();
+  const m=fakeVosk({missing:true}),b=await boot(fakeBridge([]),{vosk:m,query:'?voice=vosk'});
+  b.d.querySelector('#drill').click();
+  assert.ok(await until(()=>/No speech model here/.test(b.d.querySelector('#voice').textContent)),'no model: the line says how to get it: '+b.d.querySelector('#voice').textContent);
+  assert.ok(b.w.questState().drill&&m.stopped===1,'the drill runs on, the microphone off');b.w.close();
+  const k=fakeVosk({blocked:true}),c=await boot(fakeBridge([]),{vosk:k,query:'?voice=vosk'});
+  c.d.querySelector('#drill').click();
+  assert.ok(await until(()=>/microphone is blocked/.test(c.d.querySelector('#voice').textContent)),'a blocked microphone: the line says so');
+  c.w.close();console.log('quest vosk ok');
+}
+
+(async()=>{pure();await page();await vosk();await xr();await notAsked();await questBrowser();await android();console.log('quest ok');})().catch(e=>{console.error(e);process.exit(1);});

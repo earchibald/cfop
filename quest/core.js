@@ -211,9 +211,9 @@ function questPanel(s){
 // fingertip that goes through a button's face presses it once. Sizes in meters: w and h a button,
 // tile a hold tile (square), gap between two, group between two groups.
 const QUEST_BAR={w:0.05,h:0.04,tile:0.04,gap:0.007,group:0.024,hover:0.03,armed:0.012,deep:0.04};
-// A third row has the drill: Drill Sune, or Stop drill while one runs.
+// A third row has the drill: Drill mode, or Stop drill while one runs.
 // s: {tilt, moves (a count), panel, hidden, top, front (the hold's colors), exit (armed), drill
-// (one runs), drillName (the case the button starts)}.
+// (one runs)}.
 function questBarButtons(s){
   const tile=(place,c)=>({id:(place==='up'?'top-':'front-')+QUEST_COLOR_NAMES[c],label:place==='up'?'Top':'Front',row:1,tile:true,
     color:QUEST_HEX[c],on:(place==='up'?s.top:s.front)===c,group:c===QUEST_FRONTS[0]});
@@ -227,7 +227,7 @@ function questBarButtons(s){
     {id:'panel',label:s.panel?'Hide panel':'Show panel',row:0},
     ...QUEST_TOPS.map(c=>tile('up',c)),...QUEST_FRONTS.map(c=>tile('front',c)),
     {id:'exit',label:s.exit?'Poke again':'Exit',row:1,group:true,warn:!!s.exit},
-    {id:'drill',label:s.drill?'Stop drill':'Drill '+(s.drillName||'Sune'),on:!!s.drill,row:2},
+    {id:'drill',label:s.drill?'Stop drill':'Drill mode',on:!!s.drill,row:2},
   ];
 }
 // Where each button sits, in the row's frame (x right, y up, from the middle of the first row):
