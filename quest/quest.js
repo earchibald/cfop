@@ -78,7 +78,7 @@ function questPanelLines(){
 }
 function questHint(){
   const x=qs.xr;if(!x)return '';
-  return x.hands?'Pinch the cube to move it · pinch away to bring it here':'Grip: move · Trigger: bring here · A tilt · B level · Stick: size';
+  return x.hands?'Poke a button · pinch: carry · hold a pinch: bring here':'Poke a button, or A tilt · B level · Stick size · Grip carries';
 }
 
 // ----- tilt -----
@@ -256,9 +256,13 @@ function questDragSetup(){
 
 // ----- the WebXR session -----
 // The cube floats 45 cm in front of the head and a little below it, turned to face the user, 15
-// cm on an edge (about 2.7 times a real cube). A grip (a pinch with hands) near the cube carries
-// it; a trigger press (a pinch) away from it brings it back in front. A toggles the tilt, B levels
-// it, the right stick sizes the cube, X clears the moves, Y hides the panel.
+// cm on an edge (about 2.7 times a real cube). Hands first, since the user holds the real cube: a
+// row of buttons under the cube (Tilt, Level, Clear, Smaller, Larger, the panel) takes a poke of
+// an index fingertip; a pinch near the cube carries it; a pinch held QUEST_HOLD_MS away from it, by
+// a hand with no other hand near, brings it back in front (a short pinch does nothing, so a hand on
+// the real cube sends nothing). Controllers second: a grip near the cube carries it, a trigger away
+// brings it back, A toggles the tilt, B levels it, the right stick sizes the cube, X clears the
+// moves, Y hides the panel.
 async function questEnterXR(mode){
   if(qs.xr||!qs.r)return;
   try{
@@ -266,11 +270,12 @@ async function questEnterXR(mode){
     const session=await navigator.xr.requestSession(mode,{optionalFeatures:['local-floor','hand-tracking']});
     session.updateRenderState({baseLayer:new XRWebGLLayer(session,qs.gl,{alpha:true,antialias:true})});
     let ref;try{ref=await session.requestReferenceSpace('local-floor');}catch(e){ref=await session.requestReferenceSpace('local');}
-    qs.xr={session,ref,mode,placed:false,pos:[0,1.1,-0.45],face:[0,0,0,1],edge:questGet('cw:questEdge',0.15),grab:null,pressed:new Map(),grabbed:new Set(),panel:true,hands:false,head:[0,1.5,0]};
+    qs.xr={session,ref,mode,placed:false,pos:[0,1.1,-0.45],face:[0,0,0,1],edge:questGet('cw:questEdge',0.15),grab:null,pressed:new Map(),grabbed:new Set(),panel:true,hands:false,head:[0,1.5,0],t:0,pinch:null,pokes:new Map(),hover:-1,lit:-1,litT:0};
     session.addEventListener('end',()=>{qs.xr=null;questButtons();questFlatStart();});
     session.addEventListener('selectstart',questGrabStart);session.addEventListener('squeezestart',questGrabStart);
     session.addEventListener('selectend',questGrabEnd);session.addEventListener('squeezeend',questGrabEnd);
-    session.addEventListener('select',e=>{if(!qs.xr.grabbed.delete(e.inputSource))qs.xr.placed=false;}); // a select that carried nothing: bring the cube here
+    // A trigger that carried nothing brings the cube here. A hand's pinch does it only when held (questPinch).
+    session.addEventListener('select',e=>{if(!qs.xr.grabbed.delete(e.inputSource)&&!e.inputSource.hand)qs.xr.placed=false;});
     session.requestAnimationFrame(questXRFrame);
     questButtons();
   }catch(e){questStatus('The headset did not start the session: '+e.message);}
@@ -288,11 +293,13 @@ function questInputPos(frame,src,ref){
 function questGrabStart(e){
   const x=qs.xr;if(!x||x.grab)return;
   const p=questInputPos(e.frame,e.inputSource,x.ref);
-  if(!p||v3Dist(p,x.pos)>Math.max(0.12,x.edge*0.85))return;
+  if(!p)return;
+  if(v3Dist(p,x.pos)>questGrabRadius(x.edge)){if(e.inputSource.hand&&e.type==='selectstart')x.pinch={src:e.inputSource,t:x.t};return;}
   x.grab={src:e.inputSource,off:v3Sub(x.pos,p)};x.grabbed.add(e.inputSource);
 }
 function questGrabEnd(e){
   const x=qs.xr;if(!x)return;
+  if(x.pinch&&x.pinch.src===e.inputSource)x.pinch=null;
   if(x.grab&&x.grab.src===e.inputSource){x.grab=null;questSet('cw:questEdge',x.edge);}
   if(e.type==='squeezeend')x.grabbed.delete(e.inputSource); // a squeeze never brings the cube here
 }
@@ -300,6 +307,35 @@ function questPlace(x,t){
   const p=t.position,o=t.orientation,head=[p.x,p.y,p.z];
   let f=quatApply([o.x,o.y,o.z,o.w],[0,0,-1]);f=[f[0],0,f[2]];const l=Math.hypot(f[0],f[2])||1;f=[f[0]/l,0,f[2]/l];
   x.pos=v3Add(head,[f[0]*0.45,-0.16,f[2]*0.45]);x.face=quatFacing(x.pos,head);x.placed=true;
+}
+function questSize(x,k){x.edge=Math.max(0.057,Math.min(0.6,x.edge*k));questSet('cw:questEdge',x.edge);}
+// What a button of the row does: the same as its controller button, or the page's.
+function questBarDo(id){
+  const x=qs.xr;
+  if(id==='tilt')questTilt(!qs.tilt);else if(id==='level')questLevel();else if(id==='clear')questClear();
+  else if(id==='smaller')questSize(x,0.8);else if(id==='larger')questSize(x,1.25);else if(id==='panel')x.panel=!x.panel;
+}
+function questBarState(){return questBarButtons({tilt:qs.tilt,moves:qs.moves.length,panel:!qs.xr||qs.xr.panel});}
+function questJoint(frame,src,name,ref){const j=src.hand&&src.hand.get(name),p=j&&frame.getJointPose&&frame.getJointPose(j,ref);if(!p)return null;const t=p.transform.position;return [t.x,t.y,t.z];}
+// The hands, each frame: a poke of an index fingertip on the row, and a pinch held away from the cube.
+function questHands(x,frame){
+  const center=questBarCenter(x.pos,x.edge),n=questBarState().length,tips=new Map();
+  for(const src of x.session.inputSources)if(src.hand){const p=questJoint(frame,src,'index-finger-tip',x.ref);if(p)tips.set(src,p);}
+  x.hover=-1;
+  for(const [src,p] of tips){
+    let st=x.pokes.get(src);if(!st){st={armed:false};x.pokes.set(src,st);}
+    if(x.grab&&x.grab.src===src){st.armed=false;continue;}
+    const r=questPoke(st,questBarLocal(p,center,x.face),n);
+    if(r.hover>=0)x.hover=r.hover;
+    if(r.press>=0){const b=questBarState()[r.press];if(!b.off){questBarDo(b.id);x.lit=r.press;x.litT=x.t;}}
+  }
+  for(const src of [...x.pokes.keys()])if(!tips.has(src))x.pokes.delete(src);
+  const pin=x.pinch;
+  if(pin&&x.t-pin.t>=QUEST_HOLD_MS){
+    x.pinch=null;const p=tips.get(pin.src);
+    const others=[...tips].filter(([s])=>s!==pin.src).map(([,q])=>q);
+    if(p&&questHandFree(p,others))x.placed=false;
+  }
 }
 function questPads(x,dt){
   x.hands=false;
@@ -319,11 +355,11 @@ function questPads(x,dt){
 function questXRFrame(now,frame){
   const x=qs.xr;if(!x)return;
   frame.session.requestAnimationFrame(questXRFrame);
-  const dt=questTick(now);
+  const dt=questTick(now);x.t=now;
   const pose=frame.getViewerPose(x.ref);if(!pose)return;
   const hp=pose.transform.position;x.head=[hp.x,hp.y,hp.z];
   if(!x.placed)questPlace(x,pose.transform);
-  questPads(x,dt);
+  questPads(x,dt);questHands(x,frame);
   if(x.grab){const p=questInputPos(frame,x.grab.src,x.ref);if(p){x.pos=v3Add(p,x.grab.off);x.face=quatFacing(x.pos,x.head);}}
   const ar=x.mode==='immersive-ar',extras=[];
   if(!ar){
@@ -335,7 +371,9 @@ function questXRFrame(now,frame){
   }
   const scene={cube:qs.anim?qs.anim.from:qs.shown,anim:qs.anim?{move:qs.anim.move,t:qs.anim.e}:null,
     model:m4Mul(m4Trs(x.pos,x.face,1),m4Trs([0,0,0],questOrient(),x.edge/3)),extras,
-    panel:x.panel?{model:m4Trs(v3Add(x.pos,[0,x.edge*0.85+0.08,0]),x.face,[0.3,0.117,1]),lines:questPanelLines()}:null};
+    panel:x.panel?{model:m4Trs(v3Add(x.pos,[0,x.edge*0.85+0.08,0]),x.face,[0.3,0.117,1]),lines:questPanelLines()}:null,
+    bar:{model:m4Trs(questBarCenter(x.pos,x.edge),x.face,[questBarWidth(6),QUEST_BAR.h,1]),
+      buttons:questBarState().map((b,i)=>Object.assign({hover:i===x.hover,lit:i===x.lit&&x.t-x.litT<250},b))}};
   const layer=frame.session.renderState.baseLayer,gl=qs.gl;
   gl.bindFramebuffer(gl.FRAMEBUFFER,layer.framebuffer);
   if(ar)gl.clearColor(0,0,0,0);else gl.clearColor(0.04,0.04,0.05,1);

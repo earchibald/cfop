@@ -17,6 +17,26 @@ The page draws with WebGL 2 and no library. `quest/core.js` is pure and `test/qu
 every face move's layer turn lands on the next state, then drives the page over the fake bridge and
 a fake WebXR session.
 
+## Hands first
+
+You hold the real cube in the headset, so every control works by hand tracking, with one free hand.
+A controller is a second way, never the only one. To put the cube down and pick up a controller for
+one action is a bad step: do not add a control that needs it.
+
+- A row of buttons floats under the cube, square to you: Tilt, Level, Clear, Smaller, Larger, Hide
+  panel. An index fingertip presses one when it goes through the face from in front
+  (`questPoke` in `quest/core.js`): once per poke, nothing from behind or from the side. A button
+  lights while a fingertip is near it and flashes on the press.
+- A pinch on the cube carries it.
+- A pinch held 0.6 s away from the cube brings it back in front of you. A short pinch does nothing,
+  and so does a pinch while the other hand is within 20 cm (`questHandFree`): both hands on the real
+  cube are close together, and a stray pinch there must not move the twin.
+- Controllers: grip carries, trigger away brings back, A tilt, B level, right stick size, X clear,
+  Y panel.
+
+Open on a headset: how well hand tracking sees a hand that holds a cube, and whether the row is in a
+good place to reach.
+
 ## The Quest app: no Mac
 
 `quest/android/` is an Android app for the headset: the pages in a WebView, the cube over the

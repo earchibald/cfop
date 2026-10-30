@@ -68,6 +68,23 @@ function pure(){
   assert.strictEqual(questMoveColor('U',held),'#ffd21e','U as held is the yellow face');assert.strictEqual(questMoveColor('R',new Cube()),'#d8283b');
   const panel=run('questPanel')({name:'GAN12',battery:80,status:'Live.',stage:{name:'F2L',sub:'2 pairs'},moves:Array.from({length:15},()=>'R'),tilt:true,hint:'h'});
   assert.strictEqual(panel.head,'GAN12 · 80%');assert.strictEqual(panel.stage,'F2L · 2 pairs');assert.strictEqual(panel.moves.length,12,'the last twelve moves');assert.strictEqual(panel.count,15);
+  // the hands: the row of buttons and the poke
+  const BAR=run('QUEST_BAR'),barW=run('questBarWidth'),hit=run('questBarHit'),poke=run('questPoke'),free=run('questHandFree');
+  const cx=i=>-barW(6)/2+i*(BAR.w+BAR.gap)+BAR.w/2;
+  for(let i=0;i<6;i++)assert.strictEqual(hit([cx(i),0,0],6),i,'button '+i+' under its center');
+  assert.strictEqual(hit([cx(0)+BAR.w/2+BAR.gap/2,0,0],6),-1,'nothing in the gap');
+  assert.strictEqual(hit([cx(2),BAR.h,0],6),-1,'nothing over the row');
+  const ps={armed:false},go=z=>poke(ps,[cx(1),0,z],6);
+  assert.strictEqual(go(0.08).press,-1,'far in front: no press');assert.strictEqual(go(0.08).hover,-1,'and no light');
+  assert.strictEqual(go(0.02).hover,1,'near: the button lights');
+  assert.strictEqual(go(-0.005).press,1,'through the face: a press');
+  assert.strictEqual(go(-0.01).press,-1,'once per poke');go(0.005);assert.strictEqual(go(-0.005).press,-1,'not again without coming out');
+  go(0.02);assert.strictEqual(go(-0.005).press,1,'out and in again: a second press');
+  const s2={armed:false};poke(s2,[cx(4),0,-0.08],6);assert.strictEqual(poke(s2,[cx(4),0,-0.01],6).press,-1,'from behind: no press');
+  const s3={armed:false};poke(s3,[0.5,0,-0.005],6);assert.strictEqual(poke(s3,[cx(4),0,-0.005],6).press,-1,'in from the side: no press');
+  assert.strictEqual(poke({armed:false},null,6).press,-1,'no fingertip: nothing');
+  assert.ok(free([0,1,0],[]),'one hand is free');assert.ok(free([0,1,0],[[0.4,1,0]]),'a hand far from the other is free');
+  assert.ok(!free([0,1,0],[[0.1,1,0]]),'two hands together hold the real cube');
   console.log('quest pure ok');
 }
 
@@ -189,7 +206,7 @@ async function xr(){
   step();
   const x=Q().xr;assert.ok(near(x.pos,[0,1.44,-0.45]),'the cube floats in front of the head, a little below: '+x.pos);
   assert.ok(near(w.quatApply(x.face,[0,0,1]),[0,0,1]),'facing the user');
-  assert.strictEqual(scenes.length,1,'one view drawn');assert.ok(scenes[0].panel&&/Grip/.test(scenes[0].panel.lines.hint),'the panel with the controller hints');
+  assert.strictEqual(scenes.length,1,'one view drawn');assert.ok(scenes[0].panel&&/A tilt/.test(scenes[0].panel.lines.hint),'the panel with the controller hints');
   assert.strictEqual(scenes[0].extras.length,0,'passthrough: no floor, no drawn controllers');
   // a grip near the cube carries it
   const ev=(type)=>(handlers[type]||[]).forEach(f=>f({type,inputSource:ctrl,frame}));
@@ -206,6 +223,54 @@ async function xr(){
   const tilt=Q().tilt;pad.buttons[4].pressed=true;step();assert.strictEqual(Q().tilt,!tilt,'A toggles the tilt');step();assert.strictEqual(Q().tilt,!tilt,'once per press');
   pad.buttons[4].pressed=false;step();
   const e0=x.edge;pad.axes[3]=-1;step();step();assert.ok(x.edge>e0,'the stick up makes the cube larger');pad.axes[3]=0;
+  // hands first: two tracked hands, the right one free, the left one on the real cube
+  const tips={};const handOf=side=>{const j=new Map(['index-finger-tip','thumb-tip','wrist'].map(n=>[n,{side,n}]));return {handedness:side,hand:j,targetRaySpace:'ray'};};
+  const R=handOf('right'),Lh=handOf('left');session.inputSources.length=0;session.inputSources.push(R,Lh);
+  frame.getJointPose=(j)=>{const p=(tips[j.side]||{})[j.n];return p?{transform:{position:{x:p[0],y:p[1],z:p[2]},orientation:{x:0,y:0,z:0,w:1}},radius:0.008}:null;};
+  const v3=(a,b)=>a.map((v,i)=>v+b[i]);
+  const tip=(side,p)=>{tips[side]={'index-finger-tip':p,'thumb-tip':p,wrist:v3(p,[0,-0.05,0.1])};};
+  x.placed=false;step();assert.ok(near(x.pos,[0,1.44,-0.45]),'back in front for the hands');
+  tip('left',[0,1.1,-0.3]);tip('right',[0.3,1.3,-0.3]);step();
+  const sc=()=>scenes[scenes.length-1];
+  assert.ok(/Poke a button/.test(sc().panel.lines.hint),'the hint speaks to the hands: '+sc().panel.lines.hint);
+  assert.ok(sc().bar&&sc().bar.buttons.length===6,'the row of buttons is drawn');
+  assert.strictEqual(sc().bar.buttons.map(b=>b.id).join(),'tilt,level,clear,smaller,larger,panel');
+  const BAR=w.eval('QUEST_BAR'),barAt=(i,z)=>{const c=w.questBarCenter(x.pos,x.edge);return [c[0]-w.questBarWidth(6)/2+i*(BAR.w+BAR.gap)+BAR.w/2,c[1],c[2]+z];};
+  const press=i=>{tip('right',barAt(i,0.05));step();tip('right',barAt(i,-0.004));step();};
+  assert.ok(barAt(0,0)[1]<x.pos[1]-w.questGrabRadius(x.edge),'the row is under the cube, clear of a pinch on it');
+  // a poke on Tilt toggles it, once
+  const t0=Q().tilt;tip('right',barAt(0,0.02));step();assert.ok(sc().bar.buttons[0].hover,'the fingertip lights Tilt');
+  tip('right',barAt(0,-0.004));step();assert.strictEqual(Q().tilt,!t0,'a poke on Tilt toggles it');
+  assert.ok(sc().bar.buttons[0].lit,'and flashes');
+  step();assert.strictEqual(Q().tilt,!t0,'once per poke');
+  press(0);assert.strictEqual(Q().tilt,t0,'a second poke toggles it back');
+  // Larger and Smaller
+  const e1=x.edge,y1=barAt(0,0)[1];press(4);assert.ok(Math.abs(x.edge-e1*1.25)<1e-9,'Larger: '+x.edge);
+  assert.ok(barAt(0,0)[1]<y1,'the row moves down with a larger cube');
+  press(3);assert.ok(Math.abs(x.edge-e1)<1e-9,'Smaller: '+x.edge);
+  // Clear
+  assert.ok(Q().moves.length>0,'moves to clear');press(2);assert.strictEqual(Q().moves.length,0,'a poke on Clear clears the moves');
+  assert.ok(sc().bar.buttons[2].off,'Clear is off with no moves');
+  // the panel button hides and shows the panel
+  press(5);assert.ok(!sc().panel,'Hide panel');
+  assert.strictEqual(sc().bar.buttons[5].label,'Show panel','the button says what it does next');
+  press(5);assert.ok(sc().panel,'Show panel');
+  // a short pinch away from the cube does nothing; a held one by a free hand brings it back
+  const hev=(type,src)=>(handlers[type]||[]).forEach(f=>f({type,inputSource:src,frame}));
+  x.pos=[0.3,1.4,-0.6];x.placed=true;const away=[0.35,1.25,-0.25];
+  tip('right',away);step();hev('selectstart',R);step();hev('selectend',R);hev('select',R);step();
+  assert.ok(near(x.pos,[0.3,1.4,-0.6]),'a short pinch away leaves the cube where it is');
+  hev('selectstart',R);for(let k=0;k<45;k++)step();
+  assert.ok(near(x.pos,[0,1.44,-0.45]),'a pinch held by a free hand brings it back: '+x.pos);hev('selectend',R);hev('select',R);
+  // two hands on the real cube: a held pinch does nothing
+  x.pos=[0.3,1.4,-0.6];x.placed=true;tip('left',v3(away,[-0.08,0,0]));step();
+  hev('selectstart',R);for(let k=0;k<45;k++)step();hev('selectend',R);hev('select',R);
+  assert.ok(near(x.pos,[0.3,1.4,-0.6]),'a pinch with the other hand near (both on the real cube) leaves the cube');
+  // a pinch on the cube carries it, and the carrying fingertip presses nothing
+  tip('left',[0,1.1,-0.3]);tip('right',[0.3,1.4,-0.6]);step();hev('selectstart',R);assert.ok(x.grab,'a pinch on the cube takes it');
+  tip('right',[0.2,1.4,-0.5]);step();assert.ok(near(x.pos,[0.2,1.4,-0.5]),'and carries it: '+x.pos);
+  hev('selectend',R);hev('select',R);step();assert.ok(near(x.pos,[0.2,1.4,-0.5]),'and leaves it there');
+  session.inputSources.length=0;session.inputSources.push(ctrl);
   // VR: the floor and the controller drawn
   session.end();assert.ok(!Q().xr,'the session ends');
   $('#enterVR').click();assert.ok(await until(()=>!!Q().xr));scenes.length=0;step();

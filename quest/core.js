@@ -109,3 +109,49 @@ function questPanel(s){
   const moves=(s.moves||[]).slice(-12);
   return {head,status:s.status||'',stage,moves,count:(s.moves||[]).length,tilt:!!s.tilt,hint:s.hint||''};
 }
+
+// ----- the hands -----
+// Hands first: the user holds the real cube, so every control works with one free hand, and a
+// controller is only a second way. A row of buttons floats under the cube, square to the user; an
+// index fingertip that goes through a button's face presses it once. Sizes in meters.
+const QUEST_BAR={w:0.054,h:0.04,gap:0.008,hover:0.03,armed:0.012,deep:0.04};
+function questBarButtons(s){
+  return [
+    {id:'tilt',label:s.tilt?'Tilt on':'Tilt off',on:!!s.tilt},
+    {id:'level',label:'Level'},
+    {id:'clear',label:'Clear',off:!s.moves},
+    {id:'smaller',label:'Smaller'},
+    {id:'larger',label:'Larger'},
+    {id:'panel',label:s.panel?'Hide panel':'Show panel'},
+  ];
+}
+// Where the row sits: under the cube, clear of the space where a pinch takes the cube.
+function questGrabRadius(edge){return Math.max(0.12,edge*0.85);}
+function questBarCenter(pos,edge){return v3Add(pos,[0,-(questGrabRadius(edge)+QUEST_BAR.h/2+0.02),0]);}
+function questBarWidth(n){return n*QUEST_BAR.w+(n-1)*QUEST_BAR.gap;}
+// A point in the row's own frame: x right, y up, z toward the user (face: the row's yaw).
+function questBarLocal(p,center,face){return quatApply([-face[0],-face[1],-face[2],face[3]],v3Sub(p,center));}
+// The button under a local point, by x and y only.
+function questBarHit(local,n){
+  const half=questBarWidth(n)/2,i=Math.floor((local[0]+half)/(QUEST_BAR.w+QUEST_BAR.gap));
+  if(i<0||i>=n||Math.abs(local[1])>QUEST_BAR.h/2)return -1;
+  const x=local[0]+half-i*(QUEST_BAR.w+QUEST_BAR.gap);
+  return x<=QUEST_BAR.w?i:-1;
+}
+// One fingertip, one frame. st: {armed} for that fingertip, kept by the caller. A press needs the
+// tip in front of the button first (armed) and then through its face, not more than deep behind
+// it; it comes once, and the tip must come back out in front to press again. A tip that comes in
+// from behind or from the side presses nothing. Returns {press, hover} as button indexes or -1.
+function questPoke(st,local,n){
+  const i=local?questBarHit(local,n):-1,z=local?local[2]:1;
+  let press=-1;
+  if(i<0||z>QUEST_BAR.hover){st.armed=i>=0&&z>QUEST_BAR.armed;}
+  else if(z>QUEST_BAR.armed)st.armed=true;
+  else if(z<=0&&z>-QUEST_BAR.deep&&st.armed){press=i;st.armed=false;}
+  else if(z<=-QUEST_BAR.deep)st.armed=false;
+  return {press,hover:i>=0&&z<=QUEST_BAR.hover&&z>-QUEST_BAR.deep?i:-1};
+}
+// A pinch away from the cube brings it back only when held this long, and only by a free hand.
+const QUEST_HOLD_MS=600,QUEST_FREE_M=0.2;
+// A hand is free when no other hand is near it: two hands on the real cube are close together.
+function questHandFree(p,others){return others.every(o=>!o||v3Dist(p,o)>QUEST_FREE_M);}

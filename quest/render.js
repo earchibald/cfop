@@ -1,6 +1,6 @@
 // ================= Quest cube lab: the renderer =================
 // WebGL 2 with no library: one box mesh for the cubies (and the hands and controllers in VR), one
-// quad for the stickers, one textured quad for the floating panel. The same code draws the flat
+// quad for the stickers, two textured quads: the floating panel and the row of buttons. The same code draws the flat
 // preview on the page and each eye in a WebXR session: drawScene(proj, view) takes the matrices
 // that XRView gives (or that the page builds for the preview).
 //
@@ -43,9 +43,9 @@ function questRenderer(gl){
       I.push(b,b+1,b+2,b,b+2,b+3);}
     return mesh(P,N,I);})();
   const quad=mesh([-0.5,-0.5,0,0.5,-0.5,0,0.5,0.5,0,-0.5,0.5,0],[0,0,1,0,0,1,0,0,1,0,0,1],[0,1,2,0,2,3]);
-  const panelTex=gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D,panelTex);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-  let panelReady=false;
+  const texture=()=>{const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);return t;};
+  const panelTex=texture(),barTex=texture();
+  let panelReady=false,barReady=false;
 
   // The model matrix of every cubie and sticker for one frame. s: {cube (a Cube or null), anim
   // ({move, t} or null), model (the cube's matrix: place, turn, scale)}. An unknown cube shows
@@ -80,16 +80,36 @@ function questRenderer(gl){
     x.fillStyle='#5a5a62';x.font='400 30px system-ui,sans-serif';x.fillText(lines.hint.slice(0,64),40,320);
     gl.bindTexture(gl.TEXTURE_2D,panelTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,pc);panelReady=true;
   }
-  // One eye, or the preview. scene: {cube, anim, model, panel: {model, lines} or null, extras: [{m, c}]}.
+  // The row of buttons: one cell per button, lit while a fingertip is in front of it, bright as it presses.
+  const bc=typeof document!=='undefined'?document.createElement('canvas'):null;
+  let barKey='';
+  function bar(buttons){
+    if(!bc)return;const key=JSON.stringify(buttons);if(key===barKey&&barReady)return;barKey=key;
+    const n=buttons.length,W=QUEST_BAR.w,G=QUEST_BAR.gap,px=1024/questBarWidth(n);
+    bc.width=1024;bc.height=Math.round(QUEST_BAR.h*px);const x=bc.getContext('2d');x.clearRect(0,0,bc.width,bc.height);
+    x.textAlign='center';x.textBaseline='middle';
+    buttons.forEach((b,i)=>{const l=i*(W+G)*px,w=W*px,h=bc.height;
+      x.fillStyle=b.lit?'#5b8cff':b.hover?'rgba(60,64,80,0.95)':b.on?'rgba(28,70,46,0.95)':'rgba(16,16,20,0.92)';
+      x.beginPath();x.roundRect?x.roundRect(l+3,3,w-6,h-6,22):x.rect(l+3,3,w-6,h-6);x.fill();
+      x.strokeStyle=b.hover||b.lit?'#f1f0ea':b.on?'#3cb371':'rgba(255,255,255,0.18)';x.lineWidth=5;x.stroke();
+      x.fillStyle=b.off?'#5a5a62':'#f1f0ea';x.font='600 30px system-ui,sans-serif';
+      const words=b.label.split(' ');
+      if(words.length>1){x.fillText(words[0],l+w/2,h/2-18);x.fillText(words.slice(1).join(' '),l+w/2,h/2+20);}else x.fillText(b.label,l+w/2,h/2);});
+    gl.bindTexture(gl.TEXTURE_2D,barTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,bc);barReady=true;
+  }
+  // One eye, or the preview. scene: {cube, anim, model, panel: {model, lines} or null, bar: {model,
+  // buttons} or null, extras: [{m, c}]}.
   function drawScene(proj,view,scene){
     gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.disable(gl.BLEND);
     gl.useProgram(lit);gl.uniformMatrix4fv(L.proj,false,proj);gl.uniformMatrix4fv(L.view,false,view);gl.uniform1f(L.alpha,1);
     const draw=(p)=>{const me=p.box?box:quad;gl.bindVertexArray(me.vao);gl.uniformMatrix4fv(L.model,false,p.m);gl.uniform3fv(L.color,p.c);gl.drawElements(gl.TRIANGLES,me.n,gl.UNSIGNED_SHORT,0);};
     for(const p of cubeParts(scene))draw(p);
     for(const p of scene.extras||[])draw(Object.assign({box:true},p));
-    if(scene.panel&&pc){panel(scene.panel.lines);gl.disable(gl.CULL_FACE);gl.enable(gl.BLEND);gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA); // premultiplied, as the passthrough compositor wants
-      gl.useProgram(tex);gl.uniformMatrix4fv(T.proj,false,proj);gl.uniformMatrix4fv(T.view,false,view);gl.uniformMatrix4fv(T.model,false,scene.panel.model);
-      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,panelTex);gl.uniform1i(T.tex,0);gl.bindVertexArray(quad.vao);gl.drawElements(gl.TRIANGLES,quad.n,gl.UNSIGNED_SHORT,0);}
+    const flat=(model,t)=>{gl.disable(gl.CULL_FACE);gl.enable(gl.BLEND);gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA); // premultiplied, as the passthrough compositor wants
+      gl.useProgram(tex);gl.uniformMatrix4fv(T.proj,false,proj);gl.uniformMatrix4fv(T.view,false,view);gl.uniformMatrix4fv(T.model,false,model);
+      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,t);gl.uniform1i(T.tex,0);gl.bindVertexArray(quad.vao);gl.drawElements(gl.TRIANGLES,quad.n,gl.UNSIGNED_SHORT,0);};
+    if(scene.panel&&pc){panel(scene.panel.lines);flat(scene.panel.model,panelTex);}
+    if(scene.bar&&bc){bar(scene.bar.buttons);flat(scene.bar.model,barTex);}
     gl.bindVertexArray(null);
   }
   return {drawScene,cubeParts};
