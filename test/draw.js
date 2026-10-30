@@ -94,4 +94,51 @@ for(const [yaw,pitch] of views)for(const m of moves){
   assert.ok(R.some(p=>p.op<0.6),'R half way: the strips beside the move fade as they tip');
   assert.ok(R.some(p=>Math.floor(p.idx/9)===0),'R half way: the U strip rolls onto the back mirror');
   assert.strictEqual(T.cubePolys(solved,{hidden:true,move:'R',t:0}).filter(p=>p.hint).length,27,'t=0: the mirrors at rest');}
-console.log('draw ok:',checks,'move/view checks,',hiddenChecks,'hidden-face turns,',mirrorChecks,'mirror turns');
+// A lifted piece shows what the cube leaves in view, from any face it came out of: a point of a
+// lifted face is drawn exactly when no part of the cube stands between it and the camera.
+let liftChecks=0;
+{const L=run(`({rot3,FACE_GEOM,pieceStickers})`),solved=new T.Cube().toFacelets(),S=52,cx=200,cy=185;
+  const inConvex=(P,q)=>{let s=0;for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length],c=(b[0]-a[0])*(q[1]-a[1])-(b[1]-a[1])*(q[0]-a[0]);if(Math.abs(c)<1e-9)continue;if(s&&Math.sign(c)!==s)return false;s=Math.sign(c);}return true;};
+  const nearEdge=(P,q)=>P.some((a,i)=>{const b=P[(i+1)%P.length],dx=b[0]-a[0],dy=b[1]-a[1],l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,((q[0]-a[0])*dx+(q[1]-a[1])*dy)/l)):0;return Math.hypot(a[0]+dx*t-q[0],a[1]+dy*t-q[1])<0.5;});
+  const drawn=(P,q)=>inConvex(P.pts,q)&&!(P.cut&&inConvex(P.cut,q));
+  // the ray from p toward the camera meets the cube (the slab test)
+  const blocked=(p,v)=>{let t0=1e-9,t1=1e9;for(let i=0;i<3;i++){if(Math.abs(v[i])<1e-12){if(p[i]<=-1.5||p[i]>=1.5)return false;continue;}
+    let a=(-1.5-p[i])/v[i],b=(1.5-p[i])/v[i];if(a>b)[a,b]=[b,a];t0=Math.max(t0,a);t1=Math.min(t1,b);}return t0<t1;};
+  for(const [yaw,pitch] of [[-32,28],[-32,-34],[140,10],[45,-20],[10,5],[-60,70]])for(const sticker of [1,3,5,7,0,4,28,30,32,34,37,39,41,43])for(const t of [0.15,0.5,1]){
+    const polys=T.cubePolys(solved,{yaw,pitch,lift:{set:new Set(L.pieceStickers(sticker)),t}});
+    const faces=polys.slice(polys.findIndex(p=>p.glow)).filter(p=>!p.glow&&!p.stroke); // the plastic of the lifted piece, one per face drawn
+    const v=[0,1,2].map(a=>L.rot3([0,1,2].map(b=>a===b?1:0),yaw,pitch)[2]); // toward the camera, in cube space
+    const proj=p=>{const q=L.rot3(p,yaw,pitch);return [cx+q[0]*S,cy-q[1]*S];};
+    const g0=L.FACE_GEOM[Math.floor(sticker/9)],p0=sticker%9,c=[0,1,2].map(i=>g0.n[i]+g0.r[i]*(p0%3-1)+g0.d[i]*(Math.floor(p0/3)-1)),len=Math.hypot(...c),C=c.map(x=>x*(1+0.55*t/len));
+    for(const g of L.FACE_GEOM){if(L.rot3(g.n,yaw,pitch)[2]<0.02)continue;
+      for(let i=0;i<=10;i++)for(let j=0;j<=10;j++){const p=[0,1,2].map(k=>C[k]+g.n[k]*0.5+g.r[k]*(i/10-0.5)*0.98+g.d[k]*(j/10-0.5)*0.98),q=proj(p);
+        if(faces.some(P=>nearEdge(P.pts,q)||P.cut&&nearEdge(P.cut,q)))continue; // too close to call
+        const seen=faces.some(P=>drawn(P,q)),want=!blocked(p,v);
+        assert.strictEqual(seen,want,`lift ${sticker} t=${t} at ${yaw},${pitch}: a point ${want?'in view is not drawn':'behind the cube is drawn'}`);liftChecks++;}}}
+  // seen from a little above, the bottom left edge leaves the cube past two faces turned away from
+  // the camera; it still shows below the cube, with its glow, the part the cube hides cut out
+  const dl=T.renderCube3D(solved,{yaw:-32,pitch:8,lift:{set:new Set(L.pieceStickers(43)),t:1}});
+  assert.ok(/cwLiftGlow/.test(dl)&&/fill-rule="evenodd"/.test(dl),'the bottom left edge shows past the cube');}
+// Hidden faces with a lift: a lifted piece's stickers on a mirror move as the piece does (the height
+// cut to 0.35), brighter, with a glow behind them; the other mirror stickers dim.
+let mirrorLift=0;
+{const L=run(`({rot3,pieceStickers})`),solved=new T.Cube().toFacelets(),S=52;
+  for(const [yaw,pitch] of [[-32,28],[-32,8],[140,10]])for(const sticker of [43,30,34,39,41,52])for(const t of [0.3,1]){
+    const set=new Set(L.pieceStickers(sticker)),rest=T.cubePolys(solved,{yaw,pitch,hidden:true}).filter(p=>p.hint);
+    const polys=T.cubePolys(solved,{yaw,pitch,hidden:true,lift:{set,t}}),mir=polys.filter(p=>p.hint);
+    const mine=mir.filter(p=>set.has(p.idx));
+    const facing=f=>L.rot3([[0,1,0],[1,0,0],[0,0,1],[0,-1,0],[-1,0,0],[0,0,-1]][f],yaw,pitch)[2];
+    assert.strictEqual(mine.length,[...set].filter(i=>facing(Math.floor(i/9))<=-0.02).length,'every lifted sticker on a hidden face is in its mirror');
+    assert.ok(polys.slice(0,mine.length).every(p=>p.glow)&&!(polys[mine.length]||{}).glow,'one glow per lifted mirror sticker, first, behind everything');
+    for(const p of mir)assert.ok(set.has(p.idx)?p.op>0.6:p.op<0.6,`lift ${sticker} t=${t}: ${set.has(p.idx)?'a lifted mirror sticker is brighter':'the other mirror stickers dim'}`);
+    const cen=P=>P.pts.reduce((a,q)=>[a[0]+q[0]/4,a[1]+q[1]/4],[0,0]);
+    for(const p of mine){const f=Math.floor(p.idx/9),m=[[0,1,0],[1,0,0],[0,0,1],[0,-1,0],[-1,0,0],[0,0,-1]][f],at=rest.find(q=>q.idx===p.idx);
+      // the piece's place, from its sticker on the cube, and its move out
+      const g=run(`FACE_GEOM`)[f],q=p.idx%9,cu=[0,1,2].map(i=>g.n[i]+g.r[i]*(q%3-1)+g.d[i]*(Math.floor(q/3)-1)),len=Math.hypot(...cu);
+      const d=cu.map(x=>x*0.55*t/len),w=d[0]*m[0]+d[1]*m[1]+d[2]*m[2],d3=d.map((x,i)=>x+m[i]*(0.35-1)*w),r=L.rot3(d3,yaw,pitch);
+      const [x0,y0]=cen(at),[x1,y1]=cen(p);
+      assert.ok(Math.abs(x1-x0-r[0]*S)<1e-6&&Math.abs(y1-y0+r[1]*S)<1e-6,`lift ${sticker} t=${t} at ${yaw},${pitch}: the mirror sticker ${p.idx} moves with its piece`);mirrorLift++;}}
+  // the bottom left edge, hidden on the cube from above: its mirror stickers glow
+  const svg=T.renderCube3D(solved,{yaw:-32,pitch:28,hidden:true,lift:{set:new Set(L.pieceStickers(43)),t:1}});
+  assert.ok(/cwLiftGlow/.test(svg),'the hidden bottom left edge glows in its mirrors');}
+console.log('draw ok:',checks,'move/view checks,',liftChecks,'lift points,',mirrorLift,'lifted mirror stickers,',hiddenChecks,'hidden-face turns,',mirrorChecks,'mirror turns');
