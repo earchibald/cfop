@@ -110,29 +110,48 @@ function cubePolys(facelets,opts={}){
   if(lift)polys.push(...liftPolys(facelets,lifted,lift,{cam,proj,color,body,cls:opts.cls,labels:!opts.color||opts.labels}));
   return polys;
 }
-// The lifted pieces of cubePolys, far to near. A face with a sticker always shows in full: it looks
-// out of the cube, so nothing of the cube is in front of it. A side face shows only where it stands
-// out past a face of the cube that looks toward the camera; the rest is inside the cube.
+// The lifted pieces of cubePolys, far to near, each face as much of it as the cube leaves in view.
+// The camera sees straight on (no perspective), so a point of a face is hidden when the cube stands
+// between it and the camera: the part of the cube on the camera's side of the face's plane, a box.
+// That box's outline on the screen, cut out of the face, leaves what shows (`cut`, drawn as a hole).
+// So a piece that comes out past the edge of the cube shows, glow and all, from whichever face it
+// left, a face turned away from the camera too; a face inside the cube shows nothing.
 function liftPolys(facelets,lifted,lift,{cam,proj,color,body,cls,labels}){
-  const d=(lift.d??0.55)*lift.t,toCam=[0,1,2].map(a=>cam([0,1,2].map(b=>a===b?1:0))[2]);
+  const d=(lift.d??0.55)*lift.t;
   const vis=[0,1,2,3,4,5].map(f=>({f,nz:cam(FACE_GEOM[f].n)[2]})).filter(x=>x.nz>=0.02).sort((x,y)=>x.nz-y.nz);
   const pieces=[...lifted].map(([key,st])=>{const c=key.split(',').map(Number),len=Math.hypot(...c);const C=lift.dir?c.map((x,i)=>x+lift.dir[i]*d):c.map(x=>x*(1+d/len));return {c,C,st,z:cam(C)[2]};}).sort((x,y)=>x.z-y.z);
   const out=[],glow=[];
-  for(const {c,C,st} of pieces){
+  for(const {C,st} of pieces){
     for(const {f} of vis){const g=FACE_GEOM[f],P=[0,1,2].map(t=>C[t]+g.n[t]*0.5);
       const pt=(u,v)=>proj([0,1,2].map(t=>P[t]+g.r[t]*u+g.d[t]*v));const quad=(u0,u1,v0,v1)=>[pt(u0,v0),pt(u1,v0),pt(u1,v1),pt(u0,v1)];
-      const s=st.find(x=>x.f===f);
-      if(s){const i54=s.idx,h=0.44;out.push({pts:quad(-0.5,0.5,-0.5,0.5),fill:body});glow.push(quad(-0.5,0.5,-0.5,0.5));
-        const poly={pts:quad(-h,h,-h,h),fill:color(facelets[s.idx],i54),stroke:body,idx:i54};if(labels)poly.ci=facelets[s.idx];
-        if(cls){const k=cls(i54);if(k)poly.cls=k;}out.push(poly);continue;}
-      // a side face: the parts past the cube along each of its two axes, on the camera's side
-      for(const [ax,w] of [[g.r,0],[g.d,1]]){const a=ax.findIndex(x=>x!==0),sg=Math.sign(toCam[a]);if(!sg)continue;
-        const k=sg*ax[a],lim=1.5-sg*P[a];let lo=-0.5,hi=0.5;if(k>0)lo=Math.max(lo,lim);else hi=Math.min(hi,-lim);if(hi-lo<1e-3)continue;
-        const q=w?quad(-0.5,0.5,lo,hi):quad(lo,hi,-0.5,0.5);out.push({pts:q,fill:body});glow.push(q);}
+      // the cube in front of this face's plane, as the screen sees it
+      const a=g.n.findIndex(x=>x!==0),lo=[-1.5,-1.5,-1.5],hi=[1.5,1.5,1.5];if(g.n[a]>0)lo[a]=Math.max(lo[a],P[a]);else hi[a]=Math.min(hi[a],P[a]);
+      const hide=hi[a]-lo[a]>1e-6?hull2([0,1,2,3,4,5,6,7].map(m=>proj([0,1,2].map(i=>m>>i&1?hi[i]:lo[i])))):null;
+      const shown=q=>{if(!hide)return {pts:q};const cut=clipConvex(q,hide),A=Math.abs(area2(q)),B=cut.length>2?Math.abs(area2(cut)):0;
+        return B<1e-6*A?{pts:q}:B>A*(1-1e-6)?null:{pts:q,cut};};
+      const face=shown(quad(-0.5,0.5,-0.5,0.5));if(!face)continue;
+      out.push({...face,fill:body});glow.push(face);
+      const s=st.find(x=>x.f===f);if(!s)continue;
+      const h=0.44,sq=shown(quad(-h,h,-h,h));if(!sq)continue;
+      const i54=s.idx,poly={...sq,fill:color(facelets[s.idx],i54),stroke:body,idx:i54};
+      if(labels&&(!sq.cut||Math.abs(area2(sq.cut))<0.25*Math.abs(area2(sq.pts))))poly.ci=facelets[s.idx]; // no letter on a sticker mostly hidden
+      if(cls){const k=cls(i54);if(k)poly.cls=k;}out.push(poly);
     }
   }
-  return [...glow.map(pts=>({pts,fill:'var(--lift-glow,#ffe27a)',glow:+lift.t.toFixed(3)})),...out];
+  return [...glow.map(p=>({...p,fill:'var(--lift-glow,#ffe27a)',glow:+lift.t.toFixed(3)})),...out];
 }
+// Twice the signed area of a polygon on the screen.
+function area2(P){let a=0;for(let i=0;i<P.length;i++){const q=P[i],r=P[(i+1)%P.length];a+=q[0]*r[1]-r[0]*q[1];}return a;}
+// The convex hull of points on the screen (monotone chain), counterclockwise in x right, y up.
+function hull2(pts){const P=[...pts].sort((a,b)=>a[0]-b[0]||a[1]-b[1]),cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const half=list=>{const h=[];for(const p of list){while(h.length>=2&&cr(h[h.length-2],h[h.length-1],p)<=1e-9)h.pop();h.push(p);}h.pop();return h;};
+  return [...half(P),...half(P.reverse())];}
+// The part of a polygon inside a convex polygon `hull` (as hull2 gives it), Sutherland-Hodgman.
+function clipConvex(poly,hull){let out=poly;
+  for(let i=0;i<hull.length&&out.length;i++){const A=hull[i],B=hull[(i+1)%hull.length],side=p=>(B[0]-A[0])*(p[1]-A[1])-(B[1]-A[1])*(p[0]-A[0]);
+    const inp=out;out=[];for(let j=0;j<inp.length;j++){const p=inp[j],q=inp[(j+1)%inp.length],sp=side(p),sq=side(q);
+      if(sp>=0)out.push(p);if((sp>=0)!==(sq>=0)){const t=sp/(sp-sq);out.push([p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t]);}}}
+  return out;}
 // Hidden faces: each face that looks away from the camera, moved out along its normal by `dist`
 // (2.4 by default, in cubie widths) and drawn before the cube, a little faded. The camera sees such a
 // face from inside the cube, so it reads as in a mirror behind the cube. A drag of the view shows
@@ -180,9 +199,12 @@ function faceletPt(idx,opts={}){const g=FACE_GEOM[Math.floor(idx/9)],p=idx%9,i=M
   const yaw=opts.yaw??-32,pitch=opts.pitch??28,S=opts.scale||52,cx=opts.cx??200,cy=opts.cy??185;
   const q=rot3([0,1,2].map(t=>g.n[t]*1.5+g.r[t]*(j-1)+g.d[t]*(i-1)),yaw,pitch);return [cx+q[0]*S,cy-q[1]*S];}
 function faceFacing(f,opts={}){return rot3(FACE_GEOM[f].n,opts.yaw??-32,opts.pitch??28)[2];}
+// A polygon with a `cut` (a part of it hidden, see liftPolys) is a path with that part as a hole.
 function polysSVG(polys){const g=polys.find(p=>p.glow);
+  const shape=(p,pre,rest)=>p.cut?`<path${pre} d="${[p.pts,p.cut].map(P=>'M'+P.map(q=>q.map(v=>v.toFixed(2)).join(',')).join('L')+'Z').join('')}" fill-rule="evenodd"${rest}/>`:
+    `<polygon${pre} points="${p.pts.map(q=>q.map(v=>v.toFixed(2)).join(',')).join(' ')}"${rest}/>`;
   return (g?`<defs><filter id="cwLiftGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter></defs>`:'')+polys.map(p=>p.glow?
-  `<polygon points="${p.pts.map(q=>q.map(v=>v.toFixed(2)).join(',')).join(' ')}" fill="${p.fill}" filter="url(#cwLiftGlow)" opacity="${p.glow}"/>`:`<polygon${p.cls?` class="${p.cls}"`:''} points="${p.pts.map(q=>q.map(v=>v.toFixed(2)).join(',')).join(' ')}" fill="${p.fill}"${p.faded||p.op?` opacity="${+((p.faded?0.22:1)*(p.op||1)).toFixed(3)}"`:''}${p.stroke?` stroke="${p.stroke}" stroke-width="0.6" stroke-linejoin="round"`:''}/>`+
+  shape(p,'',` fill="${p.fill}" filter="url(#cwLiftGlow)" opacity="${p.glow}"`):shape(p,p.cls?` class="${p.cls}"`:'',` fill="${p.fill}"${p.faded||p.op?` opacity="${+((p.faded?0.22:1)*(p.op||1)).toFixed(3)}"`:''}${p.stroke?` stroke="${p.stroke}" stroke-width="0.6" stroke-linejoin="round"`:''}`)+
   (p.ci!=null?polyLabel(p):'')).join('');}
 // Color Blind Assist: a letter for each sticker color (W R G Y O B). The letter is always in the
 // picture and hidden by CSS unless body.cba is set, so a change of the setting draws nothing again.
