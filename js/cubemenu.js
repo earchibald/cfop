@@ -28,13 +28,18 @@ function cubePlayerTurn(m,src){const i=seqState.idx,ms=parseAlg(m);
   for(const x of pre.concat(ms)){const j=moves.length-1,y=j>=seqState.yours?seqJoin(moves[j],x):undefined;
     moves=y===undefined?moves.concat(x):moves.slice(0,j).concat(y?[y]:[]);}
   seqState.moves=moves;seqState.idx=moves.length;
+  // A move that turns the centers (x, y, z, M, a wide turn) turns the hold the picture shows with it.
+  if(typeof PLAYER!=='undefined'&&PLAYER.hold&&!from.isFour&&from.center){const to=applyAlg(from,ms);
+    if(to.center.join()!==from.center.join()){PLAYER.hold={top:to.center[0],front:to.center[2]};if(typeof playerHoldDraw==='function')playerHoldDraw();}}
   if(!/your moves/.test(seqState.label))seqState.label=(seqState.label?seqState.label+' · ':'')+'your moves';
   renderSequence();applySequence(ms.length===1?{from,move:ms[0]}:null);document.dispatchEvent(new CustomEvent('cw:yourmove',{detail:{moves:pre.concat(ms),src:src||'screen'}}));}
 // Two moves of one layer as one: the move, or null when they undo each other. Undefined: two layers.
 function seqJoin(a,b){const k=m=>m.replace(/['2]$/,'');if(k(a)!==k(b))return undefined;
   const t=(cubeTabTurns(a)+cubeTabTurns(b))%4;return t?k(b)+['','','2',"'"][t]:null;}
-// A key names the face as the picture shows it (js/live.js: the hold row).
-const cubePlayerScreen={el:null,keys:true,turn:m=>cubePlayerTurn(m,'screen')};
+// A key names the face as the picture shows it (js/live.js: the hold row). The keys give 3×3 names;
+// the 4×4 writes a wide turn Rr, and a move the puzzle has not got (M on the 4×4, M and a wide turn
+// on the 2×2) does nothing.
+const cubePlayerScreen={el:null,keys:true,turn:m=>{const x=screenMoveFor(m,puzzleN());if(x)cubePlayerTurn(x,'screen');return x;}};
 // The player takes the virtual cube's keys while Virtual cube is the choice and no other virtual
 // cube (the getting-started pages) has them.
 function cubeScreenWire(){cubePlayerScreen.el=$('#player');
@@ -53,7 +58,7 @@ function cubeAct(name,note,tip,act,{key='',main=false}={}){return {name,note,tip
 function cubePopActions(id){
   if(id==='screen')return {
     head:'Mixed up: scramble '+(scr.seed||''),
-    text:'Use the keyboard or numeric keypad to turn the cube faces: '+SCREEN_KEYMAPS.awdx.name+', or '+SCREEN_KEYMAPS.pad.name+' on the keypad. Shift turns the other way. Drag to turn the whole cube.',
+    text:'Use the keyboard or numeric keypad to turn the cube faces: '+SCREEN_KEYMAPS.awdx.name+', or '+SCREEN_KEYMAPS.pad.name+' on the keypad. C or 3 turns the middle layer (M). Comma, period and slash turn the whole cube (x, y, z). Shift with a key turns it the other way. '+screenWideKey()+' with a face key turns two layers. Drag to look around.',
     acts:[cubeAct('Mix it up','A new scramble','Mix the virtual cube up','mix',{key:'N',main:true}),cubeAct('Make it solved','Back to the start','Put the virtual cube back to solved','solved'),
       cubeAct('Paint a state','Set each color','Paint the virtual cube by hand','paint')],
     foot:'The virtual cube draws inside each section that needs it. The Keys window floats over the page: drag it where you like.'};
