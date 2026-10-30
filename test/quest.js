@@ -111,6 +111,7 @@ function boot(bridge,opts={}){
   const dom=new JSDOM(src,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,url:'file://'+path.join(__dirname,'..','quest','index.html'),virtualConsole:vc,
     beforeParse(w){Object.defineProperty(w,'localStorage',{value:opts.storage||fakeStorage()});
       if(opts.xr)Object.defineProperty(w.navigator,'xr',{value:opts.xr});
+      if(opts.bluetooth)Object.defineProperty(w.navigator,'bluetooth',{value:opts.bluetooth});
       if(opts.android){opts.android.install(w);w.fetch=async()=>({ok:false});return;}
       w.BRIDGE_LOCAL=true;w.WebSocket=bridge.FakeWebSocket;w.fetch=async u=>u==='/bridge/info'?{ok:true,json:async()=>bridgeInfo()}:{ok:false};}});
   const w=dom.window;
@@ -293,6 +294,30 @@ async function notAsked(){
   console.log('quest notAsked ok');
 }
 
+// The Quest Browser: navigator.bluetooth is there, but getAvailability() says no and requestDevice
+// fails with "Bluetooth Low Energy not available." The page takes the bridge. Where Web Bluetooth
+// works, a NotFoundError that is no cancel shows its words; a cancel is quiet.
+async function questBrowser(){
+  const nf=m=>Object.assign(new Error(m),{name:'NotFoundError'});
+  const dev=fakeDevice(4,MAC,Object.assign({},SOLVED),{name:'GAN12uiM_A1B2'});
+  const quest={getAvailability:async()=>false,requestDevice:async()=>{throw nf('Bluetooth Low Energy not available.');}};
+  let r=await boot(fakeBridge([{id:'p1',gen:4,dev,mac:MAC}]),{bluetooth:quest});let $=s=>r.d.querySelector(s);
+  assert.deepStrictEqual(r.errs,[]);
+  assert.ok(await until(()=>$('#way').textContent==='Mac app bridge test'),'Web Bluetooth with no Bluetooth: the bridge: '+$('#way').textContent);
+  assert.ok(await until(()=>r.d.querySelectorAll('#listItems button').length===1),'the bridge lists the cube');
+  await sleep(50);r.w.close();
+  let fail='Bluetooth adapter not available.';
+  const chrome={getAvailability:async()=>true,requestDevice:async()=>{throw nf(fail);}};
+  r=await boot(fakeBridge([]),{bluetooth:chrome});$=s=>r.d.querySelector(s);
+  assert.ok(await until(()=>$('#way').textContent==='Web Bluetooth'),'Web Bluetooth that works is the way');
+  $('#connect').click();
+  assert.ok(await until(()=>$('#status').textContent===fail),'no Bluetooth: the status says so: '+$('#status').textContent);
+  fail='User cancelled the requestDevice() chooser.';$('#connect').click();
+  assert.ok(await until(()=>$('#status').textContent==='Press Connect to look for your cube.'),'a cancel is quiet: '+$('#status').textContent);
+  r.w.close();
+  console.log('quest browser ok');
+}
+
 // The Quest app (quest/android/): with no DOM, shim.js puts the Java object behind the message
 // handler that bridge.js looks for, and a cube reads and writes through it; then the page in the
 // app, before the headset has asked for Bluetooth: the words name the headset, and Connect asks.
@@ -332,4 +357,4 @@ async function android(){
   console.log('quest android ok');
 }
 
-(async()=>{pure();await page();await xr();await notAsked();await android();console.log('quest ok');})().catch(e=>{console.error(e);process.exit(1);});
+(async()=>{pure();await page();await xr();await notAsked();await questBrowser();await android();console.log('quest ok');})().catch(e=>{console.error(e);process.exit(1);});

@@ -4,11 +4,13 @@
 // start a WebXR session. In the session the cube floats in front of the user, in passthrough (AR)
 // or in VR; each turn of the real cube turns the layer, and the tilt turns the whole cube.
 //
-// The way to the cube. The Quest Browser has no Web Bluetooth, so the Twistwright app for macOS
+// The way to the cube. The Quest Browser has no working Web Bluetooth (navigator.bluetooth is there,
+// but getAvailability() says no and requestDevice fails), so the Twistwright app for macOS
 // does the Bluetooth work, as it does for Safari (js/bridge.js). The headset reaches the Mac through
 // adb reverse: http://localhost:27272 on the Quest is the app's page server on the Mac, and
 // ws://127.0.0.1:27273 its bridge. localhost is a secure context, so WebXR runs over plain http.
-// quest/run.sh sets this up. A browser with Web Bluetooth (Chrome on a computer) connects directly.
+// quest/run.sh sets this up. A browser whose Web Bluetooth works (Chrome on a computer) connects
+// directly.
 // With no cube at all, Demo cube turns the cube by itself and the keys U R F D L B (Shift: prime)
 // turn it by hand.
 //
@@ -16,7 +18,7 @@
 // correction for a cube whose count is off), cw:questCube (the last cube's name, connected by
 // itself when the bridge hears it), cw:questHold, cw:questTilt.
 const $=s=>document.querySelector(s);
-const qs={conn:null,busy:false,pickSeq:0,listEnd:null,macWait:null,
+const qs={conn:null,busy:false,pickSeq:0,wb:false,listEnd:null,macWait:null,
   shown:null,target:null,queue:[],anim:null,moves:[],colors:[],stage:null,
   raw:null,basis:null,q:null,qTo:null,tilt:true,hold:QUEST_HOLDS.white,
   name:'',battery:null,status:'',demo:0,
@@ -99,7 +101,15 @@ function questSaveMac(name,mac){const m=questMacs();if(mac)m[name]=mac;else dele
 function questFix(name){const e=(questGet('cw:ganFix',{})||{})[name];return e&&typeof ganFixLoad==='function'?ganFixLoad(e.fix):null;}
 // The page in the Quest app (quest/android/): the cube comes over the headset's own Bluetooth.
 function questInApp(){return typeof window!=='undefined'&&!!window.TwistwrightAndroid;}
-function questWB(){return !!navigator.bluetooth&&!/[?&]bridge=1/.test(location.search);}
+// Web Bluetooth only where it works: the Quest Browser has the object with no Bluetooth behind it.
+// Set once at the start, by questWBCheck.
+function questWB(){return qs.wb;}
+async function questWBCheck(){
+  const bt=navigator.bluetooth;
+  if(!bt||/[?&]bridge=1/.test(location.search))return false;
+  if(typeof bt.getAvailability!=='function')return true;
+  try{return !!await bt.getAvailability();}catch(e){return false;}
+}
 // The chooser: the browser's own with Web Bluetooth, else a list on the page of the cubes the
 // Mac app hears. auto: the look with no click; the last cube is taken as soon as it is heard.
 async function questPick(auto){
@@ -145,7 +155,9 @@ async function questConnect(auto){
   if(qs.listEnd)qs.listEnd(null);
   const seq=++qs.pickSeq;let device;
   try{device=await questPick(auto);}
-  catch(e){if(seq===qs.pickSeq)questStatus(e.name==='NotFoundError'?'Press Connect to look for your cube.':e.message);return;}
+  // A NotFoundError is a closed chooser, or no Bluetooth at all ("Bluetooth adapter not available"):
+  // only the first is quiet.
+  catch(e){if(seq===qs.pickSeq)questStatus(e.name==='NotFoundError'&&/cancel/i.test(e.message)?'Press Connect to look for your cube.':e.message);return;}
   if(!device)return;
   questDemo(false);
   const name=device.name||'GAN cube';qs.busy=true;questButtons();
@@ -401,6 +413,6 @@ function questStart(){
     const last=questGet('cw:questCube',null);
     questStatus(last?`Looking for ${last} by itself. Press Connect to choose another cube.`:'Choose your cube in the list. The page connects to it by itself next time.');
     questConnect(true);};
-  bridgeStart().then(ready);
+  Promise.all([bridgeStart(),questWBCheck().then(v=>{qs.wb=v;})]).then(ready);
 }
 questStart();
