@@ -82,7 +82,7 @@ function cubePolys(facelets,opts={}){
   const lift=opts.lift&&opts.lift.t>0&&n===3&&!(opts.move&&opts.t)?opts.lift:null;
   const cubieOf=idx=>{const g=FACE_GEOM[Math.floor(idx/9)],p=idx%9;return [0,1,2].map(t=>g.n[t]+g.r[t]*(p%3-1)+g.d[t]*(Math.floor(p/3)-1));};
   const lifted=new Map();if(lift)for(const i of lift.set)lifted.set(cubieOf(i).join(),[]);
-  if(opts.hidden)polys.push(...hiddenFacePolys(facelets,{n,cam,proj,color,body,fade:opts.fade,to54,dist:opts.hiddenDist,flat:opts.hiddenFlat,labels:!opts.color||opts.labels,move:opts.move,t:opts.t}));
+  if(opts.hidden)polys.push(...hiddenFacePolys(facelets,{n,cam,proj,color,body,fade:opts.fade,to54,dist:opts.hiddenDist,flat:opts.hiddenFlat,labels:!opts.color||opts.labels,move:opts.move,t:opts.t,lift,lifted}));
   for(const sl of slabs){
     // the slab's box, and the turn it has made
     const lo=[-1.5,-1.5,-1.5],hi=[1.5,1.5,1.5];lo[k]=layerAt(sl.lo)-hs;hi[k]=layerAt(sl.hi)+hs; // layers are counted along the axis, so the sign of nv does not matter here
@@ -138,7 +138,7 @@ function liftPolys(facelets,lifted,lift,{cam,proj,color,body,cls,labels}){
       if(cls){const k=cls(i54);if(k)poly.cls=k;}out.push(poly);
     }
   }
-  return [...glow.map(p=>({...p,fill:'var(--lift-glow,#ffe27a)',glow:+lift.t.toFixed(3)})),...out];
+  return [...glow.map(p=>({...p,fill:'var(--lift-glow,#ffe27a)',glow:Math.max(0.001,+lift.t.toFixed(3))})),...out];
 }
 // Twice the signed area of a polygon on the screen.
 function area2(P){let a=0;for(let i=0;i<P.length;i++){const q=P[i],r=P[(i+1)%P.length];a+=q[0]*r[1]-r[0]*q[1];}return a;}
@@ -163,7 +163,11 @@ function clipConvex(poly,hull){let out=poly;
 // the face is cut to `flat` (0.35 by default) so the strip stays near the mirror. A sticker shows
 // on a mirror while it looks out of that face, and it fades as it tips away. At t=1 each mirror
 // shows the stickers of the cube after the move.
-function hiddenFacePolys(facelets,{n,cam,proj,color,body,fade,to54,dist,flat,labels,move,t}){
+//
+// With a lift (cubePolys passes `lifted`, its pieces by place), a lifted piece's stickers on a mirror
+// move as the piece does, the height cut to `flat` as above, with the same glow behind them; the
+// other stickers dim as on the cube. So a piece that the cube hides still lights in its mirror.
+function hiddenFacePolys(facelets,{n,cam,proj,color,body,fade,to54,dist,flat,labels,move,t,lift,lifted}){
   const hs=1.5/n,D=1.5+(dist??2.4),k=flat??0.35,h=0.88*hs,out=[];
   const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
   // the turn: the axis, the angle, and whether a cubie at c (counted from the negative end) moves
@@ -178,11 +182,19 @@ function hiddenFacePolys(facelets,{n,cam,proj,color,body,fade,to54,dist,flat,lab
   // a point on or near the cube to its place on the mirror of face m: out by D, its height above the face cut to k
   const onMirror=(p,m)=>{const w=dot(p,m);return [0,1,2].map(q=>p[q]+m[q]*(D-w+k*(w-1.5)));};
   const mirrors=[];for(let f=0;f<6;f++)if(cam(FACE_GEOM[f].n)[2]<=-0.02)mirrors.push(f);
+  // a lifted piece's move out from the cube, as liftPolys moves it
+  const L=lift&&lifted&&lifted.size?lift:null,ld=L?(L.d??0.55)*L.t:0,glow=[];
+  const liftOf=c=>{if(!L||!lifted.has(c.map(Math.round).join()))return null;const len=Math.hypot(...c);return L.dir?L.dir.map(x=>x*ld):c.map(x=>x*ld/len);};
   for(const f of mirrors){const m=FACE_GEOM[f].n;
     for(let i=0;i<n;i++)for(let j=0;j<n;j++){const s=sticker(f,i,j);
       if(turn&&turn.moves(s.cubie))continue; // drawn with the turning layer below
-      const pts=s.corners.map(c=>onMirror(c,m)),p=poly(pts,n*n*f+n*i+j,0.6);
+      const up=liftOf(s.cubie),mv=q=>up?q.map((v,x)=>v+up[x]):q;
+      const pts=s.corners.map(c=>onMirror(mv(c),m)),p=poly(pts,n*n*f+n*i+j,L?+(up?0.6+0.4*L.t:0.6*(1-0.45*L.t)).toFixed(3):0.6);
+      if(up){const g=s.g,c=s.cubie.map((v,x)=>v+g.n[x]*hs);
+        glow.push({pts:[[-hs,-hs],[hs,-hs],[hs,hs],[-hs,hs]].map(([u,v])=>proj(onMirror(mv([0,1,2].map(x=>c[x]+g.r[x]*u+g.d[x]*v)),m))),
+          fill:'var(--lift-glow,#ffe27a)',glow:Math.max(0.001,+L.t.toFixed(3))});}
       if(turn)p.z=cam(onMirror(s.cubie,m))[2];out.push(p);}}
+  out.unshift(...glow);
   if(turn){const R=p=>rotAxis(p,turn.nv,turn.deg);
     for(let f=0;f<6;f++){const nr=R(FACE_GEOM[f].n);
       for(let i=0;i<n;i++)for(let j=0;j<n;j++){const s=sticker(f,i,j);if(!turn.moves(s.cubie))continue;

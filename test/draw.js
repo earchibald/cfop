@@ -119,4 +119,26 @@ let liftChecks=0;
   // the camera; it still shows below the cube, with its glow, the part the cube hides cut out
   const dl=T.renderCube3D(solved,{yaw:-32,pitch:8,lift:{set:new Set(L.pieceStickers(43)),t:1}});
   assert.ok(/cwLiftGlow/.test(dl)&&/fill-rule="evenodd"/.test(dl),'the bottom left edge shows past the cube');}
-console.log('draw ok:',checks,'move/view checks,',liftChecks,'lift points,',hiddenChecks,'hidden-face turns,',mirrorChecks,'mirror turns');
+// Hidden faces with a lift: a lifted piece's stickers on a mirror move as the piece does (the height
+// cut to 0.35), brighter, with a glow behind them; the other mirror stickers dim.
+let mirrorLift=0;
+{const L=run(`({rot3,pieceStickers})`),solved=new T.Cube().toFacelets(),S=52;
+  for(const [yaw,pitch] of [[-32,28],[-32,8],[140,10]])for(const sticker of [43,30,34,39,41,52])for(const t of [0.3,1]){
+    const set=new Set(L.pieceStickers(sticker)),rest=T.cubePolys(solved,{yaw,pitch,hidden:true}).filter(p=>p.hint);
+    const polys=T.cubePolys(solved,{yaw,pitch,hidden:true,lift:{set,t}}),mir=polys.filter(p=>p.hint);
+    const mine=mir.filter(p=>set.has(p.idx));
+    const facing=f=>L.rot3([[0,1,0],[1,0,0],[0,0,1],[0,-1,0],[-1,0,0],[0,0,-1]][f],yaw,pitch)[2];
+    assert.strictEqual(mine.length,[...set].filter(i=>facing(Math.floor(i/9))<=-0.02).length,'every lifted sticker on a hidden face is in its mirror');
+    assert.ok(polys.slice(0,mine.length).every(p=>p.glow)&&!(polys[mine.length]||{}).glow,'one glow per lifted mirror sticker, first, behind everything');
+    for(const p of mir)assert.ok(set.has(p.idx)?p.op>0.6:p.op<0.6,`lift ${sticker} t=${t}: ${set.has(p.idx)?'a lifted mirror sticker is brighter':'the other mirror stickers dim'}`);
+    const cen=P=>P.pts.reduce((a,q)=>[a[0]+q[0]/4,a[1]+q[1]/4],[0,0]);
+    for(const p of mine){const f=Math.floor(p.idx/9),m=[[0,1,0],[1,0,0],[0,0,1],[0,-1,0],[-1,0,0],[0,0,-1]][f],at=rest.find(q=>q.idx===p.idx);
+      // the piece's place, from its sticker on the cube, and its move out
+      const g=run(`FACE_GEOM`)[f],q=p.idx%9,cu=[0,1,2].map(i=>g.n[i]+g.r[i]*(q%3-1)+g.d[i]*(Math.floor(q/3)-1)),len=Math.hypot(...cu);
+      const d=cu.map(x=>x*0.55*t/len),w=d[0]*m[0]+d[1]*m[1]+d[2]*m[2],d3=d.map((x,i)=>x+m[i]*(0.35-1)*w),r=L.rot3(d3,yaw,pitch);
+      const [x0,y0]=cen(at),[x1,y1]=cen(p);
+      assert.ok(Math.abs(x1-x0-r[0]*S)<1e-6&&Math.abs(y1-y0+r[1]*S)<1e-6,`lift ${sticker} t=${t} at ${yaw},${pitch}: the mirror sticker ${p.idx} moves with its piece`);mirrorLift++;}}
+  // the bottom left edge, hidden on the cube from above: its mirror stickers glow
+  const svg=T.renderCube3D(solved,{yaw:-32,pitch:28,hidden:true,lift:{set:new Set(L.pieceStickers(43)),t:1}});
+  assert.ok(/cwLiftGlow/.test(svg),'the hidden bottom left edge glows in its mirrors');}
+console.log('draw ok:',checks,'move/view checks,',liftChecks,'lift points,',mirrorLift,'lifted mirror stickers,',hiddenChecks,'hidden-face turns,',mirrorChecks,'mirror turns');
