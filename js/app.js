@@ -877,7 +877,12 @@ function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHi
   const rows=[[k('←')+' '+k('→'),'one move back or forward'],[k('⇧')+' + arrows','five moves at a time'],[k('Home')+' '+k('End'),'the start, the end'],
     [k('space'),beg?'play, pause':'timer: hold, release to start · press to stop'],[k('P'),'play, pause'],[k('A'),'animation on or off'],...(beg?[]:[[k('D'),'delete the last time'],[k('C'),typeof cubeTabShown==='function'&&cubeTabShown()?'clear the moves':'clear all times']]),
     [k('1')+'–'+k(String(railButtons().length)),'switch tab'],...(beg?[]:[[k('N'),'next scramble / case'],[k('H'),'reveal the answer']]),[k('?'),'this card'],['drag cube','orbit the view']];
-  return `<h3>Keys</h3><table>${rows.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table><p class="muted" style="margin-top:8px;font-size:13px">${beg?'Your progress and seed history are':'Times, case statuses and seed history are'} saved in this browser.</p>`;}
+  // The virtual cube's keys, in the layout of its Keys window: they come before the keys above.
+  let vc='';if(typeof cubeSrc==='function'&&cubeSrc()==='screen'&&typeof vcubeLayout==='function'){const v=screenKeys(vcubeLayout()),ks=fs=>fs.map(f=>k(esc(v[f]))).join(' ');
+    const vr=[[ks(['L','U','R','D'])+' · '+ks(['F','B']),'turn a face: left, up, right, down · front, back'],[ks(['M']),'turn the middle layer (M)'],[ks(['x','y','z']),'turn the whole cube (x, y, z)'],
+      [k('⇧')+' + key','the other way (prime)'],[k(screenWideKey())+' + face key','two layers (wide)']];
+    vc=`<h3>Virtual cube</h3><table>${vr.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table><p class="muted" style="margin-top:4px;font-size:13px">These keys turn the cube first. A key above that is one of them does not work while the virtual cube is on.</p>`;}
+  return `<h3>Keys</h3><table>${rows.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table>${vc}<p class="muted" style="margin-top:8px;font-size:13px">${beg?'Your progress and seed history are':'Times, case statuses and seed history are'} saved in this browser.</p>`;}
 // ---------- settings ----------
 // The Settings window. Cube player: Animate the moves (setAnim, cw:animate) and Show the hidden faces
 // (setHidden, cw:hidden), the same settings as the chips on the cube. Timer: 15 s inspection (cw:insp), the

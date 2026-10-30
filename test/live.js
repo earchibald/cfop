@@ -15,7 +15,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(f,what){for(let i=0;i<200;i++){if(f())return;await sleep(50);}throw new Error('timed out: '+what);}
 const click=el=>el.dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true}));
 const ev=(name,detail)=>d.dispatchEvent(new w.CustomEvent(name,{detail}));
-const keyCode=(code,shift)=>d.dispatchEvent(new w.KeyboardEvent('keydown',{code,key:code.slice(-1).toLowerCase(),shiftKey:!!shift,bubbles:true}));
+const keyCode=(code,shift,alt)=>d.dispatchEvent(new w.KeyboardEvent('keydown',{code,key:code.slice(-1).toLowerCase(),shiftKey:!!shift,altKey:!!alt,bubbles:true}));
 
 w.addEventListener('load',async()=>{try{
   await sleep(100);
@@ -118,11 +118,53 @@ w.addEventListener('load',async()=>{try{
   assert.ok(!$('#vcubeWin')||$('#vcubeWin').hidden,'no window on its own');
   click($('#vcubeBtn'));assert.strictEqual(E('cubeSrc()'),'screen','the chip turns the virtual cube on');
   assert.strictEqual($('#vcubeBtn').getAttribute('aria-pressed'),'true');const win=$('#vcubeWin');assert.ok(win&&!win.hidden,'the window floats');
-  assert.deepStrictEqual($$('#vcubeWin .vk-face').map(b=>b.dataset.f+b.querySelector('.vk-key').textContent),['UW','BE','LA','FS','RD','DX'],'the buttons sit as the keys do');
+  assert.deepStrictEqual($$('#vcubeWin .vk-face').map(b=>b.dataset.f+b.querySelector('.vk-key').textContent),['UW','BE','LA','FS','RD','DX','MC'],'the buttons sit as the keys do, M right of D');
+  assert.deepStrictEqual($$('#vcubeWin .vk-rot').map(b=>b.dataset.f+b.querySelector('.vk-key').textContent),['x,','y.','z/'],'x y z in a row under');
+  assert.deepStrictEqual($$('#vcubeWin .vk-mod').map(b=>b.dataset.mod),['wide','prime'],'the modifiers');
+  assert.strictEqual($('#vcubeWin [data-mod="prime"] .vk-key').textContent,'Shift');
+  assert.deepStrictEqual($$('#vcubeWin [data-lay]').map(b=>b.textContent),['WASD+','NumKeys'],'the layout buttons');
+  assert.ok($$('#vcubeWin button').every(b=>b.title),'every button has a title');
   E("newScramble('live-3')");E("goTab('cross')");await sleep(50);
   click($('#vcubeWin .vk-face[data-f="F"]'));assert.strictEqual($('#crossTry').value,'F','a press turns the face');
-  click($('#vcubeWin .vk-prime'));click($('#vcubeWin .vk-face[data-f="F"]'));assert.strictEqual($('#crossTry').value,'','counterclockwise undoes it');
-  assert.strictEqual($('#vcubeWin .vk-face[data-f="R"] b').textContent,"R'",'the buttons say which way');click($('#vcubeWin .vk-prime'));
+  // Prime is sticky: it stays on for every click until a second click.
+  const prime=$('#vcubeWin [data-mod="prime"]');click(prime);assert.strictEqual(prime.getAttribute('aria-pressed'),'true');
+  click($('#vcubeWin .vk-face[data-f="F"]'));assert.strictEqual($('#crossTry').value,'','prime undoes it');
+  assert.strictEqual($('#vcubeWin .vk-face[data-f="R"] b').textContent,"R'",'the buttons say which way');
+  const last=()=>E('seqState.moves[seqState.moves.length-1]');
+  click($('#vcubeWin .vk-face[data-f="U"]'));assert.strictEqual(last(),"U'",'still on for the next click');
+  // The keyboard takes no sticky modifier: D alone is R.
+  const vn0=E('seqState.moves.length');keyCode('KeyD');assert.strictEqual(last(),'R','a key ignores the sticky prime');
+  click(prime);assert.strictEqual(prime.getAttribute('aria-pressed'),'false');
+  // Wide: sticky on the buttons, Option on the keys. M and x y z ignore it.
+  const wide=$('#vcubeWin [data-mod="wide"]');click(wide);
+  assert.deepStrictEqual(['R','M','x'].map(f=>$(`#vcubeWin [data-f="${f}"] b`).textContent),['r','M','x'],'the labels follow');
+  click($('#vcubeWin .vk-face[data-f="R"]'));assert.strictEqual(last(),'r','a wide press');
+  click(prime);click($('#vcubeWin .vk-face[data-f="L"]'));assert.strictEqual(last(),"l'",'wide and prime');click(prime);click(wide);
+  keyCode('KeyW',false,true);assert.strictEqual(last(),'u','Option with a key');
+  keyCode('KeyC');assert.strictEqual(last(),'M','C is M');click($('#vcubeWin [data-f="M"]'));assert.strictEqual(last(),'M2','the M button');
+  keyCode('Comma',true);assert.strictEqual(last(),"x'",'Shift+, is x\'');click($('#vcubeWin [data-f="y"]'));assert.strictEqual(last(),'y','the y button');
+  assert.ok(E('seqState.moves.length')>vn0);
+  // A whole-cube turn with the picture turned by the hold row: the hold turns with it.
+  // (The CFOP scramble ends yellow up, z2; the white tile turns the picture back to white up.)
+  E("newScramble('live-3')");await sleep(50);click($('#viewHold .grp[data-place="up"] .ht[data-c="0"]'));const h0=E('seqState.moves.length');
+  keyCode('Comma');const hm=[...E(`seqState.moves.slice(${h0})`)];assert.ok(hm.length===2&&hm[1]==='x','the turn to the hold, then x: '+hm);
+  assert.deepStrictEqual({...E('PLAYER.hold')},{top:2,front:3},'green on top, yellow in front');
+  assert.strictEqual(E('playerHoldView(displayedCube)'),null,'the picture shows the cube as it now stands');
+  assert.deepStrictEqual($$('#viewHold .ht[aria-pressed="true"]').length,0,'no tile for green on top');
+  keyCode('KeyD');assert.deepStrictEqual([...E(`seqState.moves.slice(${h0})`)],[...hm,'R'],'no second turn to the hold');
+  E('PLAYER.hold=null;playerHoldDraw()');
+  // The 4×4: wide is Rr, no M. The 2×2: no wide, no M. x y z on both.
+  E("setMethod('speed4')");await sleep(50);let s0=E('seqState.moves.length');
+  assert.ok($('#vcubeWin [data-f="M"]').hidden&&!$('#vcubeWin [data-mod="wide"]').hidden,'4×4: no M, wide');
+  keyCode('KeyD',false,true);assert.strictEqual(last(),'Rr','Option+D is Rr');keyCode('KeyC');assert.strictEqual(last(),'Rr','C does nothing');
+  keyCode('Period');assert.strictEqual(last(),'y','y on the 4×4');assert.strictEqual(E('seqState.moves.length'),s0+2);
+  click($('#vcubeWin [data-mod="wide"]'));assert.strictEqual($('#vcubeWin [data-f="R"] b').textContent,'Rr','the label');click($('#vcubeWin [data-mod="wide"]'));
+  E("setMethod('speed2')");await sleep(50);s0=E('seqState.moves.length');
+  assert.ok($('#vcubeWin [data-f="M"]').hidden&&$('#vcubeWin [data-mod="wide"]').hidden,'2×2: no M, no wide');
+  keyCode('KeyD',false,true);keyCode('KeyC');assert.strictEqual(E('seqState.moves.length'),s0,'no wide turn, no M');
+  keyCode('Slash',true);assert.strictEqual(last(),"z'",'z on the 2×2');
+  E("setMethod('cfop')");await sleep(50);
+  E("newScramble('live-3')");await sleep(50);assert.strictEqual($('#crossTry').value,'','a new scramble empties the plan');
   // The keypad only: the letter keys keep their shortcuts.
   click($('#vcubeWin [data-lay="pad"]'));assert.strictEqual(E("store.get('vcubeKeys')"),'pad');
   assert.strictEqual($('#vcubeWin .vk-face[data-f="R"] .vk-key').textContent,'6','the keypad keys');

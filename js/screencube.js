@@ -1,22 +1,41 @@
 // ===== The virtual cube =====
 // A cube on the page for a user with no cube in the hands (Virtual cube in the cube menu; the id is
 // still 'screen'). Six keys turn the six faces: A W D X · S E on the keyboard, or 4 8 6 2 · 5 9 on
-// the numeric keypad, both at once. Shift turns the other way, and a drag turns the view round the
-// cube. A double click puts the view back. One virtual cube takes the keys at a time: the last one
-// drawn that is still on the page (SCREEN.active). The lab keeps its own four layouts (LAB_KEYMAPS).
+// the numeric keypad, both at once. C (keypad 3) turns the middle layer, M. Comma, period and slash
+// turn the whole cube: x, y, z. Shift turns the other way (prime). Option (Alt) with a face key
+// turns two layers, the face and the middle (wide: r). A drag turns the view round the cube. A
+// double click puts the view back. One virtual cube takes the keys at a time: the last one drawn
+// that is still on the page (SCREEN.active). The lab keeps its own four layouts (LAB_KEYMAPS).
+// codes: the keys of L U R D F B, then M. short: the name on the Keys window's buttons.
 const SCREEN_KEYMAPS={
-  awdx:{name:'A W D X · S E',where:'Keyboard',codes:['KeyA','KeyW','KeyD','KeyX','KeyS','KeyE']},
-  pad:{name:'4 8 6 2 · 5 9',where:'Numeric keypad',codes:['Numpad4','Numpad8','Numpad6','Numpad2','Numpad5','Numpad9']}};
-// The face each of the six keys turns: left, up, right and down around the front, then back.
-const SCREEN_KEY_FACES=['L','U','R','D','F','B'];
+  awdx:{name:'A W D X · S E',short:'WASD+',where:'Keyboard',codes:['KeyA','KeyW','KeyD','KeyX','KeyS','KeyE','KeyC']},
+  pad:{name:'4 8 6 2 · 5 9',short:'NumKeys',where:'Numeric keypad',codes:['Numpad4','Numpad8','Numpad6','Numpad2','Numpad5','Numpad9','Numpad3']}};
+// The face each of the keys turns: left, up, right and down around the front, then back, then
+// the middle layer.
+const SCREEN_KEY_FACES=['L','U','R','D','F','B','M'];
+// The whole-cube turns: the same keys in both layouts.
+const SCREEN_TURN_KEYS={Comma:'x',Period:'y',Slash:'z'};
 const SCREEN_VIEW={yaw:-32,pitch:28};
 const SCREEN={active:null};
-function screenKeyChar(code){return code.startsWith('Key')?code.slice(3):code.startsWith('Numpad')?code.slice(6):code;}
-// The key of each face in a layout: {L:'A', U:'W', ...}.
-function screenKeys(id){const m=SCREEN_KEYMAPS[id]||SCREEN_KEYMAPS.awdx;const out={};SCREEN_KEY_FACES.forEach((f,i)=>out[f]=screenKeyChar(m.codes[i]));return out;}
-// The move a key makes ("R", "R'"), or null, from either layout, or from layout `only` (an id of
-// SCREEN_KEYMAPS). The key alone turns the face clockwise; Shift the other way.
-function screenKeyMove(code,shift,only){for(const m of only&&SCREEN_KEYMAPS[only]?[SCREEN_KEYMAPS[only]]:Object.values(SCREEN_KEYMAPS)){const i=m.codes.indexOf(code);if(i>=0)return SCREEN_KEY_FACES[i]+(shift?"'":'');}return null;}
+function screenKeyChar(code){return code.startsWith('Key')?code.slice(3):code.startsWith('Numpad')?code.slice(6):{Comma:',',Period:'.',Slash:'/'}[code]||code;}
+// The key of each face in a layout: {L:'A', U:'W', ..., M:'C', x:',', y:'.', z:'/'}.
+function screenKeys(id){const m=SCREEN_KEYMAPS[id]||SCREEN_KEYMAPS.awdx;const out={};SCREEN_KEY_FACES.forEach((f,i)=>out[f]=screenKeyChar(m.codes[i]));
+  for(const [c,r] of Object.entries(SCREEN_TURN_KEYS))out[r]=screenKeyChar(c);return out;}
+// The move of a face, M, or x, y, z with the two modifiers: prime (Shift) turns the other way, wide
+// (Option) turns a face with the middle layer, as a small letter (r). Wide does nothing to M or to
+// a whole-cube turn.
+function screenMove(f,prime,wide){return (wide&&'URFDLB'.includes(f)?f.toLowerCase():f)+(prime?"'":'');}
+// The move a key makes ("R", "R'", "r", "M", "x'"), or null, from either layout, or from layout
+// `only` (an id of SCREEN_KEYMAPS). The key alone turns clockwise, Shift the other way; `wide`
+// (Option) turns two layers.
+function screenKeyMove(code,shift,only,wide){if(SCREEN_TURN_KEYS[code])return screenMove(SCREEN_TURN_KEYS[code],shift,false);
+  for(const m of only&&SCREEN_KEYMAPS[only]?[SCREEN_KEYMAPS[only]]:Object.values(SCREEN_KEYMAPS)){const i=m.codes.indexOf(code);if(i>=0)return screenMove(SCREEN_KEY_FACES[i],shift,wide);}return null;}
+// A 3×3 move as the puzzle of size n takes it, or null where it has none: the 4×4 writes a wide
+// turn as both layers (Rr) and has no M; the 2×2 has no wide turn and no M.
+function screenMoveFor(m,n){if(!n||n===3)return m;const b=m[0];
+  if(b==='M')return null;if('urfdlb'.includes(b))return n===4?b.toUpperCase()+m:null;return m;}
+// The name of the wide modifier key: Option on a Mac, Alt elsewhere.
+function screenWideKey(){return typeof navigator!=='undefined'&&/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent||'')?'Option':'Alt';}
 // Shift on the keypad: with Num Lock on, Windows sends Shift+4 as a Left arrow with no Shift, so a
 // keypad key that gives no digit counts as Shift.
 function screenKeyShift(e){return e.shiftKey||(/^Numpad\d$/.test(e.code)&&!/^\d$/.test(e.key)&&!!e.getModifierState&&e.getModifierState('NumLock'));}
@@ -78,7 +97,8 @@ function screenCube(el,opts={}){
 }
 // The keys go to the active virtual cube while it is on the page and in view, and no field has the focus.
 document.addEventListener('keydown',e=>{const sc=SCREEN.active;if(!sc||!sc.keys||!sc.el.isConnected)return;
-  if(e.ctrlKey||e.metaKey||e.altKey)return;const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return;
+  if(e.ctrlKey||e.metaKey)return;const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return;
   if(sc.el.closest('.hidden,[hidden],.tab:not(.on)'))return;
-  const m=screenKeyMove(e.code,screenKeyShift(e),sc.layout);if(!m)return; // sc.layout: one layout only (the player's Keys window)
+  // sc.layout: one layout only (the player's Keys window). Option (Alt) is the wide modifier.
+  const m=screenKeyMove(e.code,screenKeyShift(e),sc.layout,e.altKey);if(!m)return;
   e.preventDefault();e.stopImmediatePropagation();sc.turn(m);},true);

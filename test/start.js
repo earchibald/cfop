@@ -23,7 +23,18 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   assert.strictEqual(w.screenKeyMove('Numpad5',false),'F','keypad 5 is the front');
   assert.strictEqual(w.screenKeyMove('Numpad9',true),"B'",'keypad 9 is the back');
   assert.strictEqual(w.screenKeyMove('KeyK',false),null,'the old layouts are gone');assert.strictEqual(w.screenKeyMove('KeyQ',false),null,'a key of no face');
-  assert.strictEqual(JSON.stringify(w.screenKeys('pad')),JSON.stringify({L:'4',U:'8',R:'6',D:'2',F:'5',B:'9'}));
+  assert.strictEqual(JSON.stringify(w.screenKeys('pad')),JSON.stringify({L:'4',U:'8',R:'6',D:'2',F:'5',B:'9',M:'3',x:',',y:'.',z:'/'}));
+  // The middle layer, the whole cube, and two layers with Option.
+  assert.strictEqual(w.screenKeyMove('KeyC',false),'M','C is the middle layer');assert.strictEqual(w.screenKeyMove('Numpad3',true),"M'",'keypad 3 too');
+  assert.strictEqual(w.screenKeyMove('KeyC',false,'pad'),null,'C is no move with the keypad layout');
+  assert.deepStrictEqual(['Comma','Period','Slash'].map(c=>w.screenKeyMove(c,false)),['x','y','z'],', . / turn the whole cube');
+  assert.strictEqual(w.screenKeyMove('Slash',true,'pad'),"z'",'in both layouts, Shift the other way');
+  assert.strictEqual(w.screenKeyMove('KeyD',false,null,true),'r','Option: two layers');assert.strictEqual(w.screenKeyMove('Numpad4',true,null,true),"l'");
+  assert.strictEqual(w.screenKeyMove('KeyC',false,null,true),'M','no wide M');assert.strictEqual(w.screenKeyMove('Comma',false,null,true),'x','no wide x');
+  // Each puzzle: the 4×4 writes Rr and has no M; the 2×2 has neither.
+  assert.deepStrictEqual(['R','r',"r'",'M','x'].map(m=>w.screenMoveFor(m,4)),['R','Rr',"Rr'",null,'x'],'the 4×4');
+  assert.deepStrictEqual(['R','r','M',"y'"].map(m=>w.screenMoveFor(m,2)),['R',null,null,"y'"],'the 2×2');
+  assert.deepStrictEqual(['r','M'].map(m=>w.screenMoveFor(m,3)),['r','M'],'the 3×3');
   const ev=(code,k,shift,lock)=>({code,key:k,shiftKey:shift,getModifierState:m=>m==='NumLock'&&lock});
   assert.ok(!w.screenKeyShift(ev('Numpad4','4',false,true))&&w.screenKeyShift(ev('Numpad4','ArrowLeft',false,true)),'Shift on the keypad with Num Lock on');
   assert.ok(!w.screenKeyShift(ev('Numpad4','ArrowLeft',false,false)),'Num Lock off: no Shift');

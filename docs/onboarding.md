@@ -33,7 +33,7 @@ frames, read 2026-10-27). This branch builds it into the site as a first pass. E
 | new · Your first solve | `t1-ready` | A regular cube only, after 2.1, one page (Rework 7): Is your cube solved? A small solved cube; scramble it up; then Scan it with the camera or Paint the colors by hand. Each goes to Solve my cube. |
 | new · The hold screen | `gdHoldHTML` in `js/guide.js` | A screen of its own in the guided solve before the first part and wherever the top changes: "Now, hold the cube with the YELLOW CENTER on top and the GREEN CENTER facing you." The player beside it shows the real cube held that way, to drag round, with Hidden faces (Rework 7). |
 | 2.1 Which cube will you use? | `t2-cube` | Level 1 after the basics (Back goes to them). Regular cube is first and the default, lit with the glow, and goes to Your first solve; Smart cube connects, on Solve my cube; Virtual cube goes through 1.2 first (see Rework 5). |
-| 1.2 Meet the virtual cube | `t1-keys`, `js/screencube.js` | Only after 2.1, for the virtual cube. Two key sets that work at once: A W D X · S E and the numeric keypad's 4 8 6 2 · 5 9, drawn side by side; Shift for prime, drag to look around, double-click to reset. The last turn is in words ("Right face, clockwise"). On a touch screen the keyboard parts are hidden and six buttons, named in words, sit under the cube. |
+| 1.2 Meet the virtual cube | `t1-keys`, `js/screencube.js` | Only after 2.1, for the virtual cube. Two key sets that work at once: A W D X · S E and the numeric keypad's 4 8 6 2 · 5 9, drawn side by side; Shift for prime, drag to look around, double-click to reset. One "Later" line names the rest: C or 3 for the middle layer, , . / for the whole cube, Option (Alt) + key for two layers. The last turn is in words ("Right face, clockwise"). On a touch screen the keyboard parts are hidden and six buttons, named in words, sit under the cube. |
 | 2.2 Beginner home, no player on top | `lnHomeHTML` in `js/learn.js`, `begCubeLine` in `js/start-app.js` | As drawn from 1.54.0: Up next with the step's goal, the cube line with Change, Start the step and Solve my cube with help; the steps with their statuses beside it. |
 | 2.3 A step, the cube in the section | `js/place.js` | The lessons keep their own pages; the player is beside them, not on top. |
 | 2.4 All learned: on to CFOP | `begCfopCard` | On the Progress tab when Basics and the eight steps are all finished. |
@@ -309,7 +309,8 @@ page as drafted:
 - 2.3 as drawn (a hint drill on the step page). The lessons are as before, with the player beside.
 - The screen cube on a phone has buttons, not swipes on a face.
 - With Screen cube as the source, the six keys of the layout turn the cube in the player, and they win
-  over the site's own keys on those letters (A animate, D delete time, C clear times with A W D X · S E).
+  over the site's own keys on those letters (A animate, D delete time, C clear times with A W D X · S E,
+  C being M; ? is Shift+/, z'). The Keys card lists the virtual cube's keys while it is on.
 
 ## Open questions (from the storyboard's sticky)
 
