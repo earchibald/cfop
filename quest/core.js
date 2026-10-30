@@ -88,15 +88,73 @@ function questMerge(moves,m){
 }
 
 // ----- the hold -----
-// How the user holds the cube. q turns the picture (white up, green toward the viewer is no turn);
-// moves turn a state into the cube as held (for cfopStage); faces names each face of the cube as it
-// sits in the hands, so a turn of the white face is D when white is down.
-const QUEST_HOLDS={
-  white:{id:'white',words:'white up, green toward you',q:[0,0,0,1],moves:[],faces:{U:'U',D:'D',R:'R',L:'L',F:'F',B:'B'}},
-  yellow:{id:'yellow',words:'yellow up, green toward you',q:[0,0,1,0],moves:['z2'],faces:{U:'D',D:'U',R:'L',L:'R',F:'F',B:'B'}},
-};
-function questRelabel(m,hold){return (hold||QUEST_HOLDS.white).faces[m[0]]+m.slice(1);}
+// How the user holds the cube: one of the 24 ways, as CUBE_TAB_HOLDS in js/cubetab.js builds them.
+// moves: the shortest turns from white up, green front; cube: the cube after them (its centers say
+// which of the cube's faces is at each place, so a turn of the white face is D when white is
+// down); q: the turn of the picture (white up, green toward the viewer is no turn). The id names
+// the top and the front: 'white-green'.
+const QUEST_COLOR_NAMES=['white','red','green','yellow','orange','blue'];
+const QUEST_HOLDS=(()=>{
+  const s=Math.SQRT1_2,base={x:[-s,0,0,s],y:[0,-s,0,s],z:[0,0,-s,s]},conj=q=>[-q[0],-q[1],-q[2],q[3]];
+  const qOf=m=>{const b=base[m[0]];return m.endsWith("'")?conj(b):m.endsWith('2')?quatMul(b,b):b;};
+  const turns=['x','y','z',"x'","y'","z'",'x2','y2','z2'],out={},seen=new Set();
+  let layer=[{moves:[],cube:new Cube(),q:[0,0,0,1]}];
+  while(layer.length){
+    const next=[];
+    for(const h of layer){const k=h.cube.center.join();if(seen.has(k))continue;seen.add(k);
+      const top=h.cube.center[0],front=h.cube.center[2];
+      out[QUEST_COLOR_NAMES[top]+'-'+QUEST_COLOR_NAMES[front]]=Object.assign(h,{id:QUEST_COLOR_NAMES[top]+'-'+QUEST_COLOR_NAMES[front],top,front});
+      for(const m of turns)next.push({moves:h.moves.concat(m),cube:applyAlg(h.cube,[m]),q:quatMul(qOf(m),h.q)});}
+    layer=next;
+  }
+  return out;
+})();
+const QUEST_HOLD_FIRST=QUEST_HOLDS['white-green'];
+// A kept id: the ids before 0.4.0 were the top alone, with green in front.
+function questHoldFind(id){return QUEST_HOLDS[id]||QUEST_HOLDS[id+'-green']||QUEST_HOLD_FIRST;}
+function questRelabel(m,hold){
+  if(!hold||!hold.moves.length||!/^[URFDLB]/.test(m))return m;
+  return FACE_NAMES[hold.cube.center.indexOf(FACE_NAMES.indexOf(m[0]))]+m.slice(1);
+}
 function questHeld(cube,hold){return cube&&hold&&hold.moves.length?applyAlg(cube,hold.moves):cube;}
+// The tiles of the hold row, as on the Smart cube tab: Top white or yellow; Front green, orange,
+// blue or red.
+const QUEST_TOPS=[0,3],QUEST_FRONTS=[2,4,5,1];
+// A tile: a top keeps the front where it can, else the hold fewest turns away; a front keeps the
+// top where it can, else white goes on top.
+function questHoldPick(cur,place,c){
+  cur=cur||QUEST_HOLD_FIRST;
+  const turns=h=>{const d=cur.cube.inverse().mul(h.cube).center.join();const via=Object.values(QUEST_HOLDS).find(x=>x.cube.center.join()===d);return via?via.moves.length:9;};
+  const up=place==='up'?c:(c!==cur.top&&c!==(cur.top+3)%6?cur.top:0),front=place==='up'?null:c;
+  const want=Object.values(QUEST_HOLDS).filter(h=>h.top===up&&(front==null||h.front===front));
+  const score=h=>(h.front===cur.front?0:10)+turns(h);
+  return want.sort((a,b)=>score(a)-score(b))[0]||cur;
+}
+
+// ----- the hidden faces -----
+// As draw.js draws them (hiddenFacePolys): each face that looks away from the eye has a mirror out
+// along its normal, dist past the face, and its stickers show on it from behind, as in a mirror.
+// A sticker of a turning layer rolls over onto the mirror beside it, its height above the face cut
+// to flat. In the cube's units (a cubie is 1, the cube spans -1.5..1.5).
+const QUEST_MIRROR={dist:2.4,flat:0.35,alpha:0.6};
+// The matrix that puts a point of the cube on the mirror of the face with normal m: out by dist,
+// its height above the face cut to flat. p' = p + m*(D - w + flat*(w - 1.5)), w = p·m.
+function questMirror(m,dist,flat){
+  const D=1.5+(dist??QUEST_MIRROR.dist),k=flat??QUEST_MIRROR.flat,o=m4();
+  for(let c=0;c<3;c++)for(let r=0;r<3;r++)o[c*4+r]=(r===c?1:0)-(1-k)*m[r]*m[c];
+  for(let r=0;r<3;r++)o[12+r]=m[r]*(D-1.5*k);
+  return o;
+}
+// The faces whose mirrors show: those that look away from the eye. model: the cube's matrix; eye: a
+// point in the same space as the model's result.
+function questHiddenFaces(model,eye){
+  const c=m4Point(model,[0,0,0]),v=v3Sub(eye,c),lv=Math.hypot(...v)||1,out=[];
+  for(let f=0;f<6;f++){const n=FACE_GEOM[f].n,w=[0,1,2].map(i=>model[i]*n[0]+model[4+i]*n[1]+model[8+i]*n[2]),lw=Math.hypot(...w)||1;
+    if((w[0]*v[0]+w[1]*v[1]+w[2]*v[2])/(lw*lv)<=-0.02)out.push(f);}
+  return out;
+}
+// How far from the center a mirror reaches, at most: the plane out at 1.5+dist, and a face's half width.
+function questMirrorReach(){return Math.hypot(1.5+QUEST_MIRROR.dist,1.5);}
 
 // ----- the panel -----
 // The color of a move's face as held: the center on that face of the held cube.
@@ -112,38 +170,62 @@ function questPanel(s){
 
 // ----- the hands -----
 // Hands first: the user holds the real cube, so every control works with one free hand, and a
-// controller is only a second way. A row of buttons floats under the cube, square to the user; an
-// index fingertip that goes through a button's face presses it once. Sizes in meters.
-const QUEST_BAR={w:0.054,h:0.04,gap:0.008,hover:0.03,armed:0.012,deep:0.04};
+// controller is only a second way. Two rows of buttons float under the cube, square to the user:
+// the controls, then the hold (Top, Front, as the Smart cube tab's tiles) and Exit. An index
+// fingertip that goes through a button's face presses it once. Sizes in meters: w and h a button,
+// tile a hold tile (square), gap between two, group between two groups.
+const QUEST_BAR={w:0.05,h:0.04,tile:0.04,gap:0.007,group:0.024,hover:0.03,armed:0.012,deep:0.04};
+// s: {tilt, moves (a count), panel, hidden, top, front (the hold's colors), exit (armed)}.
 function questBarButtons(s){
+  const tile=(place,c)=>({id:(place==='up'?'top-':'front-')+QUEST_COLOR_NAMES[c],label:place==='up'?'Top':'Front',row:1,tile:true,
+    color:QUEST_HEX[c],on:(place==='up'?s.top:s.front)===c,group:c===QUEST_FRONTS[0]});
   return [
-    {id:'tilt',label:s.tilt?'Tilt on':'Tilt off',on:!!s.tilt},
-    {id:'level',label:'Level'},
-    {id:'clear',label:'Clear',off:!s.moves},
-    {id:'smaller',label:'Smaller'},
-    {id:'larger',label:'Larger'},
-    {id:'panel',label:s.panel?'Hide panel':'Show panel'},
+    {id:'tilt',label:s.tilt?'Tilt on':'Tilt off',on:!!s.tilt,row:0},
+    {id:'level',label:'Level',row:0},
+    {id:'clear',label:'Clear',off:!s.moves,row:0},
+    {id:'hidden',label:'Hidden faces',on:!!s.hidden,row:0},
+    {id:'smaller',label:'Smaller',row:0},
+    {id:'larger',label:'Larger',row:0},
+    {id:'panel',label:s.panel?'Hide panel':'Show panel',row:0},
+    ...QUEST_TOPS.map(c=>tile('up',c)),...QUEST_FRONTS.map(c=>tile('front',c)),
+    {id:'exit',label:s.exit?'Poke again':'Exit',row:1,group:true,warn:!!s.exit},
   ];
 }
-// Where the row sits: under the cube, clear of the space where a pinch takes the cube.
+// Where each button sits, in the row's frame (x right, y up, from the middle of the first row):
+// {x, y, w, h} at its center. Each row is centered; a button with group starts a new group.
+function questBarLayout(buttons){
+  const B=QUEST_BAR,rows=[];
+  for(const b of buttons)(rows[b.row||0]=rows[b.row||0]||[]).push(b);
+  const out=new Map();
+  rows.forEach((row,r)=>{
+    const w=b=>b.tile?B.tile:B.w;
+    const width=row.reduce((s,b,i)=>s+w(b)+(i?(b.group?B.group:B.gap):0),0);
+    let x=-width/2;const y=-r*(B.h+B.gap);
+    row.forEach((b,i)=>{if(i)x+=b.group?B.group:B.gap;out.set(b,{x:x+w(b)/2,y,w:w(b),h:B.h});x+=w(b);});
+  });
+  return buttons.map(b=>out.get(b));
+}
+// The box round the layout: {x0, x1, y0, y1}.
+function questBarBox(rects){return {x0:Math.min(...rects.map(r=>r.x-r.w/2)),x1:Math.max(...rects.map(r=>r.x+r.w/2)),y0:Math.min(...rects.map(r=>r.y-r.h/2)),y1:Math.max(...rects.map(r=>r.y+r.h/2))};}
+// Where the rows sit: under the cube, clear of the space where a pinch takes the cube, and clear of
+// the mirrors when the hidden faces show.
 function questGrabRadius(edge){return Math.max(0.12,edge*0.85);}
-function questBarCenter(pos,edge){return v3Add(pos,[0,-(questGrabRadius(edge)+QUEST_BAR.h/2+0.02),0]);}
-function questBarWidth(n){return n*QUEST_BAR.w+(n-1)*QUEST_BAR.gap;}
+function questBarCenter(pos,edge,hidden){
+  const clear=Math.max(questGrabRadius(edge),hidden?edge/3*questMirrorReach():0);
+  return v3Add(pos,[0,-(clear+QUEST_BAR.h/2+0.02),0]);
+}
 // A point in the row's own frame: x right, y up, z toward the user (face: the row's yaw).
 function questBarLocal(p,center,face){return quatApply([-face[0],-face[1],-face[2],face[3]],v3Sub(p,center));}
-// The button under a local point, by x and y only.
-function questBarHit(local,n){
-  const half=questBarWidth(n)/2,i=Math.floor((local[0]+half)/(QUEST_BAR.w+QUEST_BAR.gap));
-  if(i<0||i>=n||Math.abs(local[1])>QUEST_BAR.h/2)return -1;
-  const x=local[0]+half-i*(QUEST_BAR.w+QUEST_BAR.gap);
-  return x<=QUEST_BAR.w?i:-1;
+// The button under a local point, by x and y only: an index into rects, or -1.
+function questBarHit(local,rects){
+  return rects.findIndex(r=>Math.abs(local[0]-r.x)<=r.w/2&&Math.abs(local[1]-r.y)<=r.h/2);
 }
 // One fingertip, one frame. st: {armed} for that fingertip, kept by the caller. A press needs the
 // tip in front of the button first (armed) and then through its face, not more than deep behind
 // it; it comes once, and the tip must come back out in front to press again. A tip that comes in
 // from behind or from the side presses nothing. Returns {press, hover} as button indexes or -1.
-function questPoke(st,local,n){
-  const i=local?questBarHit(local,n):-1,z=local?local[2]:1;
+function questPoke(st,local,rects){
+  const i=local?questBarHit(local,rects):-1,z=local?local[2]:1;
   let press=-1;
   if(i<0||z>QUEST_BAR.hover){st.armed=i>=0&&z>QUEST_BAR.armed;}
   else if(z>QUEST_BAR.armed)st.armed=true;

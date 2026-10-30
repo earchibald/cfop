@@ -1,8 +1,10 @@
 // The Quest cube lab (quest/): the pure part (matrices, the cubies and stickers, every move's turn
-// lands on the next state, the moves between states, the hold), then the page over a fake bridge
-// (the list, a connect, a turn on the list, the stage, the hold, the tilt, Demo cube, the keys),
-// then a fake WebXR session (the cube placed in front of the head, a grip carries it, a select away
-// brings it back, A toggles the tilt, the stick sizes the cube, the panel, VR draws the floor).
+// lands on the next state, the moves between states, the 24 holds and the tiles, the hidden faces'
+// mirrors, the two rows of buttons), then the page over a fake bridge (the list, a connect, a turn
+// on the list, the stage, the hold tiles, the tilt, Hidden faces, no demo and no keys), then a fake
+// WebXR session (the cube placed in front of the head, a grip carries it, a select away brings it
+// back, A toggles the tilt, the stick sizes the cube, the panel, Hidden faces, the hold tiles, Exit
+// by two pokes or the left stick, VR draws the floor and the controllers but not the hands).
 // The page's functions are on window; its state comes from questState().
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const {fakeDevice}=require('./fake-gan');
@@ -57,32 +59,53 @@ function pure(){
   const questMerge=run('questMerge');
   eq(questMerge(['R'],'R'),['R2'],'R R is R2');eq(questMerge(['U','R'],"R'"),['U'],'R R\' is nothing');
   eq(questMerge(['R2'],'R'),["R'"],'R2 R is R\'');eq(questMerge(['R'],'U'),['R','U']);
-  // the hold
+  // the hold: all 24, each picture turn puts its top up and its front toward the viewer
   const H=run('QUEST_HOLDS'),questRelabel=run('questRelabel'),questHeld=run('questHeld'),questMoveColor=run('questMoveColor');
-  assert.strictEqual(questRelabel("U'",H.white),"U'");assert.strictEqual(questRelabel("U'",H.yellow),"D'",'white is down: a turn of white is D');
-  assert.strictEqual(questRelabel('R2',H.yellow),'L2');assert.strictEqual(questRelabel('F',H.yellow),'F','green stays in front');
-  const held=questHeld(new Cube(),H.yellow);assert.strictEqual(held.center[0],3,'yellow up');assert.strictEqual(held.center[2],2,'green in front');
-  // the relabel agrees with the engine: a turn of the cube is the relabeled turn of the cube as held
-  for(const m of run('QUEST_FACE_MOVES'))assert.ok(questHeld(mk([m]),H.yellow).equals(applyAlg(held,[questRelabel(m,H.yellow)])),m+' on the cube is '+questRelabel(m,H.yellow)+' as held');
-  assert.ok(near(quatApply(H.yellow.q,[0,1,0]),[0,-1,0])&&near(quatApply(H.yellow.q,[0,0,1]),[0,0,1]),'the picture turns white down, green still in front');
+  assert.strictEqual(Object.keys(H).length,24,'24 holds');
+  for(const h of Object.values(H)){
+    assert.ok(near(quatApply(h.q,FG[h.top].n),[0,1,0],1e-6)&&near(quatApply(h.q,FG[h.front].n),[0,0,1],1e-6),h.id+': the picture shows its top up, its front toward you');
+    for(const m of run('QUEST_FACE_MOVES'))assert.ok(questHeld(mk([m]),h).equals(applyAlg(questHeld(new Cube(),h),[questRelabel(m,h)])),h.id+': '+m+' on the cube is '+questRelabel(m,h)+' as held');
+  }
+  const Y=H['yellow-green'];
+  assert.strictEqual(questRelabel("U'",H['white-green']),"U'");assert.strictEqual(questRelabel("U'",Y),"D'",'white is down: a turn of white is D');
+  assert.strictEqual(questRelabel('R2',Y),'L2');assert.strictEqual(questRelabel('F',Y),'F','green stays in front');
+  const held=questHeld(new Cube(),Y);assert.strictEqual(held.center[0],3,'yellow up');assert.strictEqual(held.center[2],2,'green in front');
   assert.strictEqual(questMoveColor('U',held),'#ffd21e','U as held is the yellow face');assert.strictEqual(questMoveColor('R',new Cube()),'#d8283b');
+  const find=run('questHoldFind'),pick=run('questHoldPick');
+  assert.strictEqual(find('yellow'),Y,'a hold kept before 0.4.0 still reads');assert.strictEqual(find('nonsense').id,'white-green');
+  assert.strictEqual(pick(H['white-green'],'front',4).id,'white-orange','a front keeps the top');
+  assert.strictEqual(pick(H['white-orange'],'up',3).id,'yellow-orange','a top keeps the front');
+  assert.strictEqual(pick(Y,'front',1).id,'yellow-red','yellow stays on top');
+  // the hidden faces: a mirror out along the face's normal, its stickers seen from behind
+  const mirror=run('questMirror'),hiddenFaces=run('questHiddenFaces'),MR=run('QUEST_MIRROR');
+  assert.ok(near(m4Point(mirror([0,-1,0]),[0.5,-1.5,1]),[0.5,-1.5-MR.dist,1]),'a point on the bottom face goes down by dist');
+  assert.ok(near(m4Point(mirror([1,0,0]),[2.5,0,0]),[1.5+MR.dist+MR.flat,0,0]),'a point above the face keeps flat of its height');
+  eq(hiddenFaces(m4Trs([0,0,0],null,1),[4,5,10]),[3,4,5],'seen from above, front and right: D, L and B are hidden');
+  eq(hiddenFaces(m4Trs([0,0,-10],null,1),[0,0,0]),[5],'straight on: B alone');
   const panel=run('questPanel')({name:'GAN12',battery:80,status:'Live.',stage:{name:'F2L',sub:'2 pairs'},moves:Array.from({length:15},()=>'R'),tilt:true,hint:'h'});
   assert.strictEqual(panel.head,'GAN12 · 80%');assert.strictEqual(panel.stage,'F2L · 2 pairs');assert.strictEqual(panel.moves.length,12,'the last twelve moves');assert.strictEqual(panel.count,15);
-  // the hands: the row of buttons and the poke
-  const BAR=run('QUEST_BAR'),barW=run('questBarWidth'),hit=run('questBarHit'),poke=run('questPoke'),free=run('questHandFree');
-  const cx=i=>-barW(6)/2+i*(BAR.w+BAR.gap)+BAR.w/2;
-  for(let i=0;i<6;i++)assert.strictEqual(hit([cx(i),0,0],6),i,'button '+i+' under its center');
-  assert.strictEqual(hit([cx(0)+BAR.w/2+BAR.gap/2,0,0],6),-1,'nothing in the gap');
-  assert.strictEqual(hit([cx(2),BAR.h,0],6),-1,'nothing over the row');
-  const ps={armed:false},go=z=>poke(ps,[cx(1),0,z],6);
+  // the hands: the rows of buttons and the poke
+  const BAR=run('QUEST_BAR'),hit=run('questBarHit'),poke=run('questPoke'),free=run('questHandFree');
+  const buttons=run('questBarButtons')({tilt:true,moves:3,panel:true,hidden:false,top:0,front:2}),R6=run('questBarLayout')(buttons);
+  assert.strictEqual(buttons.map(b=>b.id).join(),'tilt,level,clear,hidden,smaller,larger,panel,top-white,top-yellow,front-green,front-orange,front-blue,front-red,exit');
+  assert.ok(buttons.find(b=>b.id==='top-white').on&&buttons.find(b=>b.id==='front-green').on&&!buttons.find(b=>b.id==='front-red').on,'the hold\'s tiles are on');
+  R6.forEach((r,i)=>assert.strictEqual(hit([r.x,r.y,0],R6),i,buttons[i].id+' under its center'));
+  assert.ok(R6[7].y<R6[0].y-BAR.h,'the hold is on the second row');
+  const cx=i=>R6[i].x;
+  assert.strictEqual(hit([cx(0)+BAR.w/2+BAR.gap/2,0,0],R6),-1,'nothing in the gap');
+  assert.strictEqual(hit([cx(2),BAR.h,0],R6),-1,'nothing over the row');
+  const box=run('questBarBox')(R6);assert.ok(box.x1-box.x0<0.42,'the rows are no wider than 42 cm: '+(box.x1-box.x0));
+  const ps={armed:false},go=z=>poke(ps,[cx(1),0,z],R6);
   assert.strictEqual(go(0.08).press,-1,'far in front: no press');assert.strictEqual(go(0.08).hover,-1,'and no light');
   assert.strictEqual(go(0.02).hover,1,'near: the button lights');
   assert.strictEqual(go(-0.005).press,1,'through the face: a press');
   assert.strictEqual(go(-0.01).press,-1,'once per poke');go(0.005);assert.strictEqual(go(-0.005).press,-1,'not again without coming out');
   go(0.02);assert.strictEqual(go(-0.005).press,1,'out and in again: a second press');
-  const s2={armed:false};poke(s2,[cx(4),0,-0.08],6);assert.strictEqual(poke(s2,[cx(4),0,-0.01],6).press,-1,'from behind: no press');
-  const s3={armed:false};poke(s3,[0.5,0,-0.005],6);assert.strictEqual(poke(s3,[cx(4),0,-0.005],6).press,-1,'in from the side: no press');
-  assert.strictEqual(poke({armed:false},null,6).press,-1,'no fingertip: nothing');
+  const s2={armed:false};poke(s2,[cx(4),0,-0.08],R6);assert.strictEqual(poke(s2,[cx(4),0,-0.01],R6).press,-1,'from behind: no press');
+  const s3={armed:false};poke(s3,[0.5,0,-0.005],R6);assert.strictEqual(poke(s3,[cx(4),0,-0.005],R6).press,-1,'in from the side: no press');
+  assert.strictEqual(poke({armed:false},null,R6).press,-1,'no fingertip: nothing');
+  const center=run('questBarCenter');
+  assert.ok(center([0,1,0],0.15,true)[1]<1-0.15/3*run('questMirrorReach')(),'with the hidden faces the rows sit under the mirrors');
   assert.ok(free([0,1,0],[]),'one hand is free');assert.ok(free([0,1,0],[[0.4,1,0]]),'a hand far from the other is free');
   assert.ok(!free([0,1,0],[[0.1,1,0]]),'two hands together hold the real cube');
   console.log('quest pure ok');
@@ -153,8 +176,12 @@ async function page(){
   // a second turn on the same face merges
   const c2=w.applyAlg(c1,['R']);set(c2);dev.notify(moveMsg());
   assert.ok(await until(()=>Q().moves.join()==='R2'),'R then R reads R2: '+Q().moves.join());
-  // the hold: yellow up names the white face D, and the moves read that way
-  change($('#hold'),'yellow');assert.strictEqual(storage.getItem('cw:questHold'),'"yellow"','the hold is kept');
+  // the hold: the tiles, as on the Smart cube tab; yellow up names the white face D
+  assert.strictEqual($$('#hold .ht').length,6,'six tiles: two tops, four fronts');
+  const tile=(place,c)=>$(`#hold .grp[data-place="${place}"] .ht[data-c="${c}"]`);
+  assert.strictEqual(tile('up',0).getAttribute('aria-pressed'),'true','white on top to start');
+  click(tile('up',3));assert.strictEqual(storage.getItem('cw:questHold'),'"yellow-green"','the hold is kept');
+  assert.ok(tile('up',3).getAttribute('aria-pressed')==='true'&&tile('front',2).getAttribute('aria-pressed')==='true','yellow on top, green in front');
   const c3=w.applyAlg(c2,['U']);set(c3);dev.notify(moveMsg());
   assert.ok(await until(()=>Q().moves.join()==='R2,D'),'a turn of white reads D as held: '+Q().moves.join());
   assert.strictEqual($$('#moves .mv')[1].style.getPropertyValue('--c'),'#f3f2ec','its bar is white');
@@ -164,15 +191,16 @@ async function page(){
   w.questGyro([0,0.3826834,0,0.9238795]);assert.ok(!$('#level').disabled,'Level is on once the cube tilts');
   w.questTick(w.performance.now()+10);assert.ok(Q().q,'the picture follows the tilt');
   assert.ok(near(w.quatApply(Q().q,[0,0,1]),[0,0,1],1e-6),'the first reading is taken as the hold: green in front');
-  change($('#tilt'),false);assert.ok(near(w.questOrient(),[0,0,1,0]),'tilt off: the picture shows the hold');
-  // Disconnect, then the keys and Demo cube
+  change($('#tilt'),false);assert.ok(near(w.quatApply(w.questOrient(),[0,1,0]),[0,-1,0],1e-6),'tilt off: the picture shows the hold, white down');
+  click(tile('front',1));assert.strictEqual(Q().hold.id,'yellow-red','a front tile keeps the top');
+  // Hidden faces: the site's setting
+  assert.strictEqual($('#hidden').getAttribute('aria-pressed'),'false','Hidden faces off to start');
+  click($('#hidden'));assert.ok(Q().hidden&&$('#hidden').getAttribute('aria-pressed')==='true','Hidden faces on');
+  assert.strictEqual(storage.getItem('cw:hidden'),'true','kept as the site keeps it');
+  // no demo and no keys: the cube is the real one
+  assert.ok(!$('#demo'),'no Demo cube');
+  const before=Q().target;d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'F',bubbles:true}));assert.ok(Q().target.equals(before),'a key turns nothing');
   click($('#disconnect'));assert.ok(!Q().conn&&!$('#connect').hidden,'Disconnect');
-  const before=Q().target;d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'F',bubbles:true}));
-  assert.ok(Q().target.equals(w.applyAlg(before,['F'])),'F turns the cube with no smart cube');assert.strictEqual(Q().moves.slice(-1)[0],'F');
-  d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'F',shiftKey:true,bubbles:true}));assert.ok(Q().target.equals(before),'Shift+F turns it back');
-  click($('#demo'));assert.strictEqual($('#demo').textContent,'Stop demo');
-  const n0=Q().moves.length;assert.ok(await until(()=>Q().moves.length!==n0,1600),'Demo cube turns by itself');
-  click($('#demo'));assert.strictEqual($('#demo').textContent,'Demo cube');
   w.close();console.log('quest page ok');
 }
 
@@ -189,9 +217,9 @@ async function xr(){
   const $=s=>d.querySelector(s),Q=()=>w.questState();
   assert.deepStrictEqual(errs,[]);
   assert.strictEqual($('#xrAR').textContent,'yes','passthrough is there');assert.strictEqual($('#xrVR').textContent,'yes');
-  // with no cube ever connected, the first key turns from solved and goes on the list
-  d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'r',bubbles:true}));
-  assert.strictEqual(Q().moves.join(),'R','the first move is on the list');assert.ok(Q().anim||Q().queue.length,'and turns');
+  // a state as a cube sends it: one move from the last turns, and goes on the list
+  Q().shown=Q().target=w.eval('new Cube()');w.questShow(w.applyAlg(Q().shown,['R']));
+  assert.strictEqual(Q().moves.join(),'R','the move is on the list');assert.ok(Q().anim||Q().queue.length,'and turns');
   // stand in for WebGL: the renderer records each scene
   const scenes=[];
   w.XRWebGLLayer=class{constructor(s,gl,o){this.o=o;this.framebuffer='fb';}getViewport(){return {x:0,y:0,width:100,height:100};}};
@@ -234,9 +262,10 @@ async function xr(){
   tip('left',[0,1.1,-0.3]);tip('right',[0.3,1.3,-0.3]);step();
   const sc=()=>scenes[scenes.length-1];
   assert.ok(/Poke a button/.test(sc().panel.lines.hint),'the hint speaks to the hands: '+sc().panel.lines.hint);
-  assert.ok(sc().bar&&sc().bar.buttons.length===6,'the row of buttons is drawn');
-  assert.strictEqual(sc().bar.buttons.map(b=>b.id).join(),'tilt,level,clear,smaller,larger,panel');
-  const BAR=w.eval('QUEST_BAR'),barAt=(i,z)=>{const c=w.questBarCenter(x.pos,x.edge);return [c[0]-w.questBarWidth(6)/2+i*(BAR.w+BAR.gap)+BAR.w/2,c[1],c[2]+z];};
+  assert.ok(sc().bar&&sc().bar.buttons.length===14,'the rows of buttons are drawn');
+  assert.strictEqual(sc().bar.buttons.slice(0,7).map(b=>b.id).join(),'tilt,level,clear,hidden,smaller,larger,panel');
+  const ids=sc().bar.buttons.map(b=>b.id),at=id=>ids.indexOf(id);
+  const barAt=(i,z)=>{const c=w.questBarCenterNow(x),r=sc().bar.rects[i];return [c[0]+r.x,c[1]+r.y,c[2]+z];};
   const press=i=>{tip('right',barAt(i,0.05));step();tip('right',barAt(i,-0.004));step();};
   assert.ok(barAt(0,0)[1]<x.pos[1]-w.questGrabRadius(x.edge),'the row is under the cube, clear of a pinch on it');
   // a poke on Tilt toggles it, once
@@ -246,16 +275,31 @@ async function xr(){
   step();assert.strictEqual(Q().tilt,!t0,'once per poke');
   press(0);assert.strictEqual(Q().tilt,t0,'a second poke toggles it back');
   // Larger and Smaller
-  const e1=x.edge,y1=barAt(0,0)[1];press(4);assert.ok(Math.abs(x.edge-e1*1.25)<1e-9,'Larger: '+x.edge);
+  const e1=x.edge,y1=barAt(0,0)[1];press(at('larger'));assert.ok(Math.abs(x.edge-e1*1.25)<1e-9,'Larger: '+x.edge);
   assert.ok(barAt(0,0)[1]<y1,'the row moves down with a larger cube');
-  press(3);assert.ok(Math.abs(x.edge-e1)<1e-9,'Smaller: '+x.edge);
+  press(at('smaller'));assert.ok(Math.abs(x.edge-e1)<1e-9,'Smaller: '+x.edge);
   // Clear
-  assert.ok(Q().moves.length>0,'moves to clear');press(2);assert.strictEqual(Q().moves.length,0,'a poke on Clear clears the moves');
-  assert.ok(sc().bar.buttons[2].off,'Clear is off with no moves');
+  assert.ok(Q().moves.length>0,'moves to clear');press(at('clear'));assert.strictEqual(Q().moves.length,0,'a poke on Clear clears the moves');
+  assert.ok(sc().bar.buttons[at('clear')].off,'Clear is off with no moves');
   // the panel button hides and shows the panel
-  press(5);assert.ok(!sc().panel,'Hide panel');
-  assert.strictEqual(sc().bar.buttons[5].label,'Show panel','the button says what it does next');
-  press(5);assert.ok(sc().panel,'Show panel');
+  press(at('panel'));assert.ok(!sc().panel,'Hide panel');
+  assert.strictEqual(sc().bar.buttons[at('panel')].label,'Show panel','the button says what it does next');
+  press(at('panel'));assert.ok(sc().panel,'Show panel');
+  // Hidden faces: the mirrors of the faces turned away, and the rows step down clear of them
+  assert.ok(!sc().hidden,'no mirrors to start');const y2=barAt(0,0)[1];
+  press(at('hidden'));assert.ok(Q().hidden&&sc().hidden&&sc().hidden.includes(5),'Hidden faces: the back has a mirror: '+sc().hidden);
+  assert.ok(barAt(0,0)[1]<y2,'the rows move down, under the mirrors');
+  press(at('hidden'));assert.ok(!Q().hidden&&!sc().hidden,'and off again');
+  // the hold's tiles
+  press(at('top-yellow'));assert.strictEqual(Q().hold.id,'yellow-green','a poke on the yellow tile: yellow on top');
+  assert.ok(sc().bar.buttons[at('top-yellow')].on,'its tile is on');
+  press(at('front-blue'));assert.strictEqual(Q().hold.id,'yellow-blue','a front tile');
+  press(at('top-white'));press(at('front-green'));assert.strictEqual(Q().hold.id,'white-green','back to white up, green front');
+  // Exit: the first poke asks, a second ends the session; another button in between, or a wait, takes the ask back
+  press(at('exit'));assert.ok(Q().xr,'one poke on Exit does not end the session');
+  assert.strictEqual(sc().bar.buttons[at('exit')].label,'Poke again','Exit asks for a second poke');
+  press(at('level'));assert.strictEqual(sc().bar.buttons[at('exit')].label,'Exit','another button takes the ask back');
+  press(at('exit'));for(let k=0;k<200;k++)step();assert.strictEqual(sc().bar.buttons[at('exit')].label,'Exit','the ask runs out');
   // a short pinch away from the cube does nothing; a held one by a free hand brings it back
   const hev=(type,src)=>(handlers[type]||[]).forEach(f=>f({type,inputSource:src,frame}));
   x.pos=[0.3,1.4,-0.6];x.placed=true;const away=[0.35,1.25,-0.25];
@@ -271,11 +315,16 @@ async function xr(){
   tip('left',[0,1.1,-0.3]);tip('right',[0.3,1.4,-0.6]);step();hev('selectstart',R);assert.ok(x.grab,'a pinch on the cube takes it');
   tip('right',[0.2,1.4,-0.5]);step();assert.ok(near(x.pos,[0.2,1.4,-0.5]),'and carries it: '+x.pos);
   hev('selectend',R);hev('select',R);step();assert.ok(near(x.pos,[0.2,1.4,-0.5]),'and leaves it there');
-  session.inputSources.length=0;session.inputSources.push(ctrl);
-  // VR: the floor and the controller drawn
-  session.end();assert.ok(!Q().xr,'the session ends');
+  // two pokes on Exit end the session
+  x.placed=false;step();press(at("exit"));press(at("exit"));assert.ok(!Q().xr,'Exit, then a second poke: the session ends');
+  // VR: the floor and the controller drawn, the hands not
   $('#enterVR').click();assert.ok(await until(()=>!!Q().xr));scenes.length=0;step();
+  assert.strictEqual(scenes[0].extras.length,1,'VR with hands: the floor alone, no hands drawn');
+  session.inputSources.length=0;session.inputSources.push(ctrl);scenes.length=0;step();
   assert.strictEqual(scenes[0].extras.length,2,'VR: the floor and the controller');
+  // the left stick's press ends the session
+  const left={handedness:'left',gripSpace:'grip',targetRaySpace:'ray',gamepad:{buttons:Array.from({length:6},()=>({pressed:false})),axes:[0,0,0,0]}};
+  session.inputSources.push(left);left.gamepad.buttons[3].pressed=true;step();assert.ok(!Q().xr,'the left stick press: the session ends');
   w.close();console.log('quest xr ok');
 }
 

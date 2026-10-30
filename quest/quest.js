@@ -11,18 +11,23 @@
 // ws://127.0.0.1:27273 its bridge. localhost is a secure context, so WebXR runs over plain http.
 // quest/run.sh sets this up. A browser whose Web Bluetooth works (Chrome on a computer) connects
 // directly.
-// With no cube at all, Demo cube turns the cube by itself and the keys U R F D L B (Shift: prime)
-// turn it by hand.
+//
+// As the site's Smart cube tab: the hold as tiles (Top white or yellow, Front green, orange, blue
+// or red; questHoldPick), and Hidden faces (the faces turned away, as in a mirror; questMirror).
+// In the session both are on the second row of buttons under the cube, with Exit.
 //
 // Storage: cw:ganMac (the site's map from cube name to MAC address), cw:ganFix (the site's
 // correction for a cube whose count is off), cw:questCube (the last cube's name, connected by
-// itself when the bridge hears it), cw:questHold, cw:questTilt.
+// itself when the bridge hears it), cw:questHold (the hold's id, 'white-green'), cw:questTilt,
+// cw:hidden (the site's Hidden faces).
 const $=s=>document.querySelector(s);
 const qs={conn:null,busy:false,pickSeq:0,wb:false,listEnd:null,macWait:null,
   shown:null,target:null,queue:[],anim:null,moves:[],colors:[],stage:null,
-  raw:null,basis:null,q:null,qTo:null,tilt:true,hold:QUEST_HOLDS.white,
-  name:'',battery:null,status:'',demo:0,
-  gl:null,r:null,view:{yaw:-32,pitch:24},drag:null,flatRaf:0,last:0,xr:null,support:{ar:false,vr:false}};
+  raw:null,basis:null,q:null,qTo:null,tilt:true,hold:QUEST_HOLD_FIRST,hidden:false,
+  name:'',battery:null,status:'',
+  gl:null,r:null,view:{yaw:-32,pitch:24},zoom:10,drag:null,flatRaf:0,last:0,xr:null,support:{ar:false,vr:false}};
+// The time the session's Exit asks for a second poke.
+const QUEST_EXIT_MS=3000;
 
 // The page's state, for the tests and the console (a const is not on window).
 function questState(){return qs;}
@@ -74,13 +79,13 @@ function questMovesDraw(){
 }
 function questClear(){qs.moves=[];qs.colors=[];questMovesDraw();}
 function questPanelLines(){
-  const p=questPanel({name:qs.name||(qs.demo?'Demo cube':''),battery:qs.battery,status:qs.status,stage:qs.stage,moves:qs.moves,tilt:qs.tilt&&!!qs.q,hint:questHint()});
+  const p=questPanel({name:qs.name,battery:qs.battery,status:qs.status,stage:qs.stage,moves:qs.moves,tilt:qs.tilt&&!!qs.q,hint:questHint()});
   p.moves=p.moves.map((m,i)=>({m,color:qs.colors[qs.moves.length-p.moves.length+i]||'#8f8f97'}));
   return p;
 }
 function questHint(){
   const x=qs.xr;if(!x)return '';
-  return x.hands?'Poke a button · pinch: carry · hold a pinch: bring here':'Poke a button, or A tilt · B level · Stick size · Grip carries';
+  return x.hands?'Poke a button · pinch: carry · hold a pinch: bring here':'A tilt · B level · Stick size · Stick press: L exit, R hidden';
 }
 
 // ----- tilt -----
@@ -93,7 +98,26 @@ function questGyro(q){
 // Level: the cube as held now is the hold, seen square from the front.
 function questLevel(){if(qs.raw){qs.basis=resetBasis(qs.raw,'yaw',qs.hold.q);qs.qTo=quatNorm(quatMul(qs.basis,qs.raw));}}
 function questTilt(on){qs.tilt=on;questSet('cw:questTilt',on);$('#tilt').checked=on;}
-function questHoldSet(id){qs.hold=QUEST_HOLDS[id]||QUEST_HOLDS.white;questSet('cw:questHold',qs.hold.id);$('#hold').value=qs.hold.id;qs.basis=null;if(qs.raw)questGyro(qs.raw);questStage();}
+// The hold: no turn goes on the list; the moves to come read as held, and the picture turns to it.
+function questHoldSet(h){
+  qs.hold=h||QUEST_HOLD_FIRST;questSet('cw:questHold',qs.hold.id);qs.basis=null;if(qs.raw)questGyro(qs.raw);
+  questStage();questHoldDraw();
+}
+function questHoldTile(place,c){questHoldSet(questHoldPick(qs.hold,place,c));}
+function questHoldDraw(){
+  for(const b of document.querySelectorAll('#hold .ht'))b.setAttribute('aria-pressed',String((b.parentNode.dataset.place==='up'?qs.hold.top:qs.hold.front)===+b.dataset.c));
+}
+function questHoldMount(){
+  for(const [place,cs] of [['up',QUEST_TOPS],['front',QUEST_FRONTS]]){
+    const g=$(`#hold .grp[data-place="${place}"]`);
+    for(const c of cs){const b=document.createElement('button');b.type='button';b.className='ht';b.dataset.c=c;b.style.setProperty('--c',QUEST_HEX[c]);
+      const t=QUEST_COLOR_NAMES[c].replace(/^./,a=>a.toUpperCase())+(place==='up'?' on top':' in front');
+      b.title=t+'. Sets how you hold the cube. No turn goes on the list.';b.setAttribute('aria-label',t);
+      b.onclick=()=>questHoldTile(place,c);g.appendChild(b);}
+  }
+}
+// Hidden faces: the site's setting.
+function questHidden(on){qs.hidden=!!on;questSet('cw:hidden',qs.hidden);const b=$('#hidden');b.setAttribute('aria-pressed',String(qs.hidden));}
 
 // ----- the link -----
 function questMacs(){return questGet('cw:ganMac',{})||{};}
@@ -159,7 +183,6 @@ async function questConnect(auto){
   // only the first is quiet.
   catch(e){if(seq===qs.pickSeq)questStatus(e.name==='NotFoundError'&&/cancel/i.test(e.message)?'Press Connect to look for your cube.':e.message);return;}
   if(!device)return;
-  questDemo(false);
   const name=device.name||'GAN cube';qs.busy=true;questButtons();
   let mac=device.mac||questMacs()[name],typed=false;
   if(!mac&&typeof device.watchAdvertisements==='function'){questStatus(`Looking for the address of ${name}. Turn a face now and then.`);mac=await ganWatchMac(device,8000);}
@@ -205,31 +228,10 @@ function questDisconnect(){
   qs.name='';qs.battery=null;questButtons();questStatus('Disconnected. Press Connect to connect again.');
 }
 
-// ----- no cube: the demo, and the keys -----
-const QUEST_DEMO_MOVES=['R','U',"R'","U'",'F','R2','L',"D'",'B','U2'];
-function questTurnBy(m){
-  if(qs.conn)return;
-  if(!qs.target&&!qs.shown)qs.shown=qs.target=new Cube(); // no cube yet: start from solved, so the first move turns
-  questShow(applyAlg(qs.target,[m]));
-}
-function questDemo(on){
-  clearInterval(qs.demo);qs.demo=0;
-  if(on){if(qs.conn)return;let i=0;qs.demo=setInterval(()=>questTurnBy(QUEST_DEMO_MOVES[i++%QUEST_DEMO_MOVES.length]),1100);
-    questStatus('Demo cube: it turns by itself. Press U, R, F, D, L or B to turn it by hand; Shift turns it the other way.');}
-  questButtons();
-}
-function questKeys(e){
-  if(e.target&&/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
-  if(e.metaKey||e.ctrlKey||e.altKey)return;
-  const f=e.key.toUpperCase();
-  if('URFDLB'.includes(f)&&f.length===1){e.preventDefault();questTurnBy(f+(e.shiftKey?"'":''));}
-}
-
 // ----- the page's buttons -----
 function questButtons(){
   const live=!!qs.conn;
   $('#connect').disabled=live||qs.busy||!ganAvailable();$('#disconnect').hidden=!live;$('#connect').hidden=live;
-  $('#demo').textContent=qs.demo?'Stop demo':'Demo cube';$('#demo').disabled=live;
   $('#level').disabled=!qs.raw;
   $('#name').textContent=qs.name?qs.name+(qs.battery!=null?' · '+qs.battery+'%':''):'';
   $('#enterAR').disabled=!qs.support.ar||!qs.r;$('#enterVR').disabled=!qs.support.vr||!qs.r;
@@ -249,13 +251,17 @@ async function questProbeXR(){
 function questFlatStart(){if(!qs.r||qs.flatRaf||qs.xr)return;qs.flatRaf=requestAnimationFrame(questFlatFrame);}
 function questFlatFrame(now){
   qs.flatRaf=0;if(qs.xr)return;
-  questTick(now);
+  const dt=questTick(now);
   const gl=qs.gl,c=gl.canvas,dpr=Math.min(2,window.devicePixelRatio||1),w=Math.round(c.clientWidth*dpr),h=Math.round(c.clientHeight*dpr);
   if(w&&h&&(c.width!==w||c.height!==h)){c.width=w;c.height=h;}
   gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,c.width,c.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   const proj=m4Persp(36,c.width/Math.max(1,c.height),0.1,100);
-  const view=m4Mul(m4Trs([0,0,-10],null,1),m4Trs([0,0,0],quatMul(quatAxis([1,0,0],qs.view.pitch),quatAxis([0,1,0],qs.view.yaw)),1));
-  qs.r.drawScene(proj,view,{cube:qs.anim?qs.anim.from:qs.shown,anim:qs.anim?{move:qs.anim.move,t:qs.anim.e}:null,model:m4Trs([0,0,0],questOrient(),1)});
+  // the camera steps back while the hidden faces show, so the mirrors fit
+  qs.zoom+=((qs.hidden?15:10)-qs.zoom)*Math.min(1,dt*10);
+  const turn=quatMul(quatAxis([1,0,0],qs.view.pitch),quatAxis([0,1,0],qs.view.yaw));
+  const view=m4Mul(m4Trs([0,0,-qs.zoom],null,1),m4Trs([0,0,0],turn,1)),model=m4Trs([0,0,0],questOrient(),1);
+  const eye=quatApply([-turn[0],-turn[1],-turn[2],turn[3]],[0,0,qs.zoom]);
+  qs.r.drawScene(proj,view,{cube:qs.anim?qs.anim.from:qs.shown,anim:qs.anim?{move:qs.anim.move,t:qs.anim.e}:null,model,hidden:qs.hidden?questHiddenFaces(model,eye):null});
   questFlatStart();
 }
 function questDragSetup(){
@@ -268,13 +274,15 @@ function questDragSetup(){
 
 // ----- the WebXR session -----
 // The cube floats 45 cm in front of the head and a little below it, turned to face the user, 15
-// cm on an edge (about 2.7 times a real cube). Hands first, since the user holds the real cube: a
-// row of buttons under the cube (Tilt, Level, Clear, Smaller, Larger, the panel) takes a poke of
-// an index fingertip; a pinch near the cube carries it; a pinch held QUEST_HOLD_MS away from it, by
-// a hand with no other hand near, brings it back in front (a short pinch does nothing, so a hand on
-// the real cube sends nothing). Controllers second: a grip near the cube carries it, a trigger away
-// brings it back, A toggles the tilt, B levels it, the right stick sizes the cube, X clears the
-// moves, Y hides the panel.
+// cm on an edge (about 2.7 times a real cube). Hands first, since the user holds the real cube: two
+// rows of buttons under the cube (Tilt, Level, Clear, Hidden faces, Smaller, Larger, the panel;
+// then the hold's Top and Front tiles, and Exit, which asks for a second poke) take a poke of an
+// index fingertip; a pinch near the cube carries it; a pinch held QUEST_HOLD_MS away from it, by a
+// hand with no other hand near, brings it back in front (a short pinch does nothing, so a hand on
+// the real cube sends nothing). The hands are not drawn. Controllers second: a grip near the cube
+// carries it, a trigger away brings it back, A toggles the tilt, B levels it, the right stick sizes
+// the cube and its press shows the hidden faces, X clears the moves, Y hides the panel, the left
+// stick's press ends the session.
 async function questEnterXR(mode){
   if(qs.xr||!qs.r)return;
   try{
@@ -282,7 +290,7 @@ async function questEnterXR(mode){
     const session=await navigator.xr.requestSession(mode,{optionalFeatures:['local-floor','hand-tracking']});
     session.updateRenderState({baseLayer:new XRWebGLLayer(session,qs.gl,{alpha:true,antialias:true})});
     let ref;try{ref=await session.requestReferenceSpace('local-floor');}catch(e){ref=await session.requestReferenceSpace('local');}
-    qs.xr={session,ref,mode,placed:false,pos:[0,1.1,-0.45],face:[0,0,0,1],edge:questGet('cw:questEdge',0.15),grab:null,pressed:new Map(),grabbed:new Set(),panel:true,hands:false,head:[0,1.5,0],t:0,pinch:null,pokes:new Map(),hover:-1,lit:-1,litT:0};
+    qs.xr={session,ref,mode,placed:false,pos:[0,1.1,-0.45],face:[0,0,0,1],edge:questGet('cw:questEdge',0.15),grab:null,pressed:new Map(),grabbed:new Set(),panel:true,hands:false,head:[0,1.5,0],t:0,pinch:null,pokes:new Map(),hover:-1,lit:-1,litT:0,exitT:0};
     session.addEventListener('end',()=>{qs.xr=null;questButtons();questFlatStart();});
     session.addEventListener('selectstart',questGrabStart);session.addEventListener('squeezestart',questGrabStart);
     session.addEventListener('selectend',questGrabEnd);session.addEventListener('squeezeend',questGrabEnd);
@@ -321,23 +329,34 @@ function questPlace(x,t){
   x.pos=v3Add(head,[f[0]*0.45,-0.16,f[2]*0.45]);x.face=quatFacing(x.pos,head);x.placed=true;
 }
 function questSize(x,k){x.edge=Math.max(0.057,Math.min(0.6,x.edge*k));questSet('cw:questEdge',x.edge);}
-// What a button of the row does: the same as its controller button, or the page's.
+// What a button of the rows does: the same as its controller button, or the page's. Exit asks for
+// a second poke within QUEST_EXIT_MS, so a stray fingertip does not end the session.
 function questBarDo(id){
-  const x=qs.xr;
+  const x=qs.xr,hold=id.match(/^(top|front)-(\w+)$/);
   if(id==='tilt')questTilt(!qs.tilt);else if(id==='level')questLevel();else if(id==='clear')questClear();
   else if(id==='smaller')questSize(x,0.8);else if(id==='larger')questSize(x,1.25);else if(id==='panel')x.panel=!x.panel;
+  else if(id==='hidden')questHidden(!qs.hidden);
+  else if(hold)questHoldTile(hold[1]==='top'?'up':'front',QUEST_COLOR_NAMES.indexOf(hold[2]));
+  else if(id==='exit'){if(questExitArmed(x))questExit();else x.exitT=x.t;}
+  if(id!=='exit'&&x)x.exitT=0;
 }
-function questBarState(){return questBarButtons({tilt:qs.tilt,moves:qs.moves.length,panel:!qs.xr||qs.xr.panel});}
+function questExitArmed(x){return !!x&&!!x.exitT&&x.t-x.exitT<QUEST_EXIT_MS;}
+function questExit(){const x=qs.xr;if(!x)return;const p=x.session.end();if(p&&p.catch)p.catch(()=>{});}
+function questBarState(){
+  const x=qs.xr;
+  return questBarButtons({tilt:qs.tilt,moves:qs.moves.length,panel:!x||x.panel,hidden:qs.hidden,top:qs.hold.top,front:qs.hold.front,exit:questExitArmed(x)});
+}
+function questBarCenterNow(x){return questBarCenter(x.pos,x.edge,qs.hidden);}
 function questJoint(frame,src,name,ref){const j=src.hand&&src.hand.get(name),p=j&&frame.getJointPose&&frame.getJointPose(j,ref);if(!p)return null;const t=p.transform.position;return [t.x,t.y,t.z];}
-// The hands, each frame: a poke of an index fingertip on the row, and a pinch held away from the cube.
+// The hands, each frame: a poke of an index fingertip on the rows, and a pinch held away from the cube.
 function questHands(x,frame){
-  const center=questBarCenter(x.pos,x.edge),n=questBarState().length,tips=new Map();
+  const center=questBarCenterNow(x),rects=questBarLayout(questBarState()),tips=new Map();
   for(const src of x.session.inputSources)if(src.hand){const p=questJoint(frame,src,'index-finger-tip',x.ref);if(p)tips.set(src,p);}
   x.hover=-1;
   for(const [src,p] of tips){
     let st=x.pokes.get(src);if(!st){st={armed:false};x.pokes.set(src,st);}
     if(x.grab&&x.grab.src===src){st.armed=false;continue;}
-    const r=questPoke(st,questBarLocal(p,center,x.face),n);
+    const r=questPoke(st,questBarLocal(p,center,x.face),rects);
     if(r.hover>=0)x.hover=r.hover;
     if(r.press>=0){const b=questBarState()[r.press];if(!b.off){questBarDo(b.id);x.lit=r.press;x.litT=x.t;}}
   }
@@ -359,9 +378,10 @@ function questPads(x,dt){
     if(src.handedness==='right'){
       if(hit(4))questTilt(!qs.tilt);
       if(hit(5))questLevel();
+      if(hit(3))questHidden(!qs.hidden);
       const ay=g.axes[3]||0;if(Math.abs(ay)>0.15){x.edge=Math.max(0.057,Math.min(0.6,x.edge*Math.exp(-ay*dt*1.2)));}
     }
-    if(src.handedness==='left'){if(hit(4))questClear();if(hit(5))x.panel=!x.panel;}
+    if(src.handedness==='left'){if(hit(4))questClear();if(hit(5))x.panel=!x.panel;if(hit(3)){questExit();return;}}
   }
 }
 function questXRFrame(now,frame){
@@ -371,21 +391,24 @@ function questXRFrame(now,frame){
   const pose=frame.getViewerPose(x.ref);if(!pose)return;
   const hp=pose.transform.position;x.head=[hp.x,hp.y,hp.z];
   if(!x.placed)questPlace(x,pose.transform);
-  questPads(x,dt);questHands(x,frame);
+  questPads(x,dt);if(qs.xr!==x)return; // the left stick's press ended the session
+  questHands(x,frame);if(qs.xr!==x)return; // a second poke on Exit
   if(x.grab){const p=questInputPos(frame,x.grab.src,x.ref);if(p){x.pos=v3Add(p,x.grab.off);x.face=quatFacing(x.pos,x.head);}}
   const ar=x.mode==='immersive-ar',extras=[];
+  // VR: the floor and the controllers. The hands are not drawn: they hold the real cube.
   if(!ar){
     extras.push({m:m4Trs([x.pos[0],0,x.pos[2]],null,[3,0.01,3]),c:[0.1,0.1,0.12]});
-    for(const src of x.session.inputSources){
-      if(src.hand){for(const j of src.hand.values()){const jp=frame.getJointPose(j,x.ref);if(jp){const p=jp.transform.position,o=jp.transform.orientation;extras.push({m:m4Trs([p.x,p.y,p.z],[o.x,o.y,o.z,o.w],(jp.radius||0.008)*1.8),c:[0.82,0.76,0.7]});}}}
-      else if(src.gripSpace){const gp=frame.getPose(src.gripSpace,x.ref);if(gp){const p=gp.transform.position,o=gp.transform.orientation;extras.push({m:m4Trs([p.x,p.y,p.z],[o.x,o.y,o.z,o.w],[0.035,0.03,0.11]),c:[0.3,0.3,0.34]});}}
-    }
+    for(const src of x.session.inputSources)if(!src.hand&&src.gripSpace){
+      const gp=frame.getPose(src.gripSpace,x.ref);if(gp){const p=gp.transform.position,o=gp.transform.orientation;extras.push({m:m4Trs([p.x,p.y,p.z],[o.x,o.y,o.z,o.w],[0.035,0.03,0.11]),c:[0.3,0.3,0.34]});}}
   }
+  if(x.exitT&&!questExitArmed(x))x.exitT=0;
+  const model=m4Mul(m4Trs(x.pos,x.face,1),m4Trs([0,0,0],questOrient(),x.edge/3));
+  const buttons=questBarState(),rects=questBarLayout(buttons),box=questBarBox(rects);
   const scene={cube:qs.anim?qs.anim.from:qs.shown,anim:qs.anim?{move:qs.anim.move,t:qs.anim.e}:null,
-    model:m4Mul(m4Trs(x.pos,x.face,1),m4Trs([0,0,0],questOrient(),x.edge/3)),extras,
+    model,hidden:qs.hidden?questHiddenFaces(model,x.head):null,extras,
     panel:x.panel?{model:m4Trs(v3Add(x.pos,[0,x.edge*0.85+0.08,0]),x.face,[0.3,0.117,1]),lines:questPanelLines()}:null,
-    bar:{model:m4Trs(questBarCenter(x.pos,x.edge),x.face,[questBarWidth(6),QUEST_BAR.h,1]),
-      buttons:questBarState().map((b,i)=>Object.assign({hover:i===x.hover,lit:i===x.lit&&x.t-x.litT<250},b))}};
+    bar:{model:m4Mul(m4Trs(questBarCenterNow(x),x.face,1),m4Trs([(box.x0+box.x1)/2,(box.y0+box.y1)/2,0],null,[box.x1-box.x0,box.y1-box.y0,1])),rects,
+      buttons:buttons.map((b,i)=>Object.assign({hover:i===x.hover,lit:i===x.lit&&x.t-x.litT<250},b))}};
   const layer=frame.session.renderState.baseLayer,gl=qs.gl;
   gl.bindFramebuffer(gl.FRAMEBUFFER,layer.framebuffer);
   if(ar)gl.clearColor(0,0,0,0);else gl.clearColor(0.04,0.04,0.05,1);
@@ -399,17 +422,18 @@ function questStart(){
   let gl=null;try{gl=$('#view').getContext('webgl2',{xrCompatible:true,alpha:true,antialias:true});}catch(e){}
   if(gl){try{qs.gl=gl;qs.r=questRenderer(gl);}catch(e){qs.r=null;$('#nogl').hidden=false;$('#nogl').textContent='The 3D view did not start: '+e.message;}}
   else $('#nogl').hidden=false;
-  questTilt(questGet('cw:questTilt',true));questHoldSet(questGet('cw:questHold','white'));
-  $('#tilt').onchange=e=>questTilt(e.target.checked);$('#hold').onchange=e=>questHoldSet(e.target.value);
-  $('#connect').onclick=()=>questConnect();$('#disconnect').onclick=questDisconnect;$('#demo').onclick=()=>questDemo(!qs.demo);
+  questHoldMount();
+  questTilt(questGet('cw:questTilt',true));questHoldSet(questHoldFind(questGet('cw:questHold','white-green')));questHidden(questGet('cw:hidden',false)===true);
+  $('#tilt').onchange=e=>questTilt(e.target.checked);$('#hidden').onclick=()=>questHidden(!qs.hidden);
+  $('#connect').onclick=()=>questConnect();$('#disconnect').onclick=questDisconnect;
   $('#level').onclick=questLevel;$('#clear').onclick=questClear;
   $('#enterAR').onclick=()=>questEnterXR('immersive-ar');$('#enterVR').onclick=()=>questEnterXR('immersive-vr');
   $('#macGo').onclick=questMacGo;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();questMacGo();}});
-  document.addEventListener('keydown',questKeys);document.addEventListener('cw:bridge',questButtons);
+  document.addEventListener('cw:bridge',questButtons);
   questDragSetup();questMovesDraw();questStage();questFlatStart();questProbeXR();
   const ready=()=>{questButtons();
     if(questWB()){questStatus('Press Connect, then choose your cube in the list that the browser shows.');return;}
-    if(!BRIDGE){questStatus('No way to a cube here. Press Demo cube to try the view, or run quest/run.sh on the Mac and open http://localhost:27272/quest/ in the headset.');return;}
+    if(!BRIDGE){questStatus('No way to a cube here. Run quest/run.sh on the Mac, then open http://localhost:27272/quest/ in the headset.');return;}
     const last=questGet('cw:questCube',null);
     questStatus(last?`Looking for ${last} by itself. Press Connect to choose another cube.`:'Choose your cube in the list. The page connects to it by itself next time.');
     questConnect(true);};

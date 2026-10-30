@@ -23,16 +23,27 @@ You hold the real cube in the headset, so every control works by hand tracking, 
 A controller is a second way, never the only one. To put the cube down and pick up a controller for
 one action is a bad step: do not add a control that needs it.
 
-- A row of buttons floats under the cube, square to you: Tilt, Level, Clear, Smaller, Larger, Hide
-  panel. An index fingertip presses one when it goes through the face from in front
-  (`questPoke` in `quest/core.js`): once per poke, nothing from behind or from the side. A button
-  lights while a fingertip is near it and flashes on the press.
+- Two rows of buttons float under the cube, square to you: Tilt, Level, Clear, Hidden faces,
+  Smaller, Larger, Hide panel; then the hold's tiles (Top: white, yellow; Front: green, orange,
+  blue, red, as on the Smart cube tab) and Exit. An index fingertip presses one when it goes
+  through the face from in front (`questPoke` in `quest/core.js`): once per poke, nothing from
+  behind or from the side. A button lights while a fingertip is near it and flashes on the press.
+- Exit asks for a second poke within 3 s ("Poke again"), so a stray fingertip does not end the
+  session. The headset's own menu button ends it too.
+- Hidden faces draws the faces turned away from you as in a mirror out past each face, as the
+  site's `draw.js` does (`questMirror`, `questHiddenFaces`). The rows then sit lower, clear of the
+  mirrors. It is the site's setting, `cw:hidden`.
+- The hands are not drawn, in VR either: they hold the real cube, and the drawn joints got in the
+  way. The floor and the controllers are drawn in VR.
 - A pinch on the cube carries it.
 - A pinch held 0.6 s away from the cube brings it back in front of you. A short pinch does nothing,
   and so does a pinch while the other hand is within 20 cm (`questHandFree`): both hands on the real
   cube are close together, and a stray pinch there must not move the twin.
-- Controllers: grip carries, trigger away brings back, A tilt, B level, right stick size, X clear,
-  Y panel.
+- Controllers: grip carries, trigger away brings back, A tilt, B level, right stick size (its
+  press: hidden faces), X clear, Y panel, the left stick's press ends the session.
+
+The flat page has the same hold tiles and Hidden faces under the cube. It has no demo cube and no
+keys: the cube is always the real one.
 
 Open on a headset: how well hand tracking sees a hand that holds a cube, and whether the row is in a
 good place to reach.

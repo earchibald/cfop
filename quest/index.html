@@ -41,6 +41,14 @@ aside h2{font-size:13px;margin:0 0 8px;color:var(--muted);text-transform:upperca
 label.chk{display:flex;align-items:center;gap:10px;min-height:46px;cursor:pointer}label.chk input{width:22px;height:22px}
 .note{color:var(--muted);font-size:14px;margin:0}
 .keys{font-size:14px;color:var(--muted);margin:0;padding-left:18px}.keys li{margin:2px 0}
+/* The hold row and Hidden faces under the cube, as on the site's Smart cube tab. */
+.viewrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:4px 20px 10px}.viewrow .grow{flex:1}
+.hold{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.hold .lbl{color:var(--muted);font-size:14px}
+.hold .grp{display:inline-flex;gap:8px}
+.hold .ht{width:46px;height:46px;min-height:0;padding:0;border-radius:9px;border:1px solid rgba(0,0,0,.5);background:var(--c)}
+.hold .ht:hover{border-color:var(--text)}
+.hold .ht[aria-pressed="true"]{outline:3px solid var(--text);outline-offset:3px}
+button.chip[aria-pressed="true"]{background:#1d3b2a;border-color:var(--ok)}
 code{font-family:var(--mono);font-size:.92em}
 </style>
 </head>
@@ -59,6 +67,11 @@ code{font-family:var(--mono);font-size:.92em}
   <div class="stagecol">
     <canvas id="view" title="Drag to turn the view. Double-click to put it back."></canvas>
     <p id="nogl" hidden>This browser has no WebGL 2, so the 3D view cannot start.</p>
+    <div class="viewrow">
+      <div class="hold" id="hold" role="group" aria-label="How you hold the cube"><span class="lbl" title="How you hold the cube. A tile sets the hold. No turn goes on the list.">Top</span><span class="grp" data-place="up"></span><span class="lbl">Front</span><span class="grp" data-place="front"></span></div>
+      <span class="grow"></span>
+      <button id="hidden" class="chip" aria-pressed="false" title="Show the faces turned away from you, as in a mirror behind the cube">Hidden faces</button>
+    </div>
     <div class="moves" id="moves" aria-live="polite"></div>
     <div class="sub"><span id="stage"></span><span class="grow"></span><span id="count">0 moves</span><button id="clear" title="Clear the moves">Clear moves</button></div>
     <div id="status" role="status"></div>
@@ -69,7 +82,6 @@ code{font-family:var(--mono);font-size:.92em}
       <div class="btns">
         <button id="connect" class="primary" title="Look for your smart cube">Connect</button>
         <button id="disconnect" hidden title="Disconnect the cube">Disconnect</button>
-        <button id="demo" title="A cube that turns by itself, for a test with no smart cube">Demo cube</button>
       </div>
     </section>
     <div class="list" id="list" hidden>
@@ -92,10 +104,6 @@ code{font-family:var(--mono);font-size:.92em}
       <h2>View</h2>
       <label class="chk" title="The cube on the screen tilts with the cube in your hands"><input type="checkbox" id="tilt"> Tilt with my cube</label>
       <div class="btns">
-        <select id="hold" title="How you hold the cube">
-          <option value="white">White up, green toward me</option>
-          <option value="yellow">Yellow up, green toward me</option>
-        </select>
         <button id="level" title="Take the cube as you hold it now as square to the front">Level</button>
       </div>
     </section>
@@ -103,12 +111,13 @@ code{font-family:var(--mono);font-size:.92em}
       <h2>In the headset</h2>
       <ul class="keys">
         <li>Your hands do it all, so you keep the cube in your hands. One free hand is enough.</li>
-        <li>Poke a button under the cube with a fingertip: Tilt, Level, Clear, Smaller, Larger, Hide panel.</li>
+        <li>Poke a button under the cube with a fingertip: Tilt, Level, Clear, Hidden faces, Smaller, Larger, Hide panel.</li>
+        <li>The row under them sets the hold: Top white or yellow, Front green, orange, blue or red.</li>
+        <li>Exit is at the end of that row. Poke it, then poke it again to come back to this page.</li>
         <li>Pinch the cube to carry it. Hold a pinch away from it for a moment to bring it back in front of you.</li>
-        <li>With controllers: grip near the cube carries it, the trigger away brings it back. A: tilt. B: level. Right stick: size. X: clear. Y: panel.</li>
+        <li>With controllers: grip near the cube carries it, the trigger away brings it back. A: tilt. B: level. Right stick: size; press it: hidden faces. X: clear. Y: panel. Press the left stick: exit.</li>
       </ul>
     </section>
-    <p class="note">For a test on a computer: the keys U, R, F, D, L and B turn the cube when no smart cube is connected. Shift turns it the other way.</p>
   </aside>
 </main>
 <script src="../js/engine.js"></script>
