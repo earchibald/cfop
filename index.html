@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Twistwright — learn and train the 2×2, 3×3 and 4×4</title>
-<meta name="description" content="Learn and train the 2×2, 3×3 and 4×4: beginner guides, speedsolving methods, a trainer with scrambles and a timer, and a scanner that reads your cube.">
+<title>Twistwright — learn and train the 3×3</title>
+<meta name="description" content="Learn and train the 3×3: a beginner guide, CFOP for speed, a trainer with scrambles and a timer, and a scanner that reads your cube.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://twistwright.com/">
-<meta property="og:title" content="Twistwright — learn and train the 2×2, 3×3 and 4×4">
-<meta property="og:description" content="Learn and train the 2×2, 3×3 and 4×4: beginner guides, speedsolving methods, a trainer with scrambles and a timer, and a scanner that reads your cube.">
+<meta property="og:title" content="Twistwright — learn and train the 3×3">
+<meta property="og:description" content="Learn and train the 3×3: a beginner guide, CFOP for speed, a trainer with scrambles and a timer, and a scanner that reads your cube.">
 <meta property="og:image" content="https://twistwright.com/assets/social-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -22,26 +22,15 @@
 <header class="top">
   <button id="menuBtn" aria-label="Open the menu" title="Open the menu" aria-expanded="false" aria-controls="menu">☰</button>
   <h1><svg class="mark" id="mark" viewBox="-21.17 -23.45 45.63 46.41" aria-hidden="true"></svg>Twistwright</h1>
-  <button class="puzzle" id="methodChip" aria-expanded="false" aria-controls="methodPop" title="Puzzle and method"><span class="desktop-only" id="puzzleName">3×3 ·</span><span id="methodName">CFOP</span> <span aria-hidden="true">▾</span></button>
-  <div id="methodPop" class="method-pop hidden" role="dialog" aria-label="Choose a puzzle and a method">
-    <div class="row" style="justify-content:space-between;align-items:baseline"><h3>Choose a puzzle and a method</h3></div>
+  <button class="puzzle" id="methodChip" aria-expanded="false" aria-controls="methodPop" title="Method"><span id="methodName">CFOP</span> <span aria-hidden="true">▾</span></button>
+  <div id="methodPop" class="method-pop hidden" role="dialog" aria-label="Choose a method">
+    <div class="row" style="justify-content:space-between;align-items:baseline"><h3>Choose a method</h3></div>
     <div class="mdata hidden" id="methodData"><span>Did you use Twistwright in another browser or in the Mac app? Bring your data here.</span><button type="button" class="small" id="methodPaste" title="Paste the data that you copied in the other browser with Settings &gt; Copy my data">Paste my data</button></div>
-    <h4 class="mgroup">3×3 cube</h4>
     <div class="mcards">
       <button class="mcard" data-method="beginner" title="The 3×3 step by step, layer by layer"><span class="row" style="width:100%"><i class="sec-sq" style="--sec:var(--sticker-Y)"></i><b>Beginner</b><span class="tag mcur">current</span></span><span class="muted">The eight-step method. Learn one step at a time. Solve your own cube with the app at your side.</span><span class="mnote" id="mnote-beginner"></span></button>
       <button class="mcard" data-method="cfop" title="The 3×3 the fast way: cross, F2L, OLL, PLL"><span class="row" style="width:100%"><i class="sec-sq" style="--sec:var(--sticker-O)"></i><b>CFOP</b><span class="tag mcur">current</span></span><span class="muted">Cross, F2L, OLL, PLL. For speed. Drills, case cards, a timer, and the algorithm lab.</span><span class="mnote muted">For solvers who know the beginner method</span></button>
     </div>
-    <h4 class="mgroup">2×2 cube</h4>
-    <div class="mcards">
-      <button class="mcard" data-method="mini" title="The 2×2 step by step, layer by layer"><span class="row" style="width:100%"><i class="sec-sq" style="--sec:var(--sticker-G)"></i><b>Beginner</b><span class="tag mcur">current</span></span><span class="muted">Five steps: one layer corner by corner, the yellow face, the yellow corners. Two algorithms.</span><span class="mnote" id="mnote-mini"></span></button>
-      <button class="mcard" data-method="speed2" title="The 2×2 the fast way: Ortega, then CLL"><span class="row" style="width:100%"><i class="sec-sq" style="--sec:var(--sticker-B)"></i><b>Speed</b><span class="tag mcur">current</span></span><span class="muted">Ortega: a face, OLL, PBL, twelve algorithms. Then CLL: a layer and one of 42 algorithms. Plans, drills, a timer.</span><span class="mnote muted">For solvers who know the beginner method</span></button>
-    </div>
-    <h4 class="mgroup">4×4 cube</h4>
-    <div class="mcards">
-      <button class="mcard" data-method="master" title="The 4×4 step by step, by reduction"><span class="row" style="width:100%"><i class="sec-sq" style="--sec:var(--sticker-R)"></i><b>Beginner</b><span class="tag mcur">current</span></span><span class="muted">Build the centers, pair the edges, then solve it like a 3×3, with the two parity fixes.</span><span class="mnote" id="mnote-master"></span></button>
-      <button class="mcard" data-method="speed4" title="The 4×4 the fast way: centers, edges, then CFOP with parity"><span class="row" style="width:100%"><i class="sec-sq" style="--sec:var(--sticker-W)"></i><b>Advanced</b><span class="tag mcur">current</span></span><span class="muted">Reduction with CFOP: a plan of the current scramble with parity where it falls, parity drills, and the way to Yau.</span><span class="mnote muted">For solvers who know CFOP</span></button>
-    </div>
-    <span class="muted" style="font-size:13px">Your times and history stay. Each puzzle keeps its own scramble, each method its own tab.</span>
+    <span class="muted" style="font-size:13px">Your times and history stay. Each method keeps its own tab.</span>
   </div>
   <span id="mtitle" aria-hidden="true"></span>
   <div class="spacer"></div>
@@ -94,7 +83,6 @@
       <span class="muted" style="font-size:14px">Each letter is one face. It turns a quarter turn, clockwise as you look at that face.</span>
       <dl class="keylist"><dt>U</dt><dd>top (up)</dd><dt>D</dt><dd>bottom (down)</dd><dt>F</dt><dd>front</dd><dt>B</dt><dd>back</dd><dt>R</dt><dd>right</dd><dt>L</dt><dd>left</dd></dl>
       <dl class="keylist keylist2"><dt class="mod">R'</dt><dd>the mark: counterclockwise ↺</dd><dt>R2</dt><dd>the 2: twice, a half turn</dd><dt class="rot">y</dt><dd>dashed: turn the whole cube, like a globe</dd><dt class="rot">z2</dt><dd>dashed: turn the whole cube over</dd></dl>
-      <dl class="keylist keylist2 four-only"><dt>r</dt><dd>a small letter: the inside slice next to that face</dd><dt>Rr</dt><dd>two letters: the face and the slice as one</dd></dl>
       <button class="ln-link" id="keyLesson" title="Open the lesson on the parts of the cube and the move letters">Open the Basics lesson</button>
     </div>
   </section>
@@ -110,9 +98,9 @@
       <button class="small" id="scanBtn" title="Type a scramble, or paste the letters of a cube state">Enter a scramble</button>
       <button class="small" id="camBtn" title="Read a real cube with the webcam">Scan cube</button>
       <button class="small" id="paintBtn" title="Tap the colors of a real cube onto a map">Paint cube</button>
-      <button class="small three-only" id="smartBtn" title="Read a GAN smart cube with Bluetooth">Smart cube</button>
+      <button class="small" id="smartBtn" title="Read a GAN smart cube with Bluetooth">Smart cube</button>
     </div>
-    <span class="muted desktop-only" style="font-size:13px"><span class="three-only">White up, green front. The same seed always gives the same scramble.</span><span class="two-only">White up, green front. A 2×2 mix-up uses R, U and F only. The same seed always gives the same scramble.</span><span class="four-only">White up, green front. A 4×4 mix-up turns outside faces and two layers at once (Uu, Rr, Ff). The same seed always gives the same scramble.</span></span>
+    <span class="muted desktop-only" style="font-size:13px">White up, green front. The same seed always gives the same scramble.</span>
     <div id="drillNote" class="drillnote hidden"><span>Drill: <b id="drillName"></b>. The player shows this case, not the scramble. Your scramble is kept.</span><button class="small primary" id="drillBack" title="Put your scramble back in the player">Back to scramble</button></div>
     <div id="history" class="hidden" style="width:100%;font-size:14px"></div>
   </section>
@@ -132,17 +120,6 @@
     <button data-tab="practice" data-sec="practice" title="Drill one step on its own"><span class="k">3</span><i class="sec-sq"></i>Practice</button>
     <button data-tab="progress" data-sec="progress" title="Which steps you know, and how many cubes you solved"><span class="k">4</span><i class="sec-sq"></i>Progress</button>
     <button data-tab="cheat" data-sec="cheat" title="Every algorithm of the method on one page"><span class="k">5</span><i class="sec-sq"></i>Cheat sheet</button>
-  </nav>
-  <nav class="rail" id="srail">
-    <button data-tab="ssolve" data-sec="ssolve" title="An Ortega plan, a CLL plan and the shortest solution for the scramble"><span class="k">1</span><i class="sec-sq"></i>Solve</button>
-    <button data-tab="ortega" data-sec="ortega" title="Train the Ortega cases: one face, then OLL, then PBL"><span class="k">2</span><i class="sec-sq"></i>Ortega</button>
-    <button data-tab="cll" data-sec="cll" title="Train the 42 CLL cases: the whole last layer in one algorithm"><span class="k">3</span><i class="sec-sq"></i>CLL</button>
-    <button data-tab="sref" data-sec="sref" title="Every 2×2 case with its picture and algorithm"><span class="k">4</span><i class="sec-sq"></i>Reference</button>
-  </nav>
-  <nav class="rail" id="frail">
-    <button data-tab="fsolve" data-sec="fsolve" title="A plan for the scramble: centers, edges, then CFOP"><span class="k">1</span><i class="sec-sq"></i>Solve</button>
-    <button data-tab="parity" data-sec="parity" title="Train the three parity cases of the 4×4"><span class="k">2</span><i class="sec-sq"></i>Parity</button>
-    <button data-tab="fref" data-sec="fref" title="The 4×4 algorithms with their pictures"><span class="k">3</span><i class="sec-sq"></i>Reference</button>
   </nav>
   <main class="main">
     <!-- SOLVE -->
@@ -330,15 +307,6 @@
     <section class="tab" id="tab-progress" data-sec="progress"><div class="panel"><h2>Progress</h2></div></section>
     <!-- BEGINNER: Cheat sheet (js/learn.js) -->
     <section class="tab" id="tab-cheat" data-sec="cheat"><div class="panel"><h2>Cheat sheet</h2></div></section>
-    <!-- 2x2 SPEED (js/speed-ui.js) -->
-    <section class="tab" id="tab-ssolve" data-sec="ssolve"><div class="panel"><h2>Solve</h2></div></section>
-    <section class="tab" id="tab-ortega" data-sec="ortega"><div class="panel"><h2>Ortega</h2></div></section>
-    <section class="tab" id="tab-cll" data-sec="cll"><div class="panel"><h2>CLL</h2></div></section>
-    <section class="tab" id="tab-sref" data-sec="sref"><div class="panel"><h2>Reference</h2></div></section>
-    <!-- 4x4 ADVANCED (js/speed4-ui.js) -->
-    <section class="tab" id="tab-fsolve" data-sec="fsolve"><div class="panel"><h2>Solve</h2></div></section>
-    <section class="tab" id="tab-parity" data-sec="parity"><div class="panel"><h2>Parity</h2></div></section>
-    <section class="tab" id="tab-fref" data-sec="fref"><div class="panel"><h2>Reference</h2></div></section>
   </main>
 </div>
 <footer class="foot">
@@ -351,8 +319,6 @@
 <script src="js/version.js"></script>
 <script src="js/tips.js"></script>
 <script src="js/engine.js"></script>
-<script src="js/two.js"></script>
-<script src="js/four.js"></script>
 <script src="js/state-text.js"></script>
 <script src="js/draw.js"></script>
 <script src="js/picture.js"></script>
@@ -360,11 +326,7 @@
 <script src="js/solver.js"></script>
 <script src="js/resync.js"></script>
 <script src="js/beginner.js"></script>
-<script src="js/mini.js"></script>
-<script src="js/master.js"></script>
 <script src="js/algs.js"></script>
-<script src="js/speed2.js"></script>
-<script src="js/speed4.js"></script>
 <script src="js/f2l.js"></script>
 <script src="js/scramble.js"></script>
 <script src="js/app.js"></script>
@@ -395,8 +357,6 @@
 <script src="js/start.js"></script>
 <script src="js/start-app.js"></script>
 <script src="js/levelmenu.js"></script>
-<script src="js/speed-ui.js"></script>
-<script src="js/speed4-ui.js"></script>
 <script src="js/glossary.js"></script>
 <script src="js/listen.js"></script>
 <script src="js/smart-card.js"></script>

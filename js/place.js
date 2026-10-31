@@ -28,7 +28,7 @@ function placePlayer(){const tab=typeof curTab!=='undefined'?curTab:'solve';docu
 // section again keeps it.
 function placeCrumb(){const tab=typeof curTab!=='undefined'?curTab:'solve',sec=$('#tab-'+tab);if(!sec)return;
   const b=document.querySelector(`nav.rail button[data-tab="${tab}"]`),name=b?b.textContent.replace(/^\d+/,'').trim():'';
-  const m=($('#puzzleName')?$('#puzzleName').textContent.replace(/·/,'').trim()+' ':'')+($('#methodName')?$('#methodName').textContent.trim():'');
+  const m=$('#methodName')?$('#methodName').textContent.trim():'';
   sec.dataset.crumb=name?`${m} · ${name}`:m;}
 document.addEventListener('cw:tab',()=>{placePlayer();placeCrumb();});
 document.addEventListener('cw:method',()=>{placePlayer();placeCrumb();});

@@ -2,7 +2,7 @@
 // hidden faces, the PLL side view, the F2L flat diagram, Play case animations, Save image (the
 // standalone SVG) and the painter's hold. The pure parts run in a vm; the rest in the page.
 const assert=require('assert');
-const run=require('./vm-load')('js/engine.js','js/two.js','js/draw.js');
+const run=require('./vm-load')('js/engine.js','js/draw.js');
 const count=(s,re)=>(s.match(re)||[]).length;
 
 // The shared net: 54 cells, each face in its NET_POS place.
@@ -32,7 +32,6 @@ assert.strictEqual(run(`cubePolys(${JSON.stringify(solved)},{})`).filter(p=>p.hi
 const below=run(`cubePolys(${JSON.stringify(solved)},{hidden:true,pitch:-34})`).filter(p=>p.hint).map(p=>Math.floor(p.idx/9));
 assert.ok(below.includes(0)&&!below.includes(3),'from below, the top is the hidden face');
 assert.ok(/opacity="0.6"/.test(run(`renderCube3D(${JSON.stringify(solved)},{hidden:true})`)),'the SVG carries the fade');
-assert.strictEqual(count(run(`renderCube3D(${JSON.stringify(solved)},{hidden:true,n:2})`),/<polygon/g)-count(run(`renderCube3D(${JSON.stringify(solved)},{n:2})`),/<polygon/g),12,'a 2×2 has four stickers a hidden face');
 
 // The page
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');

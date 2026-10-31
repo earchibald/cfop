@@ -70,7 +70,7 @@ A case card was a still picture.
   Reference card or row plays its algorithm in the card. The picture comes back when the pointer
   leaves.
 - Phone and desktop: the details window opens on a **Play** view that loops the
-  algorithm, for the 3×3 cases and the 2×2 speed cases. Top, Side, 3D and Flat
+  algorithm, for the 3×3 cases. Top, Side, 3D and Flat
   stay one tap away.
 - With the setting off, the details window still has the **Play** chip, last.
   The window opens on Top, 3D or the main picture, and Play starts on a tap.

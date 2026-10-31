@@ -2,7 +2,7 @@
 // light tint, shading, glare and noise, for the 2x2, the 3x3 and the 4x4. readFace must
 // return the right colors (up to a quarter turn; stage 5 finds the turn) in most trials.
 const assert=require('assert');
-const run=require('./vm-load')('js/engine.js','js/two.js','js/scan-assemble.js','js/scan.js');
+const run=require('./vm-load')('js/engine.js','js/scan-assemble.js','js/scan.js');
 const T=run(`({readFace,rotateFace,scanWidth})`);
 const {render,rnd,U}=require('./synth-render');
 

@@ -1,7 +1,7 @@
 // Stage 5: split random cubes into six faces, turn and shuffle them, and check that
 // assembleScan recovers the cube. Also check the color-confusion repairs.
 const assert=require('assert');
-const run=require('./vm-load')('js/engine.js','js/two.js','js/scan-assemble.js');
+const run=require('./vm-load')('js/engine.js','js/scan-assemble.js');
 const T=run(`({rotateFace,assembleScan,Cube,applyAlg,FACE_MOVES,cornerFacelet,edgeFacelet})`);
 let seed=12345;const rnd=n=>{seed=(seed+0x6D2B79F5)|0;let t=Math.imul(seed^(seed>>>15),1|seed);t=(t+Math.imul(t^(t>>>7),61|t))^t;return Math.floor(((t^(t>>>14))>>>0)/4294967296*n);}; // mulberry32
 
@@ -140,68 +140,8 @@ console.log(`five faces, joint read: ${joint5}/${J} recovered, ${jointAsk5} aske
 assert.ok(joint5>=J*0.55&&joint5+jointAsk5>=J-1,'joint read on five faces');
 console.log('scan-assemble: five faces ok');
 
-// ----- faces with no center: the 2x2 and the 4x4 -----
-// Any reading can be any side, at any turn. The right cube must be among the fits, however
-// the cube was held; the first fit is right in most cases.
-const F=run(`({scanSize,applyPerm,assembleFree,canonicalKey,twoFacelets,twoScramble,edgeColor})`);
-const S2=F.scanSize(2),S4=F.scanSize(4),S3=F.scanSize(3);
-function splitHeld(f,n){
-  const cells=n*n,held=F.applyPerm(f,F.scanSize(n).rots[rnd(24)]),faces=[];
-  for(let k=0;k<6;k++)faces.push({stickers:T.rotateFace(held.slice(cells*k,cells*k+cells),rnd(4)),margins:new Array(cells).fill(10)});
-  for(let k=5;k>0;k--){const j=rnd(k+1);[faces[k],faces[j]]=[faces[j],faces[k]];}
-  return faces;
-}
-const random2=i=>F.twoFacelets(T.applyAlg(new T.Cube(),F.twoScramble('scan-'+i,11)));
-// A 4x4 state: the corners of a random 3x3, every edge pair on two wings at random slots,
-// and four center tiles of each color. (js/four.js, with real 4x4 moves, is not loaded here.)
-function random4(){
-  const f3=randomCube().toFacelets(),f=new Array(96).fill(-1);
-  for(const c4 of S4.corners){const fs=c4.idx.map(i=>Math.floor(i/16)).join();const c3=S3.corners.find(c=>c.idx.map(i=>Math.floor(i/9)).join()===fs);c4.idx.forEach((i,t)=>{f[i]=f3[c3.idx[t]];});}
-  const pairs=[];for(const e of F.edgeColor)pairs.push(e,e);for(let k=pairs.length-1;k>0;k--){const j=rnd(k+1);[pairs[k],pairs[j]]=[pairs[j],pairs[k]];}
-  S4.edges.forEach((e,t)=>{const p=pairs[t],flip=rnd(2);f[e.idx[0]]=p[flip];f[e.idx[1]]=p[1-flip];});
-  const cen=[];for(let c=0;c<6;c++)for(let k=0;k<4;k++)cen.push(c);for(let k=cen.length-1;k>0;k--){const j=rnd(k+1);[cen[k],cen[j]]=[cen[j],cen[k]];}
-  let t=0;for(let i=0;i<96;i++)if(f[i]<0)f[i]=cen[t++];
-  return f;
-}
-for(const [n,make,M] of [[2,random2,300],[4,random4,120]]){
-  let first=0,among=0,amb=0;const t1=Date.now();
-  for(let i=0;i<M;i++){
-    const f=make(i),key=F.canonicalKey(f,n),r=F.assembleFree(splitHeld(f,n),n);
-    assert.ok(r.ok,`${n}x${n}: legal cube rejected: ${r.errors}`);assert.strictEqual(r.changes.length,0);
-    assert.ok(r.slots.every(Boolean),'every side has a reading');
-    if(n===2)assert.ok(r.cube&&r.cube.cp,'a 2x2 fit carries a Cube');
-    if(F.canonicalKey(r.facelets,n)===key)first++;
-    if(r.fits.some(x=>F.canonicalKey(x.facelets,n)===key))among++;
-    if(r.ambiguous)amb++;
-  }
-  console.log(`assemble ${n}x${n}: first fit right ${first}/${M}, right cube among the fits ${among}/${M}, ${amb} with more than one fit, ${((Date.now()-t1)/M).toFixed(1)} ms each`);
-  assert.strictEqual(among,M,`${n}x${n}: the right cube was not among the fits`);
-  assert.ok(first>=M*(n===2?0.93:0.99),`${n}x${n}: the first fit is wrong too often`);
-}
-// A seventh face (a misread of one of the six) is left out when the other six fit.
-let seven=0;
-for(let i=0;i<40;i++){
-  const f=random2(1000+i),faces=splitHeld(f,2);
-  const bad={stickers:faces[2].stickers.slice(),margins:[10,10,10,10]};bad.stickers[1]=(bad.stickers[1]+1)%6;faces.splice(2,0,bad);
-  const r=F.assembleFree(faces,2);
-  if(r.ok&&!r.used.includes(2)&&r.fits.some(x=>F.canonicalKey(x.facelets,2)===F.canonicalKey(f,2)))seven++;
-}
-console.log(`assemble 2x2: a misread seventh face left out ${seven}/40`);assert.ok(seven>=38);
-// One red sticker read as orange, with a low margin, is put back.
-let mended=0;
-for(let i=0;i<40;i++){
-  const f=random2(2000+i),faces=splitHeld(f,2);
-  const spots=[];faces.forEach((fc,fi)=>fc.stickers.forEach((x,p)=>{if(x===1||x===4)spots.push([fi,p]);}));
-  const [fi,p]=spots[rnd(spots.length)];faces[fi].stickers[p]=5-faces[fi].stickers[p];faces[fi].margins[p]=1;
-  const r=F.assembleFree(faces,2);
-  if(r.ok&&r.changes.length===1&&r.fits.some(x=>F.canonicalKey(x.facelets,2)===F.canonicalKey(f,2)))mended++;
-}
-console.log(`assemble 2x2: one sticker repaired ${mended}/40`);assert.ok(mended>=36);
-// Errors in plain words.
-assert.match(F.assembleFree(splitHeld(random2(5),2).slice(0,4),2).errors[0],/^Show 2 more faces\.$/);
-const wrong=splitHeld(random2(6),2);wrong[0].stickers=[0,0,0,0];wrong[1].stickers=[0,0,0,0];
-assert.match(F.assembleFree(wrong,2).errors[0],/^Each color must appear 4 times/);
-console.log('scan-assemble: free faces ok');
+const F=run(`({scanSize,applyPerm,canonicalKey,edgeColor})`);
+const S3=F.scanSize(3);
 // The stickers-in-space model reproduces the engine's corner and edge tables at n=3.
 const key3=a=>a.slice().sort((x,y)=>x-y).join();
 assert.strictEqual(S3.corners.length,8);assert.strictEqual(S3.edges.length,12);assert.strictEqual(S3.rots.length,24);

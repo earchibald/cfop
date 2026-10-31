@@ -153,17 +153,6 @@ w.addEventListener('load',async()=>{try{
   assert.deepStrictEqual($$('#viewHold .ht[aria-pressed="true"]').length,0,'no tile for green on top');
   keyCode('KeyD');assert.deepStrictEqual([...E(`seqState.moves.slice(${h0})`)],[...hm,'R'],'no second turn to the hold');
   E('PLAYER.hold=null;playerHoldDraw()');
-  // The 4×4: wide is Rr, no M. The 2×2: no wide, no M. x y z on both.
-  E("setMethod('speed4')");await sleep(50);let s0=E('seqState.moves.length');
-  assert.ok($('#vcubeWin [data-f="M"]').hidden&&!$('#vcubeWin [data-mod="wide"]').hidden,'4×4: no M, wide');
-  keyCode('KeyD',false,true);assert.strictEqual(last(),'Rr','Option+D is Rr');keyCode('KeyC');assert.strictEqual(last(),'Rr','C does nothing');
-  keyCode('Period');assert.strictEqual(last(),'y','y on the 4×4');assert.strictEqual(E('seqState.moves.length'),s0+2);
-  click($('#vcubeWin [data-mod="wide"]'));assert.strictEqual($('#vcubeWin [data-f="R"] b').textContent,'Rr','the label');click($('#vcubeWin [data-mod="wide"]'));
-  E("setMethod('speed2')");await sleep(50);s0=E('seqState.moves.length');
-  assert.ok($('#vcubeWin [data-f="M"]').hidden&&$('#vcubeWin [data-mod="wide"]').hidden,'2×2: no M, no wide');
-  keyCode('KeyD',false,true);keyCode('KeyC');assert.strictEqual(E('seqState.moves.length'),s0,'no wide turn, no M');
-  keyCode('Slash',true);assert.strictEqual(last(),"z'",'z on the 2×2');
-  E("setMethod('cfop')");await sleep(50);
   E("newScramble('live-3')");await sleep(50);assert.strictEqual($('#crossTry').value,'','a new scramble empties the plan');
   // The keypad only: the letter keys keep their shortcuts.
   click($('#vcubeWin [data-lay="pad"]'));assert.strictEqual(E("store.get('vcubeKeys')"),'pad');

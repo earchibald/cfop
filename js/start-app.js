@@ -113,7 +113,7 @@ function weakDraw(){const sec=$('#tab-solve');if(!sec)return;const body=sec;let 
   const w=weakSpots(),today=(times.solve||[]).filter(x=>new Date(x.t).toDateString()===new Date().toDateString());
   el.innerHTML=`<div><h3>Weak spots</h3>${w.length?`<ol class="weaklist">${w.map(x=>`<li><span>${esc(x.name)}</span><b class="mono">${fmt(x.ms)}</b></li>`).join('')}</ol><button class="small" id="weakDrill" title="Drill the slowest cases"${w.some(x=>x.id)?'':' disabled'}>Drill these</button>`:'<p class="muted">No case times yet. Drill cases on OLL · PLL and F2L: the slow ones show here.</p>'}
     <p class="muted st-small">From the case drills only. Stage times from a smart cube are not built yet.</p></div>
-    <div><h3>Today</h3><p>${today.length} solve${today.length===1?'':'s'}${today.length>=5?' · session ao5 '+fmt(avg(today,5)):''}</p><button class="st-link" id="weakMenu" title="Open the method menu">2×2 and 4×4 are in the menu</button></div>`;
+    <div><h3>Today</h3><p>${today.length} solve${today.length===1?'':'s'}${today.length>=5?' · session ao5 '+fmt(avg(today,5)):''}</p><button class="st-link" id="weakMenu" title="Open the method menu">The beginner method is in the menu</button></div>`;
   const d=$('#weakDrill');if(d)d.onclick=()=>{const ids=w.filter(x=>x.id).map(x=>x.id);llState.sel=new Set(ids);saveLL();goTab('ll');renderLLGroups();$('#llNext').click();};
   $('#weakMenu').onclick=e=>{e.stopPropagation();openMethodPop();};}
 // ---------- events ----------

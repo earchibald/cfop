@@ -1,7 +1,8 @@
 // ================= Scanner stage 5: assemble and repair =================
 // Pure functions, no DOM. Needs engine.js (fromFacelets, cornerFacelet, edgeFacelet,
-// cornerColor, edgeColor, COLOR_NAMES_E) and two.js (twoFromFacelets); uses four.js
-// (fourFromFacelets) when it is loaded. See docs/scanner-handoff.md.
+// cornerColor, edgeColor, COLOR_NAMES_E). The site reads the 3x3 only; the 2x2
+// (twoFromFacelets) and 4x4 (fourFromFacelets) fits still work when those modules are loaded.
+// See docs/scanner-handoff.md.
 //
 // A scanned face is {stickers:[n*n color indices], margins?:[numbers], pinned?:[bools]}.
 // stickers read left to right, top to bottom, as the camera saw them. The face may be
@@ -314,8 +315,8 @@ function assembleFree(faces,n){
     const held=bestHolding(sol.facelets,n);
     const slots=matchSlots(held,subset.map(i=>rs[i]),n).map(s=>s&&{face:subset[s.face],k:s.k});
     let cube=null;
-    if(n===2)cube=twoFromFacelets(held).cube||null;
-    else if(typeof fourFromFacelets==='function')cube=fourFromFacelets(held).cube||null;
+    if(n===2&&typeof twoFromFacelets==='function')cube=twoFromFacelets(held).cube||null;
+    else if(n===4&&typeof fourFromFacelets==='function')cube=fourFromFacelets(held).cube||null;
     return {facelets:held,cube,slots,used:subset};
   };
   const done=(fits,changes)=>Object.assign({ok:true,fits,ambiguous:fits.length>1,changes,errors:[]},fits[0]);

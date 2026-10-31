@@ -36,9 +36,7 @@ function cubePlayerTurn(m,src){const i=seqState.idx,ms=parseAlg(m);
 // Two moves of one layer as one: the move, or null when they undo each other. Undefined: two layers.
 function seqJoin(a,b){const k=m=>m.replace(/['2]$/,'');if(k(a)!==k(b))return undefined;
   const t=(cubeTabTurns(a)+cubeTabTurns(b))%4;return t?k(b)+['','','2',"'"][t]:null;}
-// A key names the face as the picture shows it (js/live.js: the hold row). The keys give 3×3 names;
-// the 4×4 writes a wide turn Rr, and a move the puzzle has not got (M on the 4×4, M and a wide turn
-// on the 2×2) does nothing.
+// A key names the face as the picture shows it (js/live.js: the hold row). The keys give 3×3 names.
 const cubePlayerScreen={el:null,keys:true,turn:m=>{const x=screenMoveFor(m,puzzleN());if(x)cubePlayerTurn(x,'screen');return x;}};
 // The player takes the virtual cube's keys while Virtual cube is the choice and no other virtual
 // cube (the getting-started pages) has them.
