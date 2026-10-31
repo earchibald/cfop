@@ -137,8 +137,8 @@ function questHoldPick(cur,place,c){
 // case's state times the moves made since the start: setup · P0⁻¹ · P, with P0 the real cube at the
 // start and P the real cube now. The moves between two pictures are the moves between the two real
 // states, so the layer turns, the list and the stage work as they do for the real cube. When the
-// picture is solved, "Solved" shows for QUEST_SOLVED_MS, then the case comes again.
-const QUEST_SOLVED_MS=2500;
+// picture is solved, "Solved" shows for QUEST_SOLVED_MS with a count of two, then the case comes again.
+const QUEST_SOLVED_MS=2000;
 // The cases there are: the two-look OLL and PLL (js/algs.js ALG_DB) and the full PLL. {id, name, alg}.
 function questDrillCases(){
   const out=[];

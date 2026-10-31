@@ -301,7 +301,8 @@ async function page(){
   for(const m of "R U R' U R U2 R'".split(' ')){r=w.applyAlg(r,[real(m)]);set(r);dev.notify(moveMsg());assert.ok(await until(()=>Q().real.equals(r)),'the cube turns '+m);}
   assert.strictEqual(Q().moves.join(' '),"R U R' U R U2 R'",'the list reads the Sune as held');
   assert.ok(Q().target.isSolved()&&Q().drill.solved,'the picture is solved');
-  assert.ok(!$('#toast').hidden&&/Sune comes again/.test($('#toast').textContent),'Solved shows: '+$('#toast').textContent);
+  assert.ok(!$('#toast').hidden&&/Sune in 2…/.test($('#toast').textContent),'Solved shows a count: '+$('#toast').textContent);
+  assert.ok(await until(()=>/Sune in 1…/.test($('#toast').textContent)),'the count goes to 1: '+$('#toast').textContent);
   assert.strictEqual($('#drillNote').textContent,'1 solved','one solved');
   assert.ok(await until(()=>!Q().drill.solved),'then the case comes again');
   assert.ok($('#toast').hidden&&Q().shown.equals(D.setup)&&Q().drill.p0.equals(r)&&!Q().moves.length,'the Sune, from the cube as it is now, and an empty list');

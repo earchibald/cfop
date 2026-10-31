@@ -20,8 +20,8 @@
 // names until Drill mode ends. A name said ("T perm", "Sune") drills that case; questDrill('T perm')
 // does the same in code. The picture starts as the case, set up as the cube is held, whatever state
 // the real cube is in, and each turn of the real cube turns the picture. Solved in the picture,
-// "Solved" shows for 2.5 s, then the case comes again. The end of the drill puts the real cube back
-// in the picture.
+// "Solved" shows for 2 s with a count ("Sune in 2…", "Sune in 1…"), then the case comes again. The
+// end of the drill puts the real cube back in the picture.
 //
 // Storage: cw:ganMac (the site's map from cube name to MAC address), cw:ganFix (the site's
 // correction for a cube whose count is off), cw:questCube (the last cube's name, connected by
@@ -77,32 +77,35 @@ function questDrillMode(on){
 // the real cube back in the picture.
 function questDrill(name){
   const c=name?questDrillFind(name)||questDrillFind(QUEST_DRILL_FIRST):null;
-  if(qs.drill)clearTimeout(qs.drill.timer);
+  if(qs.drill){clearTimeout(qs.drill.timer);clearTimeout(qs.drill.tick);}
   if(!c){qs.drill=null;questView(qs.real,true);questDrillDraw();return;}
   questSet('cw:questDrill',c.id);
-  qs.drill={c,setup:null,p0:null,solved:false,reps:0,timer:0};
+  qs.drill={c,setup:null,p0:null,solved:false,reps:0,timer:0,tick:0,count:2};
   questDrillAgain();
 }
 // The case again: from the real cube as it is now, set up as the cube is held now.
 function questDrillAgain(){
   const d=qs.drill;if(!d)return;
-  clearTimeout(d.timer);d.timer=0;d.solved=false;
+  clearTimeout(d.timer);clearTimeout(d.tick);d.timer=d.tick=0;d.solved=false;
   d.setup=questDrillSetup(d.c.alg,qs.hold);d.p0=qs.real;
   questClear();questView(d.setup,true);questDrillDraw();
 }
-// Solved in the picture: "Solved" for qs.solvedMs, then the case again.
+// Solved in the picture: "Solved" for qs.solvedMs and a count to the case again ("Sune in 2…",
+// "Sune in 1…", half the time each), then the case again.
 function questDrillCheck(){
   const d=qs.drill,c=qs.target||qs.shown;
   if(!d||d.solved||!c||!c.isSolved())return;
-  d.solved=true;d.reps++;d.timer=setTimeout(questDrillAgain,qs.solvedMs);questDrillDraw();
+  d.solved=true;d.reps++;d.count=2;
+  d.timer=setTimeout(questDrillAgain,qs.solvedMs);d.tick=setTimeout(()=>{d.count=1;questDrillDraw();},qs.solvedMs/2);questDrillDraw();
 }
+function questDrillCount(){const d=qs.drill;return `${d.c.name} in ${d.count}…`;}
 function questDrillWords(){const d=qs.drill;return d?`Drill: ${d.c.name} · ${d.reps} solved`:'';}
 function questDrillDraw(){
   const d=qs.drill,b=$('#drill');
   b.setAttribute('aria-pressed',String(!!d));b.textContent=d?'Stop drill':'Drill mode';
   $('#drillNote').textContent=d?d.reps+' solved':'';
   $('#toast').hidden=!(d&&d.solved);
-  if(d)$('#toastSub').textContent=`${d.c.name} comes again.`;
+  if(d&&d.solved)$('#toastSub').textContent=questDrillCount();
 }
 function questAdd(m){
   // A merge changes only the last move, and keeps its face: the colors so far stay.
@@ -471,7 +474,7 @@ function questXRFrame(now,frame){
     model,hidden:qs.hidden?questHiddenFaces(model,x.head):null,extras,
     panel:x.panel?{model:m4Trs(v3Add(x.pos,[0,x.edge*0.85+0.08,0]),x.face,[0.3,0.117,1]),lines:questPanelLines()}:null,
     // a drill's Solved: a card in front of the cube, clear of it as it tilts
-    toast:qs.drill&&qs.drill.solved?{model:m4Trs(v3Add(x.pos,quatApply(x.face,[0,0,x.edge*0.9])),x.face,[0.24,0.09,1]),lines:{text:'Solved!',sub:qs.drill.c.name+' comes again.'}}:null,
+    toast:qs.drill&&qs.drill.solved?{model:m4Trs(v3Add(x.pos,quatApply(x.face,[0,0,x.edge*0.9])),x.face,[0.24,0.09,1]),lines:{text:'Solved!',sub:questDrillCount()}}:null,
     bar:{model:m4Mul(m4Trs(questBarCenterNow(x),x.face,1),m4Trs([(box.x0+box.x1)/2,(box.y0+box.y1)/2,0],null,[box.x1-box.x0,box.y1-box.y0,1])),rects,
       buttons:buttons.map((b,i)=>Object.assign({hover:i===x.hover,lit:i===x.lit&&x.t-x.litT<250},b))}};
   const layer=frame.session.renderState.baseLayer,gl=qs.gl;

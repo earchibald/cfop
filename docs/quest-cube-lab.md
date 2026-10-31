@@ -50,9 +50,9 @@ keys: the cube is the real one, or a drill.
 
 Drill mode (the third row in the session, a chip on the page) puts a case on the picture, whatever
 state the real cube is in: the last case drilled (`cw:questDrill`), Sune the first time. Each turn
-of the real cube turns the picture. When the picture is solved, "Solved!" shows for 2.5 s (a card
-in front of the cube in the session), the count goes up, and the case comes again, from the real
-cube as it is then. Stop drill puts the real cube back in the picture.
+of the real cube turns the picture. When the picture is solved, "Solved!" shows for 2 s (a card
+in front of the cube in the session) with a count to the next one, "Sune in 2…" then "Sune in 1…",
+the count of solves goes up, and the case comes again, from the real cube as it is then. Stop drill puts the real cube back in the picture.
 
 ### The voice
 
