@@ -1,5 +1,7 @@
-// ================= Quest cube lab: the drill's voice =================
-// Drill mode listens for case names until it ends. A two-look OLL or PLL case, or one of the full PLL,
+// ================= Quest cube lab: the voice =================
+// Listen (questListen) turns the voice on until it is pressed again; Drill mode turns it on too, until
+// the drill ends (unless Listen turned it on). A case name said with no drill starts Drill mode on
+// that case. A two-look OLL or PLL case, or one of the full PLL,
 // said by name ("T perm", "Sune", "headlights", "U a perm") drills that case: the picture starts as the
 // case, set up as held (questDrill in quest.js). Said again, or "again" or "next", the case is set up
 // again. "Stop drill" ends Drill mode. The Smart cube tab's cube commands work here too
@@ -117,10 +119,16 @@ function questHoldWords(h){return `${QUEST_COLOR_NAMES[h.top]} up, ${QUEST_COLOR
 
 // ----- the microphone -----
 const QUEST_VOICE_IDLE='Say a case name, such as "T perm" or "Sune", or a hold, such as "yellow up".';
-// on: Drill mode listens. engine: 'speech' or 'vosk'. line and heard: what the panel and the page say.
-const QV={on:false,engine:null,rec:null,model:null,modelP:null,kaldi:null,ctx:null,stream:null,node:null,src:null,
+// on: the voice listens. listen: Listen turned it on, so the end of a drill leaves it on. engine: 'speech' or 'vosk'. line and heard: what the panel and the page say.
+const QV={on:false,listen:false,engine:null,rec:null,model:null,modelP:null,kaldi:null,ctx:null,stream:null,node:null,src:null,
   choices:null,line:'',heard:'',catalog:null,grammar:null,loadMs:120000};
 function questVoiceOn(){return QV.on;}
+// Listen: the voice on or off, with or without a drill.
+function questListen(on){QV.listen=!!on;if(on)questVoiceStart();else questVoiceStop();}
+function questListenDraw(){
+  const b=typeof document!=='undefined'&&document.getElementById('listen');
+  if(b){b.setAttribute('aria-pressed',String(QV.on));b.textContent=QV.on?'Stop listening':'Listen';}
+}
 function questVoiceEngine(){
   const want=typeof location!=='undefined'?new URLSearchParams(location.search).get('voice'):null;
   if(want==='vosk'||want==='speech'||want==='native')return want;
@@ -137,12 +145,12 @@ function questVoicePre(){return QV.on?'Listening. ':'';}
 function questVoiceStart(){
   if(QV.on)return;
   QV.on=true;QV.choices=null;QV.catalog=QV.catalog||questVoiceCatalog();
-  QV.engine=questVoiceEngine();
+  QV.engine=questVoiceEngine();questListenDraw();
   if(QV.engine!=='native'&&typeof questInApp==='function'&&questInApp()){questVoiceSay('This Quest app does not hear case names. Install the new Twistwright Quest app, or use the Quest Browser for the voice.');return;}
   if(QV.engine==='native')questVoiceNative();else if(QV.engine==='speech')questVoiceSpeech();else questVoiceVosk();
 }
 function questVoiceStop(){
-  QV.on=false;QV.choices=null;
+  QV.on=false;QV.listen=false;QV.choices=null;questListenDraw();
   const rec=QV.rec;QV.rec=null;if(rec)try{rec.onend=null;rec.stop();}catch(e){}
   questVoiceRelease();
   questVoiceSay('');
@@ -166,7 +174,7 @@ function questVoiceSpeech(){
       if(r.isFinal)questVoiceHeard(listenFresh(alts,0));else questVoiceSay(questVoicePre()+'Heard so far.',alts[0]);}};
   rec.onerror=e=>{
     if(QV.rec!==rec)return;
-    if(e.error==='not-allowed'||e.error==='service-not-allowed'){QV.rec=null;rec.onend=null;questVoiceSay('The microphone is blocked. Allow it for this page in the browser settings, then start Drill mode again.');return;}
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'){QV.rec=null;rec.onend=null;questVoiceSay('The microphone is blocked. Allow it for this page in the browser settings, then press Listen again.');return;}
     if(e.error==='network'||e.error==='language-not-supported'){QV.rec=null;rec.onend=null;try{rec.stop();}catch(x){}QV.engine='vosk';questVoiceVosk();}};
   rec.onend=()=>{if(QV.on&&QV.rec===rec)setTimeout(()=>{if(QV.on&&QV.rec===rec)try{rec.start();}catch(e){}},250);};
   try{rec.start();}catch(e){QV.rec=null;QV.engine='vosk';questVoiceVosk();return;}
@@ -194,11 +202,11 @@ function questVoiceNative(){
     if(ev.type==='ready'){if(!rec.ready){rec.ready=true;questVoiceSay(questVoicePre()+QUEST_VOICE_IDLE);}}
     else if(ev.type==='partial'&&texts.length)questVoiceSay(questVoicePre()+'Heard so far.',texts[0]);
     else if(ev.type==='final'&&texts.length)questVoiceHeard(listenFresh(texts,0));
-    else if(ev.type==='blocked'){QV.rec=null;questVoiceSay('The microphone is blocked. Allow it for Twistwright in the headset settings, then start Drill mode again.');}
+    else if(ev.type==='blocked'){QV.rec=null;questVoiceSay('The microphone is blocked. Allow it for Twistwright in the headset settings, then press Listen again.');}
     else if(ev.type==='error')questVoiceSay(questVoicePre()+'The voice stopped: '+(ev.msg||'no reason given')+'. It starts again by itself.');
   };
   let r='none';try{r=S.start(JSON.stringify({lang:'en-US',bias:questVoiceBias(QV.catalog)}));}catch(e){}
-  if(r!=='ok'){QV.rec=null;questVoiceSay('This headset gives the app no speech service. The drill works without voice.');return;}
+  if(r!=='ok'){QV.rec=null;questVoiceSay('This headset gives the app no speech service. Drill mode and the buttons work without voice.');return;}
   questVoiceSay('Asking for the microphone.');
 }
 
@@ -239,7 +247,7 @@ async function questVoiceVosk(){
   }catch(e){
     questVoiceRelease();if(!QV.on)return;
     const why=e.why||(e.name==='NotAllowedError'||e.name==='SecurityError'?'blocked':'');
-    questVoiceSay(why==='blocked'?'The microphone is blocked. Allow it for this page in the browser settings, then start Drill mode again.':
+    questVoiceSay(why==='blocked'?'The microphone is blocked. Allow it for this page in the browser settings, then press Listen again.':
       why==='model'?'No speech model here. On the Mac, run quest/run.sh (or node scripts/quest-voice.js), then reload.':
       why==='slow'?'The speech model did not load. Stop the drill and start it again.':
       why==='mic'?'This browser gives no microphone. The drill works without voice.':'Voice did not start: '+e.message);
@@ -252,7 +260,7 @@ function questVoiceClean(t){return String(t||'').replace(/\[unk\]/g,' ').replace
 function questVoiceHeard(texts){
   if(!QV.on||!texts.length)return;
   const heard=texts[0],a=questVoiceAction(texts,QV.choices,questVoiceSection(qs.drill&&qs.drill.c),QV.catalog);
-  if(a.cmd==='stop'){questDrillMode(false);return;}
+  if(a.cmd==='stop'){questDrillMode(false);if(QV.on)questVoiceSay(questVoicePre()+'The drill is stopped. '+QUEST_VOICE_IDLE,heard);return;}
   if(a.cube){questVoiceSay(questVoicePre()+questVoiceCube(a.cube),heard);return;}
   if(a.cmd==='again'){if(qs.drill)questDrillAgain();questVoiceSay(questVoicePre()+(qs.drill?qs.drill.c.name+' again.':QUEST_VOICE_IDLE),heard);return;}
   const e=a.pick||a.hit;

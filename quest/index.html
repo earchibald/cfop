@@ -56,7 +56,8 @@ label.chk{display:flex;align-items:center;gap:10px;min-height:46px;cursor:pointe
 button.chip[aria-pressed="true"]{background:#1d3b2a;border-color:var(--ok)}
 code{font-family:var(--mono);font-size:.92em}
 /* In the Quest app (quest/native.js) the app draws the cube beside this panel: no preview, no WebXR. */
-body.native #view,body.native .xronly,body.native #hidden{display:none}
+body.native #view,body.native .xronly{display:none}
+body:not(.native) .apponly{display:none}
 </style>
 </head>
 <body>
@@ -86,6 +87,7 @@ body.native #view,body.native .xronly,body.native #hidden{display:none}
       <button id="drill" class="chip" aria-pressed="false" title="Drill mode: the picture starts as a case, and your turns turn it. Solved, the case comes again. Say a case name, such as T perm or Sune, to drill that one. Press again to see your own cube.">Drill mode</button>
       <button id="scramble" class="chip" title="A new scramble on the picture, whatever your cube shows. Your turns turn it. Solved, another comes.">New scramble</button>
       <button id="real" class="chip" title="Show your own cube again, its stickers as they are now" disabled>Real cube state</button>
+      <button id="listen" class="chip" aria-pressed="false" title="The voice: say a case name to drill it, a hold such as yellow up, or clear moves. Press again to stop listening.">Listen</button>
     </div>
     <p id="voice" class="voicenote" aria-live="polite" hidden></p>
     <div class="moves" id="moves" aria-live="polite"></div>
@@ -121,9 +123,20 @@ body.native #view,body.native .xronly,body.native #hidden{display:none}
       <label class="chk" title="The cube on the screen tilts with the cube in your hands"><input type="checkbox" id="tilt"> Tilt with my cube</label>
       <div class="btns">
         <button id="level" title="Take the cube as you hold it now as square to the front">Level</button>
+        <button id="here" class="apponly" title="Bring the cube and this panel back in front of you">Bring here</button>
       </div>
     </section>
-    <section>
+    <section class="apponly">
+      <h2>In the app</h2>
+      <ul class="keys">
+        <li>Pinch the cube to carry it. Pinch the bar under this panel to carry the panel. Each goes where you put it.</li>
+        <li>The buttons under the cube go with it: Tilt, Level, Clear, Hidden faces, Smaller, Larger, Hide panel; the hold; Bring here; Drill mode, New scramble, Real cube state and Listen.</li>
+        <li>Poke a button with a fingertip, or point at it and pinch.</li>
+        <li>Listen turns the voice on. Say a case name to drill it, such as "T perm" or "Sune", a hold such as "yellow up", "x prime", "clear moves" or "reset". Drill mode turns the voice on too.</li>
+        <li>Bring here puts the cube and this panel back in front of you.</li>
+      </ul>
+    </section>
+    <section class="xronly">
       <h2>In the headset</h2>
       <ul class="keys">
         <li>Your hands do it all, so you keep the cube in your hands. One free hand is enough.</li>

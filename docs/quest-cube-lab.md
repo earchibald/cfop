@@ -123,24 +123,44 @@ good place to reach.
 
 `quest/spatial/` is Twistwright as a Horizon OS app, built with Meta's Spatial SDK (0.14.0, Kotlin,
 Gradle). It needs no Mac and no browser: the cube over the headset's Bluetooth, the voice through
-the headset's own speech service, and the cube in the room in passthrough.
+the headset's own speech service, and the cube in a dark room.
 
+- **No passthrough** (from app 0.3.0): a dark room with a floor (`setBackfillColor`, a floor box), so
+  the real cube in the hands is not seen beside the one drawn.
+- **Hands first, through the Interaction SDK** (`IsdkFeature`): a fingertip pokes a panel's buttons, a
+  pinch on the cube carries it, and the bar under the page panel (the Interaction SDK's grab handle)
+  carries the panel. The two are carried apart and stay where they are put. Bring here (on the rows
+  under the cube and on the page) puts the cube 42 cm in front of the head and the panel to its
+  left; the app does it once at the start, when the head is tracked.
 - **The page is a panel.** The Quest page (`quest/index.html`, built in and served by `Pages.java`
   as the WebView app serves it) floats in the room as a panel, and keeps all the logic: the cube's
   link (`js/bridge.js` over `BleBridge.java`), the moves, Drill mode, New scramble, the stage, the
-  hold, the matcher. Hands work on it as on any panel: point or poke. Its grab bar carries it.
-- **The app draws the cube** beside the panel, and it moves with the panel (`CubeView.kt`): 26 cubies
-  and 54 stickers as boxes, the layer of a move part way through its turn. `quest/native.js` sends
-  the geometry once (`questNativeGeometry`) and a frame at each change of the picture
-  (`questNativeFrame`: the facelets before the move, the move, how far it has turned, the tilt or
-  the hold). The page's own 3D preview, the WebXR buttons and Hidden faces are off in the app
-  (`body.native`). The page's frame is right-handed with z toward you, the scene's has z away from
-  you; `CubeView.scene()` turns each pose over z.
+  hold, the matcher, what each button does.
+- **The app draws the cube** by itself (`CubeView.kt`): 26 cubies and 54 stickers as boxes, the layer
+  of a move part way through its turn, and with Hidden faces the faces turned away from the head on
+  mirrors out past them, as `questMirror` places them (the head from `scene.getViewerPose()`).
+  `quest/native.js` sends the geometry once (`questNativeGeometry`, with the mirrors' sizes) and a
+  frame at each change (`questNativeFrame`: the facelets before the move, the move, how far it has
+  turned, the tilt or the hold, Hidden faces, the cube's edge, whether the page panel shows, and the
+  buttons). The cube's root is an invisible box that the grab takes. The page's own 3D preview and
+  the WebXR buttons are off in the app (`body.native`). The page's frame is right-handed with z
+  toward you, the scene's has z away from you; `CubeView.scene()` turns each pose over z.
+- **The session's buttons hang under the cube** and go with it (`CubeBar.kt`, a second panel): the
+  page's `questBarButtons` in the app's form, `app: true` (no Exit, Bring here). Tilt, Level, Clear,
+  Hidden faces, Smaller, Larger, Hide panel; the hold's tiles and Bring here; Drill mode, New
+  scramble, Real cube state and Listen. A press goes back to the page as `questNativeDo(id)`, the
+  same as a poke in the WebXR session (`questBarDo`, with `qs.native` in place of `qs.xr`). The
+  rows move down clear of the mirrors while the hidden faces show. Both panels are drawn as meshes
+  in the scene (`PanelRenderMode.Mesh`): in front of or behind the cube and the hands as they are, and
+  in the headset's screenshots (a layer panel shows black in them).
+- **Listen** (page 0.10.0, on the page and the rows, in the browser too) turns the voice on without a
+  drill: a case name starts Drill mode on that case, and "stop drill" leaves the voice on. Drill
+  mode still turns the voice on by itself, and its end turns it off unless Listen did.
 - **The voice** (`QuestSpeech.kt`, `window.TwistwrightSpeech`): Android's `SpeechRecognizer` on
   the headset's speech service. Horizon OS has one: on a Quest 3 (Android 14, build UP1A.231005.007.A1, seen 2026-10-30),
   `com.oculus.systemintelligence` registers "HzOS Speech On Device Recognition Service" as the
-  default. The app asks for the microphone when Drill mode first starts, then listens one sentence at
-  a time while Drill mode is on, biased to the case names and the commands
+  default. The app asks for the microphone when the voice first starts, then listens one sentence at
+  a time while it is on, biased to the case names and the commands
   (`EXTRA_BIASING_STRINGS`, `questVoiceBias`). The page reads the alternatives with the same matcher
   as the other two recognizers (`questVoiceNative` in `quest/voice.js`). If the default service will
   not bind, it falls back to the on-device recognizer.
@@ -168,9 +188,13 @@ the headset is getting it. If it never comes, look in the headset's settings for
 dictation, which may fetch it.
 
 Checked: the build; the app installs over the WebView app and starts; `test/quest.js` drives the
-page with a fake app (the geometry, the frames, the voice's events). Not yet seen on a headset: the
-first sentence heard, the panel and the cube's place and size, the turn of the cube's frame, the cube
-over Horizon OS Bluetooth. (`adb shell am broadcast -a com.oculus.vrpowermanager.prox_close` wakes a
+page with a fake app (the geometry, the frames, the rows of buttons and their presses, Listen, the
+voice's events). On the headset (2026-10-30, unworn, through `chrome://inspect` and the headset's
+screenshot service, `adb shell am startservice -n com.oculus.metacam/.capture.CaptureService -a
+TAKE_SCREENSHOT`, files in `/sdcard/Oculus/Screenshots/`): the dark room and floor, the cube facing
+the user as held, the page panel and the rows under the cube, Larger and Smaller, Hide panel, the
+mirrors of the hidden faces. Not yet tried by hand: a pinch carrying the cube and the panel's handle,
+a poke on the rows, the first sentence heard, the cube over Horizon OS Bluetooth. (`adb shell am broadcast -a com.oculus.vrpowermanager.prox_close` wakes a
 headset nobody wears, but a launch waits while a Guardian dialog shows.)
 
 ## The Quest app (WebView): the first try

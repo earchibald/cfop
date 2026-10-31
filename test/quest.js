@@ -89,8 +89,11 @@ function pure(){
   // the hands: the rows of buttons and the poke
   const BAR=run('QUEST_BAR'),hit=run('questBarHit'),poke=run('questPoke'),free=run('questHandFree');
   const buttons=run('questBarButtons')({tilt:true,moves:3,panel:true,hidden:false,top:0,front:2}),R6=run('questBarLayout')(buttons);
-  assert.strictEqual(buttons.map(b=>b.id).join(),'tilt,level,clear,hidden,smaller,larger,panel,top-white,top-yellow,front-green,front-orange,front-blue,front-red,exit,drill,scramble,real');
-  assert.ok(buttons.slice(-3).every(b=>b.row===2)&&buttons[buttons.length-3].label==='Drill mode','the third row starts a drill');
+  assert.strictEqual(buttons.map(b=>b.id).join(),'tilt,level,clear,hidden,smaller,larger,panel,top-white,top-yellow,front-green,front-orange,front-blue,front-red,exit,drill,scramble,real,listen');
+  assert.ok(buttons.slice(-4).every(b=>b.row===2)&&buttons[buttons.length-4].label==='Drill mode','the third row starts a drill');
+  assert.ok(buttons.find(b=>b.id==='listen').label==='Listen'&&run('questBarButtons')({listen:true}).find(b=>b.id==='listen').label==='Stop listening','Listen, and Stop listening while it hears');
+  const app=run('questBarButtons')({app:true}).map(b=>b.id);
+  assert.ok(!app.includes('exit')&&app.includes('here'),'in the app: Bring here, no Exit');
   assert.ok(buttons.find(b=>b.id==='real').off&&!run('questBarButtons')({over:true}).find(b=>b.id==='real').off,'Real cube state: off on the real cube');
   assert.strictEqual(run('questBarButtons')({drill:true}).find(b=>b.id==='drill').label,'Stop drill','and stops it');
   assert.ok(buttons.find(b=>b.id==='top-white').on&&buttons.find(b=>b.id==='front-green').on&&!buttons.find(b=>b.id==='front-red').on,'the hold\'s tiles are on');
@@ -447,7 +450,7 @@ async function xr(){
   tip('left',[0,1.1,-0.3]);tip('right',[0.3,1.3,-0.3]);step();
   const sc=()=>scenes[scenes.length-1];
   assert.ok(/Poke a button/.test(sc().panel.lines.hint),'the hint speaks to the hands: '+sc().panel.lines.hint);
-  assert.ok(sc().bar&&sc().bar.buttons.length===17,'the rows of buttons are drawn');
+  assert.ok(sc().bar&&sc().bar.buttons.length===18,'the rows of buttons are drawn');
   assert.strictEqual(sc().bar.buttons.slice(0,7).map(b=>b.id).join(),'tilt,level,clear,hidden,smaller,larger,panel');
   const ids=sc().bar.buttons.map(b=>b.id),at=id=>ids.indexOf(id);
   const barAt=(i,z)=>{const c=w.questBarCenterNow(x),r=sc().bar.rects[i];return [c[0]+r.x,c[1]+r.y,c[2]+z];};
@@ -612,7 +615,7 @@ async function android(){
 function fakeNative(opts={}){
   const f={geo:[],frames:[],starts:[],stops:0,w:null};
   f.install=w=>{f.w=w;
-    w.TwistwrightQuest={geometry(j){assert.strictEqual(typeof j,'string');f.geo.push(JSON.parse(j));},frame(j){assert.strictEqual(typeof j,'string');f.frames.push(JSON.parse(j));}};
+    w.TwistwrightQuest={geometry(j){assert.strictEqual(typeof j,'string');f.geo.push(JSON.parse(j));},frame(j){assert.strictEqual(typeof j,'string');f.frames.push(JSON.parse(j));},here(){if(f.here)f.here();}};
     w.TwistwrightSpeech={start(j){f.starts.push(JSON.parse(j));return opts.none?'none':'ok';},stop(){f.stops++;}};};
   f.ev=e=>f.w.questSpeechEvent(e);
   return f;
@@ -635,6 +638,27 @@ async function spatial(){
   assert.ok(await until(()=>n.frames.some(f=>f.m==='R'&&f.t>0&&f.t<1)),'R part way through');
   assert.ok(await until(()=>{const f=n.frames[n.frames.length-1];return f.m===''&&f.f===R.toFacelets().join('');}),'then the state after R');
   const k=n.frames.length;await sleep(80);assert.strictEqual(n.frames.length,k,'no frame while nothing changes');
+  // the rows of buttons under the app's cube, and what a press on them does
+  const last=()=>n.frames[n.frames.length-1],btn=id=>last().bar.find(b=>b.id===id);
+  assert.ok(g.faces===undefined&&g.mirror&&g.mirror.dist===2.4&&g.mirror.reach>4,'the mirrors\' sizes go with the geometry');
+  assert.ok(last().bar&&btn('here')&&!btn('exit')&&btn('listen'),'the app\'s rows: Bring here, Listen, no Exit');
+  assert.ok(last().panel===true&&last().edge===0.12,'the panel shows; the cube is 12 cm');
+  w.questNativeDo('larger');assert.ok(await until(()=>last().edge===0.15),'Larger: the cube grows');
+  w.questNativeDo('smaller');assert.ok(await until(()=>last().edge===0.12),'Smaller');
+  w.questNativeDo('panel');assert.ok(await until(()=>last().panel===false&&btn('panel').label==='Show panel'),'Hide panel');
+  w.questNativeDo('panel');assert.ok(await until(()=>last().panel===true),'Show panel');
+  w.questNativeDo('hidden');assert.ok(await until(()=>last().hidden&&btn('hidden').on),'Hidden faces');
+  assert.ok(!$('#hidden').hidden&&w.getComputedStyle($('#hidden')).display!=='none'&&$('#hidden').getAttribute('aria-pressed')==='true','the page\'s Hidden faces too');
+  w.questNativeDo('hidden');w.questNativeDo('top-yellow');assert.ok(await until(()=>btn('top-yellow').on),'a hold tile');w.questNativeDo('top-white');
+  let heres=0;n.here=()=>heres++;w.questNativeDo('here');$('#here').click();assert.strictEqual(heres,2,'Bring here goes to the app, from the rows and from the page');
+  // Listen: the voice without a drill; a case name starts one; the end of the drill keeps listening
+  w.questNativeDo('listen');assert.ok(n.starts.length===1&&!Q().drill&&$('#listen').textContent==='Stop listening','Listen starts the voice, with no drill');
+  assert.ok(await until(()=>btn('listen').on),'and the rows show it');
+  n.ev({type:'ready'});n.ev({type:'final',texts:['sune']});assert.ok(Q().drill&&Q().drill.c.name==='Sune','a case name starts Drill mode');
+  n.ev({type:'final',texts:['stop drill']});assert.ok(!Q().drill&&n.stops===0&&/drill is stopped/.test($('#voice').textContent),'"stop drill": the voice listens on');
+  n.ev({type:'final',texts:['yellow up']});assert.ok(Q().hold.top===3,'a hold with no drill');n.ev({type:'final',texts:['white up']});
+  $('#listen').click();assert.ok(n.stops===1&&$('#listen').textContent==='Listen','Stop listening');
+  n.starts.length=0;n.stops=0;
   // the voice
   $('#drill').click();
   assert.strictEqual(n.starts.length,1,'Drill mode starts the app\'s recognizer');

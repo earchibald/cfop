@@ -211,10 +211,12 @@ function questPanel(s){
 // fingertip that goes through a button's face presses it once. Sizes in meters: w and h a button,
 // tile a hold tile (square), gap between two, group between two groups.
 const QUEST_BAR={w:0.05,h:0.04,tile:0.04,gap:0.007,group:0.024,hover:0.03,armed:0.012,deep:0.04};
-// A third row has the drill (Drill mode, or Stop drill while one runs), New scramble, and Real cube
-// state (off while the picture is the real cube).
+// A third row has the drill (Drill mode, or Stop drill while one runs), New scramble, Real cube
+// state (off while the picture is the real cube) and Listen (the voice, with or without a drill).
+// In the Quest app (quest/native.js) the row has no Exit (the headset's own menu leaves the app)
+// and has Bring here: the cube and the panel come back in front of the user.
 // s: {tilt, moves (a count), panel, hidden, top, front (the hold's colors), exit (armed), drill
-// (one runs), over (a drill or a scramble is on the picture)}.
+// (one runs), over (a drill or a scramble is on the picture), listen (the voice is on), app}.
 function questBarButtons(s){
   const tile=(place,c)=>({id:(place==='up'?'top-':'front-')+QUEST_COLOR_NAMES[c],label:place==='up'?'Top':'Front',row:1,tile:true,
     color:QUEST_HEX[c],on:(place==='up'?s.top:s.front)===c,group:c===QUEST_FRONTS[0]});
@@ -227,10 +229,11 @@ function questBarButtons(s){
     {id:'larger',label:'Larger',row:0},
     {id:'panel',label:s.panel?'Hide panel':'Show panel',row:0},
     ...QUEST_TOPS.map(c=>tile('up',c)),...QUEST_FRONTS.map(c=>tile('front',c)),
-    {id:'exit',label:s.exit?'Poke again':'Exit',row:1,group:true,warn:!!s.exit},
+    s.app?{id:'here',label:'Bring here',row:1,group:true}:{id:'exit',label:s.exit?'Poke again':'Exit',row:1,group:true,warn:!!s.exit},
     {id:'drill',label:s.drill?'Stop drill':'Drill mode',on:!!s.drill,row:2},
     {id:'scramble',label:'New scramble',row:2},
     {id:'real',label:'Real cube state',off:!s.over,row:2},
+    {id:'listen',label:s.listen?'Stop listening':'Listen',on:!!s.listen,row:2,group:true},
   ];
 }
 // Where each button sits, in the row's frame (x right, y up, from the middle of the first row):

@@ -17,7 +17,7 @@
 // In the session both are on the second row of buttons under the cube, with Exit.
 //
 // Drill mode (questDrillMode): a drill of a case, and the voice (quest/voice.js) listens for case
-// names until Drill mode ends. A name said ("T perm", "Sune") drills that case; questDrill('T perm')
+// names until Drill mode ends (Listen keeps it on after). A name said ("T perm", "Sune") drills that case; questDrill('T perm')
 // does the same in code. The picture starts as the case, set up as the cube is held, whatever state
 // the real cube is in, and each turn of the real cube turns the picture. Solved in the picture,
 // "Solved" shows for 2 s with a count ("Sune in 2…", "Sune in 1…"), then the case comes again. The
@@ -72,7 +72,7 @@ function questDrilled(real){
 // Off: the voice stops and the real cube comes back.
 function questDrillMode(on){
   if(on){questDrill(questGet('cw:questDrill',QUEST_DRILL_FIRST));questVoiceStart();}
-  else{questVoiceStop();questDrill(null);}
+  else{if(!QV.listen)questVoiceStop();questDrill(null);}
 }
 // Start a drill of a case (an id or a name: 'Sune', 'T perm'), or end it with none. The end puts
 // the real cube back in the picture.
@@ -422,21 +422,22 @@ function questSize(x,k){x.edge=Math.max(0.057,Math.min(0.6,x.edge*k));questSet('
 // What a button of the rows does: the same as its controller button, or the page's. Exit asks for
 // a second poke within QUEST_EXIT_MS, so a stray fingertip does not end the session.
 function questBarDo(id){
-  const x=qs.xr,hold=id.match(/^(top|front)-(\w+)$/);
+  const x=qs.xr||qs.native,hold=id.match(/^(top|front)-(\w+)$/);
   if(id==='tilt')questTilt(!qs.tilt);else if(id==='level')questLevel();else if(id==='clear')questClear();
   else if(id==='smaller')questSize(x,0.8);else if(id==='larger')questSize(x,1.25);else if(id==='panel')x.panel=!x.panel;
   else if(id==='hidden')questHidden(!qs.hidden);
   else if(id==='drill')questDrillMode(!questDrilling());else if(id==='scramble')questScramble();else if(id==='real')questRealState();
+  else if(id==='listen')questListen(!questVoiceOn());
   else if(hold)questHoldTile(hold[1]==='top'?'up':'front',QUEST_COLOR_NAMES.indexOf(hold[2]));
   else if(id==='exit'){if(questExitArmed(x))questExit();else x.exitT=x.t;}
-  if(id!=='exit'&&x)x.exitT=0;
+  if(id!=='exit'&&qs.xr)qs.xr.exitT=0;
 }
 function questExitArmed(x){return !!x&&!!x.exitT&&x.t-x.exitT<QUEST_EXIT_MS;}
 function questExit(){const x=qs.xr;if(!x)return;const p=x.session.end();if(p&&p.catch)p.catch(()=>{});}
 function questBarState(){
-  const x=qs.xr;
-  return questBarButtons({tilt:qs.tilt,moves:qs.moves.length,panel:!x||x.panel,hidden:qs.hidden,top:qs.hold.top,front:qs.hold.front,exit:questExitArmed(x),
-    drill:questDrilling(),over:!!qs.drill});
+  const x=qs.xr||qs.native;
+  return questBarButtons({tilt:qs.tilt,moves:qs.moves.length,panel:!x||x.panel,hidden:qs.hidden,top:qs.hold.top,front:qs.hold.front,exit:questExitArmed(qs.xr),
+    drill:questDrilling(),over:!!qs.drill,listen:questVoiceOn(),app:!!qs.native});
 }
 function questBarCenterNow(x){return questBarCenter(x.pos,x.edge,qs.hidden);}
 function questJoint(frame,src,name,ref){const j=src.hand&&src.hand.get(name),p=j&&frame.getJointPose&&frame.getJointPose(j,ref);if(!p)return null;const t=p.transform.position;return [t.x,t.y,t.z];}
@@ -519,7 +520,7 @@ function questStart(){
   questHoldMount();
   questTilt(questGet('cw:questTilt',true));questHoldSet(questHoldFind(questGet('cw:questHold','white-green')));questHidden(questGet('cw:hidden',false)===true);
   $('#tilt').onchange=e=>questTilt(e.target.checked);$('#hidden').onclick=()=>questHidden(!qs.hidden);
-  $('#drill').onclick=()=>questDrillMode(!questDrilling());$('#scramble').onclick=questScramble;$('#real').onclick=questRealState;questDrillDraw();
+  $('#drill').onclick=()=>questDrillMode(!questDrilling());$('#listen').onclick=()=>questListen(!questVoiceOn());$('#scramble').onclick=questScramble;$('#real').onclick=questRealState;questDrillDraw();
   $('#connect').onclick=()=>questConnect();$('#disconnect').onclick=questDisconnect;
   $('#level').onclick=questLevel;$('#clear').onclick=questClear;
   $('#enterAR').onclick=()=>questEnterXR('immersive-ar');$('#enterVR').onclick=()=>questEnterXR('immersive-vr');
