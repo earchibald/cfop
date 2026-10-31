@@ -89,8 +89,9 @@ function pure(){
   // the hands: the rows of buttons and the poke
   const BAR=run('QUEST_BAR'),hit=run('questBarHit'),poke=run('questPoke'),free=run('questHandFree');
   const buttons=run('questBarButtons')({tilt:true,moves:3,panel:true,hidden:false,top:0,front:2}),R6=run('questBarLayout')(buttons);
-  assert.strictEqual(buttons.map(b=>b.id).join(),'tilt,level,clear,hidden,smaller,larger,panel,top-white,top-yellow,front-green,front-orange,front-blue,front-red,exit,drill');
-  assert.strictEqual(buttons[buttons.length-1].label,'Drill mode','the third row starts a drill');
+  assert.strictEqual(buttons.map(b=>b.id).join(),'tilt,level,clear,hidden,smaller,larger,panel,top-white,top-yellow,front-green,front-orange,front-blue,front-red,exit,drill,scramble,real');
+  assert.ok(buttons.slice(-3).every(b=>b.row===2)&&buttons[buttons.length-3].label==='Drill mode','the third row starts a drill');
+  assert.ok(buttons.find(b=>b.id==='real').off&&!run('questBarButtons')({over:true}).find(b=>b.id==='real').off,'Real cube state: off on the real cube');
   assert.strictEqual(run('questBarButtons')({drill:true}).find(b=>b.id==='drill').label,'Stop drill','and stops it');
   assert.ok(buttons.find(b=>b.id==='top-white').on&&buttons.find(b=>b.id==='front-green').on&&!buttons.find(b=>b.id==='front-red').on,'the hold\'s tiles are on');
   R6.forEach((r,i)=>assert.strictEqual(hit([r.x,r.y,0],R6),i,buttons[i].id+' under its center'));
@@ -365,6 +366,24 @@ async function page(){
   click($('#drill'));assert.ok(!Q().drill&&speech.recs[1].stopped&&Q().shown.equals(r),'Stop drill: the real cube, the listening off');
   // any case by name, for the voice to come
   w.questDrill('T perm');assert.strictEqual(Q().drill.c.id,'pll-T','a drill by name');w.questDrill(null);assert.ok(!Q().drill&&Q().shown.equals(r));
+  // New scramble: a scramble on the picture, over the real cube as it is; solved, another comes
+  assert.ok($('#real').disabled,'Real cube state: off on the real cube');
+  click($('#scramble'));const S=Q().drill;
+  assert.ok(S&&S.scramble&&S.c.moves.split(' ').length===20&&Q().shown.equals(S.setup)&&S.p0.equals(r)&&!$('#real').disabled,'New scramble: the scramble on the picture');
+  assert.ok(S.setup.equals(w.questDrillSetup(w.invertAlg(S.c.moves),Q().hold)),'as held');
+  assert.strictEqual($('#drill').textContent,'Drill mode','it is no drill');assert.ok(!w.questVoiceOn(),'and nothing listens');
+  assert.strictEqual(w.questPanelLines().stage,'Scramble · 0 solved','the panel says the scramble');
+  for(const m of w.invertAlg(S.c.moves).split(' ')){r=w.applyAlg(r,[real(m)]);set(r);dev.notify(moveMsg());assert.ok(await until(()=>Q().real.equals(r)),'the cube turns '+m);}
+  assert.ok(Q().drill.solved&&/New scramble in 2…/.test($('#toast').textContent),'solved: '+$('#toast').textContent);
+  assert.ok(await until(()=>Q().drill!==S&&Q().drill.scramble),'then a new scramble');
+  assert.ok(Q().drill.reps===1&&Q().drill.c.moves!==S.c.moves&&Q().drill.p0.equals(r)&&Q().shown.equals(Q().drill.setup),'the count goes on, from the cube as it is');
+  // Drill mode from a scramble, then New scramble ends Drill mode
+  click($('#drill'));assert.ok(Q().drill&&!Q().drill.scramble&&w.questVoiceOn()&&$('#drill').textContent==='Stop drill','Drill mode from a scramble: a drill');
+  click($('#scramble'));assert.ok(Q().drill.scramble&&!w.questVoiceOn()&&$('#drill').textContent==='Drill mode','New scramble ends Drill mode');
+  // Real cube state: the scramble ends, and the cube's own state is read again, with nothing on the list
+  r=w.applyAlg(r,[real('R')]);set(r);dev.notify(moveMsg());assert.ok(await until(()=>Q().moves.length===1),'a turn');
+  click($('#real'));assert.ok(!Q().drill&&$('#real').disabled,'Real cube state: the scramble ends');
+  assert.ok(await until(()=>Q().shown.equals(r)&&!Q().moves.length),'the cube as it is, read again, nothing on the list');
   click($('#disconnect'));assert.ok(!Q().conn&&!$('#connect').hidden,'Disconnect');
   w.close();console.log('quest page ok');
 }
@@ -427,7 +446,7 @@ async function xr(){
   tip('left',[0,1.1,-0.3]);tip('right',[0.3,1.3,-0.3]);step();
   const sc=()=>scenes[scenes.length-1];
   assert.ok(/Poke a button/.test(sc().panel.lines.hint),'the hint speaks to the hands: '+sc().panel.lines.hint);
-  assert.ok(sc().bar&&sc().bar.buttons.length===15,'the rows of buttons are drawn');
+  assert.ok(sc().bar&&sc().bar.buttons.length===17,'the rows of buttons are drawn');
   assert.strictEqual(sc().bar.buttons.slice(0,7).map(b=>b.id).join(),'tilt,level,clear,hidden,smaller,larger,panel');
   const ids=sc().bar.buttons.map(b=>b.id),at=id=>ids.indexOf(id);
   const barAt=(i,z)=>{const c=w.questBarCenterNow(x),r=sc().bar.rects[i];return [c[0]+r.x,c[1]+r.y,c[2]+z];};
@@ -472,6 +491,10 @@ async function xr(){
   assert.strictEqual(sc().panel.lines.stage,'Drill: Sune · 1 solved');
   await sleep(80);step();assert.ok(!sc().toast&&Q().shown.equals(DX.setup),'then the case again');
   press(at('drill'));assert.ok(!Q().drill&&Q().shown.equals(realY)&&Q().real.equals(realY),'Stop drill: the real cube');
+  assert.ok(sc().bar.buttons[at('real')].off,'Real cube state is off');
+  press(at('scramble'));assert.ok(Q().drill&&Q().drill.scramble&&Q().shown.equals(Q().drill.setup)&&!sc().bar.buttons[at('real')].off,'a poke on New scramble: a scramble on the picture');
+  step();assert.strictEqual(sc().panel.lines.stage,'Scramble · 0 solved');
+  press(at('real'));assert.ok(!Q().drill&&Q().shown.equals(realY),'a poke on Real cube state: the real cube');
   // Exit: the first poke asks, a second ends the session; another button in between, or a wait, takes the ask back
   press(at('exit'));assert.ok(Q().xr,'one poke on Exit does not end the session');
   assert.strictEqual(sc().bar.buttons[at('exit')].label,'Poke again','Exit asks for a second poke');

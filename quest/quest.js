@@ -59,8 +59,9 @@ function questView(cube,jump){
 }
 
 // ----- the drill (questDrillState in core.js) -----
-// qs.drill: {c (the case), setup, p0 (the real cube at the start, or null until a cube is there),
-// solved, reps, timer}. The real cube's own state stays in qs.real, for the end of the drill.
+// qs.drill: {c (the case), scramble (true for New scramble), setup, p0 (the real cube at the start,
+// or null until a cube is there), solved, reps, timer, tick, count}. The real cube's own state stays
+// in qs.real, for the end of the drill.
 const QUEST_DRILL_FIRST='co-sune';
 function questDrilled(real){
   const d=qs.drill;if(!d||!real)return real;
@@ -77,11 +78,34 @@ function questDrillMode(on){
 // the real cube back in the picture.
 function questDrill(name){
   const c=name?questDrillFind(name)||questDrillFind(QUEST_DRILL_FIRST):null;
-  if(qs.drill){clearTimeout(qs.drill.timer);clearTimeout(qs.drill.tick);}
-  if(!c){qs.drill=null;questView(qs.real,true);questDrillDraw();return;}
+  if(!c){questDrillEnd();questView(qs.real,true);questDrillDraw();return;}
   questSet('cw:questDrill',c.id);
-  qs.drill={c,setup:null,p0:null,solved:false,reps:0,timer:0,tick:0,count:2};
+  questDrillOn(c,false,0);
+}
+function questDrillEnd(){if(qs.drill){clearTimeout(qs.drill.timer);clearTimeout(qs.drill.tick);}qs.drill=null;}
+function questDrillOn(c,scramble,reps){
+  questDrillEnd();
+  qs.drill={c,scramble,setup:null,p0:null,solved:false,reps,timer:0,tick:0,count:2};
   questDrillAgain();
+}
+// A drill runs (not a scramble): Drill mode is on.
+function questDrilling(){return !!qs.drill&&!qs.drill.scramble;}
+
+// ----- a scramble on the picture -----
+// New scramble: the picture starts as a random scramble, set up as held, over the real cube as a
+// drill is (questDrillSetup of the scramble's inverse is the scrambled state), and the real cube's
+// turns turn it. Solved: "Solved!", a count, then another. It ends Drill mode first.
+function questScramble(){
+  const reps=qs.drill&&qs.drill.scramble?qs.drill.reps:0;
+  if(questDrilling())questDrillMode(false);
+  const moves=randomMoveScramble(randomSeedName(),20);
+  questDrillOn({id:'scramble',name:'Scramble',alg:invertAlg(moves),moves:moves.join(' ')},true,reps);
+}
+// Real cube state: a drill or a scramble ends, and the cube is asked for its state again, so the
+// picture shows its own stickers as they are now, with nothing on the list.
+function questRealState(){
+  if(questDrilling())questDrillMode(false);else if(qs.drill)questDrill(null);
+  questClear();const c=qs.conn;if(c){c.jump=true;questAsk();}
 }
 // The case again: from the real cube as it is now, set up as the cube is held now.
 function questDrillAgain(){
@@ -96,13 +120,14 @@ function questDrillCheck(){
   const d=qs.drill,c=qs.target||qs.shown;
   if(!d||d.solved||!c||!c.isSolved())return;
   d.solved=true;d.reps++;d.count=2;
-  d.timer=setTimeout(questDrillAgain,qs.solvedMs);d.tick=setTimeout(()=>{d.count=1;questDrillDraw();},qs.solvedMs/2);questDrillDraw();
+  d.timer=setTimeout(d.scramble?questScramble:questDrillAgain,qs.solvedMs);d.tick=setTimeout(()=>{d.count=1;questDrillDraw();},qs.solvedMs/2);questDrillDraw();
 }
-function questDrillCount(){const d=qs.drill;return `${d.c.name} in ${d.count}…`;}
-function questDrillWords(){const d=qs.drill;return d?`Drill: ${d.c.name} · ${d.reps} solved`:'';}
+function questDrillCount(){const d=qs.drill;return `${d.scramble?'New scramble':d.c.name} in ${d.count}…`;}
+function questDrillWords(){const d=qs.drill;return !d?'':d.scramble?`Scramble · ${d.reps} solved`:`Drill: ${d.c.name} · ${d.reps} solved`;}
 function questDrillDraw(){
   const d=qs.drill,b=$('#drill');
-  b.setAttribute('aria-pressed',String(!!d));b.textContent=d?'Stop drill':'Drill mode';
+  b.setAttribute('aria-pressed',String(questDrilling()));b.textContent=questDrilling()?'Stop drill':'Drill mode';
+  $('#real').disabled=!d;
   $('#drillNote').textContent=d?d.reps+' solved':'';
   $('#toast').hidden=!(d&&d.solved);
   if(d&&d.solved)$('#toastSub').textContent=questDrillCount();
@@ -285,7 +310,8 @@ function questLink(ev,conn){
   if(ev.type==='move')questAsk();
   if(ev.type==='gyro')questGyro(ev.q);
   if(ev.type==='battery'){qs.battery=ev.level;questButtons();}
-  if(ev.type==='state'){conn.asked=false;if(conn.want){conn.want=false;questAsk();}questShow(ev.cube);}
+  if(ev.type==='state'){conn.asked=false;if(conn.want){conn.want=false;questAsk();}
+    if(conn.jump){conn.jump=false;questClear();questJump(ev.cube);}else questShow(ev.cube);}
 }
 function questDisconnect(){
   if(qs.conn){const c=qs.conn;qs.conn=null;c.close();}
@@ -400,7 +426,7 @@ function questBarDo(id){
   if(id==='tilt')questTilt(!qs.tilt);else if(id==='level')questLevel();else if(id==='clear')questClear();
   else if(id==='smaller')questSize(x,0.8);else if(id==='larger')questSize(x,1.25);else if(id==='panel')x.panel=!x.panel;
   else if(id==='hidden')questHidden(!qs.hidden);
-  else if(id==='drill')questDrillMode(!qs.drill);
+  else if(id==='drill')questDrillMode(!questDrilling());else if(id==='scramble')questScramble();else if(id==='real')questRealState();
   else if(hold)questHoldTile(hold[1]==='top'?'up':'front',QUEST_COLOR_NAMES.indexOf(hold[2]));
   else if(id==='exit'){if(questExitArmed(x))questExit();else x.exitT=x.t;}
   if(id!=='exit'&&x)x.exitT=0;
@@ -410,7 +436,7 @@ function questExit(){const x=qs.xr;if(!x)return;const p=x.session.end();if(p&&p.
 function questBarState(){
   const x=qs.xr;
   return questBarButtons({tilt:qs.tilt,moves:qs.moves.length,panel:!x||x.panel,hidden:qs.hidden,top:qs.hold.top,front:qs.hold.front,exit:questExitArmed(x),
-    drill:!!qs.drill});
+    drill:questDrilling(),over:!!qs.drill});
 }
 function questBarCenterNow(x){return questBarCenter(x.pos,x.edge,qs.hidden);}
 function questJoint(frame,src,name,ref){const j=src.hand&&src.hand.get(name),p=j&&frame.getJointPose&&frame.getJointPose(j,ref);if(!p)return null;const t=p.transform.position;return [t.x,t.y,t.z];}
@@ -493,7 +519,7 @@ function questStart(){
   questHoldMount();
   questTilt(questGet('cw:questTilt',true));questHoldSet(questHoldFind(questGet('cw:questHold','white-green')));questHidden(questGet('cw:hidden',false)===true);
   $('#tilt').onchange=e=>questTilt(e.target.checked);$('#hidden').onclick=()=>questHidden(!qs.hidden);
-  $('#drill').onclick=()=>questDrillMode(!qs.drill);questDrillDraw();
+  $('#drill').onclick=()=>questDrillMode(!questDrilling());$('#scramble').onclick=questScramble;$('#real').onclick=questRealState;questDrillDraw();
   $('#connect').onclick=()=>questConnect();$('#disconnect').onclick=questDisconnect;
   $('#level').onclick=questLevel;$('#clear').onclick=questClear;
   $('#enterAR').onclick=()=>questEnterXR('immersive-ar');$('#enterVR').onclick=()=>questEnterXR('immersive-vr');

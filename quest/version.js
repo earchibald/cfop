@@ -1,2 +1,2 @@
 // The version of the Quest cube lab, shown on its page. Raise it with any change a user of the page can see.
-const QUEST_VERSION='0.7.0';
+const QUEST_VERSION='0.8.0';

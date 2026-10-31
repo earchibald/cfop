@@ -76,9 +76,14 @@ code{font-family:var(--mono);font-size:.92em}
     <div class="viewrow">
       <div class="hold" id="hold" role="group" aria-label="How you hold the cube"><span class="lbl" title="How you hold the cube. A tile sets the hold. No turn goes on the list.">Top</span><span class="grp" data-place="up"></span><span class="lbl">Front</span><span class="grp" data-place="front"></span></div>
       <span class="grow"></span>
+      <button id="hidden" class="chip" aria-pressed="false" title="Show the faces turned away from you, as in a mirror behind the cube">Hidden faces</button>
+    </div>
+    <div class="viewrow">
+      <span class="grow"></span>
       <span id="drillNote" class="drillnote"></span>
       <button id="drill" class="chip" aria-pressed="false" title="Drill mode: the picture starts as a case, and your turns turn it. Solved, the case comes again. Say a case name, such as T perm or Sune, to drill that one. Press again to see your own cube.">Drill mode</button>
-      <button id="hidden" class="chip" aria-pressed="false" title="Show the faces turned away from you, as in a mirror behind the cube">Hidden faces</button>
+      <button id="scramble" class="chip" title="A new scramble on the picture, whatever your cube shows. Your turns turn it. Solved, another comes.">New scramble</button>
+      <button id="real" class="chip" title="Show your own cube again, its stickers as they are now" disabled>Real cube state</button>
     </div>
     <p id="voice" class="voicenote" aria-live="polite" hidden></p>
     <div class="moves" id="moves" aria-live="polite"></div>
@@ -124,6 +129,7 @@ code{font-family:var(--mono);font-size:.92em}
         <li>The row under them sets the hold: Top white or yellow, Front green, orange, blue or red.</li>
         <li>Exit is at the end of that row. Poke it, then poke it again to come back to this page.</li>
         <li>Drill mode, in the third row, shows a case on the picture (Sune the first time), whatever your cube shows. Your turns turn it. Solve it and the case comes again. Stop drill shows your own cube again.</li>
+        <li>New scramble, in the third row too, puts a random scramble on the picture the same way. Solve it and another comes. Real cube state shows your own cube again, as it is now.</li>
         <li>In Drill mode, say a case name to drill it: any two-look OLL or PLL case, or any PLL, such as "T perm", "Sune", "headlights" or "U a perm". Say "again" for the case again, "stop drill" to end. Say the hold as on the Smart cube tab, such as "yellow up", "green front" or "top yellow, front green", or turn it with "x prime" or "turn y". Say "clear moves", or "reset" for the case again. The panel shows what was heard. Start Drill mode on this page once first, so the headset asks for the microphone here.</li>
         <li>Pinch the cube to carry it. Hold a pinch away from it for a moment to bring it back in front of you.</li>
         <li>With controllers: grip near the cube carries it, the trigger away brings it back. A: tilt. B: level. Right stick: size; press it: hidden faces. X: clear. Y: panel. Press the left stick: exit.</li>

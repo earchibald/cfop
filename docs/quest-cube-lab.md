@@ -54,6 +54,14 @@ of the real cube turns the picture. When the picture is solved, "Solved!" shows 
 in front of the cube in the session) with a count to the next one, "Sune in 2…" then "Sune in 1…",
 the count of solves goes up, and the case comes again, from the real cube as it is then. Stop drill puts the real cube back in the picture.
 
+New scramble (the third row in the session, beside Drill mode; a chip on the page) puts a random
+scramble on the picture the same way (`questScramble`: 20 random moves, set up as held, over the
+real cube with `setup · P0⁻¹ · P`), so the user can solve a fresh scramble without scrambling the
+real cube. It ends Drill mode first. Solved: "Solved!" with "New scramble in 2…", "New scramble in
+1…", then another; the count of solves goes on. Real cube state (`questRealState`, off while the
+picture is the real cube) ends a drill or a scramble and asks the cube for its state again, so the
+picture shows its own stickers as they are now, with nothing on the list.
+
 ### The voice
 
 While Drill mode is on, the page listens (`quest/voice.js`). A case name drills that case: every
