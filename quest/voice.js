@@ -2,7 +2,11 @@
 // Drill mode listens for case names until it ends. A two-look OLL or PLL case, or one of the full PLL,
 // said by name ("T perm", "Sune", "headlights", "U a perm") drills that case: the picture starts as the
 // case, set up as held (questDrill in quest.js). Said again, or "again" or "next", the case is set up
-// again. "Stop drill" ends Drill mode. The site's Listen matcher reads what was heard
+// again. "Stop drill" ends Drill mode. The Smart cube tab's cube commands work here too
+// (js/smart-words.js): the hold ("yellow up", "green front", "top yellow, front green", "green
+// toward me"), a turn of the whole cube ("x prime", "turn y"), "clear moves", and "reset" (the case
+// again, and the picture lined up with the cube while the tilt is live). A new hold sets the case up
+// for it, as the hold tiles do. The site's Listen matcher reads what was heard
 // (js/listen-match.js): the names people say for each case, scored by sound. A tie between sets ("T"
 // alone is the T OLL and the T perm) goes to the set of the case drilled now; else the line asks.
 //
@@ -12,14 +16,25 @@
 // them; quest/run.sh runs it). Vosk is told the phrases it may hear (questVoiceGrammar), so it
 // gives a case name or nothing. ?voice=vosk or ?voice=speech picks one, for a test.
 //
-// Pure (no DOM): questVoiceCatalog, questVoiceGrammar, questVoiceCommand, questVoiceAction,
-// questVoiceCase, questVoiceSection.
+// Pure (no DOM): questVoiceCatalog, questVoiceGrammar, questVoiceCubePhrases, questVoiceCommand,
+// questVoiceAction, questVoiceCase, questVoiceSection, questVoiceHold, questHoldTurn, questHoldWords.
 
 // ----- the words (pure) -----
 // Words the model does not know, as words it does: listenNormalize reads them back.
 const QUEST_VOICE_SPELL={antisune:'anti sune',oll:'all'};
 // The commands, said alone, as Vosk may hear them.
-const QUEST_VOICE_COMMANDS=['stop drill','end drill','exit drill','stop drilling','again','next','next one','reset','first','second','third'];
+const QUEST_VOICE_COMMANDS=['stop drill','end drill','exit drill','stop drilling','again','next','next one','first','second','third'];
+// The cube commands (smartCommand) as Vosk may hear them: the hold by its top color, its front color
+// or both; "clear moves"; "reset"; a turn of the whole cube with a word that is no letter ("x prime",
+// "turn x"): a letter alone is left out, as below.
+function questVoiceCubePhrases(){
+  const N=SMART_COLOR_NAMES,out=[];
+  for(const c of N)out.push('top '+c,c+' top',c+' on top',c+' up','front '+c,c+' front',c+' in front',c+' toward me','bottom '+c,c+' on the bottom');
+  N.forEach((u,i)=>N.forEach((f,j)=>{if(j!==i&&j!==(i+3)%6)out.push(`top ${u} front ${f}`,`${u} up ${f} front`,`${u} on top ${f} in front`);}));
+  for(const a of ['x','y','z'])out.push(a+' prime',a+' two','turn '+a,'rotate '+a,a+' counterclockwise','back '+a);
+  out.push('clear','clear moves','clear the moves','reset','reset cube','reset view');
+  return out;
+}
 // The cases the drill takes: every two-look OLL and PLL case and the rest of the full PLL (no F2L).
 function questVoiceCatalog(){return listenCatalog().filter(c=>c.set!=='f2l');}
 // The drill's case for a catalog entry ({kind:'ll', id:'co-sune'} or {kind:'pll', id:'Ja'}).
@@ -39,23 +54,26 @@ function questVoiceGrammar(catalog){
     const w=s.split(' ').map(x=>QUEST_VOICE_SPELL[x]||x).join(' ');
     out.add(c.set==='pll'?w+' perm':w);}
   for(const s of QUEST_VOICE_COMMANDS)out.add(s);
+  for(const s of questVoiceCubePhrases())out.add(s);
   out.add('[unk]');
   return [...out];
 }
-// A command, said alone: 'stop' ("stop drill", "end the drill"), 'again' ("again", "next", "reset",
-// "one more"), or null. "Stop" alone does nothing: a word misheard must not end the drill.
+// A command, said alone: 'stop' ("stop drill", "end the drill"), 'again' ("again", "next", "one
+// more"), or null. "Reset" is a cube command (smartCommand). "Stop" alone does nothing: a word misheard must not end the drill.
 function questVoiceCommand(text){
   const t=String(text).toLowerCase().replace(/[’']/g,'').replace(/[^a-z ]+/g,' ').split(/\s+/)
     .filter(w=>w&&!/^(please|the|now|ok|okay|um|uh|this|that)$/.test(w)).join(' ');
   if(/^(stop|end|exit|quit|leave)( drill| drilling| drill mode)$/.test(t)||t==='drill off'||t==='drill mode off')return 'stop';
-  if(/^(again|next|next one|reset|one more|another|another one|once more)$/.test(t))return 'again';
+  if(/^(again|next|next one|one more|another|another one|once more)$/.test(t))return 'again';
   return null;
 }
-// What a sentence (with the recognizer's alternatives) asks for: {cmd}, {pick} from the choices on the
+// What a sentence (with the recognizer's alternatives) asks for: {cmd}, {cube} (a cube command:
+// smartCommand's {cmd:'hold'|'turn'|'clear'|'reset'|'error'}), {pick} from the choices on the
 // line, or the matcher's {hit, strong, choices, ranked}, or {} for nothing. The set drilled now only
 // breaks a tie: a sure name wins without it ("double sune" is the H OLL in a PLL drill too).
 function questVoiceAction(texts,choices,section,catalog){
   for(const t of texts){const c=questVoiceCommand(t);if(c)return {cmd:c};}
+  for(const t of texts){const c=smartCommand(t);if(c)return {cube:c};}
   if(choices)for(const t of texts){const c=listenPick(t,choices);if(c)return {pick:c};}
   const sure=listenDecide(listenRankAll(texts,catalog,null));
   if(sure&&sure.hit)return sure;
@@ -75,8 +93,24 @@ function questVoiceLongest(texts,choices){
   return best&&!tie?best:null;
 }
 
+// The hold a hold command names, from the hold now, as the Smart cube tab takes it: the top said
+// (the top now when unsaid) and the front said, else the front now where it can stay, else the
+// hold the fewest turns away (questHoldPick). Null when the front said is on top or under it.
+function questVoiceHold(cmd,cur){
+  cur=cur||QUEST_HOLD_FIRST;const up=cmd.up==null?cur.top:cmd.up;
+  if(cmd.front!=null&&(cmd.front===up||cmd.front===(up+3)%6))return null;
+  if(cmd.front!=null)return QUEST_HOLDS[QUEST_COLOR_NAMES[up]+'-'+QUEST_COLOR_NAMES[cmd.front]];
+  return questHoldPick(cur,'up',up);
+}
+// The hold after a turn of the whole cube, as held ("x": the front comes up).
+function questHoldTurn(cur,m){
+  cur=cur||QUEST_HOLD_FIRST;const c=applyAlg(cur.cube,[m]).center.join();
+  return Object.values(QUEST_HOLDS).find(h=>h.cube.center.join()===c)||cur;
+}
+function questHoldWords(h){return `${QUEST_COLOR_NAMES[h.top]} up, ${QUEST_COLOR_NAMES[h.front]} in front`;}
+
 // ----- the microphone -----
-const QUEST_VOICE_IDLE='Say a case name, such as "T perm" or "Sune".';
+const QUEST_VOICE_IDLE='Say a case name, such as "T perm" or "Sune", or a hold, such as "yellow up".';
 // on: Drill mode listens. engine: 'speech' or 'vosk'. line and heard: what the panel and the page say.
 const QV={on:false,engine:null,rec:null,model:null,modelP:null,kaldi:null,ctx:null,stream:null,node:null,src:null,
   choices:null,line:'',heard:'',catalog:null,grammar:null,loadMs:120000};
@@ -183,6 +217,7 @@ function questVoiceHeard(texts){
   if(!QV.on||!texts.length)return;
   const heard=texts[0],a=questVoiceAction(texts,QV.choices,questVoiceSection(qs.drill&&qs.drill.c),QV.catalog);
   if(a.cmd==='stop'){questDrillMode(false);return;}
+  if(a.cube){questVoiceSay(questVoicePre()+questVoiceCube(a.cube),heard);return;}
   if(a.cmd==='again'){if(qs.drill)questDrillAgain();questVoiceSay(questVoicePre()+(qs.drill?qs.drill.c.name+' again.':QUEST_VOICE_IDLE),heard);return;}
   const e=a.pick||a.hit;
   if(e){const c=questVoiceCase(e);QV.choices=null;
@@ -191,4 +226,19 @@ function questVoiceHeard(texts){
   if(a.choices){QV.choices=a.choices;
     questVoiceSay(questVoicePre()+'Which one? '+a.choices.map(c=>c.hint||c.name).join(', or ')+'.',heard);return;}
   questVoiceSay(questVoicePre()+'No case name heard. '+QUEST_VOICE_IDLE,heard);
+}
+// A cube command, done: the hold, a turn of the whole cube, "clear moves", "reset". Returns the
+// words for the line.
+function questVoiceCube(cmd){
+  if(cmd.cmd==='error')return cmd.msg;
+  if(cmd.cmd==='clear'){if(!qs.moves.length)return 'No moves to clear.';questClear();return 'The moves are cleared.';}
+  if(cmd.cmd==='reset'){
+    const live=qs.tilt&&!!qs.raw;if(live)questLevel();
+    if(qs.drill)questDrillAgain();else questClear();
+    return (qs.drill?`Reset. ${qs.drill.c.name} again`:'Reset. The moves are cleared')+(live?', and the picture is lined up with your cube.':'.');}
+  const h=cmd.cmd==='turn'?questHoldTurn(qs.hold,cmd.m):questVoiceHold(cmd,qs.hold);
+  if(!h){const up=cmd.up==null?qs.hold.top:cmd.up;return `${smartCap(QUEST_COLOR_NAMES[cmd.front])} cannot face you with ${QUEST_COLOR_NAMES[up]} on top.`;}
+  if(cmd.cmd==='hold'&&h.id===qs.hold.id)return `Already held ${questHoldWords(h)}.`;
+  questHoldSet(h);
+  return (cmd.cmd==='turn'?`Turned ${cmd.m}. `:'')+`Held ${questHoldWords(h)}.`+(qs.drill?` ${qs.drill.c.name} is set up that way.`:'');
 }

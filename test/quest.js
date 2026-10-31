@@ -146,7 +146,7 @@ function drill(){
 // The drill's voice (quest/voice.js): every case of the drill by its names, the words Vosk is told,
 // the commands, a tie between sets, talk.
 function voice(){
-  const run=require('./vm-load')('js/engine.js','js/algs.js','js/stage.js','js/draw.js','lab/smack.js','quest/core.js','js/listen-match.js','quest/voice.js');
+  const run=require('./vm-load')('js/engine.js','js/algs.js','js/stage.js','js/draw.js','lab/smack.js','quest/core.js','js/listen-match.js','js/smart-words.js','quest/voice.js');
   const cat=run('questVoiceCatalog()'),g=run('questVoiceGrammar')(cat),act=run('questVoiceAction'),vcase=run('questVoiceCase'),cmd=run('questVoiceCommand');
   assert.ok(cat.length&&!cat.some(e=>e.set==='f2l'),'two-look OLL and PLL and the full PLL, no F2L');
   const ids=new Set(cat.map(e=>vcase(e).id));
@@ -162,10 +162,25 @@ function voice(){
   for(const w of ['antisune','oll','sooney','chamelion'])assert.ok(!g.some(p=>p.split(' ').includes(w)),'no '+w+': the model has no such word');
   assert.ok(!g.some(p=>/^[a-z]$/.test(p)),'no letter alone');
   for(const p of ['sune','anti sune','headlights','chameleon','t perm','u a perm','g a perm','stop drill','again','[unk]'])assert.ok(g.includes(p),'the grammar has "'+p+'"');
-  for(const p of g.filter(p=>p!=='[unk]'&&!cmd(p)&&!/^(first|second|third)$/.test(p))){const a=act([p],null,null,cat);assert.ok(a.hit||a.choices,'"'+p+'" names a case');}
+  const cube=run('smartCommand'),phr=run('questVoiceCubePhrases()');
+  for(const p of ['yellow up','green front','top yellow front green','x prime','turn y','clear moves','reset'])assert.ok(g.includes(p),'the grammar has "'+p+'"');
+  for(const p of phr){const c=cube(p);assert.ok(c&&c.cmd!=='error','"'+p+'" is a cube command');const a=act([p],null,'oll',cat);assert.ok(a.cube&&!a.hit,'"'+p+'" names no case');}
+  for(const p of g.filter(p=>p!=='[unk]'&&!cmd(p)&&!cube(p)&&!/^(first|second|third)$/.test(p))){const a=act([p],null,null,cat);assert.ok(a.hit||a.choices,'"'+p+'" names a case');}
   // commands
   for(const t of ['stop drill','Stop the drill please','end drill','exit drill mode'])assert.strictEqual(cmd(t),'stop',t);
-  for(const t of ['again','next','one more','Reset'])assert.strictEqual(cmd(t),'again',t);
+  for(const t of ['again','next','one more'])assert.strictEqual(cmd(t),'again',t);
+  assert.strictEqual(cmd('Reset'),null,'"reset" is a cube command');assert.strictEqual(act(['reset'],null,null,cat).cube.cmd,'reset');
+  // the hold a command names, from the hold now, and a turn of the whole cube, as held
+  const H=run('QUEST_HOLDS'),hold=(t,cur)=>{const h=run('questVoiceHold')(cube(t),H[cur]);return h&&h.id;},turn=run('questHoldTurn');
+  assert.strictEqual(hold('yellow up','white-green'),'yellow-green','"yellow up": the front stays');
+  assert.strictEqual(hold('yellow on top','white-red'),'yellow-red','from red in front too');
+  assert.strictEqual(hold('green front','yellow-red'),'yellow-green','"green front": the top stays');
+  assert.strictEqual(hold('top yellow front blue','white-green'),'yellow-blue','both');
+  assert.strictEqual(hold('bottom white','white-green'),'yellow-green','"bottom white": yellow on top');
+  assert.strictEqual(hold('white toward me','white-green'),null,'a front on top is no hold');
+  assert.strictEqual(cube('top white bottom red').cmd,'error','a pair that is no pair');
+  assert.deepStrictEqual(['x',"x'",'y','z','x2'].map(m=>turn(H['white-green'],m).id),['green-yellow','blue-white','white-red','orange-green','yellow-blue'],'x, y, z as held');
+  assert.strictEqual(run('questHoldWords')(H['yellow-green']),'yellow up, green in front');
   for(const t of ['stop','T perm','again and again'])assert.strictEqual(cmd(t),null,'"'+t+'" is no command');
   assert.strictEqual(act(['stop drill'],null,'oll',cat).cmd,'stop');
   // "T" alone: the set drilled now; with none, the line asks, and the next words pick
@@ -326,6 +341,21 @@ async function page(){
   speech.say('again');assert.ok(Q().drill.c.id==='co-T'&&!Q().moves.length&&Q().drill.p0.equals(r),'"again": the case again, from the cube as it is');
   speech.say('I have two dogs');assert.ok(Q().drill.c.id==='co-T'&&/No case name heard/.test($('#voice').textContent),'talk changes nothing');
   speech.say('stop');assert.ok(Q().drill,'"stop" alone does not end the drill');
+  // the Smart cube tab's cube commands: the hold, a turn, clear moves, reset
+  speech.say('yellow up');assert.strictEqual(Q().hold.id,'yellow-red','"yellow up": the front stays red');
+  assert.ok(Q().drill.c.id==='co-T'&&Q().shown.equals(w.questDrillSetup(Q().drill.c.alg,Q().hold)),'the case, set up for the new hold');
+  assert.ok(/Held yellow up, red in front\. T \(chameleon\) is set up that way\./.test($('#voice').textContent),'the line: '+$('#voice').textContent);
+  speech.say('green front');assert.strictEqual(Q().hold.id,'yellow-green','"green front": the top stays');
+  speech.say('top yellow, front green');assert.ok(/Already held yellow up, green in front/.test($('#voice').textContent),'the same hold: '+$('#voice').textContent);
+  speech.say('green toward me with white on top');assert.strictEqual(Q().hold.id,'white-green','a hold in other words');
+  speech.say('x prime');assert.ok(Q().hold.id==='blue-white'&&/Turned x'\. Held blue up, white in front/.test($('#voice').textContent),'"x prime" turns the hold: '+$('#voice').textContent);
+  speech.say('top white bottom red');assert.ok(Q().hold.id==='blue-white'&&/not opposite/.test($('#voice').textContent),'no such hold: the line says so');
+  speech.say('top white front green');assert.strictEqual(Q().hold.id,'white-green');
+  r=w.applyAlg(r,[real('R')]);set(r);dev.notify(moveMsg());assert.ok(await until(()=>Q().moves.length===1),'a turn');
+  speech.say('clear moves');assert.ok(!Q().moves.length&&/The moves are cleared/.test($('#voice').textContent),'"clear moves"');
+  speech.say('clear');assert.ok(/No moves to clear/.test($('#voice').textContent),'nothing to clear');
+  r=w.applyAlg(r,[real('U')]);set(r);dev.notify(moveMsg());assert.ok(await until(()=>Q().moves.length===1),'a turn');
+  speech.say('reset');assert.ok(!Q().moves.length&&Q().drill.p0.equals(r)&&/Reset\. T \(chameleon\) again\./.test($('#voice').textContent),'"reset": the case again: '+$('#voice').textContent);
   // "stop drill": the real cube again, and the microphone off
   speech.say('stop drill');assert.ok(!Q().drill&&Q().shown.equals(r),'"stop drill": the picture is the real cube');
   assert.ok(speech.recs[0].stopped&&!w.questVoiceOn(),'and the listening stops');

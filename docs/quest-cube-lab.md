@@ -62,6 +62,15 @@ two-look OLL and PLL case and every PLL ("T perm", "Sune", "anti sune", "headlig
 "Stop drill" ends Drill mode; "stop" alone does nothing, so a misheard word does not end it. The
 panel's last line (the line under the cube on the page) says what was heard and what it did.
 
+The Smart cube tab's cube commands work here too (`js/smart-words.js`, shared with
+`js/smart-listen.js`). The hold: "yellow up", "green front", "top yellow, front green", "green
+toward me", "bottom white"; one color alone keeps the other where it can, as the hold tiles do, and
+a new hold sets the case up for it. A turn of the whole cube: "x prime", "turn y", "z two", which
+moves the hold. "Clear moves" empties the list. "Reset" sets the case up again and, while the tilt
+is live, lines the picture up with the cube (Level). A command must be the whole of what was said,
+so a color word in talk does nothing. Vosk is told these phrases too (`questVoiceCubePhrases`),
+with no letter alone: say "turn x" or "x prime", not "x".
+
 The site's Listen matcher reads the words (`js/listen-match.js`, shared with the Reference and the
 Smart cube tab). A sure name wins. A tie between the sets ("T" alone) goes to the set of the case
 drilled now; with none, the line asks.
