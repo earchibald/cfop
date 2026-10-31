@@ -11,8 +11,7 @@
 // it on (sticky) for the clicks on the window's buttons until a second click; the keys of the
 // keyboard take the modifiers held down with them, never the sticky ones. One layout of keys at a
 // time, WASD+ (A W D X · S E, C) or NumKeys (4 8 6 2 · 5 9, 3) (cw:vcubeKeys): the keys of the
-// other layout keep their own shortcuts. Wide shows on the 3×3 and the 4×4 (Rr), M on the 3×3
-// only. The head drags the window; its place is kept (cw:vcubeWin) and kept on the screen. The
+// other layout keep their own shortcuts. The head drags the window; its place is kept (cw:vcubeWin) and kept on the screen. The
 // first time it sits under the rail, or beside the player cube, so the moves stay in view. A key
 // or a press lights its button for a moment.
 const VCUBE={prime:false,wide:false,drag:null,open:false};
@@ -25,9 +24,8 @@ function vcubeOn(){return typeof cubeSrc==='function'&&cubeSrc()==='screen';}
 // virtual cube (the getting-started pages) has them.
 function vcubeShown(){return vcubeOn()&&VCUBE.open&&SCREEN.active===cubePlayerScreen&&!$('#player').closest('.hidden,[hidden]');}
 function vcubeEl(tag,attrs,...kids){return liveEl(tag,attrs,...kids);}
-// The modifiers in force for a click: the sticky ones, or the keys held down with the click. No wide
-// turn on the 2×2.
-function vcubeMods(e){return {prime:VCUBE.prime!==!!(e&&e.shiftKey),wide:(VCUBE.wide&&puzzleN()!==2)||!!(e&&e.altKey)};}
+// The modifiers in force for a click: the sticky ones, or the keys held down with the click.
+function vcubeMods(e){return {prime:VCUBE.prime!==!!(e&&e.shiftKey),wide:VCUBE.wide||!!(e&&e.altKey)};}
 function vcubeMount(){
   if($('#vcubeWin'))return $('#vcubeWin');
   const close=vcubeEl('button',{type:'button',class:'small ghost vk-close',title:'Hide this window. The keys still turn the cube; the Virtual cube chip shows it again','aria-label':'Close'},'×');

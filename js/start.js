@@ -459,9 +459,9 @@ START_SCREENS['t5-setup']=()=>{if(!START.five)START.five={all:true,insp:store.ge
     <div class="st-box"><span class="st-lbl">2 · What you know</span>${sw('all','Full CFOP: every case Learned','Mark every CFOP case Learned')}<button class="st-link" data-go="t4-sets" title="Pick the sets you know">Not all of it? Pick the sets →</button></div>
     <div class="st-box"><span class="st-lbl">3 · The timer</span>${sw('insp','15 s inspection','Inspection before each solve')}${sw('hide','Hide the time while I solve','Show only the final time')}${sw('rs','Random-state scrambles','Scrambles from a random state, as in competition')}</div>
     <div class="st-box"><span class="st-lbl">4 · Bring your times <span class="tag">new idea</span></span><span class="muted">Paste a csTimer export. Your averages and best start from there, not from zero.</span><button class="small" disabled title="Not built yet">Paste an export (not built yet)</button></div></div>
-  <div class="st-foot"><span class="muted">2×2 Speed and 4×4 Advanced are in the menu.</span><span class="spacer"></span><button class="primary" data-finish="timer" title="Go to the Scramble tab with the timer">Go to the timer →</button></div></div>`;};
+  <div class="st-foot"><span class="spacer"></span><button class="primary" data-finish="timer" title="Go to the Scramble tab with the timer">Go to the timer →</button></div></div>`;};
 function startSaveFive(){const F=START.five;store.set('insp',F.insp);$('#inspChk').checked=F.insp;store.set('hideTime',F.hide);
-  $('#scrLen').value=F.rs?'rs':String(SCR_LENS[3][1]);
+  $('#scrLen').value=F.rs?'rs':String(SCR_LENS[1]);
   if(F.all){for(const i of [2,3,4,5])startMark(START_SETS[i].ids(),'finished');startSetKnown('cross',2);startSetKnown('f2lfeel',2);startSetKnown('oll',2);}
   store.set('timerHome',true);}
 // The first solve on the virtual cube: a mixed-up cube, and the guided solve on it.

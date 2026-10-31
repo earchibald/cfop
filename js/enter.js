@@ -8,10 +8,6 @@ function customName(kind){const d=new Date();const p=n=>String(n).padStart(2,'0'
 // unless `stay` is set (the F2L guide's Set up from current keeps its tab).
 function scrambleFromCube(cube,name,stay){
   const go=()=>{if(!stay)goSolveTab();};
-  if(puzzleN()===4){loadState(name||customName('cube'),cube);go();return {ok:true,moves:[]};} // the state itself is the mix-up
-  if(puzzleN()===2){ // the corners only: face moves from a solved cube, white up, that give them
-    const scr=twoScrambleFor(cube);if(!scr)return {ok:false,errors:['No scramble found.']};
-    loadScramble(name||customName('cube'),scr,true);go();return {ok:true,moves:scr};}
   const res=(typeof fromFacelets==='function')?fromFacelets(cube.toFacelets()):{ok:true,cube};
   if(!res.ok)return {ok:false,errors:res.errors};
   const sol=solveTwoPhase(res.cube,{timeMs:1500,target:-1});
@@ -20,7 +16,7 @@ function scrambleFromCube(cube,name,stay){
   if(!applyAlg(new Cube(),scr).equals(res.cube))return {ok:false,errors:['The scramble does not match the cube.']};
   loadScramble(name||customName('cube'),scr,true);go();return {ok:true,moves:scr};
 }
-function goSolveTab(){const t=isBeg()?'bsolve':method==='speed2'?'ssolve':method==='speed4'?'fsolve':'solve';if(curTab!==t)goTab(t);focusPlayer();}
+function goSolveTab(){const t=isBeg()?'bsolve':'solve';if(curTab!==t)goTab(t);focusPlayer();}
 
 function openEnter(){
   if($('#enterBg'))return;
@@ -61,8 +57,7 @@ function enterState(text){
   const r=stateFromText(text);
   const fail=msg=>{if(!$('#enterBg'))openEnter();$('#enterType').value=text.trim();$('#enterStatus').textContent=msg;};
   if(!r.ok)return fail(r.errors.join(' '));
-  const n=puzzleN();
-  if(r.n!==n)return fail(`These letters are a ${r.n}x${r.n} state. This is the ${n}x${n}: choose a ${r.n}x${r.n} method first, then load it again.`);
+  if(r.n!==3)return fail(`These letters are a ${r.n}x${r.n} state. Twistwright reads the 3x3.`);
   const res=scrambleFromCube(r.cube,customName('state'));
   if(!res.ok)return fail(res.errors.join(' '));
   closeEnter();

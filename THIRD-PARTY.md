@@ -11,15 +11,14 @@ them.
 | Library | Version | License | Source |
 |---|---|---|---|
 | cubing.js | 0.66.1 | MPL-2.0 (offered as MPL-2.0 or GPL-3.0-or-later; Twistwright uses it under MPL-2.0) | https://github.com/cubing/cubing.js/tree/v0.66.1 |
-| min2phase, the 4x4 reduction solver and the math helpers inside cubing.js (`vendor/mit/cs0x7f`) | as in cubing.js 0.66.1 | MIT | https://github.com/cs0x7f/min2phase, https://github.com/cs0x7f/TPR-4x4x4-Solver |
-| twips, the 2x2 search inside cubing.js (`vendor/mpl/twips`) | as in cubing.js 0.66.1 | MPL-2.0 (offered as MPL-2.0 or GPL-3.0-or-later; used under MPL-2.0) | https://github.com/cubing/twips |
+| min2phase, the math helpers inside cubing.js (`vendor/mit/cs0x7f`) | as in cubing.js 0.66.1 | MIT | https://github.com/cs0x7f/min2phase |
 | random-uint-below | 3.3.0 | Unlicense | https://github.com/lgarron/random-uint-below.js |
 
 ## What Twistwright uses them for
 
-Random-state scrambles for the 2x2, the 3x3 and the 4x4 (`js/scramble.js`).
-TNoodle, the WCA scrambler, uses the same 3x3 and 4x4 solvers (min2phase and
-threephase by Chen Shuang). TNoodle itself is GPL-3.0 and is not used.
+Random-state scrambles for the 3x3 (`js/scramble.js`). TNoodle, the WCA
+scrambler, uses the same 3x3 solver (min2phase by Chen Shuang). TNoodle itself
+is GPL-3.0 and is not used.
 
 ## Changes to the files
 

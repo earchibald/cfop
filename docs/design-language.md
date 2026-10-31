@@ -45,9 +45,7 @@ has a gray ring all round (`--sticker-W-edge`, none in dark mode), as a
 sticker sits in its frame. A played move keeps a softer bar. The color
 comes from the center at that place before the move (`seqFaceColors` in
 `js/app.js`), so a `z2` or a `y` earlier in the list changes it. A
-whole-cube turn and a middle slice (`M`, `E`, `S`) carry no color. The 4x4
-has no fixed centers: there the letter names the color, turned on by
-whole-cube turns only.
+whole-cube turn and a middle slice (`M`, `E`, `S`) carry no color.
 
 ## Tokens
 

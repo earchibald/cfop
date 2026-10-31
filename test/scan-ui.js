@@ -1,6 +1,6 @@
-// The Scan cube dialog in the page, for each puzzle. jsdom has no camera, so the dialog
-// reports that and the test feeds it synthetic frames through scanStep, as the camera loop
-// would. A scanned 2x2 goes through Use this cube to a scramble that gives the same cube.
+// The Scan cube dialog in the page. jsdom has no camera, so the dialog reports that and the
+// test feeds it synthetic frames through scanStep, as the camera loop would. A scanned cube
+// goes through Use this cube to a scramble that gives the same cube.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const {render,U}=require('./synth-render');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
@@ -14,7 +14,7 @@ function boot(seed){
 }
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{try{
-  const {w,d,errs}=await boot({'cw:method':'"mini"'});
+  const {w,d,errs}=await boot({});
   const $=s=>d.querySelector(s),$$=s=>[...d.querySelectorAll(s)];
   const click=el=>{assert.ok(el,'element to click');el.dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true}));};const ev=s=>w.eval(s);
   // Show the faces of a cube held some way, each at a random turn, until each locks.
@@ -23,43 +23,41 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     for(const c of [2,0,1,5,3,4]){
       const truth=w.rotateFace(held.slice(cells*c,cells*c+cells),Math.floor(U(0,4)));
       const before=ev("scanVoter").order.length+Object.keys(ev("scanVoter").faces).length;let k=0;
-      for(;k<80;k++){w.scanStep(w.readFace(render(truth,W,H,false,'stickers'),{n}));if(ev("scanVoter").order.length+Object.keys(ev("scanVoter").faces).length>before||ev("scanRes"))break;}
+      for(;k<80;k++){w.scanStep(w.readFace(render(truth,W,H,false,'stickers'),{n}));if(ev("scanVoter").order.length+Object.keys(ev("scanVoter").faces).length>before)break;}
     }
   };
-  // ----- the 2x2: the beginner home offers the scan, and the top bar button opens it -----
-  assert.strictEqual(d.body.dataset.puzzle,'2x2');
-  w.goTab('bsolve');assert.ok($('#tab-bsolve [data-beg="scan"]'),'the 2x2 Solve my cube offers the camera');
-  assert.ok(!$('#camBtn').classList.contains('three-only'),'the Scan cube button shows for every puzzle');
+  // ----- the dialog opens, six faces fit together, the card, a painted tile, Use this cube -----
+  assert.strictEqual(d.body.dataset.puzzle,'3x3');
+  assert.ok(!$('#camBtn').classList.contains('three-only'),'the Scan cube button shows');
   click($('#camBtn'));await sleep(50);
-  assert.ok($('#scanBg'),'the dialog opens');assert.strictEqual(ev("scanN"),2);
-  assert.ok(/2×2/.test($('.modal.scan p').textContent)&&/no fixed centers/.test($('.modal.scan p').textContent),'the text names the puzzle');
+  assert.ok($('#scanBg'),'the dialog opens');assert.strictEqual(ev("scanN"),3);
   assert.ok(/cannot use the camera/.test($('#scanStatus').textContent),'no camera in jsdom');
-  assert.strictEqual($$('#scanNet g').length,6);assert.strictEqual($$('#scanNet rect').length,24,'six faces of four tiles');
+  assert.strictEqual($$('#scanNet g').length,6);assert.strictEqual($$('#scanNet rect').length,54,'six faces of nine tiles');
   assert.ok($('#scanUse').disabled&&$('#scanNextFit').classList.contains('hidden'));
-  const cube2=w.applyAlg(new (ev("Cube"))(),w.twoScramble('ui-scan',11)),f2=w.twoFacelets(cube2);
-  showAll(f2,2);
+  const cube3a=w.applyAlg(new (ev("Cube"))(),w.randomMoveScramble('ui-scan',22)),f3a=cube3a.toFacelets();
+  showAll(f3a,3);
   assert.ok(ev("scanRes")&&ev("scanRes").ok,'six faces fit together: '+$('#scanStatus').textContent);
   assert.ok(/All six faces are read/.test($('#scanStatus').textContent));
-  assert.strictEqual($$('#scanNet rect[data-pos]').length,24,'every net tile shows a sticker');
+  assert.strictEqual($$('#scanNet rect[data-pos]').length,48,'every tile but a center shows a sticker');
   assert.ok(!$('#scanUse').disabled,'Use this cube is on');
   // The card over the dialog: the net again, Next fit when more than one cube fits. Back keeps the dialog.
   assert.ok($('#scanOkBg')&&$('#scanOkTitle').textContent==='Is this your cube?','the card comes up once the cube is read');
-  assert.strictEqual($$('#scanOkNet rect').length,24,'the card shows the net');
+  assert.strictEqual($$('#scanOkNet rect').length,54,'the card shows the net');
   assert.strictEqual($('#scanOkNext').classList.contains('hidden'),ev("scanRes").fits.length<2,'Next fit on the card follows the fits');
   click($('#scanOkBack'));assert.ok(!$('#scanOkBg')&&$('#scanBg')&&ev("scanRes").ok,'Back closes the card and keeps the dialog as it is');
-  const key=w.canonicalKey(f2,2);
+  const key=w.canonicalKey(f3a,3);
   if(ev("scanRes").fits.length>1){
     assert.ok(!$('#scanNextFit').classList.contains('hidden'),'Next fit shows when more than one cube fits');
-    for(let i=0;i<ev("scanRes").fits.length&&w.canonicalKey(ev("scanRes").facelets,2)!==key;i++)click($('#scanNextFit'));
+    for(let i=0;i<ev("scanRes").fits.length&&w.canonicalKey(ev("scanRes").facelets,3)!==key;i++)click($('#scanNextFit'));
   }else assert.ok($('#scanNextFit').classList.contains('hidden'));
-  assert.strictEqual(w.canonicalKey(ev("scanRes").facelets,2),key,'the fit shown is the scanned cube');
+  assert.strictEqual(w.canonicalKey(ev("scanRes").facelets,3),key,'the fit shown is the scanned cube');
   // A click on a net tile paints the chosen color and pins it; the fit is checked again. The
   // palette keys 1 to 6 pick a color.
   const keyOf=c=>String(ev("SCAN_PALETTE").findIndex(p=>p.c===c)+1);
   const keydown=k=>d.dispatchEvent(new w.KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true}));
   assert.strictEqual($$('#scanPal .pt-swatch').length,6,'six swatches');assert.strictEqual(ev("scanColor"),0,'white is picked at first');
-  const tile=$('#scanNet rect[data-pos]'),id=+tile.dataset.id,pos=+tile.dataset.pos,was=ev("scanVoter").faces[id].stickers.slice();
-  const g0=$(`#scanNet g[data-id="${id}"]`),k0=ev(`netSlot(${g0.dataset.slot})`).k,idx=w.rotateFace([0,1,2,3],k0)[pos],other=(was[idx]+1)%6;
+  const tile=[...$$('#scanNet rect[data-pos]')].find(t=>+t.dataset.pos!==4),id=+tile.dataset.id,pos=+tile.dataset.pos,was=ev("scanVoter").faces[id].stickers.slice();
+  const g0=$(`#scanNet g[data-id="${id}"]`),k0=ev(`netSlot(${g0.dataset.slot})`).k,idx=w.rotateFace([0,1,2,3,4,5,6,7,8],k0)[pos],other=(was[idx]+1)%6;
   keydown(keyOf(other));assert.strictEqual(ev("scanColor"),other,'a key picks a color');
   assert.ok($(`#scanPal .pt-swatch[data-c="${other}"]`).classList.contains('on'),'the swatch shows picked');
   click(tile);
@@ -68,23 +66,23 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.ok(!$('#scanOkBg'),'no card while the cube does not fit');
   // Put it back: pick its read color and paint it again. The net may redraw the face turned
   // another way between clicks, so find the tile by its stored index each time.
-  const tileOf=()=>{const g=$(`#scanNet g[data-id="${id}"]`),k=ev(`netSlot(${g.dataset.slot})`).k,shown=w.rotateFace([0,1,2,3],k).indexOf(idx);return $(`#scanNet rect[data-id="${id}"][data-pos="${shown}"]`);};
+  const tileOf=()=>{const g=$(`#scanNet g[data-id="${id}"]`),k=ev(`netSlot(${g.dataset.slot})`).k,shown=w.rotateFace([0,1,2,3,4,5,6,7,8],k).indexOf(idx);return $(`#scanNet rect[data-id="${id}"][data-pos="${shown}"]`);};
   click($(`#scanPal .pt-swatch[data-c="${was[idx]}"]`));assert.strictEqual(ev("scanColor"),was[idx],'a click on a swatch picks it');
   click(tileOf());
   assert.strictEqual(ev("scanVoter").faces[id].stickers.join(),was.join(),'the sticker is back to its read color');
   assert.ok(ev("scanRes")&&ev("scanRes").ok,'the fit holds after the tile is put back: '+$('#scanStatus').textContent);
   assert.ok($('#scanOkBg'),'a paint that makes the cube fit again brings the card up');
-  while(w.canonicalKey(ev("scanRes").facelets,2)!==key&&!$('#scanNextFit').classList.contains('hidden'))click($('#scanNextFit'));
-  assert.strictEqual($$('#scanOkNet rect').length,24,'the card follows Next fit');
+  while(w.canonicalKey(ev("scanRes").facelets,3)!==key&&!$('#scanNextFit').classList.contains('hidden'))click($('#scanNextFit'));
+  assert.strictEqual($$('#scanOkNet rect').length,54,'the card follows Next fit');
   click($('#scanOkYes'));await sleep(50);
   assert.ok(!$('#scanBg')&&!$('#scanOkBg'),'the dialog and the card close on Use this cube');
-  assert.strictEqual(w.canonicalKey(w.twoFacelets(w.scr.cube),2),key,'the loaded scramble gives the scanned 2x2');
+  assert.strictEqual(w.canonicalKey(w.scr.cube.toFacelets(),3),key,'the loaded scramble gives the scanned cube');
   assert.ok(/^scan-/.test(w.scr.seed),'the scramble is named after the scan');
-  // ----- the 3x3: nine tiles a face, faces by center color. Five faces are enough when the sixth
-  // follows from them: it shows on the net dashed and takes no paint, and the card comes up -----
-  w.setMethod('cfop');click($('#camBtn'));await sleep(50);
+  // ----- five faces are enough when the sixth follows from them: it shows on the net dashed and
+  // takes no paint, and the card comes up -----
+  click($('#camBtn'));await sleep(50);
   assert.strictEqual(ev("scanN"),3);assert.strictEqual($$('#scanNet rect').length,54);
-  assert.ok(!/no fixed centers/.test($('.modal.scan p').textContent)&&/Five faces are usually enough/.test($('.modal.scan p').textContent),'the text says five faces are usually enough');
+  assert.ok(/Five faces are usually enough/.test($('.modal.scan p').textContent),'the text says five faces are usually enough');
   const cube3=w.applyAlg(new (ev("Cube"))(),['R','U',"F'",'L2','D','B']),f3=cube3.toFacelets();
   const feed3=(f,c)=>{const truth=w.rotateFace(f.slice(9*c,9*c+9),c%4);for(let k=0;k<80&&!ev("scanVoter").faces[c];k++)w.scanStep(w.readFace(render(truth,320,240,false,'stickers'),{n:3}));};
   for(const c of [2,0,1,5,3])feed3(f3,c);
@@ -128,18 +126,6 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.ok($('#scanOkBg'),'the card comes up');
   click($('#scanOkBack'));assert.ok(!$('#scanOkBg')&&$('#scanBg'),'Back closes the card');
   click($('#scanUse'));await sleep(50);assert.ok(!$('#scanBg')&&w.scr.cube.equals(cubeN),'the dialog\'s own button still uses the cube');
-  // ----- the 4x4: sixteen tiles a face; Use this cube loads the state itself -----
-  w.setMethod('master');w.openScan({n:4});await sleep(50);
-  assert.strictEqual(ev("scanN"),4);assert.strictEqual($$('#scanNet rect').length,96);
-  assert.ok(/4×4/.test($('.modal.scan p').textContent));
-  const f4=[];for(let f=0;f<6;f++)for(let k=0;k<16;k++)f4.push(f); // solved
-  showAll(f4,4);
-  assert.ok(ev("scanRes")&&ev("scanRes").ok,'six 4x4 faces fit together: '+$('#scanStatus').textContent);
-  assert.ok($('#scanOkBg')&&$$('#scanOkNet rect').length===96,'the card comes up for the 4x4 too');
-  assert.strictEqual(ev("scanRes").facelets.join(),f4.join(),'a solved 4x4, held white up and green in front');
-  assert.ok(!$('#scanUse').disabled,'a 4x4 can be used: '+$('#scanStatus').textContent);
-  click($('#scanUse'));await sleep(50);assert.ok(!$('#scanBg'));
-  assert.ok(w.scr.cube.isFour&&w.scr.cube.s.join()===f4.join(),'the loaded state is the scanned 4x4');
   // ----- the sticker style chip: Auto by default, a pick is kept -----
   w.openScan({n:3});await sleep(20);
   assert.ok($('#scanStyle button[data-s="auto"]').classList.contains('on'),'Auto is the default');
@@ -190,7 +176,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   click($('#scanUse'));await sleep(20);
   assert.ok(got&&got.how==='use'&&got.info.full&&got.c.equals(far),'Use this cube hands the full read back');
   // Escape closes the dialog; Start again clears it.
-  w.openScan({n:2});await sleep(20);
+  w.openScan({n:3});await sleep(20);
   click($('#scanReset'));assert.strictEqual(ev("scanVoter").order.length,0);assert.ok(/Show a face/.test($('#scanStatus').textContent));
   d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
   assert.ok(!$('#scanBg'),'Escape closes the dialog');

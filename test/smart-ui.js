@@ -27,7 +27,6 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   const Cube=ev('Cube');
   const netColors=()=>$$('#smartNet rect').map(r=>r.getAttribute('fill'));
   const colorsOf=c=>c.toFacelets().map(i=>w.stickerColor(i));
-  assert.ok($('#smartBtn').classList.contains('three-only'),'the Smart cube button is for the 3x3');
   // ----- open, then a cancelled chooser -----
   click($('#smartBtn'));await sleep(20);
   assert.ok($('#smartBg'),'the dialog opens');

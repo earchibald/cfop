@@ -28,7 +28,6 @@ w.addEventListener('load',async()=>{try{
   const fcs=(base,ms)=>JSON.stringify([...w.seqFaceColors(base,ms)]);
   assert.strictEqual(fcs(null,['U','z2','U','R','M']),'[0,-1,3,4,-1]','a turn moves the centers on; a slice has no face');
   assert.strictEqual(fcs(null,['x','U','y','R']),'[-1,2,-1,0]','each turn counts');
-  assert.strictEqual(fcs({isFour:true},['r','Rw','2R','x','U']),'[1,1,1,-1,2]','the 4x4 counts its whole-cube turns only');
 
   // F2L live works on the same scramble, with the solved part dashed.
   tab('f2l');await until(()=>moves().length>scr.length,'F2L state');

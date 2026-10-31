@@ -54,12 +54,8 @@ w.addEventListener('load',async()=>{try{
   box.checked=true;box.dispatchEvent(new w.Event('change',{bubbles:true}));
   assert.ok(d.body.classList.contains('refall'),'all moves show');assert.ok(!sp.querySelector('.sp-m.on'),'revealed moves reset');
   click(sp);assert.ok($('#modalBg'),'with all moves shown, a click on the line opens the details');$('#modalClose').click();
-  // The 2x2 and 4x4 Reference tabs share the checkbox and cover their algorithms.
-  for(const m of ['speed2','speed4']){w.setMethod(m);const t=m==='speed2'?'#tab-sref':'#tab-fref';
-    assert.ok($(t+' .refAll').checked,m+': the checkbox follows the setting');
-    assert.ok($$(t+' .alg, '+t+' .ref-alg').length>0&&$$(t+' .alg, '+t+' .ref-alg').every(e=>e.querySelector('.spoil')),m+': every algorithm is covered');}
-  const b4=$('#tab-fref .refAll');b4.checked=false;b4.dispatchEvent(new w.Event('change',{bubbles:true}));
-  assert.ok(!d.body.classList.contains('refall')&&!$('#tab-ref .refAll').checked&&!$('#tab-sref .refAll').checked,'one checkbox turns them all off');
+  box.checked=false;box.dispatchEvent(new w.Event('change',{bubbles:true}));
+  assert.ok(!d.body.classList.contains('refall')&&!$('#tab-ref .refAll').checked,'the checkbox turns it off again');
   assert.deepStrictEqual(errs,[],'no script errors');
   console.log('refspoil: first move shows, one move per click, the button reveals the rest, show all moves ok');process.exit(0);
 }catch(e){console.error('refspoil: FAIL',e.message,errs);process.exit(1);}});

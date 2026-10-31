@@ -25,9 +25,9 @@ const SEED={'cw:method':'"beginner"','cw:btab':'"blearn"','cw:animate':'false'};
   const bar=$('#onboardBar');assert.ok(bar,'the first-visit strip shows');
   assert.ok(/First visit/.test(bar.textContent)&&/nothing is saved/.test(bar.textContent));
   for(const id of ['onboardAgain','onboardLeave'])assert.ok($('#'+id).title,id+' carries a title');
-  $('#methodPop .mcard[data-method="mini"]').click();
-  assert.strictEqual(d.body.dataset.method,'mini','a card still switches the method');
-  assert.strictEqual($('#puzzleName').textContent,'2×2 ·','the chip follows the choice');
+  $('#methodPop .mcard[data-method="beginner"]').click();
+  assert.strictEqual(d.body.dataset.method,'beginner','a card still switches the method');
+  assert.strictEqual($('#methodName').textContent,'Beginner','the chip follows the choice');
   assert.strictEqual(JSON.stringify([...ls.map]),before,'localStorage is not changed');
 
   // ----- without ?onboard -----

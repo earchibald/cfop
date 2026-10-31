@@ -54,13 +54,11 @@ function moveGeom(move,size){
 // The cube is drawn as slabs: runs of layers along the move axis that move together.
 // Each slab is a convex box, so its front faces never overlap and need no sort. The
 // slabs are separated by planes across the axis, so they draw far to near along it.
-// The cube is a 3×3 by default. setDrawN(2) draws the 2×2: two cubies a side, each half the
-// cube, with 24 stickers. A 54-sticker array is accepted for either size: the 2×2 shows its
-// corner stickers. Options fade, cls and color always get the 3×3 (54) index of a sticker.
-let DRAW_N=3;function setDrawN(n){DRAW_N=n===2?2:n===4?4:3;}function drawN(){return DRAW_N;}
+// The cube is a 3×3. Options fade, cls and color always get the 54-sticker index of a sticker.
+let DRAW_N=3;function setDrawN(n){DRAW_N=3;}function drawN(){return DRAW_N;}
 function cubePolys(facelets,opts={}){
-  const n=opts.n||DRAW_N;if(n===2&&facelets.length===54)facelets=TWO_FACELET.map(i=>facelets[i]);
-  const to54=n===2?i=>TWO_FACELET[i]:i=>i; // the index the options see: the 3×3 one for a 2×2, the native one otherwise
+  const n=opts.n||DRAW_N;
+  const to54=i=>i;
   const yaw=opts.yaw??-32,pitch=opts.pitch??28;const S=opts.scale||52;const cx=opts.cx??200,cy=opts.cy??185;
   const color=opts.color||((ci)=>stickerColor(ci));const body=opts.body||'var(--sticker-line)';
   const M=opts.rot,cam=M?p=>rot3([0,1,2].map(i=>M[i][0]*p[0]+M[i][1]*p[1]+M[i][2]*p[2]),yaw,pitch):p=>rot3(p,yaw,pitch);
@@ -248,9 +246,9 @@ function netCells(n,{tile=28,gap=2,pad=1,ox=0,oy=0,faces=[0,1,2,3,4,5],pos=NET_P
 // A square sticker of a net or a top view, with its Color Blind Assist letter.
 function netRect(c,x,y,w,h,attrs){return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${stickerColor(c)}"${attrs?' '+attrs:''}/>`+(w>=8&&h>=8?stickerLabel(c,x+w/2,y+h/2,0.55*Math.min(w,h)):'');}
 function renderNet(facelets,opts={}){
-  const n=opts.n||DRAW_N;if(n===2&&facelets.length===54)facelets=TWO_FACELET.map(i=>facelets[i]);
-  const to54=n===2?i=>TWO_FACELET[i]:i=>i; // the index the options see: the 3×3 one for a 2×2, the native one otherwise
-  const s=opts.size||(n===2?45:n===4?22.5:30);let out='';
+  const n=opts.n||DRAW_N;
+  const to54=i=>i;
+  const s=opts.size||30;let out='';
   for(const c of netCells(n,{tile:s-2,gap:2,pad:1,ox:19,oy:19})){const faded=opts.fade&&!opts.fade.has(to54(c.idx));
     out+=netRect(facelets[c.idx],c.x,c.y,c.s,c.s,`rx="3"${faded?' opacity="0.22"':''} stroke="var(--sticker-line)" stroke-width="1"`).replace(/<text /,faded?'<text opacity="0.22" ':'<text ');}
   return out;

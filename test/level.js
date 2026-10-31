@@ -90,8 +90,8 @@ function boot(seed){
   p.w.eval("goTab('learn');openLesson(1)");
   assert.strictEqual(p.$('#tab-learn .stbtn').textContent,'Not started','the status words of the Learn home');
   assert.ok(/Lesson · Step 1 of 8/.test(p.$('#tab-learn .ln-of').textContent),'the lesson eyebrow');
-  assert.strictEqual(p.$('#tab-learn').dataset.crumb,'3×3 Beginner · Learn','the crumb over the section');
-  p.w.eval("setMethod('cfop');goTab('cross')");assert.strictEqual(p.$('#tab-cross').dataset.crumb,'3×3 CFOP · Cross');
+  assert.strictEqual(p.$('#tab-learn').dataset.crumb,'Beginner · Learn','the crumb over the section');
+  p.w.eval("setMethod('cfop');goTab('cross')");assert.strictEqual(p.$('#tab-cross').dataset.crumb,'CFOP · Cross');
   // A level from the menu starts its own track, from any method.
   p.$('#levelChip').click();p.$('#levelPop .lvrow[data-n="4"]').click();
   assert.strictEqual(p.get('level'),4);assert.strictEqual(p.w.eval('START.screen'),'t4-sets','level 4 starts with the sets');

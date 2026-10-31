@@ -5,7 +5,7 @@
 // through stage 5. Tune the references and the gain clamp against these frames, not against the
 // synthetic renderer. With no recording here the test only says so.
 const fs=require('fs'),path=require('path'),zlib=require('zlib'),assert=require('assert');
-const run=require('./vm-load')('js/engine.js','js/two.js','js/scan-assemble.js','js/scan.js');
+const run=require('./vm-load')('js/engine.js','js/scan-assemble.js','js/scan.js');
 const T=run(`({readFace,rotateFace,makeVoter,voteFrame,assembleScan,assembleFree,COLOR_NAMES_E})`);
 const BAR=+(process.env.SCAN_REAL_BAR||0.5); // the share of a face's frames that must read right
 

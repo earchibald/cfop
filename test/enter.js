@@ -15,7 +15,7 @@ const state=alg=>w.stateText(w.applyAlg(new (w.eval('Cube'))(),alg));
 
 w.addEventListener('load',async()=>{try{
   await sleep(100);
-  const Cube=w.eval('Cube'),FourCube=w.eval('FourCube'),STATE=w.eval('STATE_LETTERS'); // a const or class in a classic script is not on window
+  const Cube=w.eval('Cube'),STATE=w.eval('STATE_LETTERS'); // a const or class in a classic script is not on window
   assert.strictEqual(STATE,'WRGYOB');
   w.setMethod('cfop');
   const want=w.applyAlg(new Cube(),"R U F' D2 L B");
@@ -33,9 +33,9 @@ w.addEventListener('load',async()=>{try{
   // an illegal state stays in the dialog with the error
   w.openEnter();$('#enterType').value='WWWWWWWWW RRRRRRRRR GGGGGGGGG YYYYYYYYY OOOOOOOOO BBBBBBBBW';$('#enterGo').click();
   assert.ok($('#enterBg'),'the dialog stays on a bad state');assert.match($('#enterStatus').textContent,/white 10, blue 8/);
-  // a 2x2 state on the 3x3 names the puzzle
+  // a 2x2 or 4x4 state is refused: this page does not read it
   $('#enterType').value='WWWW RRRR GGGG YYYY OOOO BBBB';$('#enterGo').click();
-  assert.match($('#enterStatus').textContent,/a 2x2 state. This is the 3x3/);
+  assert.match($('#enterStatus').textContent,/does not read a 2x2/);
   w.closeEnter();
   // a paste on the page loads a state
   const want2=w.applyAlg(new Cube(),"L2 D' F U R' B2");
@@ -49,16 +49,6 @@ w.addEventListener('load',async()=>{try{
   assert.ok(e.defaultPrevented&&$('#enterBg'),'a bad state opens the dialog');assert.match($('#enterStatus').textContent,/white 10, blue 8/);
   assert.strictEqual($('#enterType').value,'WWWWWWWWW RRRRRRRRR GGGGGGGGG YYYYYYYYY OOOOOOOOO BBBBBBBBW','with the text in the field');
   w.closeEnter();
-  // the 2x2 and the 4x4 take their own letters
-  w.setMethod('speed2');
-  const two=w.applyAlg(new Cube(),"R U' F");
-  e=paste(w.stateText({toFacelets:()=>w.twoFacelets(two)}));
-  assert.ok(e.defaultPrevented,'a 2x2 state is taken on the 2x2');
-  assert.deepStrictEqual(w.twoFacelets(w.eval('scr.cube')),w.twoFacelets(two),'the 2x2 loads as the letters say');
-  w.setMethod('speed4');
-  const four=new FourCube().apply("Rr U f'");
-  e=paste(w.stateText(four));
-  assert.ok(e.defaultPrevented,'a 4x4 state is taken on the 4x4');assert.ok(w.eval('scr.cube').equals(four),'the 4x4 loads as the letters say');
   assert.deepStrictEqual(errs,[],'no script errors');
   console.log('enter ok');process.exit(0);
 }catch(e){console.error(e);process.exit(1);}});

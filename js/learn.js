@@ -63,7 +63,7 @@ function lnCubieGroups(n){const cubies={};for(let i=0;i<6*n*n;i++){const k=lnCub
 // The stickers a lesson word lights, on `cube`: whole cubies, so an edge lights both its tiles.
 // ycenter: the yellow center. wedges: the edges with white. top, middle, bottom: a layer.
 function lnMarkSet(key,cube){
-  const n=drawN();let f=cube.toFacelets();const to54=n===2?i=>TWO_FACELET[i]:i=>i;if(n===2&&f.length===54)f=TWO_FACELET.map(i=>f[i]);
+  const n=drawN();let f=cube.toFacelets();const to54=i=>i;
   const top=1.5-1.5/n,cubies=lnCubieGroups(n);
   const out=new Set();
   for(const k in cubies){const ids=cubies[k],y=+k.split(',')[1];
@@ -82,9 +82,8 @@ function lnCaseMode(s){return s.id==='centers'?'center':s.id==='edges'?'any':und
 // null moves, or nothing to pick out, means the picture shows plain, with nothing dimmed.
 function lnCaseLit(cube,moves,mode){
   const ms=Array.isArray(moves)?moves:parseAlg(moves||'');if(!ms.length)return null;
-  const n=drawN(),after=applyAlg(cube,ms);const to54=n===2?i=>TWO_FACELET[i]:i=>i;
+  const n=drawN(),after=applyAlg(cube,ms);const to54=i=>i;
   let f0=cube.toFacelets(),f1=after.toFacelets();
-  if(n===2&&f0.length===54){f0=TWO_FACELET.map(i=>f0[i]);f1=TWO_FACELET.map(i=>f1[i]);}
   const cubies=lnCubieGroups(n),changed=[],target=[];
   for(const k in cubies){const ids=cubies[k];
     if(mode==='center'?ids.length!==1:ids.length<2)continue;

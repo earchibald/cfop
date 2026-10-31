@@ -24,12 +24,10 @@ function moveCaption(m){
   const w=/^([URFDLB])([urfdlb])(['2]?)$/.exec(m);if(w&&w[1].toLowerCase()===w[2])return BEG_FACE_WORD[w[1]]+', 2 layers '+(w[3]===''?'↻':w[3]==="'"?'↺':'×2');
   const b=m[0],s=m.slice(1);const turn=s===''?'↻':s==="'"?'↺':'×2';
   if(BEG_FACE_WORD[b])return BEG_FACE_WORD[b]+' '+turn;
-  if(puzzleN()===4&&BEG_FACE_WORD[b.toUpperCase()])return 'inside '+BEG_FACE_WORD[b.toUpperCase()]+' '+turn;
   if(s==='2'&&(b==='z'||b==='x'))return 'turn over';
   if(b==='y'||b==='x'||b==='z')return 'whole cube '+turn;
   return '';
 }
-// A 4×4 mix-up also turns two layers as one (Rr) or an inside slice (r).
 function begTurnWords(m){const wide=/^([URFDLB])([urfdlb])/.exec(m);if(wide)return {w:BEG_FACE_WORD[wide[1]]+' two layers',s:m.slice(2),thing:'two layers'};
   if(/^[urfdlb]/.test(m))return {w:'inside '+BEG_FACE_WORD[m[0].toUpperCase()],s:m.slice(1),thing:'slice'};return {w:BEG_FACE_WORD[m[0]],s:m.slice(1),thing:'face'};}
 function begTurnTitle(m){const {w,s,thing}=begTurnWords(m);return s==='2'?`Turn the ${w} ${thing} twice`:s==="'"?`Turn the ${w} ${thing} the other way`:`Turn the ${w} ${thing}`;}
@@ -113,7 +111,7 @@ function renderBegMix(){
   const n=begMix.moves.length,i=begMix.i;
   if(i>=n){
     el.innerHTML=`<div class="beg-mix-pic"><svg id="begMixCube" viewBox="20 10 360 340" aria-hidden="true">${begMixPicSVG(begMixCubeAt(n),null)}</svg><span class="muted beg-small">Still white on top, green facing you.</span></div>
-    <div class="beg-mix-body beg-mix-done"><span class="st-lbl">Turn ${n} of ${n} done</span><h2>Your cube is mixed up</h2><p>The app saw every turn, so it knows your cube. Keep holding it white on top for now.</p>${puzzleN()===3?'<p><b>Next: yellow on top.</b> The solve starts with the cube turned over. The app stops and shows you the turn before the first move.</p>':''}
+    <div class="beg-mix-body beg-mix-done"><span class="st-lbl">Turn ${n} of ${n} done</span><h2>Your cube is mixed up</h2><p>The app saw every turn, so it knows your cube. Keep holding it white on top for now.</p><p><b>Next: yellow on top.</b> The solve starts with the cube turned over. The app stops and shows you the turn before the first move.</p>
     <div class="row beg-mix-act"><button class="primary big" data-beg="mixSolve" title="Start the guided solve on this cube">Start my solve →</button><button class="ghost" data-beg="mixBack" title="Go back to the last turn">← Back</button></div></div>`;
     return;
   }
@@ -124,7 +122,7 @@ function renderBegMix(){
     <div class="beg-mix-turn"><span class="beg-tile${m.includes("'")?' mod':''}">${esc(m)}</span><div><h2 id="begMixTitle">${esc(begTurnTitle(m))}</h2><span class="beg-mix-sub">${esc(begTurnText(m))}</span></div></div>
     <p class="muted">Hold the cube white on top, green toward you. Only the one face moves. The picture shows the result when you press Next.</p>
     <div class="row beg-mix-act"><button data-beg="mixBack"${i?'':' disabled'} title="Go back one turn">← Back</button><button class="primary big" data-beg="mixNext" title="Turn made: show the next turn">Next turn →</button><button class="ghost" data-beg="mixEnd" title="Skip the turns one by one and show the end of the mix-up">Skip to the end</button></div>
-    <div class="beg-key-line"><span><b class="mono">${esc(f.toUpperCase())}</b> is the ${esc(BEG_FACE_WORD[f.toUpperCase()])} face. The six letters: U top, D bottom, F front, B back, R right, L left.</span>${puzzleN()===4?'<span>Two letters, like <b class="mono">Rr</b>, turn the face and the slice behind it as one.</span>':''}<span><b class="mono mod">${esc(f)}'</b> with a mark means counterclockwise.</span><span><b class="mono">${esc(f)}2</b> with a 2 means twice: a half turn.</span></div>
+    <div class="beg-key-line"><span><b class="mono">${esc(f.toUpperCase())}</b> is the ${esc(BEG_FACE_WORD[f.toUpperCase()])} face. The six letters: U top, D bottom, F front, B back, R right, L left.</span><span><b class="mono mod">${esc(f)}'</b> with a mark means counterclockwise.</span><span><b class="mono">${esc(f)}2</b> with a 2 means twice: a half turn.</span></div>
   </div>`;
 }
 // Go to turn i. anim: play the turn just done on the picture, then show the next step.

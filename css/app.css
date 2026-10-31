@@ -493,22 +493,13 @@ details.fold>summary:hover h3{color:var(--text)}
    Each file appends its own section below this one; none edits the rules above. */
 [data-sec="learn"]{--sec:var(--sticker-W)}[data-sec="bsolve"]{--sec:var(--sticker-O)}[data-sec="practice"]{--sec:var(--sticker-G)}
 [data-sec="progress"]{--sec:var(--sticker-B)}[data-sec="cheat"]{--sec:var(--sticker-R)}
-/* One rail per method: #rail for CFOP, #brail for both beginner methods (data-kind=beg), #srail for the 2×2 speed section. */
+/* One rail per method: #rail for CFOP, #brail for the beginner method (data-kind=beg). */
 body:not([data-method="cfop"]) #rail{display:none}
 body:not([data-kind="beg"]) #brail{display:none}
-body:not([data-method="speed2"]) #srail{display:none}
-body:not([data-method="speed4"]) #frail{display:none}
 body[data-kind="beg"]:not([data-begtimer]) .timerpanel{display:none}
 body:not([data-kind="beg"]) #progressPanel,body[data-begtimer] #progressPanel{display:none}
 body:not([data-kind="beg"]) #timerBack{display:none}
-/* Text for one puzzle only. */
-body:not([data-puzzle="3x3"]) .three-only,body:not([data-puzzle="2x2"]) .two-only,body:not([data-puzzle="4x4"]) .four-only{display:none!important}
 .mgroup{margin:4px 0 -4px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.face.f2{grid-template-columns:repeat(2,1fr)}
-.face.f4{grid-template-columns:repeat(4,1fr);gap:1px;width:52px}
-.pt-face2{grid-template-columns:repeat(2,1fr)!important;grid-template-rows:repeat(2,1fr)!important}
-.pt-face4{grid-template-columns:repeat(4,1fr)!important;grid-template-rows:repeat(4,1fr)!important;gap:1px!important}
-/* A 2×2 plan sits in half the width: the note goes under the moves instead of beside them. */
 .tw-plan .step{grid-template-columns:110px 1fr;grid-template-rows:auto auto}
 .tw-plan .step .nm{grid-row:1 / span 2}
 .tw-plan .step>div:last-child{white-space:normal!important;grid-column:2}
@@ -963,7 +954,7 @@ body.cba .cbl{display:inline}
 body.cba .face i{display:flex;align-items:center;justify-content:center;font:700 9px/1 var(--mono,ui-monospace,monospace);font-style:normal;color:#15161a}
 body.cba .face i.R,body.cba .face i.B{color:#fff}
 body.cba .face i.W::after{content:'W'}body.cba .face i.Y::after{content:'Y'}body.cba .face i.R::after{content:'R'}body.cba .face i.O::after{content:'O'}body.cba .face i.G::after{content:'G'}body.cba .face i.B::after{content:'B'}
-body.cba .face.f4 i,body.cba .gd-net .face i{font-size:6px}
+body.cba .gd-net .face i{font-size:6px}
 body.cba .pt-tile[data-cb]:not([data-cb=""])::after{content:attr(data-cb);font:700 12px/1 var(--mono,ui-monospace,monospace);color:#15161a}
 body.cba .pt-tile[data-cb="R"]::after,body.cba .pt-tile[data-cb="B"]::after{color:#fff}
 body.cba .pt-tile{display:flex;align-items:center;justify-content:center}
