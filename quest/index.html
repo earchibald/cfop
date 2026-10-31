@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Quest cube lab</title>
+<meta name="color-scheme" content="dark">
+<style>
+:root{--bg:#0b0b0d;--panel:#151517;--panel2:#1e1e22;--line:#2a2a30;--text:#f1f0ea;--muted:#8f8f97;--faint:#5a5a62;--accent:#2c6fdc;--ok:#3cb371;--warn:#ff6a1c;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:ui-monospace,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:17px;line-height:1.45;-webkit-font-smoothing:antialiased}
+/* The Quest Browser points with a ray: every target is large. */
+button,select{cursor:pointer;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 18px;color:var(--text);font:inherit;font-weight:500;min-height:46px}
+button:hover,select:hover{border-color:var(--muted)}button:disabled{opacity:.4;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.xr{background:#1d3b2a;border-color:#2c6b47;font-weight:600}
+input[type=text]{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font:inherit;min-height:46px;width:16em}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:20px;margin:0}header .ver{font-family:var(--mono);font-size:13px;color:var(--faint)}
+header .grow{flex:1}header #name{font-family:var(--mono);font-size:14px;color:var(--muted)}
+.diag{display:flex;flex-wrap:wrap;gap:6px 18px;padding:10px 20px;font-size:14px;color:var(--muted);border-bottom:1px solid var(--line)}
+.diag b{font-weight:600}.diag .ok{color:var(--ok)}.diag .no{color:var(--warn)}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);gap:0;min-height:calc(100vh - 120px)}
+@media (max-width:760px){main{grid-template-columns:1fr}}
+.stagecol{display:flex;flex-direction:column;min-width:0;position:relative}
+/* A drill's Solved card, over the top of the cube's picture. */
+.toast{position:absolute;top:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px;padding:14px 34px;border-radius:16px;background:rgba(22,74,44,.94);border:3px solid var(--ok);pointer-events:none}
+.toast[hidden]{display:none}.toast b{font-size:40px;line-height:1.1}.toast span{color:rgba(241,240,234,.8);font-size:15px}
+.drillnote{color:var(--muted);font-size:14px}
+.voicenote{margin:0;padding:0 20px 8px;color:var(--muted);font-size:14px}.voicenote[hidden]{display:none}
+#view{width:100%;flex:1;min-height:360px;touch-action:none;cursor:grab;display:block}
+#nogl{margin:20px;color:var(--warn)}
+.moves{padding:10px 20px 4px;font-family:var(--mono);font-size:20px;font-weight:600;min-height:40px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.moves .mv{color:var(--text);border-bottom:4px solid var(--c);padding:0 2px}.moves .more{color:var(--faint)}
+.sub{display:flex;align-items:center;gap:12px;padding:0 20px 12px;color:var(--muted);font-size:14px}.sub .grow{flex:1}
+#stage{color:#ffd21e;font-weight:600}
+#status{padding:0 20px 16px;color:var(--muted);min-height:28px}
+aside{border-left:1px solid var(--line);background:var(--panel);padding:16px 20px;display:flex;flex-direction:column;gap:18px}
+@media (max-width:760px){aside{border-left:0;border-top:1px solid var(--line)}}
+aside h2{font-size:13px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.list,.macrow{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel2)}
+.list p,.macrow p{margin:0 0 8px;color:var(--muted);font-size:14px}
+label.chk{display:flex;align-items:center;gap:10px;min-height:46px;cursor:pointer}label.chk input{width:22px;height:22px}
+.note{color:var(--muted);font-size:14px;margin:0}
+.keys{font-size:14px;color:var(--muted);margin:0;padding-left:18px}.keys li{margin:2px 0}
+/* The hold row and Hidden faces under the cube, as on the site's Smart cube tab. */
+.viewrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:4px 20px 10px}.viewrow .grow{flex:1}
+.hold{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.hold .lbl{color:var(--muted);font-size:14px}
+.hold .grp{display:inline-flex;gap:8px}
+.hold .ht{width:46px;height:46px;min-height:0;padding:0;border-radius:9px;border:1px solid rgba(0,0,0,.5);background:var(--c)}
+.hold .ht:hover{border-color:var(--text)}
+.hold .ht[aria-pressed="true"]{outline:3px solid var(--text);outline-offset:3px}
+button.chip[aria-pressed="true"]{background:#1d3b2a;border-color:var(--ok)}
+code{font-family:var(--mono);font-size:.92em}
+/* In the Quest app (quest/native.js) the app draws the cube beside this panel: no preview, no WebXR. */
+body.native #view,body.native .xronly{display:none}
+body:not(.native) .apponly{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Quest cube lab</h1><span class="ver" id="ver"></span>
+  <span class="grow"></span><span id="name"></span>
+</header>
+<div class="diag" id="diag">
+  <span>Passthrough (AR): <b id="xrAR">…</b></span>
+  <span>VR: <b id="xrVR">…</b></span>
+  <span>Secure context: <b id="secure">…</b></span>
+  <span>Way to the cube: <b id="way">…</b></span>
+</div>
+<main>
+  <div class="stagecol">
+    <canvas id="view" title="Drag to turn the view. Double-click to put it back."></canvas>
+    <div id="toast" class="toast" role="status" hidden><b>Solved!</b><span id="toastSub"></span></div>
+    <p id="nogl" hidden>This browser has no WebGL 2, so the 3D view cannot start.</p>
+    <div class="viewrow">
+      <div class="hold" id="hold" role="group" aria-label="How you hold the cube"><span class="lbl" title="How you hold the cube. A tile sets the hold. No turn goes on the list.">Top</span><span class="grp" data-place="up"></span><span class="lbl">Front</span><span class="grp" data-place="front"></span></div>
+      <span class="grow"></span>
+      <button id="hidden" class="chip" aria-pressed="false" title="Show the faces turned away from you, as in a mirror behind the cube">Hidden faces</button>
+    </div>
+    <div class="viewrow">
+      <span class="grow"></span>
+      <span id="drillNote" class="drillnote"></span>
+      <button id="drill" class="chip" aria-pressed="false" title="Drill mode: the picture starts as a case, and your turns turn it. Solved, the case comes again. Say a case name, such as T perm or Sune, to drill that one. Press again to see your own cube.">Drill mode</button>
+      <button id="scramble" class="chip" title="A new scramble on the picture, whatever your cube shows. Your turns turn it. Solved, another comes.">New scramble</button>
+      <button id="real" class="chip" title="Show your own cube again, its stickers as they are now" disabled>Real cube state</button>
+      <button id="listen" class="chip" aria-pressed="false" title="The voice: say a case name to drill it, a hold such as yellow up, or clear moves. Press again to stop listening.">Listen</button>
+    </div>
+    <p id="voice" class="voicenote" aria-live="polite" hidden></p>
+    <div class="moves" id="moves" aria-live="polite"></div>
+    <div class="sub"><span id="stage"></span><span class="grow"></span><span id="count">0 moves</span><button id="clear" title="Clear the moves">Clear moves</button></div>
+    <div id="status" role="status"></div>
+  </div>
+  <aside>
+    <section>
+      <h2>Cube</h2>
+      <div class="btns">
+        <button id="connect" class="primary" title="Look for your smart cube">Connect</button>
+        <button id="disconnect" hidden title="Disconnect the cube">Disconnect</button>
+      </div>
+    </section>
+    <div class="list" id="list" hidden>
+      <p id="listNote"></p>
+      <div class="btns" id="listItems"></div>
+      <div class="btns" style="margin-top:8px"><button id="listCancel" title="Stop looking">Cancel</button></div>
+    </div>
+    <div class="macrow" id="macRow" hidden>
+      <p>The MAC address of <b id="macName"></b>. The site's Smart cube dialog shows it.</p>
+      <div class="btns"><input type="text" id="mac" placeholder="AB:12:34:56:78:9A" title="The cube's MAC address" autocomplete="off" spellcheck="false"><button id="macGo" class="primary" title="Connect with this address">Connect</button></div>
+    </div>
+    <section class="xronly">
+      <h2>Headset</h2>
+      <div class="btns">
+        <button id="enterAR" class="xr" disabled title="See the cube in your room, through passthrough">Enter passthrough</button>
+        <button id="enterVR" class="xr" disabled title="See the cube in VR">Enter VR</button>
+      </div>
+    </section>
+    <section>
+      <h2>View</h2>
+      <label class="chk" title="The cube on the screen tilts with the cube in your hands"><input type="checkbox" id="tilt"> Tilt with my cube</label>
+      <div class="btns">
+        <button id="level" title="Take the cube as you hold it now as square to the front">Level</button>
+        <button id="here" class="apponly" title="Bring the cube and this panel back in front of you">Bring here</button>
+      </div>
+    </section>
+    <section class="apponly">
+      <h2>In the app</h2>
+      <ul class="keys">
+        <li>Pinch the cube to carry it. Pinch the bar under this panel to carry the panel. Each goes where you put it.</li>
+        <li>The buttons under the cube go with it: Tilt, Level, Clear, Hidden faces, Smaller, Larger, Hide panel; the hold; Bring here; Drill mode, New scramble, Real cube state and Listen.</li>
+        <li>Poke a button with a fingertip, or point at it and pinch.</li>
+        <li>Listen turns the voice on. Say a case name to drill it, such as "T perm" or "Sune", a hold such as "yellow up", "x prime", "clear moves" or "reset". Drill mode turns the voice on too.</li>
+        <li>Bring here puts the cube and this panel back in front of you.</li>
+      </ul>
+    </section>
+    <section class="xronly">
+      <h2>In the headset</h2>
+      <ul class="keys">
+        <li>Your hands do it all, so you keep the cube in your hands. One free hand is enough.</li>
+        <li>Poke a button under the cube with a fingertip: Tilt, Level, Clear, Hidden faces, Smaller, Larger, Hide panel.</li>
+        <li>The row under them sets the hold: Top white or yellow, Front green, orange, blue or red.</li>
+        <li>Exit is at the end of that row. Poke it, then poke it again to come back to this page.</li>
+        <li>Drill mode, in the third row, shows a case on the picture (Sune the first time), whatever your cube shows. Your turns turn it. Solve it and the case comes again. Stop drill shows your own cube again.</li>
+        <li>New scramble, in the third row too, puts a random scramble on the picture the same way. Solve it and another comes. Real cube state shows your own cube again, as it is now.</li>
+        <li>In Drill mode, say a case name to drill it: any two-look OLL or PLL case, or any PLL, such as "T perm", "Sune", "headlights" or "U a perm". Say "again" for the case again, "stop drill" to end. Say the hold as on the Smart cube tab, such as "yellow up", "green front" or "top yellow, front green", or turn it with "x prime" or "turn y". Say "clear moves", or "reset" for the case again. The panel shows what was heard. Start Drill mode on this page once first, so the headset asks for the microphone here.</li>
+        <li>Pinch the cube to carry it. Hold a pinch away from it for a moment to bring it back in front of you.</li>
+        <li>With controllers: grip near the cube carries it, the trigger away brings it back. A: tilt. B: level. Right stick: size; press it: hidden faces. X: clear. Y: panel. Press the left stick: exit.</li>
+      </ul>
+    </section>
+  </aside>
+</main>
+<script src="../js/engine.js"></script>
+<script src="../js/state-text.js"></script>
+<script src="../js/algs.js"></script>
+<script src="../js/listen-match.js"></script>
+<script src="../js/smart-words.js"></script>
+<script src="../js/stage.js"></script>
+<script src="../js/draw.js"></script>
+<script src="../js/gan.js"></script>
+<script src="../js/bridge.js"></script>
+<script src="../lab/smack.js"></script>
+<script src="core.js"></script>
+<script src="render.js"></script>
+<script src="voice.js"></script>
+<script src="version.js"></script>
+<script src="quest.js"></script>
+<script src="native.js"></script>
+</body>
+</html>

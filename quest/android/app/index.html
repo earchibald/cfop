@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Twistwright on Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* The Quest app's start page (quest/android/app/): the three pages, and the state of Bluetooth. */
+  :root{--bg:#14161a;--card:#1e2127;--line:#2e333b;--ink:#eef0f3;--dim:#9aa3ad;--acc:#2fbf71;--warn:#f0a43a}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font:18px/1.45 Rubik,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px}
+  h1{font-size:30px;font-weight:600;margin:0 0 6px}
+  p.sub{color:var(--dim);margin:0 0 28px}
+  .pages{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;width:min(900px,100%)}
+  a.page{display:block;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;color:inherit;text-decoration:none}
+  a.page:hover,a.page:focus{border-color:var(--acc);outline:none}
+  a.page b{display:block;font-size:22px;font-weight:600;margin-bottom:6px}
+  a.page span{color:var(--dim);font-size:16px}
+  .foot{margin-top:28px;color:var(--dim);font-size:15px}
+  .foot i{font-style:normal;color:var(--ink)}
+  .foot i.bad{color:var(--warn)}
+</style>
+</head>
+<body>
+  <h1>Twistwright on Quest</h1>
+  <p class="sub">The app reads your smart cube over Bluetooth. Pick a page.</p>
+  <div class="pages">
+    <a class="page" href="../lab/" title="Open the smart cube lab"><b>Smart cube lab</b><span>Your cube live, full size: turns, tilt, the moves, the F2L guide.</span></a>
+    <a class="page" href="../quest/" title="Open the Quest cube page"><b>Quest cube</b><span>The Quest page's cube and panel, as a flat preview.</span></a>
+    <a class="page" href="../" title="Open the Twistwright trainer"><b>Twistwright</b><span>The whole trainer, with the Smart cube tab.</span></a>
+  </div>
+  <p class="foot">App <i id="ver">–</i> · Bluetooth <i id="bt">–</i></p>
+<script>
+  // The words for the states that BleBridge.java gives.
+  const BT_WORDS={poweredOn:'on',poweredOff:'off. Turn it on in the Quick Settings.',unauthorized:'not allowed. Allow Nearby devices for this app in Settings > Apps.',
+    notAsked:'not asked yet. The app asks when you press Connect.',unsupported:'not on this headset',resetting:'starting',unknown:'starting'};
+  (async()=>{
+    const h=window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.bridge;
+    if(!h){document.getElementById('bt').textContent='not here: open this page in the Quest app';return;}
+    const r=await h.postMessage({op:'hello'})||{};
+    document.getElementById('ver').textContent=r.version||'–';
+    const bt=document.getElementById('bt');bt.textContent=BT_WORDS[r.bluetooth]||r.bluetooth;bt.className=r.bluetooth==='poweredOn'?'':'bad';
+  })();
+</script>
+</body>
+</html>
