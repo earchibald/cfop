@@ -218,6 +218,7 @@ function boot(bridge,opts={}){
     beforeParse(w){Object.defineProperty(w,'localStorage',{value:opts.storage||fakeStorage()});
       if(opts.speech)w.SpeechRecognition=opts.speech.R;
       if(opts.vosk)opts.vosk.install(w);
+      if(opts.native)opts.native.install(w);
       if(opts.xr)Object.defineProperty(w.navigator,'xr',{value:opts.xr});
       if(opts.bluetooth)Object.defineProperty(w.navigator,'bluetooth',{value:opts.bluetooth});
       if(opts.android){opts.android.install(w);w.fetch=async()=>({ok:false});return;}
@@ -606,6 +607,61 @@ async function android(){
   console.log('quest android ok');
 }
 
+// The Quest app (quest/spatial/) as the page sees it: TwistwrightQuest takes the geometry and the
+// frames; TwistwrightSpeech is the headset's speech service. opts.none: no speech service.
+function fakeNative(opts={}){
+  const f={geo:[],frames:[],starts:[],stops:0,w:null};
+  f.install=w=>{f.w=w;
+    w.TwistwrightQuest={geometry(j){assert.strictEqual(typeof j,'string');f.geo.push(JSON.parse(j));},frame(j){assert.strictEqual(typeof j,'string');f.frames.push(JSON.parse(j));}};
+    w.TwistwrightSpeech={start(j){f.starts.push(JSON.parse(j));return opts.none?'none':'ok';},stop(){f.stops++;}};};
+  f.ev=e=>f.w.questSpeechEvent(e);
+  return f;
+}
+// The page in the Quest app: the geometry once, a frame per change of the picture (a layer part way
+// through, then the state after it), no preview of its own, and the voice through the app.
+async function spatial(){
+  const n=fakeNative(),{w,d,errs}=await boot(fakeBridge([]),{native:n});
+  const $=s=>d.querySelector(s),Q=()=>w.questState();
+  assert.deepStrictEqual(errs,[]);
+  assert.ok(d.body.classList.contains('native')&&Q().r===null,'the app draws the cube: no preview here');
+  assert.strictEqual(n.geo.length,1,'the geometry goes once');
+  const g=n.geo[0];
+  assert.ok(g.stickers.length===54&&g.cubies.length===26&&Object.keys(g.moves).length===18&&g.colors.length===6,'54 stickers, 26 cubies, 18 moves, 6 colors');
+  assert.deepStrictEqual(g.moves.R,{n:[1,0,0],deg:-90,layers:[1]},'R: the right layer, a quarter turn');
+  assert.ok(await until(()=>n.frames.length>0),'a first frame');
+  assert.ok(n.frames[0].f===''&&n.frames[0].q.length===4,'no cube yet: no facelets');
+  const C=w.eval('Cube'),R=w.applyAlg(new C(),['R']);
+  w.questJump(new C());w.questShow(R);
+  assert.ok(await until(()=>n.frames.some(f=>f.m==='R'&&f.t>0&&f.t<1)),'R part way through');
+  assert.ok(await until(()=>{const f=n.frames[n.frames.length-1];return f.m===''&&f.f===R.toFacelets().join('');}),'then the state after R');
+  const k=n.frames.length;await sleep(80);assert.strictEqual(n.frames.length,k,'no frame while nothing changes');
+  // the voice
+  $('#drill').click();
+  assert.strictEqual(n.starts.length,1,'Drill mode starts the app\'s recognizer');
+  const bias=n.starts[0].bias;assert.ok(n.starts[0].lang==='en-US'&&bias.includes('sune')&&bias.includes('t perm')&&bias.includes('stop drill'),'biased to the names and the commands');
+  assert.ok(!bias.some(b=>b.length<2),'no letter alone');
+  assert.ok(/Asking for the microphone/.test($('#voice').textContent));
+  n.ev({type:'ready'});assert.ok(/Say a case name/.test($('#voice').textContent),'listening');
+  n.ev({type:'partial',texts:['tea']});assert.ok(/Heard so far.*tea/.test($('#voice').textContent));
+  n.ev({type:'final',texts:['tea perm','t perm']});assert.strictEqual(Q().drill.c.id,'pll-T','an alternative names the T perm');
+  n.ev({type:'ready'});assert.ok(/Drilling T perm/.test($('#voice').textContent),'the next sentence keeps the line');
+  n.ev({type:'final',texts:['yellow up']});assert.ok(Q().hold.top===3,'a hold command');
+  n.ev({type:'error',msg:'busy'});assert.ok(/The voice stopped: busy/.test($('#voice').textContent)&&Q().drill,'an error: the drill runs on');
+  n.ev({type:'final',texts:['stop drill']});assert.ok(!Q().drill&&n.stops===1,'"stop drill": the recognizer stops');
+  n.ev({type:'final',texts:['sune']});assert.ok(!Q().drill,'nothing heard after the stop counts');
+  $('#drill').click();n.ev({type:'blocked'});assert.ok(/microphone is blocked/.test($('#voice').textContent),'no microphone: the line says so');
+  $('#drill').click();w.close();
+  const m=fakeNative({none:true}),b=await boot(fakeBridge([]),{native:m});
+  b.d.querySelector('#drill').click();
+  assert.ok(/no speech service/.test(b.d.querySelector('#voice').textContent)&&b.w.questState().drill,'no speech service: the drill runs without voice');
+  b.w.close();
+  // the WebView app with no speech of its own says where the voice is
+  const a=await boot(null,{android:fakeAndroid(fakeBridge([]))});
+  a.d.querySelector('#drill').click();
+  assert.ok(/does not hear case names/.test(a.d.querySelector('#voice').textContent),a.d.querySelector('#voice').textContent);
+  a.w.close();console.log('quest spatial ok');
+}
+
 // The voice through Vosk (?voice=vosk, as on the Quest Browser): the microphone, the model told the
 // phrases, a name, the model kept for the next drill; a server with no model; a blocked microphone.
 async function vosk(){
@@ -634,4 +690,4 @@ async function vosk(){
   c.w.close();console.log('quest vosk ok');
 }
 
-(async()=>{pure();await page();await vosk();await xr();await notAsked();await questBrowser();await android();console.log('quest ok');})().catch(e=>{console.error(e);process.exit(1);});
+(async()=>{pure();await page();await vosk();await xr();await notAsked();await questBrowser();await android();await spatial();console.log('quest ok');})().catch(e=>{console.error(e);process.exit(1);});

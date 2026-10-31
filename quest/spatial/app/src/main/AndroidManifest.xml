@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Twistwright for Meta Quest, the Spatial SDK app. The entries for the headset follow Meta's
+     MixedRealitySample (Spatial SDK 0.14.0). The version is in app/build.gradle.kts. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:horizonos="http://schemas.horizonos/sdk"
+    android:installLocation="auto">
+
+    <horizonos:uses-horizonos-sdk horizonos:minSdkVersion="69" horizonos:targetSdkVersion="69" />
+
+    <uses-feature android:name="android.hardware.vr.headtracking" android:required="true" />
+    <uses-feature android:name="oculus.software.handtracking" android:required="false" />
+    <uses-feature android:name="com.oculus.feature.PASSTHROUGH" android:required="false" />
+    <uses-feature android:name="com.oculus.feature.VIRTUAL_KEYBOARD" android:required="false" />
+    <uses-feature android:name="oculus.software.overlay_keyboard" android:required="false" />
+    <uses-feature android:name="com.oculus.feature.RENDER_MODEL" android:required="false" />
+    <uses-feature android:glEsVersion="0x00030001" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+
+    <uses-permission android:name="com.oculus.permission.HAND_TRACKING" />
+    <uses-permission android:name="com.oculus.permission.RENDER_MODEL" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- The voice: the headset's own speech service (QuestSpeech.kt). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- The cube (BleBridge.java): the Nearby devices question. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- The pages are built in; the fonts come from the web. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Android 11 and later: the speech service is seen only when the app asks for it. -->
+    <queries>
+        <intent><action android:name="android.speech.RecognitionService" /></intent>
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:label="Twistwright Cube Lab">
+        <meta-data android:name="com.oculus.supportedDevices" android:value="quest2|questpro|quest3|quest3s" />
+        <meta-data android:name="com.oculus.handtracking.version" android:value="V2.0" />
+        <meta-data android:name="com.oculus.vr.focusaware" android:value="true" />
+        <uses-native-library android:name="libossdk.oculus.so" android:required="true" />
+
+        <activity
+            android:name=".QuestActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="false"
+            android:configChanges="screenSize|screenLayout|orientation|keyboardHidden|keyboard|navigation|uiMode">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="com.oculus.intent.category.VR" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

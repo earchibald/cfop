@@ -33,13 +33,25 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+# The same headset over USB and over Wi-Fi shows as two devices: when every device has one serial,
+# use the USB one (else the first).
+one_headset() {
+  local ids serials pick
+  ids=$(adb devices | awk 'NR>1 && $2=="device" {print $1}')
+  [ -n "$ids" ] || return 1
+  serials=$(for d in $ids; do adb -s "$d" shell getprop ro.serialno 2>/dev/null | tr -d '\r'; echo; done | grep -v '^$' | sort -u)
+  [ "$(printf '%s\n' "$serials" | wc -l | tr -d ' ')" = 1 ] || return 1
+  pick=$(printf '%s\n' $ids | grep -v ':' | head -1); [ -n "$pick" ] || pick=$(printf '%s\n' $ids | head -1)
+  export ANDROID_SERIAL="$pick"
+  echo "The headset is on adb twice (USB and Wi-Fi): using $pick."
+}
 headset() {
   command -v adb >/dev/null 2>&1 || { echo "adb is not installed. Install it with: brew install --cask android-platform-tools" >&2; exit 1; }
   local st; st=$(adb get-state 2>&1 || true)
   case "$st" in
     device) ;;
     *unauthorized*) echo "The headset has not allowed this Mac yet. Put it on and choose Allow in the USB debugging prompt, then run this again." >&2; exit 1;;
-    *"more than one"*) echo "More than one device is connected. Set ANDROID_SERIAL to the headset's serial from: adb devices" >&2; exit 1;;
+    *"more than one"*) one_headset || { echo "More than one device is connected. Set ANDROID_SERIAL to the headset's serial from: adb devices" >&2; exit 1; };;
     *) echo "No headset found. Plug it in with a USB-C data cable, put it on, and allow USB debugging. adb said: $st" >&2; exit 1;;
   esac
 }

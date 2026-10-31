@@ -95,8 +95,9 @@ stays for the next drill. A browser with its own speech recognition (Chrome or S
 uses that; `?voice=vosk` or `?voice=speech` picks one.
 
 Start Drill mode once on the flat page before the session, so the microphone question comes up
-there. The Quest app's WebView has no microphone, so the app says the voice is for the Quest
-Browser, and its build leaves `quest/voice/` out.
+there. In the Quest app (below) the page hears through the headset's own speech service instead,
+so the app's build leaves `quest/voice/` out. The older WebView app (`quest/android/`) has no
+microphone; there the line says the voice is in the new app or the Quest Browser.
 
 Checked: `test/quest.js` (every name of every case, the grammar, the commands, a fake recognizer
 and a fake Vosk on the page), and headless Chrome with the real model, a case name spoken by macOS
@@ -118,7 +119,61 @@ new case.
 Open on a headset: how well hand tracking sees a hand that holds a cube, and whether the row is in a
 good place to reach.
 
-## The Quest app: no Mac
+## The Quest app (Spatial SDK): the real app
+
+`quest/spatial/` is Twistwright as a Horizon OS app, built with Meta's Spatial SDK (0.14.0, Kotlin,
+Gradle). It needs no Mac and no browser: the cube over the headset's Bluetooth, the voice through
+the headset's own speech service, and the cube in the room in passthrough.
+
+- **The page is a panel.** The Quest page (`quest/index.html`, built in and served by `Pages.java`
+  as the WebView app serves it) floats in the room as a panel, and keeps all the logic: the cube's
+  link (`js/bridge.js` over `BleBridge.java`), the moves, Drill mode, New scramble, the stage, the
+  hold, the matcher. Hands work on it as on any panel: point or poke. Its grab bar carries it.
+- **The app draws the cube** beside the panel, and it moves with the panel (`CubeView.kt`): 26 cubies
+  and 54 stickers as boxes, the layer of a move part way through its turn. `quest/native.js` sends
+  the geometry once (`questNativeGeometry`) and a frame at each change of the picture
+  (`questNativeFrame`: the facelets before the move, the move, how far it has turned, the tilt or
+  the hold). The page's own 3D preview, the WebXR buttons and Hidden faces are off in the app
+  (`body.native`). The page's frame is right-handed with z toward you, the scene's has z away from
+  you; `CubeView.scene()` turns each pose over z.
+- **The voice** (`QuestSpeech.kt`, `window.TwistwrightSpeech`): Android's `SpeechRecognizer` on
+  the headset's speech service. Horizon OS has one: on a Quest 3 (Android 14, build UP1A.231005.007.A1, seen 2026-10-30),
+  `com.oculus.systemintelligence` registers "HzOS Speech On Device Recognition Service" as the
+  default. The app asks for the microphone when Drill mode first starts, then listens one sentence at
+  a time while Drill mode is on, biased to the case names and the commands
+  (`EXTRA_BIASING_STRINGS`, `questVoiceBias`). The page reads the alternatives with the same matcher
+  as the other two recognizers (`questVoiceNative` in `quest/voice.js`). If the default service will
+  not bind, it falls back to the on-device recognizer.
+- It installs over the WebView app (same id, `com.twistwright.quest`, a higher `versionCode`), so the
+  pages keep their storage.
+
+```sh
+quest/spatial/build.sh --install     # stage the pages, build with Gradle, install over adb, open
+quest/spatial/build.sh --logs        # the app's log and the page's console
+```
+
+The build needs a JDK 17 and the Android SDK with platform 34 (as below); Gradle comes through the
+wrapper (9.4.1) and the Spatial SDK from Maven Central, so the first build needs the network. No
+Android Studio and no Spatial Editor: the scene is made in code. `chrome://inspect` shows the
+panel's page while the headset is on adb.
+
+What a probe app found on the headset (2026-10-30): `isRecognitionAvailable` is false and
+`isOnDeviceRecognitionAvailable` is true, but a plain `createSpeechRecognizer` works: the system
+binds it to `OnDeviceRecognitionService` (both of its services say `exported=false`, so an app cannot
+bind it itself). The microphone counts only while the app is in front, worn (`RECORD_AUDIO` is a
+foreground app-op): with nobody in the headset every try ends in error 9. Then the service said
+"Models are not available for language: en-US - requires download" (error 13), so `QuestSpeech`
+asks for the model once (`triggerModelDownload`) and tries again every 5 s, and the page's line says
+the headset is getting it. If it never comes, look in the headset's settings for voice commands or
+dictation, which may fetch it.
+
+Checked: the build; the app installs over the WebView app and starts; `test/quest.js` drives the
+page with a fake app (the geometry, the frames, the voice's events). Not yet seen on a headset: the
+first sentence heard, the panel and the cube's place and size, the turn of the cube's frame, the cube
+over Horizon OS Bluetooth. (`adb shell am broadcast -a com.oculus.vrpowermanager.prox_close` wakes a
+headset nobody wears, but a launch waits while a Guardian dialog shows.)
+
+## The Quest app (WebView): the first try
 
 `quest/android/` is an Android app for the headset: the pages in a WebView, the cube over the
 headset's own Bluetooth. It is the Mac app's window in Android form. `BleBridge.java` speaks the

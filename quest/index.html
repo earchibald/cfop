@@ -55,6 +55,8 @@ label.chk{display:flex;align-items:center;gap:10px;min-height:46px;cursor:pointe
 .hold .ht[aria-pressed="true"]{outline:3px solid var(--text);outline-offset:3px}
 button.chip[aria-pressed="true"]{background:#1d3b2a;border-color:var(--ok)}
 code{font-family:var(--mono);font-size:.92em}
+/* In the Quest app (quest/native.js) the app draws the cube beside this panel: no preview, no WebXR. */
+body.native #view,body.native .xronly,body.native #hidden{display:none}
 </style>
 </head>
 <body>
@@ -107,7 +109,7 @@ code{font-family:var(--mono);font-size:.92em}
       <p>The MAC address of <b id="macName"></b>. The site's Smart cube dialog shows it.</p>
       <div class="btns"><input type="text" id="mac" placeholder="AB:12:34:56:78:9A" title="The cube's MAC address" autocomplete="off" spellcheck="false"><button id="macGo" class="primary" title="Connect with this address">Connect</button></div>
     </div>
-    <section>
+    <section class="xronly">
       <h2>Headset</h2>
       <div class="btns">
         <button id="enterAR" class="xr" disabled title="See the cube in your room, through passthrough">Enter passthrough</button>
@@ -152,5 +154,6 @@ code{font-family:var(--mono);font-size:.92em}
 <script src="voice.js"></script>
 <script src="version.js"></script>
 <script src="quest.js"></script>
+<script src="native.js"></script>
 </body>
 </html>

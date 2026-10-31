@@ -10,11 +10,12 @@
 // (js/listen-match.js): the names people say for each case, scored by sound. A tie between sets ("T"
 // alone is the T OLL and the T perm) goes to the set of the case drilled now; else the line asks.
 //
-// Two recognizers. The browser's speech recognition where it has one (Chrome or Safari on a computer).
+// Three recognizers. In the Quest app (quest/spatial/), the headset's own speech service through
+// the app (questVoiceNative). The browser's speech recognition where it has one (Chrome or Safari on a computer).
 // The Quest Browser has none, so there the page hears through Vosk in WebAssembly, on the headset
 // itself: vosk-browser and a small English model in quest/voice/ (scripts/quest-voice.js fetches
 // them; quest/run.sh runs it). Vosk is told the phrases it may hear (questVoiceGrammar), so it
-// gives a case name or nothing. ?voice=vosk or ?voice=speech picks one, for a test.
+// gives a case name or nothing. ?voice=native, ?voice=vosk or ?voice=speech picks one, for a test.
 //
 // Pure (no DOM): questVoiceCatalog, questVoiceGrammar, questVoiceCubePhrases, questVoiceCommand,
 // questVoiceAction, questVoiceCase, questVoiceSection, questVoiceHold, questHoldTurn, questHoldWords.
@@ -43,16 +44,21 @@ function questVoiceCase(e){return e?questDrillFind(e.kind==='pll'?'pll-'+e.id:e.
 function questVoiceSection(c){return !c?null:/^(eo|co)-/.test(c.id)?'oll':'pll';}
 // Spellings in the names that are only there for a dictation's mistakes: the model has no such word.
 const QUEST_VOICE_NOT_WORDS=new Set(['sooney','chamelion','camelion','cameleon']);
-// The phrases Vosk listens for: each name as people say it, a PLL name with "perm" after it, and the
-// commands. '[unk]' takes everything else, so talk names nothing. A letter alone is left out: told
-// a letter, Vosk hears "uh" as U. Each OLL case has a name to say instead (headlights, chameleon).
-function questVoiceGrammar(catalog){
+// Each case name as people say it, a PLL name with "perm" after it; no OLL letter alone.
+function questVoiceNames(catalog){
   const out=new Set();
   for(const c of catalog)for(const s of c.say){
     if(c.set==='oll'&&s.length===1)continue;
     if(s.split(' ').some(x=>QUEST_VOICE_NOT_WORDS.has(x)))continue;
     const w=s.split(' ').map(x=>QUEST_VOICE_SPELL[x]||x).join(' ');
     out.add(c.set==='pll'?w+' perm':w);}
+  return [...out];
+}
+// The phrases Vosk listens for: each name as people say it, a PLL name with "perm" after it, and the
+// commands. '[unk]' takes everything else, so talk names nothing. A letter alone is left out: told
+// a letter, Vosk hears "uh" as U. Each OLL case has a name to say instead (headlights, chameleon).
+function questVoiceGrammar(catalog){
+  const out=new Set(questVoiceNames(catalog));
   for(const s of QUEST_VOICE_COMMANDS)out.add(s);
   for(const s of questVoiceCubePhrases())out.add(s);
   out.add('[unk]');
@@ -117,7 +123,8 @@ const QV={on:false,engine:null,rec:null,model:null,modelP:null,kaldi:null,ctx:nu
 function questVoiceOn(){return QV.on;}
 function questVoiceEngine(){
   const want=typeof location!=='undefined'?new URLSearchParams(location.search).get('voice'):null;
-  if(want==='vosk'||want==='speech')return want;
+  if(want==='vosk'||want==='speech'||want==='native')return want;
+  if(questVoiceNativeHere())return 'native';
   const R=window.SpeechRecognition||window.webkitSpeechRecognition;
   return !R||/OculusBrowser|Quest/.test(navigator.userAgent)?'vosk':'speech';
 }
@@ -130,9 +137,9 @@ function questVoicePre(){return QV.on?'Listening. ':'';}
 function questVoiceStart(){
   if(QV.on)return;
   QV.on=true;QV.choices=null;QV.catalog=QV.catalog||questVoiceCatalog();
-  if(typeof questInApp==='function'&&questInApp()){questVoiceSay('The Quest app does not hear case names. Use the Quest Browser for the voice.');return;}
   QV.engine=questVoiceEngine();
-  if(QV.engine==='speech')questVoiceSpeech();else questVoiceVosk();
+  if(QV.engine!=='native'&&typeof questInApp==='function'&&questInApp()){questVoiceSay('This Quest app does not hear case names. Install the new Twistwright Quest app, or use the Quest Browser for the voice.');return;}
+  if(QV.engine==='native')questVoiceNative();else if(QV.engine==='speech')questVoiceSpeech();else questVoiceVosk();
 }
 function questVoiceStop(){
   QV.on=false;QV.choices=null;
@@ -164,6 +171,35 @@ function questVoiceSpeech(){
   rec.onend=()=>{if(QV.on&&QV.rec===rec)setTimeout(()=>{if(QV.on&&QV.rec===rec)try{rec.start();}catch(e){}},250);};
   try{rec.start();}catch(e){QV.rec=null;QV.engine='vosk';questVoiceVosk();return;}
   questVoiceSay(questVoicePre()+QUEST_VOICE_IDLE);
+}
+
+// The Quest app's recognizer (quest/spatial/, QuestSpeech.kt): the headset's own speech service,
+// through Android's SpeechRecognizer. window.TwistwrightSpeech.start(json) asks for the microphone
+// the first time and listens until stop(), again after each sentence; it answers 'ok', or 'none'
+// with no speech service. The app sends each event to window.questSpeechEvent: {type: 'ready'
+// (listening), 'partial' or 'final' with texts (the alternatives, the likeliest first), 'blocked'
+// (no microphone), 'error' with msg}. The options bias it toward the case names and the commands.
+function questVoiceNativeHere(){return typeof window!=='undefined'&&!!window.TwistwrightSpeech&&typeof window.TwistwrightSpeech.start==='function';}
+function questVoiceBias(catalog){
+  const out=new Set([...questVoiceNames(catalog),...QUEST_VOICE_COMMANDS]);
+  for(const s of ['clear moves','reset','yellow up','white up','green front','x prime','y prime','z prime'])out.add(s);
+  return [...out];
+}
+function questVoiceNative(){
+  const S=window.TwistwrightSpeech,rec={ready:false,stop(){try{S.stop();}catch(e){}}};QV.rec=rec;
+  window.questSpeechEvent=ev=>{
+    if(!QV.on||QV.rec!==rec||!ev)return;
+    const texts=(ev.texts||[]).map(t=>String(t).trim()).filter(Boolean);
+    // 'ready' comes before each sentence: only the first one changes the line
+    if(ev.type==='ready'){if(!rec.ready){rec.ready=true;questVoiceSay(questVoicePre()+QUEST_VOICE_IDLE);}}
+    else if(ev.type==='partial'&&texts.length)questVoiceSay(questVoicePre()+'Heard so far.',texts[0]);
+    else if(ev.type==='final'&&texts.length)questVoiceHeard(listenFresh(texts,0));
+    else if(ev.type==='blocked'){QV.rec=null;questVoiceSay('The microphone is blocked. Allow it for Twistwright in the headset settings, then start Drill mode again.');}
+    else if(ev.type==='error')questVoiceSay(questVoicePre()+'The voice stopped: '+(ev.msg||'no reason given')+'. It starts again by itself.');
+  };
+  let r='none';try{r=S.start(JSON.stringify({lang:'en-US',bias:questVoiceBias(QV.catalog)}));}catch(e){}
+  if(r!=='ok'){QV.rec=null;questVoiceSay('This headset gives the app no speech service. The drill works without voice.');return;}
+  questVoiceSay('Asking for the microphone.');
 }
 
 // Vosk: the microphone through the page's audio, to a recognizer told the phrases.
