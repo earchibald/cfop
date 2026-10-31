@@ -132,6 +132,21 @@ the headset's own speech service, and the cube in a dark room.
   carries the panel. The two are carried apart and stay where they are put. Bring here (on the rows
   under the cube and on the page) puts the cube 42 cm in front of the head and the panel to its
   left; the app does it once at the start, when the head is tracked.
+- **In my hands** (app 0.4.0, on the second row, on by default, `cw:questFollow`): while a cube is
+  live and both tracked hands are within 32 cm of each other (they hold the real cube), the drawn
+  cube rides at the middle of the two hands (`AvatarBody`'s hands, `getAbsoluteTransform`), square to
+  the user, eased. The tilt turns it there, so a look around the cube is a turn of the real one. A
+  hand that leaves (to poke a button) leaves the cube where it is. Meanwhile no pinch carries the
+  cube (the fingers of a hand that holds a cube read as a pinch), and the rows stay in the room where
+  they were, so a poke finds them. Off, the cube floats where it is put, as before.
+- **The tilt's state** (page 0.11.0): with Tilt on and a live cube that has sent no tilt reading,
+  the Tilt button says "No tilt yet" (the page and the WebXR session too). A cube that never sends one
+  (a gen 3 cube has no sensor) keeps the hold's picture.
+- **The headset's menu gestures.** Horizon OS keeps the palm pinch: the right hand's opens the
+  headset's own menu, and no app can take or block it (a hand that holds the cube, palm away, cannot
+  make it). The left hand's comes to the app as the Menu button: the app brings the cube and the
+  page panel back in front of the user (`menuWatch`). Quit, at the end of the third row, closes the
+  app (`finishAndRemoveTask`) on a second poke within 3 s, as Exit does in the WebXR session.
 - **The page is a panel.** The Quest page (`quest/index.html`, built in and served by `Pages.java`
   as the WebView app serves it) floats in the room as a panel, and keeps all the logic: the cube's
   link (`js/bridge.js` over `BleBridge.java`), the moves, Drill mode, New scramble, the stage, the
@@ -145,10 +160,12 @@ the headset's own speech service, and the cube in a dark room.
   buttons). The cube's root is an invisible box that the grab takes. The page's own 3D preview and
   the WebXR buttons are off in the app (`body.native`). The page's frame is right-handed with z
   toward you, the scene's has z away from you; `CubeView.scene()` turns each pose over z.
-- **The session's buttons hang under the cube** and go with it (`CubeBar.kt`, a second panel): the
-  page's `questBarButtons` in the app's form, `app: true` (no Exit, Bring here). Tilt, Level, Clear,
-  Hidden faces, Smaller, Larger, Hide panel; the hold's tiles and Bring here; Drill mode, New
-  scramble, Real cube state and Listen. A press goes back to the page as `questNativeDo(id)`, the
+- **The session's buttons sit under the cube** and go with it (`CubeBar.kt`, a second panel, placed
+  in the room under the cube each frame, not a child of it): the page's `questBarButtons` in the
+  app's form, `app: true`. Tilt, Level, Clear, Hidden faces, Smaller, Larger, Hide panel; the hold's
+  tiles, Bring here and In my hands; Drill mode, New scramble, Real cube state, Listen and Quit. Under
+  them, while the voice is on, its line (what it heard and what it did; the frame's `voice`), so the
+  voice shows with the panel away. A press goes back to the page as `questNativeDo(id)`, the
   same as a poke in the WebXR session (`questBarDo`, with `qs.native` in place of `qs.xr`). The
   rows move down clear of the mirrors while the hidden faces show. Both panels are drawn as meshes
   in the scene (`PanelRenderMode.Mesh`): in front of or behind the cube and the hands as they are, and
@@ -162,8 +179,12 @@ the headset's own speech service, and the cube in a dark room.
   default. The app asks for the microphone when the voice first starts, then listens one sentence at
   a time while it is on, biased to the case names and the commands
   (`EXTRA_BIASING_STRINGS`, `questVoiceBias`). The page reads the alternatives with the same matcher
-  as the other two recognizers (`questVoiceNative` in `quest/voice.js`). If the default service will
-  not bind, it falls back to the on-device recognizer.
+  as the other two recognizers (`questVoiceNative` in `quest/voice.js`). From app 0.4.0 it starts
+  with the plain recognizer (`createSpeechRecognizer`; up to 0.3.0 it took the on-device one each
+  time, as `isRecognitionAvailable` says no on the headset). A start the service does not answer in
+  4 s is made again on the other recognizer; a "no model for en-US" (error 13 or 12) tries the
+  service's own language, then the other recognizer, then asks for the download. Each step goes to
+  the log (`build.sh --logs`: "Speech: ...").
 - It installs over the WebView app (same id, `com.twistwright.quest`, a higher `versionCode`), so the
   pages keep their storage.
 

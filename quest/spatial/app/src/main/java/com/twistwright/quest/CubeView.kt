@@ -37,15 +37,20 @@ import kotlin.math.sqrt
 //
 // The cube is its own thing in the room: root, a box the size of the cube that a pinch or a grip
 // carries (Grabbable; the Interaction SDK makes it a hand grab), turned to face the user as it is
-// carried. The rows of buttons (CubeBar) hang under it and go with it; the page panel is carried by
-// itself.
+// carried. The rows of buttons (CubeBar) sit under it and go with it; the page panel is carried by
+// itself. With In my hands (the frame's follow) and a cube live, the cube rides between the two
+// hands while they hold the real one (both tracked, close together), square to the user, so the
+// tilt turns it there: a look around it is a turn of the real cube. A hand that leaves (to poke a
+// button) leaves the cube where it is; no pinch carries it then (the fingers of a hand that holds a
+// cube read as a pinch), and the rows stay in the room where they were, so a poke finds them.
 //
 // The page's frame is right-handed: x right, y up, z toward you. The scene's is x right, y up, z away
 // from you. All the math here is in the page's frame; scene() turns each final pose over z.
-class CubeView(private val viewer: () -> Pose?) {
-  // The scene's side, for QuestActivity: the frame's panel and bar, as they change.
+class CubeView(private val viewer: () -> Pose?, private val hands: () -> List<Pose>) {
+  // The scene's side, for QuestActivity: the frame's panel, bar and voice line, as they change.
   var onPanel: (Boolean) -> Unit = {}
   var onBar: (JSONArray) -> Unit = {}
+  var onVoice: (String) -> Unit = {}
   // The rows of buttons under the cube: an entity the app made, and its height in meters.
   var bar: Entity? = null
   var barHeight = 0.15f
@@ -81,6 +86,9 @@ class CubeView(private val viewer: () -> Pose?) {
     val hidden: Boolean = o.optBoolean("hidden", false)
     val edge: Float = min(0.6f, max(0.05f, o.optDouble("edge", 0.12).toFloat()))
     val panel: Boolean = o.optBoolean("panel", true)
+    val follow: Boolean = o.optBoolean("follow", false)
+    val live: Boolean = o.optBoolean("live", false)
+    val voice: String = o.optString("voice", "")
     val bar: JSONArray? = o.optJSONArray("bar")
   }
 
@@ -101,10 +109,13 @@ class CubeView(private val viewer: () -> Pose?) {
   private var faces = -1 // the hidden faces drawn, a bit each (-1: none drawn yet)
   private var panelShown: Boolean? = null
   private var barKey = ""
-  private var barAt = Float.NaN
+  private var voiceShown: String? = null
+  private var barAt: Pose? = null // the rows' place in the room
+  private var following = false
+  private var held = false // the hands hold the cube now
 
   // The page's side: window.TwistwrightQuest.
-  inner class Page(private val here: () -> Unit) {
+  inner class Page(private val here: () -> Unit, private val quit: () -> Unit) {
     @JavascriptInterface fun geometry(json: String) {
       try { geoIn.set(Geo(JSONObject(json))) } catch (e: Exception) { Log.e(BleBridge.TAG, "The page's geometry did not read: $e") }
     }
@@ -112,9 +123,10 @@ class CubeView(private val viewer: () -> Pose?) {
       try { frameIn.set(Frame(JSONObject(json))) } catch (e: Exception) { Log.e(BleBridge.TAG, "A frame did not read: $e") }
     }
     @JavascriptInterface fun here() = here.invoke()
+    @JavascriptInterface fun quit() = quit.invoke()
   }
 
-  // The cube's place in the room, where it starts.
+  // The cube's place in the room, where it starts; the rows go under it.
   fun place(at: Pose) {
     val r = root ?: Entity.create(listOf(
       Transform(at), Grabbable(true, GrabbableType.FACE),
@@ -122,6 +134,7 @@ class CubeView(private val viewer: () -> Pose?) {
       // the box is only there to be pinched: nothing of it shows
       Material().apply { baseColor = Color4(0f, 0f, 0f, 0f); alphaMode = AlphaMode.TRANSLUCENT.mode; unlit = true })).also { root = it }
     r.setComponent(Transform(at))
+    barAt = null
   }
 
   val system = object : SystemBase() {
@@ -137,8 +150,31 @@ class CubeView(private val viewer: () -> Pose?) {
       if (dirty) { dirty = false; faces = hf; draw(g, fr, hf) }
       if (fr.panel != panelShown) { panelShown = fr.panel; onPanel(fr.panel) }
       fr.bar?.let { b -> val k = b.toString(); if (k != barKey) { barKey = k; onBar(b) } }
-      placeBar(g, fr)
+      if (fr.voice != voiceShown) { voiceShown = fr.voice; onVoice(fr.voice) }
+      follow(r, fr)
+      placeBar(r, g, fr)
     }
+  }
+
+  // In my hands: the cube between the two hands while they are close together (they hold the real
+  // cube), eased so the tracking's jitter does not shake it.
+  private fun follow(r: Entity, fr: Frame) {
+    val on = fr.follow && fr.live
+    if (on != following) {
+      following = on; held = false
+      r.setComponent(Grabbable(!on, GrabbableType.FACE))
+      Log.i(BleBridge.TAG, "In my hands: " + if (on) "on" else "off")
+    }
+    if (!on) return
+    val hs = hands()
+    val head = viewer()
+    val holds = hs.size == 2 && head != null && hs[0].t.distanceTo(hs[1].t) < HOLD_APART
+    if (holds != held) { held = holds; Log.i(BleBridge.TAG, "In my hands: " + if (holds) "held" else "let go, ${hs.size} hands") }
+    if (!holds) return
+    val mid = (hs[0].t + hs[1].t) * 0.5f
+    val want = Pose(mid, head!!.removePitchAndRoll().q)
+    val now = r.getComponent<Transform>().transform
+    r.setComponent(Transform(if (now.t.distanceTo(mid) > 0.6f) want else now.lerp(want, 0.35f)))
   }
   private var dirty = false
 
@@ -231,16 +267,20 @@ class CubeView(private val viewer: () -> Pose?) {
     for (j in k until seen.size) if (seenOn[j]) { seenOn[j] = false; seen[j].setComponent(Visible(false)) }
   }
 
-  // The rows hang under the cube, clear of it as it tilts, and clear of the mirrors when they show
-  // (questBarCenter in quest/core.js).
-  private fun placeBar(g: Geo, fr: Frame) {
+  // The rows sit under the cube, clear of it as it tilts, and clear of the mirrors when they show
+  // (questBarCenter in quest/core.js), square to the user as the cube is. With In my hands they stay
+  // where they were.
+  private fun placeBar(r: Entity, g: Geo, fr: Frame) {
     val b = bar ?: return
+    if (following && barAt != null) return
     val clear = max(fr.edge * 0.8f, if (fr.hidden) fr.edge / 3f * g.reach else 0f)
     val y = -(clear + barHeight / 2f + 0.02f)
-    if (y == barAt) return
-    barAt = y
-    b.setComponent(TransformParent(root!!))
-    b.setComponent(Transform(Pose(Vector3(0f, y, 0f), Quaternion(1f, 0f, 0f, 0f))))
+    val c = r.getComponent<Transform>().transform
+    val at = Pose(c.t + c.q.removePitchAndRoll() * Vector3(0f, y, 0f), c.q.removePitchAndRoll())
+    val was = barAt
+    if (was != null && was.isApproximatelyEqual(at, 1e-4f, 1e-4f)) return
+    barAt = at
+    b.setComponent(Transform(at))
   }
 
   private fun colorOf(f: String, i: Int) = if (f.length == 54) f[i] - '0' else if (i % 9 == 4) (i - 4) / 9 else -1
@@ -251,6 +291,8 @@ class CubeView(private val viewer: () -> Pose?) {
   }
 
   companion object {
+    // Two hands closer than this (meters) hold the cube between them.
+    const val HOLD_APART = 0.32f
     // The faces' normals in the page's frame, U R F D L B (FACE_GEOM in js/draw.js).
     val FACE_N = arrayOf(floatArrayOf(0f, 1f, 0f), floatArrayOf(1f, 0f, 0f), floatArrayOf(0f, 0f, 1f),
       floatArrayOf(0f, -1f, 0f), floatArrayOf(-1f, 0f, 0f), floatArrayOf(0f, 0f, -1f))

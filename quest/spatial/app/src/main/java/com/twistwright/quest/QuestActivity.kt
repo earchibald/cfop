@@ -19,14 +19,19 @@ import android.widget.LinearLayout
 import com.meta.spatial.core.Color4
 import com.meta.spatial.core.Entity
 import com.meta.spatial.core.Pose
+import com.meta.spatial.core.Query
 import com.meta.spatial.core.Quaternion
 import com.meta.spatial.core.SpatialFeature
 import com.meta.spatial.core.SystemBase
 import com.meta.spatial.core.Vector3
 import com.meta.spatial.isdk.IsdkFeature
+import com.meta.spatial.runtime.ButtonBits
 import com.meta.spatial.runtime.ReferenceSpace
 import com.meta.spatial.toolkit.AppSystemActivity
+import com.meta.spatial.toolkit.AvatarBody
 import com.meta.spatial.toolkit.Box
+import com.meta.spatial.toolkit.Controller
+import com.meta.spatial.toolkit.ControllerType
 import com.meta.spatial.toolkit.DpDisplayOptions
 import com.meta.spatial.toolkit.Grabbable
 import com.meta.spatial.toolkit.GrabbableType
@@ -39,8 +44,8 @@ import com.meta.spatial.toolkit.PanelRegistration
 import com.meta.spatial.toolkit.PanelRenderMode
 import com.meta.spatial.toolkit.QuadShapeOptions
 import com.meta.spatial.toolkit.Transform
-import com.meta.spatial.toolkit.TransformParent
 import com.meta.spatial.toolkit.UIPanelRenderOptions
+import com.meta.spatial.toolkit.getAbsoluteTransform
 import com.meta.spatial.toolkit.UIPanelSettings
 import com.meta.spatial.toolkit.Visible
 import com.meta.spatial.vr.LocomotionSystem
@@ -57,16 +62,20 @@ import org.json.JSONObject
 // have: the headset's speech service for the voice (QuestSpeech), and the cube in the room with no
 // WebXR. Hands first (the Interaction SDK): a pinch carries the cube, the bar under the panel carries
 // the panel, a fingertip pokes a button. Bring here puts both in front of the user again; the app
-// does that once at the start.
+// does that once at the start. In my hands puts the cube between the hands that hold the real one
+// (CubeView). The left hand's palm pinch (the Menu button) brings the panel back; the right hand's
+// is the headset's own menu, which no app can take, and Quit (two pokes) closes the app.
 class QuestActivity : AppSystemActivity() {
   private var web: WebView? = null
   private var bridge: BleBridge? = null
   private var speech: QuestSpeech? = null
   private lateinit var pages: Pages
-  private val cube = CubeView { scene.getViewerPose() }
+  private val cube = CubeView({ scene.getViewerPose() }, { hands() })
   private var panel: Entity? = null
   private var bar: CubeBar? = null
   private var barWait: JSONArray? = null
+  private var voiceWait: String? = null
+  private var menuDown = false
   private var placed = 0 // frames waited for the head before the first Bring here
 
   override fun registerFeatures(): List<SpatialFeature> = listOf(VRFeature(this), IsdkFeature(this, spatial, systemManager))
@@ -77,9 +86,11 @@ class QuestActivity : AppSystemActivity() {
     pages = Pages(this)
     cube.onPanel = { on -> panel?.setComponent(Visible(on)) }
     cube.onBar = { b -> runOnUiThread { bar?.show(b) ?: run { barWait = b } } }
+    cube.onVoice = { t -> runOnUiThread { bar?.voice(t) ?: run { voiceWait = t } } }
     cube.barHeight = BAR_H
     systemManager.registerSystem(cube.system)
     systemManager.registerSystem(firstPlace)
+    systemManager.registerSystem(menuWatch)
     systemManager.findSystem<LocomotionSystem>().enableLocomotion(false)
     // No passthrough: a dark room with a floor, so the cube in the hands is not seen beside the one
     // drawn.
@@ -103,8 +114,7 @@ class QuestActivity : AppSystemActivity() {
       Visible(true)))
     cube.place(Pose(Vector3(0.08f, 0.95f, 0.45f), Quaternion(1f, 0f, 0f, 0f)))
     cube.bar = Entity.create(listOf(
-      Panel(R.id.bar_panel), TransformParent(cube.root!!),
-      Transform(Pose(Vector3(0f, -0.2f, 0f), Quaternion(1f, 0f, 0f, 0f))), Visible(true)))
+      Panel(R.id.bar_panel), Transform(Pose(Vector3(0.08f, 0.75f, 0.45f), Quaternion(1f, 0f, 0f, 0f))), Visible(true)))
   }
 
   // Bring here: the cube 42 cm in front of the head and a little low, square to the user, and the
@@ -121,6 +131,30 @@ class QuestActivity : AppSystemActivity() {
     override fun execute() {
       if (placed < 0 || cube.root == null) return
       if (scene.getViewerPose().t.y > 0.4f || ++placed > 600) { placed = -1; bringHere() }
+    }
+  }
+
+  // The user's hands, as the headset tracks them (not controllers), each at its pose in the room.
+  private var body: Entity? = null
+  private fun hands(): List<Pose> {
+    val b = body?.takeIf { it.hasComponent<AvatarBody>() }
+      ?: Query.where { has(AvatarBody.id) }.eval().firstOrNull { it.isLocal() && it.getComponent<AvatarBody>().isPlayerControlled }?.also { body = it }
+      ?: return emptyList()
+    val a = b.getComponent<AvatarBody>()
+    return listOf(a.leftHand, a.rightHand).mapNotNull { h ->
+      val c = h.tryGetComponent<Controller>()
+      if (c == null || !c.isActive || c.type != ControllerType.HAND) null else getAbsoluteTransform(h)
+    }
+  }
+  // The left hand's palm pinch, or the left controller's menu button: the panel, and the cube and
+  // the panel in front of the user.
+  private val menuWatch = object : SystemBase() {
+    override fun execute() {
+      val b = body ?: run { hands(); body } ?: return
+      val c = b.getComponent<AvatarBody>().leftHand.tryGetComponent<Controller>() ?: return
+      val down = c.isActive && (c.buttonState and ButtonBits.ButtonMenu) != 0
+      if (down && !menuDown) { Log.i(BleBridge.TAG, "Menu: the panel and Bring here"); bringHere(); press("menu") }
+      menuDown = down
     }
   }
 
@@ -150,7 +184,10 @@ class QuestActivity : AppSystemActivity() {
       },
       panelSetupWithRootView = { root, _, _ ->
         val rows = root.findViewById<LinearLayout>(R.id.bar_rows) ?: (root as LinearLayout)
-        bar = CubeBar(rows) { id -> press(id) }.also { b -> barWait?.let { b.show(it); barWait = null } }
+        bar = CubeBar(rows) { id -> press(id) }.also { b ->
+          barWait?.let { b.show(it); barWait = null }
+          voiceWait?.let { b.voice(it); voiceWait = null }
+        }
       }))
 
   // The WebView goes in the panel's frame, made with the panel's own context the first time.
@@ -176,7 +213,7 @@ class QuestActivity : AppSystemActivity() {
     val s = QuestSpeech(this, w); speech = s
     w.addJavascriptInterface(b, "TwistwrightAndroid")
     w.addJavascriptInterface(s, "TwistwrightSpeech")
-    w.addJavascriptInterface(cube.Page { runOnUiThread { bringHere() } }, "TwistwrightQuest")
+    w.addJavascriptInterface(cube.Page({ runOnUiThread { bringHere() } }, { runOnUiThread { finishAndRemoveTask() } }), "TwistwrightQuest")
     w.webViewClient = object : WebViewClient() {
       override fun shouldInterceptRequest(v: WebView, r: WebResourceRequest): WebResourceResponse? = pages.serve(r.url)
       // Links away from the app's pages open in the Quest Browser.
@@ -217,7 +254,7 @@ class QuestActivity : AppSystemActivity() {
   companion object {
     // The rows of buttons under the cube, in meters.
     const val BAR_W = 0.40f
-    const val BAR_H = 0.135f
+    const val BAR_H = 0.155f
     // Both panels are drawn in the scene, not as layers of their own: in front of or behind the
     // cube and the hands as they are, and in the headset's screenshots and casting.
     val MESH = UIPanelRenderOptions(PanelRenderMode.Mesh())

@@ -93,7 +93,10 @@ function pure(){
   assert.ok(buttons.slice(-4).every(b=>b.row===2)&&buttons[buttons.length-4].label==='Drill mode','the third row starts a drill');
   assert.ok(buttons.find(b=>b.id==='listen').label==='Listen'&&run('questBarButtons')({listen:true}).find(b=>b.id==='listen').label==='Stop listening','Listen, and Stop listening while it hears');
   const app=run('questBarButtons')({app:true}).map(b=>b.id);
-  assert.ok(!app.includes('exit')&&app.includes('here'),'in the app: Bring here, no Exit');
+  assert.strictEqual(app.join(),'tilt,level,clear,hidden,smaller,larger,panel,top-white,top-yellow,front-green,front-orange,front-blue,front-red,here,follow,drill,scramble,real,listen,exit','in the app: Bring here and In my hands on the second row, Quit last');
+  const appB=run('questBarButtons')({app:true,follow:true,exit:true});
+  assert.ok(appB.find(b=>b.id==='follow').on&&appB.find(b=>b.id==='exit').label==='Poke again'&&appB.find(b=>b.id==='exit').row===2,'In my hands lit; Quit asks for a second poke');
+  assert.strictEqual(run('questBarButtons')({tilt:true,still:true}).find(b=>b.id==='tilt').label,'No tilt yet','a live cube with no tilt reading yet');
   assert.ok(buttons.find(b=>b.id==='real').off&&!run('questBarButtons')({over:true}).find(b=>b.id==='real').off,'Real cube state: off on the real cube');
   assert.strictEqual(run('questBarButtons')({drill:true}).find(b=>b.id==='drill').label,'Stop drill','and stops it');
   assert.ok(buttons.find(b=>b.id==='top-white').on&&buttons.find(b=>b.id==='front-green').on&&!buttons.find(b=>b.id==='front-red').on,'the hold\'s tiles are on');
@@ -615,7 +618,7 @@ async function android(){
 function fakeNative(opts={}){
   const f={geo:[],frames:[],starts:[],stops:0,w:null};
   f.install=w=>{f.w=w;
-    w.TwistwrightQuest={geometry(j){assert.strictEqual(typeof j,'string');f.geo.push(JSON.parse(j));},frame(j){assert.strictEqual(typeof j,'string');f.frames.push(JSON.parse(j));},here(){if(f.here)f.here();}};
+    w.TwistwrightQuest={geometry(j){assert.strictEqual(typeof j,'string');f.geo.push(JSON.parse(j));},frame(j){assert.strictEqual(typeof j,'string');f.frames.push(JSON.parse(j));},here(){if(f.here)f.here();},quit(){if(f.quit)f.quit();}};
     w.TwistwrightSpeech={start(j){f.starts.push(JSON.parse(j));return opts.none?'none':'ok';},stop(){f.stops++;}};};
   f.ev=e=>f.w.questSpeechEvent(e);
   return f;
@@ -641,8 +644,16 @@ async function spatial(){
   // the rows of buttons under the app's cube, and what a press on them does
   const last=()=>n.frames[n.frames.length-1],btn=id=>last().bar.find(b=>b.id===id);
   assert.ok(g.faces===undefined&&g.mirror&&g.mirror.dist===2.4&&g.mirror.reach>4,'the mirrors\' sizes go with the geometry');
-  assert.ok(last().bar&&btn('here')&&!btn('exit')&&btn('listen'),'the app\'s rows: Bring here, Listen, no Exit');
+  assert.ok(last().bar&&btn('here')&&btn('follow')&&btn('exit').label==='Quit'&&btn('listen'),'the app\'s rows: Bring here, In my hands, Listen, Quit');
   assert.ok(last().panel===true&&last().edge===0.12,'the panel shows; the cube is 12 cm');
+  assert.ok(last().follow===true&&btn('follow').on&&last().live===false&&last().voice==='','In my hands is on at the start; no cube; the voice is off');
+  w.questNativeDo('follow');assert.ok(await until(()=>last().follow===false&&!btn('follow').on),'In my hands, off');
+  assert.strictEqual(w.localStorage.getItem('cw:questFollow'),'false','and kept');w.questNativeDo('follow');
+  w.questNativeDo('panel');w.questNativeDo('menu');assert.ok(await until(()=>last().panel===true),'the left hand\'s menu pinch shows the panel');
+  let quits=0;n.quit=()=>quits++;
+  w.questNativeDo('exit');assert.ok(await until(()=>btn('exit').label==='Poke again')&&quits===0,'Quit asks for a second poke');
+  w.questNativeDo('exit');assert.strictEqual(quits,1,'the second poke closes the app');
+  w.questNativeDo('exit');w.questNativeDo('larger');w.questNativeDo('exit');assert.strictEqual(quits,1,'another button between the two pokes starts over');w.questNativeDo('smaller');
   w.questNativeDo('larger');assert.ok(await until(()=>last().edge===0.15),'Larger: the cube grows');
   w.questNativeDo('smaller');assert.ok(await until(()=>last().edge===0.12),'Smaller');
   w.questNativeDo('panel');assert.ok(await until(()=>last().panel===false&&btn('panel').label==='Show panel'),'Hide panel');
@@ -654,7 +665,9 @@ async function spatial(){
   // Listen: the voice without a drill; a case name starts one; the end of the drill keeps listening
   w.questNativeDo('listen');assert.ok(n.starts.length===1&&!Q().drill&&$('#listen').textContent==='Stop listening','Listen starts the voice, with no drill');
   assert.ok(await until(()=>btn('listen').on),'and the rows show it');
+  assert.ok(await until(()=>/Asking for the microphone/.test(last().voice)),'the voice\'s line goes to the app: '+last().voice);
   n.ev({type:'ready'});n.ev({type:'final',texts:['sune']});assert.ok(Q().drill&&Q().drill.c.name==='Sune','a case name starts Drill mode');
+  assert.ok(await until(()=>/Drilling Sune.*Heard: "sune"/.test(last().voice)),'what was heard, under the cube: '+last().voice);
   n.ev({type:'final',texts:['stop drill']});assert.ok(!Q().drill&&n.stops===0&&/drill is stopped/.test($('#voice').textContent),'"stop drill": the voice listens on');
   n.ev({type:'final',texts:['yellow up']});assert.ok(Q().hold.top===3,'a hold with no drill');n.ev({type:'final',texts:['white up']});
   $('#listen').click();assert.ok(n.stops===1&&$('#listen').textContent==='Listen','Stop listening');

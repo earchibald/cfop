@@ -428,16 +428,22 @@ function questBarDo(id){
   else if(id==='hidden')questHidden(!qs.hidden);
   else if(id==='drill')questDrillMode(!questDrilling());else if(id==='scramble')questScramble();else if(id==='real')questRealState();
   else if(id==='listen')questListen(!questVoiceOn());
+  else if(id==='follow'&&qs.native){x.follow=!x.follow;questSet('cw:questFollow',x.follow);}
+  else if(id==='menu'&&qs.native)x.panel=true;
   else if(hold)questHoldTile(hold[1]==='top'?'up':'front',QUEST_COLOR_NAMES.indexOf(hold[2]));
-  else if(id==='exit'){if(questExitArmed(x))questExit();else x.exitT=x.t;}
-  if(id!=='exit'&&qs.xr)qs.xr.exitT=0;
+  else if(id==='exit'){if(questExitArmed(x)){x.exitT=0;questExit();}else x.exitT=x.t;}
+  if(id!=='exit'&&x)x.exitT=0;
 }
 function questExitArmed(x){return !!x&&!!x.exitT&&x.t-x.exitT<QUEST_EXIT_MS;}
-function questExit(){const x=qs.xr;if(!x)return;const p=x.session.end();if(p&&p.catch)p.catch(()=>{});}
+// Exit ends the session; in the Quest app, Quit closes the app and the headset goes home.
+function questExit(){
+  if(qs.native){const Q=window.TwistwrightQuest;if(Q&&typeof Q.quit==='function')try{Q.quit();}catch(e){}return;}
+  const x=qs.xr;if(!x)return;const p=x.session.end();if(p&&p.catch)p.catch(()=>{});}
 function questBarState(){
   const x=qs.xr||qs.native;
-  return questBarButtons({tilt:qs.tilt,moves:qs.moves.length,panel:!x||x.panel,hidden:qs.hidden,top:qs.hold.top,front:qs.hold.front,exit:questExitArmed(qs.xr),
-    drill:questDrilling(),over:!!qs.drill,listen:questVoiceOn(),app:!!qs.native});
+  return questBarButtons({tilt:qs.tilt,still:qs.tilt&&!!qs.conn&&qs.conn.gen!==3&&!qs.q,moves:qs.moves.length,panel:!x||x.panel,hidden:qs.hidden,
+    top:qs.hold.top,front:qs.hold.front,exit:questExitArmed(x),drill:questDrilling(),over:!!qs.drill,listen:questVoiceOn(),
+    app:!!qs.native,follow:!!(qs.native&&qs.native.follow)});
 }
 function questBarCenterNow(x){return questBarCenter(x.pos,x.edge,qs.hidden);}
 function questJoint(frame,src,name,ref){const j=src.hand&&src.hand.get(name),p=j&&frame.getJointPose&&frame.getJointPose(j,ref);if(!p)return null;const t=p.transform.position;return [t.x,t.y,t.z];}

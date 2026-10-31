@@ -9,16 +9,20 @@
 //                   frame (x right, y up, z toward you), and the mirrors of the hidden faces
 //                   (questMirror: dist, flat, alpha, reach). The app turns them into its own.
 //   frame(json)     each time the picture or a button changes: {f, m, t, q, hidden, edge, panel,
-//                   bar}. f: the 54 facelets of the cube before the move in turn ('' before a cube
-//                   is there: gray, centers in color), m: that move or '', t: how far it has turned
-//                   (eased, 0..1), q: the cube's turn (the tilt or the hold, questOrient), hidden:
-//                   Hidden faces (the app finds the faces turned away from the head), edge: the
-//                   cube's edge in meters (Smaller, Larger), panel: this panel shows, bar: the
-//                   buttons ({id, label, on, off, tile, color, row, group}).
+//                   follow, live, voice, bar}. f: the 54 facelets of the cube before the move in
+//                   turn ('' before a cube is there: gray, centers in color), m: that move or '', t:
+//                   how far it has turned (eased, 0..1), q: the cube's turn (the tilt or the hold,
+//                   questOrient), hidden: Hidden faces (the app finds the faces turned away from the
+//                   head), edge: the cube's edge in meters (Smaller, Larger), panel: this panel
+//                   shows, follow: In my hands (the app puts the cube between the hands that hold
+//                   the real one), live: a cube is connected, voice: the voice's line (what it
+//                   heard, '' while it is off), bar: the buttons ({id, label, on, off, tile, color,
+//                   row, group}).
 //   here()          Bring here: the cube and the panel in front of the user.
+//   quit()          Quit (a second poke): the app closes.
 //
 // A press on the app's buttons comes back as questNativeDo(id), as a poke in the session
-// (questBarDo).
+// (questBarDo); 'menu' is the left hand's palm pinch (the Menu button), which shows this panel.
 //
 // Outside the app (no TwistwrightQuest) this file does nothing. With the app, the page's own 3D
 // preview stops: the app's cube is the picture. Pure: questNativeGeometry, questNativeFrame.
@@ -36,6 +40,7 @@ function questNativeFrame(s){
   const a=s.anim,c=a?a.from:s.shown,n=s.native||{edge:0.12,panel:true};
   return {f:c?c.toFacelets().join(''):'',m:a&&a.e>0&&a.e<1?a.move:'',t:a?Math.round(a.e*1000)/1000:0,
     q:questOrient().map(v=>Math.round(v*1e5)/1e5),hidden:!!s.hidden,edge:Math.round(n.edge*1e4)/1e4,panel:n.panel!==false,
+    follow:!!n.follow,live:!!s.conn,voice:questVoiceOn()?questVoiceWords():'',
     bar:questBarState().map(b=>({id:b.id,label:b.label,on:!!b.on,off:!!b.off,tile:!!b.tile,color:b.color||'',row:b.row||0,group:!!b.group}))};
 }
 // A press on one of the app's buttons.
@@ -50,14 +55,14 @@ function questNativeDo(id){
   if(!Q||typeof Q.frame!=='function')return;
   const s=questState();
   document.body.classList.add('native');
-  s.native={edge:questGet('cw:questEdge',0.12),panel:true};
+  s.native={edge:questGet('cw:questEdge',0.12),panel:true,follow:questGet('cw:questFollow',true)!==false,t:0,exitT:0};
   const here=document.getElementById('here');if(here)here.onclick=()=>questNativeDo('here');
   // the app draws the cube: the page's preview stops, and this loop runs the clock
   if(s.flatRaf)cancelAnimationFrame(s.flatRaf);s.flatRaf=0;s.r=null;
   try{Q.geometry(JSON.stringify(questNativeGeometry()));}catch(e){}
   let last='';
   const loop=now=>{
-    questTick(now);
+    questTick(now);s.native.t=now;
     const key=JSON.stringify(questNativeFrame(s));
     if(key!==last){last=key;try{Q.frame(key);}catch(e){}}
     requestAnimationFrame(loop);};

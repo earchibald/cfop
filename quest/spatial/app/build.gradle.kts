@@ -19,8 +19,8 @@ android {
     targetSdk = 34
     // Raise versionName with any change a user can see, and versionCode with every build that goes
     // on a headset over an older one.
-    versionCode = 3
-    versionName = "0.3.0"
+    versionCode = 4
+    versionName = "0.4.0"
   }
 
   sourceSets["main"].apply {
