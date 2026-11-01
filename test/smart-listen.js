@@ -262,7 +262,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.ok(await until(()=>warnOn(),500),'the cube still sits yellow up: the band');assert.match($('#cubeWinWarn .txt').textContent,/^Your cube sits with yellow up, .* read with white up/);
   tilt((ev('cubeTab.hold')||H[0]).q);await sleep(100);assert.ok(!warnOn(),'turned over as said: no band');
   // Another tab: the listening ends with the tab. Back on the tab, the button is at rest.
-  w.goTab('solve');assert.ok(!ev('SMART_LISTEN.on')&&rec4.stopped===1,'the listening ends when the user leaves the tab');
+  w.goTab('cross');assert.ok(!ev('SMART_LISTEN.on')&&rec4.stopped===1,'the listening ends when the user leaves the tab');
   w.goTab('smart');assert.ok(btn().textContent==='Listen'&&hints().classList.contains('hidden'),'back on the tab: at rest');
   // The link drops: the listening ends and the button is off.
   click(btn());const rec5=recs[recs.length-1];assert.ok(ev('SMART_LISTEN.on'));

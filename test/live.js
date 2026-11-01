@@ -23,7 +23,7 @@ w.addEventListener('load',async()=>{try{
   E("setMethod('cfop')");
   // The hold row: six tiles; the player's own hold lights its colors.
   assert.strictEqual($$('#viewHold .ht').length,6,'two tops, four fronts');
-  E("newScramble('live-1')");E("goTab('solve')");
+  E("newScramble('live-1')");E("goTab('cross')");
   const on=()=>$$('#viewHold .ht[aria-pressed="true"]').map(b=>b.parentNode.dataset.place+b.dataset.c);
   assert.deepStrictEqual(on(),['up3','front2'],'yellow on top, green in front: the scramble, then z2 to the grip');
   // White on top: the picture turns, and the list stays.

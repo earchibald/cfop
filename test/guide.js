@@ -21,7 +21,7 @@ w.addEventListener('load',async()=>{try{
   await sleep(100);
   w.setMethod('beginner');w.goTab('bsolve');
   assert.ok($('#tab-bsolve').classList.contains('on'),'Solve my cube is the current tab');
-  w.newScramble('guide-test-one');
+  w.loadScramble('guide-test-one',w.randomMoveScramble('guide-test-one',22),true); // the plan below is this scramble's
 
   // The entry view: two cards for a regular cube (mix it up with me; scan or paint) and the current scramble.
   assert.ok(entry(),'entry view shows the two cards');

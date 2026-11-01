@@ -1,5 +1,5 @@
 // ================= The smart cube tab =================
-// The Smart cube tab on the CFOP rail (tab 7) shows a smart cube live, large, in the main panel:
+// The Smart cube tab on the CFOP rail (tab 6) shows a smart cube live, large, in the main panel:
 // each turn of the real cube turns the layer on the screen. With no cube connected the tab offers
 // Connect, which opens the chooser at once (the browser's own, or the list over the bridge, on
 // the tab): no dialog comes between. The connect itself is in smart-ui.js (smartConnect).

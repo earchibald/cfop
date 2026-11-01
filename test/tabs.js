@@ -41,7 +41,7 @@ w.addEventListener('load',async()=>{try{
 
   // Next case starts a drill. Another tab keeps it. Back to scramble ends it.
   $('#llNext').click();assert.ok(drill(),'Next case starts a drill');assert.ok(/setup for case/.test(label()));
-  tab('solve');assert.ok(drill(),'tab change keeps the drill');assert.ok(/setup for case/.test(label()));
+  tab('lab');assert.ok(drill(),'tab change keeps the drill');assert.ok(/setup for case/.test(label()));
   $('#drillBack').click();assert.ok(!drill(),'Back to scramble ends the drill');
   assert.deepStrictEqual(moves().slice(0,scr.length),scr,'the scramble is back');assert.ok(label().includes('seed '+seed));
 
@@ -83,7 +83,7 @@ w.addEventListener('load',async()=>{try{
 
   assert.deepStrictEqual(errs,[],'no script errors');
   // The Clear button opens a themed dialog. Escape cancels, Enter confirms. Space does not reach the timer.
-  tab('solve');w.recordTime(12340);w.recordTime(9870);assert.strictEqual($('#stN').textContent,'2','two times recorded');
+  tab('cross');w.recordTime(12340);w.recordTime(9870);assert.strictEqual($('#stN').textContent,'2','two times recorded');
   const key=(type,k,code)=>d.dispatchEvent(new w.KeyboardEvent(type,{key:k,code:code||k,bubbles:true,cancelable:true}));
   $('#clearTimes').click();assert.ok($('#askBg'),'Clear opens a dialog');assert.ok(!w.confirm.called,'no browser confirm');
   assert.ok($('#askTitle').textContent.includes('Clear'),'dialog names the action');

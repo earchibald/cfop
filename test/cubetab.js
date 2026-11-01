@@ -45,9 +45,9 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.strictEqual(w.smartNiceName('GAN356iCarry2_AB12'),'GAN 356 i Carry 2');
   assert.strictEqual(w.smartNiceName('MG_AB12'),'MG');
   assert.strictEqual(w.smartNiceName(''),'GAN cube');
-  // ----- before a cube: the seventh tab, with the Connect card -----
-  assert.strictEqual($$('#rail button').length,7,'seven CFOP tabs');
-  assert.ok(tab()&&tab()===$$('#rail button')[6],'Smart cube is the seventh');assert.strictEqual(tab().querySelector('.k').textContent,'7');
+  // ----- before a cube: the sixth tab, with the Connect card -----
+  assert.strictEqual($$('#rail button').length,6,'six CFOP tabs');
+  assert.ok(tab()&&tab()===$$('#rail button')[5],'Smart cube is the sixth');assert.strictEqual(tab().querySelector('.k').textContent,'6');
   assert.strictEqual(tab().lastChild.textContent,'Smart cube');assert.ok(tab().querySelector('.dot'),'with a dot for the link');
   assert.ok(!tab().classList.contains('live')&&!$('#cubeTab'),'no cube: no dot, and no tab in the top bar');
   assert.ok(win().hidden&&!home().hidden,'the Connect card shows, the live panel is hidden');
@@ -57,7 +57,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   click($('#smartTabConnect'));assert.ok(!$('#smartBg'),'Connect a smart cube opens no dialog');assert.strictEqual(picks,1,'it opens the browser\'s chooser at once');
   assert.ok(await until(()=>/No cube was chosen/.test($('#smartTabStatus').textContent)),'no cube chosen: the card says so: '+$('#smartTabStatus').textContent);
   d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'7',bubbles:true}));assert.strictEqual(ev('curTab'),'smart','the 7 key is the tab');
-  w.goTab('solve');assert.strictEqual(ev('curTab'),'solve');
+  w.goTab('cross');assert.strictEqual(ev('curTab'),'cross');
   // ----- connect: the page goes to the tab; the panel carries the name and the charge -----
   const c1=w.applyAlg(new Cube(),['R','U',"F'",'L2','D','B',"R'"]);set(c1);
   dev=fakeDevice(4,MAC,cube,{mfData:mfDataFor(MAC),name:'GAN12uiM_A1B2'});
@@ -254,7 +254,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.strictEqual(more.getAttribute('aria-label'),'1 more');assert.strictEqual(more.title,'11 moves in all');
   assert.strictEqual(more.textContent.trim(),'1','the hidden move as a range');assert.ok($('#cubeWinMoves .z-now .mv'),'the last move in the Now zone');assert.ok(!more.onclick,'nothing happens on a click yet');
   // ----- another tab: the turns stop and the picture lands; the moves still count -----
-  w.goTab('solve');assert.strictEqual(ev('curTab'),'solve');assert.ok(!ev('cubeTabShown()'));
+  w.goTab('cross');assert.strictEqual(ev('curTab'),'cross');assert.ok(!ev('cubeTabShown()'));
   cc=w.applyAlg(cc,['B']);set(cc);dev.notify(mv);
   assert.ok(await until(()=>ev('cubeTab.moves').length===12,1500),'a move on another tab is kept');
   assert.ok(!ev('cubeTab.anim')&&!ev('cubeTab.queue').length,'no turn plays out of view');
@@ -362,7 +362,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   for(;i<scr.length;i+=4){user(scr.slice(i,i+4));await until(()=>!ev('cubeTab.anim')&&ev('cubeTab.target').equals(cur),1500);}
   assert.ok(await until(()=>stName()==='Cross',2500),'past the budget, the cross: '+stName());
   // The hold stays through a change of tab.
-  w.goTab('solve');w.goTab('smart');assert.strictEqual(ev('cubeTab.hold'),holdOf('z2'),'the hold survives a change of tab');
+  w.goTab('cross');w.goTab('smart');assert.strictEqual(ev('cubeTab.hold'),holdOf('z2'),'the hold survives a change of tab');
   assert.ok(same(winPolys(),fixed(w.applyAlg(cur,['z2']))),'and so does the picture');
   // ----- the tilt: the picture follows the cube in the hands; the hold stays with the buttons -----
   // Pure: the heading lines a reading up with the hold about the vertical, and only about the
@@ -463,7 +463,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.ok(readout().endsWith(w.cubeTabHoldDelta(z2y2,null).join(' ')),'the turn is on the list: '+readout());
   assert.ok(await until(()=>!ev('cubeTab.qraf')&&same(winPolys(),fixed(cur)),1500),'the picture is the cube as it sits');
   // On another tab the tilt still tracks, and the rail's dot warns. Turned back, the band goes.
-  w.goTab('solve');tilt(holdOf('x').q);
+  w.goTab('cross');tilt(holdOf('x').q);
   assert.ok(await until(()=>tab().classList.contains('warn'),500),'the dot warns on another tab');
   w.goTab('smart');assert.ok(warnOn(),'the band is there on return');assert.ok(same(winPolys(),fixed(w.applyAlg(cur,['x']))),'and the picture is the cube as it sits');
   tilt(HOLDS[0].q);assert.ok(await until(()=>!warnOn()&&!tab().classList.contains('warn'),500),'turned back: the band goes');

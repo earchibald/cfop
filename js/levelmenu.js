@@ -18,7 +18,7 @@ const LEVEL_TRACK={
      {name:'The first CFOP lesson',note:'The cross',to:['cfop','cross'],lesson:true},{name:'The beginner lessons',note:'Practice a step again',to:['beginner','learn']}],
   4:[{name:'Which sets do you know?',note:'F2L, OLL and PLL',go:'t4-sets'},{name:'Quiz me',note:'The cases you marked Learned',go:'t4-quiz'},
      {name:'Cases still to learn',note:'On OLL · PLL',to:['cfop','ll'],left:true},{name:'F2L cases',note:'The 41 cases',to:['cfop','f2l']}],
-  5:[{name:'Set up, then time',note:'Inspection, scrambles, the sets',go:'t5-setup'},{name:'The timer',note:'On the Scramble tab',to:['cfop','solve']},
+  5:[{name:'Set up, then time',note:'Inspection, scrambles, the sets',go:'t5-setup'},{name:'The timer',note:'Beside every section',to:['cfop','cross']},
      {name:'Cases still to learn',note:'On OLL · PLL',to:['cfop','ll'],left:true},{name:'F2L cases',note:'The 41 cases',to:['cfop','f2l']}]};
 function levelNow(){const n=store.get('level',null);const l=n!=null&&typeof startLevel==='function'?startLevel(n):null;return l?l.n:null;}
 function levelChipDraw(){const c=$('#levelChip');if(!c)return;const n=levelNow();
@@ -52,7 +52,7 @@ function levelDo(b){const k=b.dataset.lv;levelPopClose();if(k!=='resume')START.f
   if(t.left&&typeof llShowSet==='function')llShowSet('left');}
 // ---------- the landing card ----------
 const LANDING={bsolve:['Solve my cube','The app tells you each move, one part at a time.'],learn:['Learn','Up next is your next step. Each step has a lesson.'],
-  cross:['Cross','Your first CFOP lesson is at the top.'],ll:['OLL · PLL','It shows the cases you still have to learn.'],solve:['Scramble','The scramble, the cube and the timer. Hold Space to start the timer.']};
+  cross:['Cross','Your first CFOP lesson is at the top.'],ll:['OLL · PLL','It shows the cases you still have to learn.']};
 function startLanding(tab){const t=LANDING[tab];levelLandingClose();if(!t)return;
   const el=document.createElement('section');el.id='landing';el.className='panel landing';el.dataset.tab=tab;el.setAttribute('aria-label','Getting started is done');
   el.innerHTML=`<div class="landing-text"><span class="st-lbl">Getting started · Done</span><h2>You are on ${esc(t[0])}.</h2><p>${esc(t[1])} Your level is in the top bar. It brings you back to the getting-started pages.</p></div>

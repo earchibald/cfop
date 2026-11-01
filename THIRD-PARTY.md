@@ -16,9 +16,10 @@ them.
 
 ## What Twistwright uses them for
 
-Random-state scrambles for the 3x3 (`js/scramble.js`). TNoodle, the WCA
-scrambler, uses the same 3x3 solver (min2phase by Chen Shuang). TNoodle itself
-is GPL-3.0 and is not used.
+Nothing, since 1.63. Random-state scrambles came from it (`js/scramble.js`) until
+the page made its own WCA scrambles (`js/wca.js`, with the app's own two-phase
+solver). `scripts/vendor.js` still fetches it. TNoodle itself is GPL-3.0 and was
+never used.
 
 ## Changes to the files
 

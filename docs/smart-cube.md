@@ -4,7 +4,7 @@
 |---|---|
 | Protocol, cipher, Bluetooth link | `js/gan.js` (no DOM) |
 | Smart cube dialog | `js/smart-ui.js`, opened by `#smartBtn` in the seed bar (3x3 only) |
-| The Smart cube tab | `js/cubetab.js`: tab 7 of the CFOP rail, the live cube large in the main panel with every control beside it (turns, the tilt of the cube, the moves, the stage, Listen); `test/cubetab.js`. The voice: `js/smart-listen.js`; the reference card a case name opens: `js/smart-card.js` |
+| The Smart cube tab | `js/cubetab.js`: tab 6 of the CFOP rail, the live cube large in the main panel with every control beside it (turns, the tilt of the cube, the moves, the stage, Listen); `test/cubetab.js`. The voice: `js/smart-listen.js`; the reference card a case name opens: `js/smart-card.js` |
 | Tests | `test/gan.js` (protocol), `test/smart-ui.js` (dialog), `test/fake-gan.js` (a fake GAN cube) |
 | Saved MAC addresses | `cw:ganMac`, a map from the Bluetooth name to the address |
 | The macOS app (Bluetooth bridge for Safari) | `mac/` (Swift, AppKit, Network, CoreBluetooth); `js/bridge.js` is the page side; `test/bridge.js` and `test/fake-bridge.js` |

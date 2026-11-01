@@ -46,16 +46,16 @@ async function chrome(){
   assert.ok(await until(()=>!!p.ev('smartConn')),'the cube connects again by itself');
   assert.ok(!p.$('#rail button[data-tab="smart"]').classList.contains('off'),'the dot is live again');
   // On another tab: the drop reconnects too, and the page stays where it is.
-  p.w.goTab('solve');dev.gatt.disconnect();
+  p.w.goTab('cross');dev.gatt.disconnect();
   assert.ok(await until(()=>!p.ev('smartConn')));
   assert.ok(await until(()=>!!p.ev('smartConn')),'a drop on another tab reconnects');
-  assert.strictEqual(p.ev('curTab'),'solve','a cube that connects by itself does not move the page');
+  assert.strictEqual(p.ev('curTab'),'cross','a cube that connects by itself does not move the page');
   // Disconnect: no look by itself.
   p.w.goTab('smart');p.click(p.$('#cubeWinOptions'));await sleep(20);p.click(p.$('#smartDisconnect'));
   await sleep(60);assert.ok(!p.ev('smartConn'),'Disconnect: the page does not connect again by itself');
   p.d.dispatchEvent(new p.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
   // The next visit to the tab looks again.
-  p.w.goTab('solve');p.w.goTab('smart');
+  p.w.goTab('cross');p.w.goTab('smart');
   assert.ok(await until(()=>!!p.ev('smartConn')),'back on the tab: the cube connects by itself');
   assert.deepStrictEqual(p.errs,[]);
   console.log('smart-auto chrome ok');
@@ -63,7 +63,7 @@ async function chrome(){
 async function bridge(){
   const cube=solved(),dev=fakeDevice(4,MAC,cube,{name:NAME});
   const br=fakeBridge([{id:'p1',gen:4,dev,mac:MAC}]);
-  const store=new Map([['cw:tab','"solve"']]);
+  const store=new Map([['cw:tab','"cross"']]);
   let p=await boot({store,bridge:br});
   assert.ok(p.ev('BRIDGE'),'the page found the app');
   p.w.goTab('smart');
@@ -73,7 +73,7 @@ async function bridge(){
   assert.strictEqual(p.$('#smartTabListItems button').textContent,NAME);
   // Leaving the tab ends the look; coming back starts it again.
   const scans=()=>br.sockets[0].sent.filter(m=>m.op==='scan').length,stops=()=>br.sockets[0].sent.filter(m=>m.op==='stop').length;
-  const s0=stops();p.w.goTab('solve');
+  const s0=stops();p.w.goTab('cross');
   assert.ok(!p.ev('smartLook')&&stops()===s0+1,'leaving the tab ends the look');
   const n0=scans();p.w.goTab('smart');assert.strictEqual(scans(),n0+1,'back on the tab: the look again');
   // Cancel ends it, and the card says how to look again.
