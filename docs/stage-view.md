@@ -96,10 +96,17 @@ turns, and changes that come with no input (the timer's next scramble).
 ## Maximize cube
 
 The cube gets the page. The rail is a column of color chips with the key number on each; a hover names
-the section. The sheets are vertical tabs at the right edge, a grip and a title each. A click opens the
-sheet beside the tabs; a second click, Esc or a click on the stage closes it. Drag a tab off to float
-its sheet; drop a floating sheet on the tabs to dock it. Floating sheets stay where they are. Kept in
-`cw:svMax`.
+the section. The sheets are vertical tabs at the right edge, a grip and a title each. A panel that its
+section hides (an F2L mode not in use) has no tab. A click on a tab tears its sheet off: it floats left of
+the tabs, under Undo and the hold, at the tab's height, beside the floats already there. Drag a tab off
+to float its sheet where it is let go. Drop a floating sheet on the tabs, or press dock, and it is a tab
+again. Floating sheets stay where they are. Kept in `cw:svMax`.
+
+A float stays on the stage: under the top bar, so its strip can be grabbed, and on the screen. Its
+height ends at the bottom of the window. A float taken by its strip comes to the front. While a sheet
+is under the pointer, a redraw of the page leaves it in the float layer (before 1.63.2 a redraw put a
+sheet torn off a tab back in its hidden place, and it was kept at 0×0 in the top left corner, under
+the top bar). A float kept narrower than 120 px is one of those, and docks again.
 
 ## Focus
 

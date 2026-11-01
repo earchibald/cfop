@@ -7,12 +7,12 @@
 // (js/scrinfo.js), Scan or paint and Undo (js/undo.js) over the hold at the top right, an action
 // bar, and the cube question when no cube is picked yet. Maximize cube (a button in the top bar,
 // cw:svMax) gives the cube the page: the rail is a column of color chips, the sheets are vertical
-// tabs at the right edge, and a click on a tab opens its sheet beside them. A timed solve fades the rest (focus) and ends on a Solved! card.
+// tabs at the right edge, and a click on a tab or a drag off it floats its sheet. A timed solve fades the rest (focus) and ends on a Solved! card.
 // The module writes no section. It moves the cube slot, the sections and a few player parts with a
 // placeholder for each, so the page goes back as it was for the beginner method, a phone, ?classic
 // and Settings > Layout. cw:stageView (on by default) and cw:svSheets (fold, closed, float by
 // section and sheet) keep the choices. Every text put in markup here goes through svEsc.
-const SV={on:false,marks:new Map(),fmarks:new Map(),phase:'',obs:null,raf:0,drag:null,ate:false,open:null};
+const SV={on:false,marks:new Map(),fmarks:new Map(),phase:'',obs:null,raf:0,drag:null,ate:false};
 const SV_TITLES={planFold:'CFOP plan',f2lGuide:'Guide',f2lLive:'Live pairs',f2lCases:'Train cases',f2lCaseOut:'This case',
   f2lCaseList:'Cases',f2lStatsPanel:'Per-case times',llCurrent:'This case',labOut:'What it moves',labWhy:'Why it works',weakSpots:'Weak spots'};
 const SV_ICON={
@@ -96,7 +96,7 @@ function svApply(){const want=svWanted();
   if(want===SV.on){if(want)svRefresh();return;}
   SV.on=want;document.body.classList.toggle('sv',want);
   if(!want){svBigClose();svFocus('');[...SV.fmarks.keys()].forEach(p=>svFloatSet(p,null));
-    $$('.svclosed,.svfold,.svopen').forEach(p=>p.classList.remove('svclosed','svfold','svopen'));svBack();svAskDraw();svMaxDraw();
+    $$('.svclosed,.svfold').forEach(p=>p.classList.remove('svclosed','svfold'));svBack();svAskDraw();svMaxDraw();
     if(typeof siCurDraw==='function')siCurDraw();return;}
   svBuild();const wrap=$('.wrap'),slot=$('#cubeSlot'),box=$('#player .cubebox');
   svPut(slot,wrap,$('#svCol'));
@@ -143,15 +143,21 @@ function svSheets(){if(!SV.on)return;const st=svState(),list=svList(),seen=new S
   for(const {p,key} of list){p.dataset.svkey=key;p.classList.add('svsheet');svStrip(p);const s=st[key]||{},d=svDetails(p);
     if(d){if('fold' in s&&d.open===!!s.fold)d.open=!s.fold;p.classList.remove('svfold');p.classList.toggle('svfolded',!d.open);}
     else{p.classList.toggle('svfold',!!s.fold);p.classList.toggle('svfolded',!!s.fold);}
-    p.classList.toggle('svclosed',!!s.closed);svFloatSet(p,s.float);p.classList.toggle('svopen',SV.open===key);}
+    p.classList.toggle('svclosed',!!s.closed);svFloatSet(p,svFloatOf(s));}
   const sec=$('#svSec');if(sec){const tab=typeof curTab!=='undefined'?curTab:'cross';sec.textContent=svSecName(tab);sec.dataset.sec=tab;}
   svAddDraw(list,st);svTabsDraw(list,st);}
-function svFloatSet(p,f){if(f&&!p.classList.contains('svclosed')){p.classList.add('svfloat');
+// A float narrower than a sheet came from a drag that lost its box (before 1.63.2): it docks again.
+function svFloatOf(s){return s&&s.float&&s.float.w>=120?s.float:null;}
+function svFloatSet(p,f){if(SV.drag&&SV.drag.on&&SV.drag.p===p)return; // the sheet under the pointer stays there
+  if(f&&!p.classList.contains('svclosed')){p.classList.add('svfloat');
     if(!SV.fmarks.has(p)){const m=document.createComment('stage view float');p.before(m);SV.fmarks.set(p,m);$('#svFloats').append(p);}
-    const W=innerWidth,H=innerHeight,w=Math.min(f.w||360,W-24);p.style.width=w+'px';
-    p.style.left=Math.max(8,Math.min(f.x,W-w-8))+'px';p.style.top=Math.max(8,Math.min(f.y,H-48))+'px';}
+    const b=svFloatBox(f);p.style.width=b.w+'px';p.style.left=b.x+'px';p.style.top=b.y+'px';p.style.maxHeight=(innerHeight-b.y-8)+'px';}
   else{const m=SV.fmarks.get(p);if(m){m.replaceWith(p);SV.fmarks.delete(p);}
-    if(!p.classList.contains('svdrag')){p.classList.remove('svfloat');p.style.left=p.style.top=p.style.width='';}}}
+    if(!p.classList.contains('svdrag')){p.classList.remove('svfloat');p.style.left=p.style.top=p.style.width=p.style.maxHeight='';}}}
+// A float stays on the stage: under the top bar, where its strip can be grabbed, and on the screen.
+function svFloatBox(f){const W=innerWidth,H=innerHeight,w=Math.min(f.w||360,W-24),h=$('header.top');
+  const top=(h?Math.max(0,h.getBoundingClientRect().bottom):0)+8;
+  return {w,x:Math.round(Math.max(8,Math.min(f.x,W-w-8))),y:Math.round(Math.max(top,Math.min(f.y,H-48)))};}
 function svAddDraw(list,st){const box=$('#svAdd');if(!box)return;
   const shut=list.filter(x=>st[x.key]&&st[x.key].closed);
   box.innerHTML=shut.map(x=>`<button type="button" class="svchip" data-svadd="${svEsc(x.key)}" title="Open ${svEsc(svTitle(x.p))} again">${SV_ICON.plus}${svEsc(svTitle(x.p))}</button>`).join('');
@@ -166,7 +172,7 @@ function svClick(e){if(SV.ate){SV.ate=false;e.stopPropagation();e.preventDefault
   if(act==='fold'){const d=svDetails(p);if(d){e.preventDefault();d.open=!d.open;svSet(key,{fold:!d.open});}else svSet(key,{fold:!p.classList.contains('svfold')});}
   else if(act==='dock')svSet(key,{float:null});
   else if(act==='close')svSet(key,{closed:true,float:null});}
-function svReset(){const tab=typeof curTab!=='undefined'?curTab:'cross',st=svState();SV.open=null;
+function svReset(){const tab=typeof curTab!=='undefined'?curTab:'cross',st=svState();
   for(const k of Object.keys(st))if(k.startsWith(tab+':'))delete st[k];svSave(st);
   $$('.svsheet').forEach(p=>{const d=svDetails(p);if(d&&p.id!=='planFold')d.open=true;});svSheets();}
 // Drag a sheet by its strip. Off the column it floats where it is let go; on the column it docks.
@@ -174,13 +180,15 @@ function svDown(e){if(e.button!==0)return;const tab=e.target.closest('.svtab');l
   if(tab)p=svSheetByKey(tab.dataset.svkey);
   else{const bar=e.target.closest('.svbar');if(!bar||e.target.closest('[data-sv="dock"],[data-sv="close"]'))return;p=bar.closest('.svsheet');}
   if(!p||!p.dataset.svkey)return;
+  // The float taken by its strip comes to the front.
+  const fl=$('#svFloats');if(p.parentElement===fl&&fl.lastElementChild!==p&&!e.target.closest('button'))fl.append(p);
   SV.drag={p,x0:e.clientX,y0:e.clientY,on:false,id:e.pointerId};
   addEventListener('pointermove',svMove);addEventListener('pointerup',svUp,{once:true});addEventListener('pointercancel',svUp,{once:true});}
 function svMove(e){const d=SV.drag;if(!d)return;const dx=e.clientX-d.x0,dy=e.clientY-d.y0;
   if(!d.on){if(Math.hypot(dx,dy)<6)return;d.on=true;const r=d.p.getBoundingClientRect();
     // A sheet behind a tab has no box yet: it comes out under the pointer.
-    d.r0=r.width&&!svMaxOn()?{x:r.left,y:r.top,w:r.width}:{x:d.x0-40,y:d.y0-16,w:380};if(SV.open===d.p.dataset.svkey)SV.open=null;d.p.classList.remove('svopen');
-    d.p.classList.add('svfloat','svdrag');d.p.style.width=r.width+'px';document.body.classList.add('svdragging');
+    d.r0=r.width?{x:r.left,y:r.top,w:r.width}:{x:d.x0-40,y:d.y0-16,w:380};
+    d.p.classList.add('svfloat','svdrag');d.p.style.width=d.r0.w+'px';document.body.classList.add('svdragging');
     if(!SV.fmarks.has(d.p)){const m=document.createComment('stage view float');d.p.before(m);SV.fmarks.set(d.p,m);$('#svFloats').append(d.p);}}
   d.p.style.left=(d.r0.x+dx)+'px';d.p.style.top=(d.r0.y+dy)+'px';
   const z=svDockRect();svDockEl().classList.toggle('svdrop',e.clientX>=z.left);}
@@ -196,7 +204,7 @@ function svDockRect(){return svDockEl().getBoundingClientRect();}
 function svSheetByKey(k){return $$('.svsheet').find(x=>x.dataset.svkey===k)||null;}
 // ---- Maximize cube: the rail as chips, the sheets as vertical tabs ----
 function svMaxOn(){return !!store.get('svMax',false);}
-function svMaxSet(on){store.set('svMax',!!on);SV.open=null;svMaxDraw();svSheets();}
+function svMaxSet(on){store.set('svMax',!!on);svMaxDraw();svSheets();}
 function svMaxDraw(){const on=SV.on&&svMaxOn();document.body.classList.toggle('svmax',on);
   const b=$('#svMaxBtn');if(b){b.innerHTML=(on?SV_ICON.min+'Minimize Cube':SV_ICON.max+'Maximize Cube');b.setAttribute('aria-pressed',String(on));
     b.title=on?'Give the sheets their column again':'Give the cube the page: the sections as chips, the sheets as tabs at the right';}
@@ -205,13 +213,21 @@ function svMaxDraw(){const on=SV.on&&svMaxOn();document.body.classList.toggle('s
     else if(r.dataset.svtitle!=null){r.title=r.dataset.svtitle;delete r.dataset.svtitle;}});}
 function svTabsDraw(list,st){const box=$('#svTabs');if(!box)return;
   if(!svMaxOn()){if(box.childElementCount){box.replaceChildren();box.dataset.html='';}return;}
-  const show=list.filter(x=>!(st[x.key]||{}).closed&&!(st[x.key]||{}).float);
-  if(SV.open&&!show.some(x=>x.key===SV.open))SV.open=null;
-  const html=show.map(x=>{const t=svTitle(x.p);return `<button type="button" class="svtab" data-svkey="${svEsc(x.key)}" aria-pressed="${SV.open===x.key}" title="${svEsc(t)}: click to open, drag to float"><span class="svgrip">${SV_ICON.grip}</span><span class="svtabt">${svEsc(t)}</span></button>`;}).join('');
-  if(box.dataset.html!==html){box.dataset.html=html;box.innerHTML=html;}
-  show.forEach(x=>x.p.classList.toggle('svopen',SV.open===x.key));}
+  // A panel its section hides (an F2L mode not in use) has no tab.
+  const show=list.filter(x=>!(st[x.key]||{}).closed&&!svFloatOf(st[x.key])&&!x.p.classList.contains('hidden'));
+  const html=show.map(x=>{const t=svTitle(x.p);return `<button type="button" class="svtab" data-svkey="${svEsc(x.key)}" title="${svEsc(t)}: click, or drag it off, to float it on the cube"><span class="svgrip">${SV_ICON.grip}</span><span class="svtabt">${svEsc(t)}</span></button>`;}).join('');
+  if(box.dataset.html!==html){box.dataset.html=html;box.innerHTML=html;}}
+// A click on a tab tears its sheet off. It floats left of the tabs, under Undo and the hold, at the
+// tab's height; where a float is in the way it goes left of it, and with no room, a step down from it.
 function svTabClick(e){if(SV.ate){SV.ate=false;e.stopPropagation();return;}const t=e.target.closest('.svtab');if(!t)return;
-  SV.open=SV.open===t.dataset.svkey?null:t.dataset.svkey;svSheets();}
+  const w=380,h=320,tabs=$('#svTabs').getBoundingClientRect();
+  const top=Math.max(0,...['#svTR','.cubebox .viewbtns'].map(s=>{const el=$(s);return el?el.getBoundingClientRect().bottom:0;}));
+  const taken=$$('#svFloats>.svsheet').map(s=>s.getBoundingClientRect()).filter(r=>r.width);
+  const y=Math.max(top+8,Math.min(t.getBoundingClientRect().top,innerHeight-h-16));
+  const hit=(x,y)=>taken.some(r=>x<r.right&&x+w>r.left&&y<r.bottom&&y+h>r.top);
+  let at=null;for(let x=tabs.left-w-12;x>=8&&!at;x-=w+12)if(!hit(x,y))at={x,y};
+  if(!at){at={x:tabs.left-w-12,y};for(let i=0;i<12&&taken.some(r=>Math.abs(r.left-at.x)<20&&Math.abs(r.top-at.y)<20);i++){at.x-=28;at.y+=28;}}
+  svSet(t.dataset.svkey,{float:{x:Math.round(at.x),y:Math.round(at.y),w}});}
 // ---- the stage: badge, source, focus ----
 function svSecName(tab){const b=document.querySelector(`nav.rail button[data-tab="${tab}"]`);
   return b?[...b.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim():tab;}
@@ -247,14 +263,15 @@ function svInit(){const t=$('#timer');
   if(t&&typeof MutationObserver==='function'){SV.obs=new MutationObserver(svTimer);SV.obs.observe(t,{attributes:true,attributeFilter:['class'],childList:true,characterData:true,subtree:true});}
   // A module may write a panel again: its strip comes back on the next frame.
   if(typeof MutationObserver==='function'){const m=$('main.main'),mo=new MutationObserver(()=>{if(!SV.on||SV.raf)return;
-    SV.raf=requestAnimationFrame(()=>{SV.raf=0;svSheets();svBadge();});});if(m)mo.observe(m,{childList:true,subtree:true});const em=$('#everyMore');if(em)mo.observe(em,{childList:true});}
+    SV.raf=requestAnimationFrame(()=>{SV.raf=0;svSheets();svBadge();});});if(m)mo.observe(m,{childList:true,subtree:true});const em=$('#everyMore');if(em)mo.observe(em,{childList:true});
+    // A sheet its section hides or shows (the F2L modes): its tab goes or comes back.
+    const hid=r=>r.target.dataset&&r.target.dataset.svkey&&/(^|\s)hidden(\s|$)/.test(r.oldValue||'')!==r.target.classList.contains('hidden');
+    const ho=new MutationObserver(rs=>{if(SV.on&&!SV.raf&&rs.some(hid))SV.raf=requestAnimationFrame(()=>{SV.raf=0;svSheets();svBadge();});});
+    const wr=$('.wrap');if(wr)ho.observe(wr,{attributes:true,attributeFilter:['class'],attributeOldValue:true,subtree:true});}
   ['cw:tab','cw:method'].forEach(n=>document.addEventListener(n,()=>{svApply();svBigClose();}));
   ['cw:sequence','cw:scramble'].forEach(n=>document.addEventListener(n,()=>{if(SV.on){svBadge();if(!SV.phase)svBigClose();}}));
   document.addEventListener('cw:cubesrc',()=>{svSrc();svAskDraw();});document.addEventListener('cw:smart',svSrc);
-  // A click on the stage closes a sheet opened from its tab.
-  document.addEventListener('pointerdown',e=>{if(!SV.on||!SV.open||e.target.closest('#svCol,#svTabs,#svFloats,.modal-bg,#siPane'))return;SV.open=null;svSheets();});
-  document.addEventListener('keydown',e=>{if(SV.on&&SV.open&&e.key==='Escape'&&!$('#svBig.svsolved')&&!document.querySelector('.modal-bg')){SV.open=null;svSheets();e.stopPropagation();return;}
-    if(!SV.on||!$('#svBig.svsolved'))return;
+  document.addEventListener('keydown',e=>{if(!SV.on||!$('#svBig.svsolved'))return;
     if(e.key==='Escape'){svBigClose();e.stopPropagation();}else if(e.key===' ')svBigClose();},true);
   if(typeof matchMedia==='function'){const q=matchMedia('(max-width: 760px)');if(q&&q.addEventListener)q.addEventListener('change',svApply);}
   addEventListener('resize',()=>{if(SV.on)svSheets();});

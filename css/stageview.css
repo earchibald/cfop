@@ -225,15 +225,13 @@ body.sv.svmax .svtabs{display:flex}
 .svtabs.svdrop{outline:2px dashed var(--link);outline-offset:-2px}
 .svtab{writing-mode:vertical-rl;display:flex;align-items:center;gap:8px;padding:10px 6px;width:34px;font-size:13px;font-weight:600;background:transparent;border:1px solid transparent;border-radius:9px;color:var(--muted);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;white-space:nowrap}
 .svtab:hover{color:var(--text);border-color:var(--line)}
-.svtab[aria-pressed="true"]{color:var(--text);background:var(--panel2);border-color:var(--line)}
 .svtab .svgrip svg{width:10px;height:14px;fill:currentColor;transform:rotate(90deg)}
 body.sv.svmax #svCol{right:calc(16px + 44px + 8px);width:min(420px,42vw);bottom:auto;max-height:calc(100% - 42px);z-index:5}
-body.sv.svmax #svCol:not(:has(.svopen,#siCur)){display:none}
+body.sv.svmax #svCol:not(:has(#siCur)){display:none}
 body.sv.svmax #svCol>:is(.svhead,.svadd){display:none}
-body.sv.svmax #svCol .svsheet:not(.svopen){display:none!important}
-body.sv.svmax #svCol .svopen .svbar [data-sv="close"]{display:none}
+body.sv.svmax #svCol .svsheet{display:none!important}
 body.sv.svmax[data-cube="none"] #svCol{left:var(--svleft);right:calc(16px + 44px + 8px);width:auto;max-width:none}
-body.sv.svmax[data-cube="none"] #svCol:not(:has(.svopen,#siCur)){display:flex}
-body.sv.svmax[data-cube="none"] #svCol .svsheet:not(.svopen){display:block!important}
+body.sv.svmax[data-cube="none"] #svCol:not(:has(#siCur)){display:flex}
+body.sv.svmax[data-cube="none"] #svCol .svsheet:not(.hidden){display:block!important}
 body.sv.svmax[data-cube="none"] .svtabs{display:none}
 @media (prefers-reduced-motion:reduce){body.sv :is(#svTR,#svTabs){transition:none}}
