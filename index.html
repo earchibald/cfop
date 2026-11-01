@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="css/app.css">
 <link rel="stylesheet" href="css/trail.css">
 <link rel="stylesheet" href="css/start.css">
+<link rel="stylesheet" href="css/stageview.css">
 </head>
 <body>
 <header class="top">
@@ -64,10 +65,11 @@
       <div class="row" style="justify-content:center;margin-top:4px;font-size:13px">
         <label title="Count down 15 seconds to look at the cube before the timer starts, as in a competition"><input type="checkbox" id="inspChk"> 15 s inspection</label>
         <label title="Load a new scramble as soon as the timer stops"><input type="checkbox" id="autoNext"> Next on stop</label>
+        <label class="fullchk" title="Keep the time of the whole solve in one list, Full solves. Clear the box to time the cross alone"><input type="checkbox" id="fullChk"> Full solve</label>
       </div>
       <div class="stats"><div title="The last time">last<b id="stLast">—</b></div><div title="The average of the last five, with the best and the worst left out">ao5<b id="stAo5">—</b></div><div title="The average of the last twelve, with the best and the worst left out">ao12<b id="stAo12">—</b></div><div title="The best time">best<b id="stBest">—</b></div><div title="How many times">n<b id="stN">0</b></div></div>
       <div class="times" id="times"></div>
-      <div class="row" style="margin-top:4px;justify-content:space-between"><span class="muted" style="font-size:13px" id="timesScope">times: solve</span><span><button class="small ghost" id="timerBack" title="Show your progress in this panel">Progress</button><button class="small ghost" id="delLast" title="Delete the last time (D)">Delete last<span class="hk" aria-hidden="true">D</span></button><button class="small ghost" id="clearTimes" title="Clear all times (C)">Clear<span class="hk" aria-hidden="true">C</span></button></span></div>
+      <div class="row" style="margin-top:4px;justify-content:space-between"><span class="muted" style="font-size:13px" id="timesScope">Times: Full solves</span><span><button class="small ghost" id="timerBack" title="Show your progress in this panel">Progress</button><button class="small ghost" id="delLast" title="Delete the last time (D)">Delete last<span class="hk" aria-hidden="true">D</span></button><button class="small ghost" id="clearTimes" title="Clear all times (C)">Clear<span class="hk" aria-hidden="true">C</span></button></span></div>
     </div>
     <div class="panel progresspanel" id="progressPanel">
       <span class="lbl">your progress</span>
@@ -85,14 +87,51 @@
       <dl class="keylist keylist2"><dt class="mod">R'</dt><dd>the mark: counterclockwise ↺</dd><dt>R2</dt><dd>the 2: twice, a half turn</dd><dt class="rot">y</dt><dd>dashed: turn the whole cube, like a globe</dd><dt class="rot">z2</dt><dd>dashed: turn the whole cube over</dd></dl>
       <button class="ln-link" id="keyLesson" title="Open the lesson on the parts of the cube and the move letters">Open the Basics lesson</button>
     </div>
+    <div class="everymore cfop-only" id="everyMore">
+      <!-- The smart cube sheet (js/cubetab.js, the voice commands in js/smart-listen.js, the reference card in js/smart-card.js): the cube on the page follows the cube; this shows the stage, the moves and the voice -->
+      <div class="panel cubewin hidden" id="cubeWin">
+        <div class="cw-head"><h2 class="nm"></h2><span class="dot" aria-hidden="true"></span><span class="batt" id="cubeWinBatt" hidden></span><span class="grow"></span><button class="small ghost" id="cubeWinOptions" title="Open the Smart cube window: scan or paint the colors of the cube, use it as the scramble, or disconnect">Options</button></div>
+        <div class="cw-aside">
+          <div class="cw-stage" id="cubeWinStage"><div class="st-name" aria-live="polite"></div><div class="st-sub"></div><div class="st-alg" aria-label="The moves of this case"></div></div>
+          <div class="cw-moves" id="cubeWinMoves" aria-label="Your last moves"></div>
+          <div class="cw-row" id="cubeWinView"><div class="cw-side"><button class="small ghost" id="cubeWinClear" title="Empty the list of moves">Clear moves</button><button class="small" id="cubeWinListen" aria-pressed="false" title='Listen for "reset", "clear moves", "top yellow, front green", "x prime" and case names such as "T perm": click to listen until Stop; hold, say one thing and let go'>Listen</button></div></div>
+          <div class="cw-listen hidden" id="cubeWinListenRow" role="status"><span class="listen-dot" aria-hidden="true"></span><span class="txt"></span><span class="heard"></span><span class="ask listen-ask"></span></div>
+          <div class="cw-hints hidden" id="cubeWinHints" aria-label="What you can say"></div>
+          <p class="muted cw-note" id="cubeWinNote"></p>
+          <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect" title="Look for your cube and connect it again">Connect again</button></div>
+        </div>
+      </div>
+      <div class="panel hidden" id="smartHome">
+        <h2>Smart cube</h2>
+        <p class="muted">Connect a GAN smart cube with Bluetooth. Each turn of your cube turns the layer on the cube here. This sheet names the stage of your solve and the case on the cube. It listens for your voice: a reset, how you hold the cube, or a case name, which opens a small reference card.</p>
+        <p class="muted">A cube that you connected before connects by itself. Turn a face to wake it up.</p>
+        <div class="row"><button class="primary" id="smartTabConnect" title="Look for your cube and connect it">Connect a smart cube</button></div>
+        <p class="muted" id="smartTabStatus" role="status"></p>
+        <div id="smartTabList" class="hidden smart-look">
+          <p class="muted" id="smartTabListNote"></p>
+          <div class="scan-row" id="smartTabListItems"></div>
+          <div class="scan-row"><button class="small ghost" id="smartTabListCancel" title="Stop the search and choose no cube">Cancel</button></div>
+        </div>
+      </div>
+      <details class="panel planfold" id="planFold">
+        <summary title="Show a CFOP plan for this scramble"><h2>Reveal a CFOP plan for this scramble</h2></summary>
+        <div class="row" style="justify-content:space-between;margin-top:10px">
+          <div><p class="muted" style="margin:0">The scramble is white up and green in front, as the cube shows it. Press Plan. Each step shows the cube at that point; click a move to step through it.</p></div>
+          <div class="row"><select id="crossColor" title="Scrambles are always applied white up, green front. This is the color you then solve on the bottom."><option value="white">White cross (z2 after scramble)</option><option value="yellow">Yellow cross (no rotation)</option><option value="green">Green cross</option><option value="blue">Blue cross</option><option value="red">Red cross</option><option value="orange">Orange cross</option></select>
+          <select id="f2lOrder" title="The order the plan solves the four pairs in"><option value="greedy">F2L: shortest pair first</option><option value="FR,FL,BL,BR">F2L: FR FL BL BR</option><option value="FL,FR,BR,BL">F2L: FL FR BR BL</option></select>
+          <label title="Turn the whole cube (y) before a step, so each pair goes in at the front right and each last-layer case sits as the reference shows it. Off: keep one front and use any face moves."><input type="checkbox" id="planRef"> Rotate to each algorithm</label>
+          <button class="primary" id="planBtn" title="Work out a full solution for the scramble and show it in the player">Plan</button></div>
+        </div>
+      <div id="planOut" style="margin-top:10px"><p class="muted">No plan yet. Scramble, then press Plan. The plan uses optimal cross, short pair inserts, and the two-look OLL/PLL algorithms from the Reference tab.</p></div>
+      </details>
+    </div>
   </section>
   <section class="panel tight seedbar" id="seedBar">
     <span class="lbl">Scramble</span>
     <div class="seedrow">
-      <input id="seed" placeholder="seed name" title="Type any word to get a repeatable scramble">
-      <button class="small" id="newSeed" title="A new random scramble">New<span class="hk" aria-hidden="true">N</span></button>
+      <input id="seed" placeholder="seed name" title="Type any word to get a repeatable WCA scramble">
+      <button class="small" id="newSeed" title="A new WCA scramble: a random state, as in a competition">New<span class="hk" aria-hidden="true">N</span></button>
       <button class="small" id="reScramble" title="Make the scramble for the seed name in the box">Go</button>
-      <select id="scrLen" class="small" title="How New makes a scramble: Random state, a random position as in a WCA competition, or this many random moves. A seed name always gives random moves"><option value="rs" selected>Random state</option><option value="20">20</option><option value="22">22</option><option value="25">25</option></select>
       <button class="small ghost" id="histBtn" title="Show your recent scrambles, to load one again">History</button>
       <button class="small ghost" id="showScramble" title="Put the current scramble back in the player">Show scramble</button>
       <button class="small" id="scanBtn" title="Type a scramble, or paste the letters of a cube state">Enter a scramble</button>
@@ -106,13 +145,11 @@
   </section>
 <div class="wrap">
   <nav class="rail" id="rail">
-    <button data-tab="solve" data-sec="solve" class="on" title="The scramble, the cube and the timer. A CFOP plan is one click away"><span class="k">1</span><i class="sec-sq"></i>Scramble</button>
-    <button data-tab="cross" data-sec="cross" title="Train the cross: short scrambles and the best plans"><span class="k">2</span><i class="sec-sq"></i>Cross</button>
-    <button data-tab="f2l" data-sec="f2l" title="Train the first two layers, one pair at a time"><span class="k">3</span><i class="sec-sq"></i>F2L</button>
-    <button data-tab="ll" data-sec="ll" title="Train the last layer: the two-look OLL and PLL cases"><span class="k">4</span><i class="sec-sq"></i>OLL · PLL</button>
-    <button data-tab="lab" data-sec="lab" title="Take an algorithm apart: what each move does, commutators, conjugates"><span class="k">5</span><i class="sec-sq"></i>Lab</button>
-    <button data-tab="ref" data-sec="ref" title="Every case with its picture and algorithm"><span class="k">6</span><i class="sec-sq"></i>Reference</button>
-    <button data-tab="smart" data-sec="smart" title="Your smart cube, live: each turn of the cube turns the layer here, with the stage of your solve and the voice commands"><span class="k">7</span><i class="sec-sq"></i><span class="dot" aria-hidden="true"></span>Smart cube</button>
+    <button data-tab="cross" data-sec="cross" class="on" title="Train the cross: short scrambles and the best plans"><span class="k">1</span><i class="sec-sq"></i>Cross</button>
+    <button data-tab="f2l" data-sec="f2l" title="Train the first two layers, one pair at a time"><span class="k">2</span><i class="sec-sq"></i>F2L</button>
+    <button data-tab="ll" data-sec="ll" title="Train the last layer: the two-look OLL and PLL cases"><span class="k">3</span><i class="sec-sq"></i>OLL · PLL</button>
+    <button data-tab="lab" data-sec="lab" title="Take an algorithm apart: what each move does, commutators, conjugates"><span class="k">4</span><i class="sec-sq"></i>Lab</button>
+    <button data-tab="ref" data-sec="ref" title="Every case with its picture and algorithm"><span class="k">5</span><i class="sec-sq"></i>Reference</button>
   </nav>
   <nav class="rail" id="brail">
     <button data-tab="learn" data-sec="learn" title="The lessons, one per step"><span class="k">1</span><i class="sec-sq"></i>Learn</button>
@@ -122,22 +159,8 @@
     <button data-tab="cheat" data-sec="cheat" title="Every algorithm of the method on one page"><span class="k">5</span><i class="sec-sq"></i>Cheat sheet</button>
   </nav>
   <main class="main">
-    <!-- SOLVE -->
-    <section class="tab on" id="tab-solve" data-sec="solve">
-      <details class="panel planfold" id="planFold">
-        <summary title="Show a CFOP plan for this scramble"><h2>Reveal a CFOP plan for this scramble</h2> <span class="muted planwas">was the Solve tab</span></summary>
-        <div class="row" style="justify-content:space-between;margin-top:10px">
-          <div><p class="muted" style="margin:0">The scramble is white up and green in front, as the cube shows it. Press Plan. Each step shows the cube at that point; click a move to step through it.</p></div>
-          <div class="row"><select id="crossColor" title="Scrambles are always applied white up, green front. This is the color you then solve on the bottom."><option value="white">White cross (z2 after scramble)</option><option value="yellow">Yellow cross (no rotation)</option><option value="green">Green cross</option><option value="blue">Blue cross</option><option value="red">Red cross</option><option value="orange">Orange cross</option></select>
-          <select id="f2lOrder" title="The order the plan solves the four pairs in"><option value="greedy">F2L: shortest pair first</option><option value="FR,FL,BL,BR">F2L: FR FL BL BR</option><option value="FL,FR,BR,BL">F2L: FL FR BR BL</option></select>
-          <label title="Turn the whole cube (y) before a step, so each pair goes in at the front right and each last-layer case sits as the reference shows it. Off: keep one front and use any face moves."><input type="checkbox" id="planRef"> Rotate to each algorithm</label>
-          <button class="primary" id="planBtn" title="Work out a full solution for the scramble and show it in the player">Plan</button></div>
-        </div>
-      <div id="planOut" style="margin-top:10px"><p class="muted">No plan yet. Scramble, then press Plan. The plan uses optimal cross, short pair inserts, and the two-look OLL/PLL algorithms from the Reference tab.</p></div>
-      </details>
-    </section>
     <!-- CROSS -->
-    <section class="tab" id="tab-cross" data-sec="cross">
+    <section class="tab on" id="tab-cross" data-sec="cross">
       <div class="panel">
         <h2>Check my plan</h2>
         <p class="muted">Type the moves you would use. The checker applies them to the scramble and tells you if the cross is solved, how many moves you used, and the gap to optimal.</p>
@@ -262,41 +285,6 @@
       <div class="panel"><h3>Notation</h3><p>Face turns: <span class="mono">U R F D L B</span> clockwise when you look at that face. <span class="mono">'</span> is counterclockwise. <span class="mono">2</span> is a half turn. Lower-case <span class="mono">r u f</span> turn two layers. <span class="mono">M E S</span> are the middle slices (M follows L, E follows D, S follows F). <span class="mono">x y z</span> rotate the whole cube like R, U, F.</p><p>Scrambles are applied with white up and green in front, the WCA rule. Solving plans start with one rotation (<span class="mono">z2</span> for a white cross) and then contain only face turns: hold the cube still, cross color down, and turn faces.</p></div>
     </div>
     </section>
-    <!-- SMART CUBE (js/cubetab.js, the voice commands in js/smart-listen.js, the reference card in js/smart-card.js) -->
-    <section class="tab" id="tab-smart" data-sec="smart">
-      <div class="panel cubewin" id="cubeWin" hidden>
-        <div class="cw-head"><h2 class="nm"></h2><span class="dot" aria-hidden="true"></span><span class="batt" id="cubeWinBatt" hidden></span><span class="grow"></span><button class="small ghost" id="cubeWinOptions" title="Open the Smart cube window: scan or paint the colors of the cube, use it as the scramble, or disconnect">Options</button></div>
-        <div class="cw-body">
-          <div class="cw-main">
-            <svg id="cubeWinSvg" viewBox="0 0 400 360" role="img" aria-label="Your smart cube, live"></svg>
-            <div class="cw-warn hidden" id="cubeWinWarn" role="status"><span class="txt"></span><span class="btns"><button class="small" id="cubeWinMatch" title="Turn the hold to match the cube. The turn goes on the list">Read as held</button><button class="small ghost" id="cubeWinKeep" title="The cube did not turn: line the picture up with the hold again.">Keep this hold</button></span></div>
-            <div class="cw-hold" id="cubeWinHold" role="group" aria-label="How you hold the cube"><span class="lbl" title="How you hold the cube. A tile sets the hold. No turn goes on the list.">Top</span><span class="grp" data-place="up"></span><span class="lbl">Front</span><span class="grp" data-place="front"></span></div>
-            <div class="cw-turns" id="cubeWinTurns" role="group" aria-label="Turn the whole cube"><span class="lbl" title="Turned the cube in your hands? Press the same turn here, so the picture, the moves and the stage read as you hold it.">Turn the cube</span></div>
-          </div>
-          <div class="cw-aside">
-            <div class="cw-stage" id="cubeWinStage"><div class="st-name" aria-live="polite"></div><div class="st-sub"></div><div class="st-alg" aria-label="The moves of this case"></div></div>
-            <div class="cw-moves" id="cubeWinMoves" aria-label="Your last moves"></div>
-            <div class="cw-row" id="cubeWinView"><div class="cw-side"><button class="small ghost hidden" id="cubeWinLock" aria-pressed="true" title="Lock the picture to the hold. Off, the picture turns as you turn the cube in your hands">Lock</button><button class="small ghost hidden" id="cubeWinReset" title="Line the picture up with the cube in your hands">Reset view</button><button class="small ghost" id="cubeWinClear" title="Empty the list of moves">Clear moves<span class="hk">C</span></button><button class="small ghost" id="cubeWinFront" aria-pressed="false" title="The cube from above and to the right, with three faces in view. Press to see it straight on, the front face alone">Front view<span class="hk">V</span></button><button class="small ghost" id="cubeWinHidden" aria-pressed="false" title="Show the hidden faces: the faces turned away from you, as in a mirror behind the cube">Hidden faces</button><button class="small" id="cubeWinListen" aria-pressed="false" title='Listen for "reset", "clear moves", "top yellow, front green", "x prime" and case names such as "T perm": click to listen until Stop; hold, say one thing and let go'>Listen</button></div></div>
-            <div class="cw-listen hidden" id="cubeWinListenRow" role="status"><span class="listen-dot" aria-hidden="true"></span><span class="txt"></span><span class="heard"></span><span class="ask listen-ask"></span></div>
-            <div class="cw-hints hidden" id="cubeWinHints" aria-label="What you can say"></div>
-            <p class="muted cw-note" id="cubeWinNote"></p>
-            <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect" title="Look for your cube and connect it again">Connect again</button></div>
-          </div>
-        </div>
-      </div>
-      <div class="panel" id="smartHome">
-        <h2>Smart cube</h2>
-        <p class="muted">Connect a GAN smart cube with Bluetooth. Each turn of your cube turns the layer here, large. The page names the stage of your solve and the case on the cube. It listens for your voice: a reset, how you hold the cube, or a case name, which opens a small reference card beside the cube.</p>
-        <p class="muted">A cube that you connected before connects by itself when you open this tab. Turn a face to wake it up.</p>
-        <div class="row"><button class="primary" id="smartTabConnect" title="Look for your cube and connect it">Connect a smart cube</button></div>
-        <p class="muted" id="smartTabStatus" role="status"></p>
-        <div id="smartTabList" class="hidden smart-look">
-          <p class="muted" id="smartTabListNote"></p>
-          <div class="scan-row" id="smartTabListItems"></div>
-          <div class="scan-row"><button class="small ghost" id="smartTabListCancel" title="Stop the search and choose no cube">Cancel</button></div>
-        </div>
-      </div>
-    </section>
     <!-- BEGINNER: Learn (js/learn.js) -->
     <section class="tab" id="tab-learn" data-sec="learn"><div class="panel"><h2>Learn</h2></div></section>
     <!-- BEGINNER: Solve my cube (js/guide.js) -->
@@ -324,11 +312,11 @@
 <script src="js/picture.js"></script>
 <script src="js/loop.js"></script>
 <script src="js/solver.js"></script>
+<script src="js/wca.js"></script>
 <script src="js/resync.js"></script>
 <script src="js/beginner.js"></script>
 <script src="js/algs.js"></script>
 <script src="js/f2l.js"></script>
-<script src="js/scramble.js"></script>
 <script src="js/app.js"></script>
 <script src="js/screencube.js"></script>
 <script src="js/place.js"></script>
@@ -361,5 +349,8 @@
 <script src="js/listen.js"></script>
 <script src="js/smart-card.js"></script>
 <script src="js/smart-listen.js"></script>
+<script src="js/scrinfo.js"></script>
+<script src="js/undo.js"></script>
+<script src="js/stageview.js"></script>
 </body>
 </html>

@@ -62,8 +62,8 @@ function cubePopActions(id){
     foot:'The virtual cube draws inside each section that needs it. The Keys window floats over the page: drag it where you like.'};
   if(id==='smart'){const live=smartLive();return {
     head:live?(typeof smartNiceName==='function'&&smartConn.name?smartNiceName(smartConn.name):'Smart cube')+(smartConn.battery!=null?' · '+smartConn.battery+'%':''):'Not connected',
-    text:live?'Connected. The page sees every turn. The live view is on the Smart cube tab.':'Connect a GAN smart cube. '+smartHowWords(),
-    acts:live?[cubeAct('Live view','The Smart cube tab','Go to the Smart cube tab','live',{main:true}),cubeAct('My cube is solved','Reset what the page reads','Tell the page the cube is solved','smartSolved'),
+    text:live?'Connected. The page sees every turn: the cube in each section follows it. The Smart cube sheet names the stage of your solve.':'Connect a GAN smart cube. '+smartHowWords(),
+    acts:live?[cubeAct('Use my cube','Make it the scramble','Make the cube in your hands the scramble','use',{main:true}),cubeAct('My cube is solved','Reset what the page reads','Tell the page the cube is solved','smartSolved'),
       cubeAct('Fix the colors','Scan or paint it','Correct the state the cube reports','smartFix'),cubeAct('Disconnect','Back to Regular cube','Disconnect the smart cube','disconnect')]
       :[cubeAct('Connect','Look for a cube','Look for a GAN smart cube','connect',{main:true}),cubeAct('Options','The Smart cube window','Open the Smart cube window','options')],
     foot:typeof smartInApp==='function'&&smartInApp()?'No smart cube yet? Connect looks for a GAN cube near this Mac.':'No smart cube yet? Connect opens the browser’s chooser. Safari connects through the Mac app.'};}
@@ -91,7 +91,7 @@ function cubeDo(act){
     case 'paint':close();openPaint();break;
     case 'scan':close();$('#camBtn').click();break;
     case 'type':close();openEnter();break;
-    case 'live':close();if(method!=='cfop')setMethod('cfop');goTab('smart');break;
+    case 'use':close();if(typeof liveUse==='function')liveUse();break;
     case 'connect':close();openSmart();break;
     case 'options':case 'smartSolved':case 'smartFix':close();openSmart();break;
     case 'disconnect':close();if(typeof smartDisconnect==='function')smartDisconnect();setCubeSrc('mine');break;

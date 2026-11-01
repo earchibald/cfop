@@ -30,7 +30,7 @@ const view={yaw:-32,pitch:28,mode:'3d'};
 let displayedCube=new Cube();let fadeSet=null;
 // Animation: a layer turns on the player cube when the player steps one move. One setting for every
 // method, on by default (cw:animate); the Animate chip on the cube, the A key and Settings change it.
-var anim={on:store.get('animate',true),raf:0,move:null,t:0,from:null}; // var: tests read it
+var anim={on:store.get('animate',true),raf:0,move:null,t:0,from:null,quick:0}; // var: tests read it. quick: a shorter turn (ms), for a fast run of moves
 function animOn(){return !!anim.on;}
 function setAnim(on){anim.on=!!on;store.set('animate',anim.on);if(!on)stopAnim();renderAnimBtn();}
 function renderAnimBtn(){const b=$('#animBtn');if(!b)return;const on=animOn();b.setAttribute('aria-pressed',String(on));b.title=on?'Moves turn on the cube. Press to show each move at once (A).':'Each move shows at once. Press to turn the layer on the cube (A).';}
@@ -53,7 +53,7 @@ function mainBump(set,o={}){const L0=mainLift;if(L0){cancelAnimationFrame(L0.raf
 function showCubeMoved(from,move,cube,fade){
   mainBump(null,{quiet:true});displayedCube=cube;fadeSet=fade||null;
   if(!animOn()||view.mode!=='3d'||reducedMotion()||typeof requestAnimationFrame!=='function'){stopAnim();drawMain();return;}
-  stopAnim();const half=move.endsWith('2');let dur=half?420:300;if(auto.on)dur=Math.min(dur,autoMs()*0.7);
+  stopAnim();const half=move.endsWith('2');let dur=half?420:300;if(auto.on)dur=Math.min(dur,autoMs()*0.7);if(anim.quick)dur=Math.min(dur,anim.quick);
   anim.from=from;anim.move=move;anim.t=0;const t0=performance.now();
   const step=()=>{const x=Math.min(1,(performance.now()-t0)/dur);anim.t=x<1?0.5-0.5*Math.cos(Math.PI*x):1; // ease in and out
     if(x>=1){anim.raf=0;anim.move=null;drawMain();return;}
@@ -67,8 +67,7 @@ function drawDragHint(){const h=$('#dragHint');if(h)h.classList.toggle('hidden',
 // Hidden faces (cw:hidden, off by default): the back, left and bottom drawn as in a mirror behind the
 // cube (hiddenFacePolys in js/draw.js). The cube draws smaller so the faces fit the box.
 function hiddenOn(){return !!store.get('hidden',false);}
-// The smart cube window (js/cubetab.js) follows the same setting.
-function setHidden(on){store.set('hidden',!!on);drawMain();if(typeof cubeTabHiddenDraw==='function')cubeTabHiddenDraw();}
+function setHidden(on){store.set('hidden',!!on);drawMain();}
 function view3D(){return hiddenOn()?{yaw:view.yaw,pitch:view.pitch,hidden:true,scale:40}:{yaw:view.yaw,pitch:view.pitch};}
 // The hold row under the cube (js/live.js) turns the picture: rot, or a turned cube on the net.
 function drawMain(){
@@ -219,7 +218,7 @@ function thumb3D(cube){const f=cube.toFacelets();return `<svg viewBox="40 30 320
 // drill: a name when the player shows a case drill instead of the current scramble. Tab changes keep a drill.
 var seqState={moves:[],idx:0,shown:-1,label:'scramble',base:new Cube(),drill:null,yours:null}; // var: tests read it from the window. yours: where your moves start (js/cubemenu.js)
 function setSequence(moves,label,base,drill){stopAuto();seqState.shown=-1;seqState.yours=null;seqState.moves=Array.isArray(moves)?moves:parseAlg(moves);seqState.label=label||'';seqState.base=base||puzzleCube();seqState.idx=seqState.moves.length;
-  if(!drill&&seqState.drill){currentLabel=scrLabel;if(/^(ll|f2l):/.test(timer.scope))setScope(TAB_SCOPE[curTab]||'solve');}
+  if(!drill&&seqState.drill){currentLabel=scrLabel;if(/^(ll|f2l):/.test(timer.scope))setScope(tabScope(curTab));}
   seqState.drill=drill||null;$('#drillNote').classList.toggle('hidden',!drill);$('#drillName').textContent=drill||'';
   renderSequence();applySequence();document.dispatchEvent(new CustomEvent('cw:sequence',{detail:{drill:seqState.drill}}));}
 function cubeAtSeq(i){return applyAlg(seqState.base,seqState.moves.slice(0,i));}
@@ -289,18 +288,9 @@ $('#autoSpeed').onchange=()=>{store.set('autoSpeed',autoMs());if(auto.timer){cle
 // scramble state
 var scr={seed:'',moves:[],cube:new Cube()}; // var: tests read it from the window
 let history=store.get('history',[]);
-// The scramble lengths the seed bar offers, after Random state (js/scramble.js).
-const SCR_LENS=[20,22,25];
-function setScrLenOptions(){const sel=$('#scrLen');const vals=['rs',...SCR_LENS.map(String)];if([...sel.options].map(o=>o.value).join()===vals.join())return;
-  const was=sel.value;sel.replaceChildren(...vals.map(v=>{const o=document.createElement('option');o.value=v;o.textContent=v==='rs'?'Random state':v;return o;}));
-  sel.value=was==='rs'||!was?'rs':vals[2];}
-// The length of a random-move scramble: the one chosen, or the middle one under Random state.
-function scrLen(){const v=$('#scrLen').value;return v==='rs'||!v?SCR_LENS[1]:+v;}
-// A new scramble. With no seed and Random state chosen, a random-state one when the pool has one;
-// it loads with its moves, as a typed scramble does, since no seed makes it again. Else random moves.
-function newScramble(seed){
-  if(!seed&&$('#scrLen').value==='rs'){const m=rsTake(puzzleN());if(m){loadScramble(randomSeedName(),m,true);return;}}
-  seed=seed||randomSeedName();loadScramble(seed,randomMoveScramble(seed,scrLen()),false);}
+// A new scramble: a WCA scramble (js/wca.js), a random state made from a seed name. The same seed
+// always gives the same scramble.
+function newScramble(seed){seed=seed||randomSeedName();loadScramble(seed,wcaScramble(seed),false);}
 function loadScramble(seed,moves,custom){
   scr.seed=seed;$('#seed').value=custom?'':seed;$('#seed').placeholder=custom?seed:'seed name';
   scr.moves=Array.isArray(moves)?moves:parseAlg(moves);scr.cube=applyAlg(puzzleCube(),scr.moves);
@@ -336,7 +326,7 @@ function avg(arr,n){if(arr.length<n)return null;const a=arr.slice(-n).map(x=>x.m
 function renderTimes(){const arr=scopeTimes();$('#stLast').textContent=fmt(arr.length?arr[arr.length-1].ms:null);$('#stAo5').textContent=fmt(avg(arr,5));$('#stAo12').textContent=fmt(avg(arr,12));const best=arr.length?Math.min(...arr.map(x=>x.ms)):null;$('#stBest').textContent=fmt(best);$('#stN').textContent=arr.length;
   $('#times').innerHTML=arr.slice(-40).map((x,i)=>`<span class="${x.ms===best?'best':''}" title="${esc(x.label||'')} · ${new Date(x.t).toLocaleString()}. Click to delete this time">${fmt(x.ms)}</span>`).reverse().join('');$('#timesScope').textContent='Times: '+scopeName();}
 // The timer scope as words: a tab name, or the case name for a case drill.
-function scopeName(){const s=timer.scope;if(s.startsWith('ll:')){const a=LL_ALL.find(x=>x.id===s.slice(3));return a?a.name:s.slice(3);}if(s.startsWith('f2l:'))return 'F2L case #'+s.slice(4);return {solve:'Scramble',cross:'Cross',f2l:'F2L',ll:'OLL · PLL',lab:'Lab',ref:'Reference'}[s]||s;}
+function scopeName(){const s=timer.scope;if(s.startsWith('ll:')){const a=LL_ALL.find(x=>x.id===s.slice(3));return a?a.name:s.slice(3);}if(s.startsWith('f2l:'))return 'F2L case #'+s.slice(4);return {solve:'Full solves',cross:'Cross',f2l:'F2L',ll:'OLL · PLL',lab:'Lab',ref:'Reference'}[s]||s;}
 function setScope(s){timer.scope=s;renderTimes();}
 function recordTime(ms){const arr=times[timer.scope]||(times[timer.scope]=[]);arr.push({ms,t:Date.now(),label:currentLabel()});store.set('times',times);renderTimes();if(onTimerStop)onTimerStop(ms);}
 let onTimerStop=null;const scrLabel=()=>curTab==='f2l'?'f2l '+scr.seed:scr.seed;let currentLabel=scrLabel;
@@ -366,7 +356,6 @@ document.addEventListener('keydown',e=>{const el=document.activeElement,tag=el?e
   if(e.code==='Space'){e.preventDefault();if(e.repeat)return;if(timerHidden())toggleAuto();else timerPress();return;}
   if(timer.state==='running')return;
   if(typeof f2lGuideKey==='function'&&f2lGuideKey(e))return; // the F2L guide: the arrows make and cover moves
-  if(typeof cubeTabKeys==='function'&&cubeTabKeys(e))return; // the Smart cube tab: C clears the moves
   if(e.key>='1'&&e.key<='9'){const b=railButtons()[+e.key-1];if(b)b.click();}
   const jump=e.shiftKey?5:1;
   if(e.key==='ArrowLeft'){e.preventDefault();seqGo(seqState.idx-jump);}if(e.key==='ArrowRight'){e.preventDefault();seqGo(seqState.idx+jump);}
@@ -420,25 +409,30 @@ function puzzleN(){return 3;}
 function puzzleCube(){return new Cube();}
 function applyMethodData(){const i=methodInfo();document.body.dataset.method=method;document.body.dataset.kind=i.kind;document.body.dataset.puzzle=i.puzzle;setDrawN(puzzleN());}
 applyMethodData();
-let curTab='solve';
-const TAB_SCOPE={solve:'solve',cross:'cross',f2l:'f2l',ll:'ll',lab:'lab',ref:'ref',smart:'solve',learn:'solve',bsolve:'solve',practice:'solve',progress:'solve',cheat:'solve'};
+let curTab='cross';
+const TAB_SCOPE={solve:'solve',cross:'cross',f2l:'f2l',ll:'ll',lab:'solve',ref:'solve',learn:'solve',bsolve:'solve',practice:'solve',progress:'solve',cheat:'solve'};
 const BEGINNER_TABS=['learn','bsolve','practice','progress','cheat'];
+// One list for full solves (1.63): Cross, Lab and Reference time into 'solve'. With Full solve
+// off (cw:timeFull, the box by the timer) the Cross tab times the cross alone, into 'cross'. F2L and
+// OLL · PLL keep their own lists. The old 'lab' and 'ref' lists stay in cw:times, unshown.
+function tabScope(t){const s=TAB_SCOPE[t]||'solve';return s==='cross'&&$('#fullChk').checked?'solve':s;}
 function railButtons(){return $$('#'+methodInfo().rail+' button');}
 function tabKey(){return (mobileMQ.matches?'m':'')+methodInfo().tabKey;}
-function homeTab(){return isBeg()?'learn':mobileMQ.matches?'ref':'solve';}
+function homeTab(){return isBeg()?'learn':mobileMQ.matches?'ref':'cross';}
 $$('nav.rail button').forEach(b=>b.onclick=()=>{curTab=b.dataset.tab;$$('nav.rail button').forEach(x=>x.classList.toggle('on',x===b));$$('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+curTab));
-  document.body.dataset.tab=curTab;$('#mtitle').textContent=b.lastChild.textContent;store.set(tabKey(),curTab);setScope(TAB_SCOPE[curTab]);onEnterTab(curTab);document.dispatchEvent(new CustomEvent('cw:tab',{detail:curTab}));
+  document.body.dataset.tab=curTab;$('#mtitle').textContent=b.lastChild.textContent;store.set(tabKey(),curTab);setScope(tabScope(curTab));onEnterTab(curTab);document.dispatchEvent(new CustomEvent('cw:tab',{detail:curTab}));
   // The desktop Reference opens with its own heading at the top of the window, under the top bar, not the player.
-  // So does the Smart cube tab: the live cube and every control beside it come into view together.
-  const sec=$('#tab-'+curTab);if((curTab==='ref'||curTab==='smart')&&!mobileMQ.matches&&sec&&sec.scrollIntoView)sec.scrollIntoView({behavior:'smooth',block:'start'});});
-function goTab(name){const b=$(`nav.rail button[data-tab="${name}"]`);if(b)b.click();}
+  const sec=$('#tab-'+curTab);if(curTab==='ref'&&!mobileMQ.matches&&sec&&sec.scrollIntoView)sec.scrollIntoView({behavior:'smooth',block:'start'});});
+// A saved tab that is gone (CFOP's Scramble tab, before 1.63; the Smart cube tab, before 1.64) opens the method's home tab.
+function goTab(name){const b=$(`nav.rail button[data-tab="${name}"]`)||$(`nav.rail button[data-tab="${homeTab()}"]`);if(b)b.click();}
 function onEnterTab(t){if(!seqState.drill)showForTab();else if(t==='f2l'&&f2lState.mode==='live')showF2LState();else if(t==='f2l'&&f2lState.mode==='guide'&&typeof fgShow==='function')fgShow();if(t==='cross')refreshCross();}
 function nextForTab(){({solve:()=>newScramble(),cross:()=>$('#crossNew').click(),f2l:()=>(f2lState.mode==='guide'?$('#fgNew'):f2lState.mode==='live'?$('#f2lNew'):$('#f2lRandomCase')).click(),ll:()=>$('#llNext').click(),ssolve:()=>newScramble(),ortega:()=>{const b=$('#twNextOrtega');if(b)b.click();},cll:()=>{const b=$('#twNextCll');if(b)b.click();},fsolve:()=>newScramble(),parity:()=>{const b=$('#fwNext');if(b)b.click();}}[curTab]||(()=>{}))();}
 function hintForTab(){({cross:()=>$('#crossReveal').click(),f2l:()=>{if(f2lState.mode!=='guide')(f2lState.mode==='live'?$('#f2lReveal'):$('#f2lCaseReveal')).click();},ll:()=>$('#llHint').click(),ortega:()=>{const b=$('#twRevealOrtega');if(b)b.click();},cll:()=>{const b=$('#twRevealCll');if(b)b.click();},parity:()=>{const b=$('#fwReveal');if(b)b.click();}}[curTab]||(()=>{}))();}
 $('#autoNext').checked=store.get('autoNext',false);$('#autoNext').onchange=()=>store.set('autoNext',$('#autoNext').checked);
 // 15 s inspection (cw:insp, on by default): the box by the timer and the one in Settings are the same setting.
+$('#fullChk').checked=store.get('timeFull',true);$('#fullChk').onchange=()=>{store.set('timeFull',$('#fullChk').checked);if(!/^(ll|f2l):/.test(timer.scope))setScope(tabScope(curTab));};
 $('#inspChk').checked=store.get('insp',true);$('#inspChk').onchange=()=>store.set('insp',$('#inspChk').checked);
-onTimerStop=()=>{if($('#autoNext').checked&&(curTab==='solve'||curTab==='cross'||curTab==='f2l'||curTab==='ll'||curTab==='ssolve'||curTab==='fsolve'))setTimeout(nextForTab,150);};
+onTimerStop=()=>{if($('#autoNext').checked&&(curTab==='cross'||curTab==='f2l'||curTab==='ll'||curTab==='ssolve'||curTab==='fsolve'))setTimeout(nextForTab,150);};
 
 // ---------- cross color / orientation ----------
 const CROSS_ROT={white:'z2',yellow:'',green:"x'",blue:'x',red:'z',orange:"z'"};
@@ -503,7 +497,7 @@ function refreshCross(){if(!tablesReady){$('#crossOpt').textContent='…';ensure
   $('#crossTryOut').innerHTML='';}
 $('#crossReveal').onclick=()=>{crossState.revealed=!crossState.revealed;refreshCross();};
 $('#crossPlus1').onchange=refreshCross;$('#crossColor').onchange=()=>{store.set('crossColor',$('#crossColor').value);if(!seqState.drill)showForTab();refreshCross();planState.plan=null;renderLLGroups();renderF2LGrid();if(mobileMQ.matches)renderMobileRef();$('#planOut').innerHTML='<p class="muted">Cross color changed. Press Plan.</p>';};
-$('#crossNew').onclick=()=>{ensureTables(()=>{const diff=$('#crossDiff').value;for(let k=0;k<200;k++){const seed=randomSeedName();const moves=randomMoveScramble(seed,scrLen());const c=toFrame(applyAlg(new Cube(),moves));const d=buildCrossTable()[crossIndex(c)];if(diff==='any'||(diff==='easy'&&d<=5)||(diff==='hard'&&d>=7)){newScramble(seed);return;}}newScramble();});};
+$('#crossNew').onclick=()=>{ensureTables(()=>{const diff=$('#crossDiff').value;for(let k=0;k<200;k++){const seed=randomSeedName();const c=toFrame(wcaState(seed));const d=buildCrossTable()[crossIndex(c)];if(diff==='any'||(diff==='easy'&&d<=5)||(diff==='hard'&&d>=7)){newScramble(seed);return;}}newScramble();});};
 // Check my plan. quiet: the moves are on the player already (js/live.js: made on the cube, or typed),
 // so the player stays as it is.
 $('#crossCheck').onclick=()=>crossCheckNow(false);
@@ -859,7 +853,7 @@ $('#themeBtn').onclick=toggleTheme;;
 // The keys card. Beginner mode has no timer, so Space plays there and the timer row is left out.
 function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHidden();
   const rows=[[k('←')+' '+k('→'),'one move back or forward'],[k('⇧')+' + arrows','five moves at a time'],[k('Home')+' '+k('End'),'the start, the end'],
-    [k('space'),beg?'play, pause':'timer: hold, release to start · press to stop'],[k('P'),'play, pause'],[k('A'),'animation on or off'],...(beg?[]:[[k('D'),'delete the last time'],[k('C'),typeof cubeTabShown==='function'&&cubeTabShown()?'clear the moves':'clear all times']]),
+    [k('space'),beg?'play, pause':'timer: hold, release to start · press to stop'],[k('P'),'play, pause'],[k('A'),'animation on or off'],...(beg?[]:[[k('D'),'delete the last time'],[k('C'),'clear all times']]),
     [k('1')+'–'+k(String(railButtons().length)),'switch tab'],...(beg?[]:[[k('N'),'next scramble / case'],[k('H'),'reveal the answer']]),[k('?'),'this card'],['drag cube','orbit the view']];
   // The virtual cube's keys, in the layout of its Keys window: they come before the keys above.
   let vc='';if(typeof cubeSrc==='function'&&cubeSrc()==='screen'&&typeof vcubeLayout==='function'){const v=screenKeys(vcubeLayout()),ks=fs=>fs.map(f=>k(esc(v[f]))).join(' ');
@@ -883,6 +877,9 @@ function openSettings(open){if($('#setBg'))return;
     <label class="setrow" title="Turn the layer on the cube for each move in the player"><input type="checkbox" id="setAnim"${animOn()?' checked':''}> Animate the moves</label>
     <label class="setrow" title="Show the back, left and bottom, as in a mirror behind the cube"><input type="checkbox" id="setHidden"${hiddenOn()?' checked':''}> Show the hidden faces</label>
     <p class="muted">The Animate and Hidden faces chips on the cube change the same settings. Animate is off when your device asks for less motion.</p>
+    <h3>Layout</h3>
+    <label class="setrow" title="CFOP on a computer: the cube fills the page, and the panels of each section are sheets beside it"><input type="checkbox" id="setStage"${store.get('stageView',true)!==false?' checked':''}> Stage view: the cube fills the page</label>
+    <p class="muted">The sections float over the cube. Each panel is a sheet on the right: fold it, close it, or drag it off to float. Off: the page as before.</p>
     <h3>Timer</h3>
     <label class="setrow" title="Count down 15 seconds to look at the cube before the timer starts, as in a competition"><input type="checkbox" id="setInsp"${store.get('insp',true)?' checked':''}> 15 s inspection</label>
     <p class="muted">The box by the timer changes the same setting.</p>
@@ -898,7 +895,7 @@ function openSettings(open){if($('#setBg'))return;
     <label class="setrow" title="When a smart cube connects and it is not at the cube on the page, ask to make it the scramble. Off: keep the scramble"><input type="checkbox" id="setSmartAsk"${store.get('smartAsk',true)?' checked':''}> Ask to use my cube as the scramble</label>
     <p class="muted">Off, the page keeps its scramble when a cube connects. Use my cube, under the player, makes it the scramble at any time.</p>
     <h3>Scrambles</h3>
-    <p class="muted" id="setScr">${esc(rsStatus())}</p>
+    <p class="muted" id="setScr">WCA scrambles: a random state, as in a competition. A seed name always gives the same one.</p>
     <h3>Phone</h3>
     <label class="setrow" title="On a phone, in the Reference section: close a case's details, and the page goes on to the next stage"><input type="checkbox" id="setRefNext"${store.get('refNext',true)?' checked':''}> Go to the next stage after a case closes</label>
     <p class="muted">Phone only, in the Reference section.</p>
@@ -933,11 +930,10 @@ function setCba(on){store.set('cba',!!on);document.body.classList.toggle('cba',!
 document.body.classList.toggle('cba',!!store.get('cba',false));
 $('#helpBtn').onclick=()=>{const b=$('#helpBox');b.classList.toggle('hidden');b.innerHTML=helpHTML();};
 document.addEventListener('cw:method',()=>{renderAnimBtn();const b=$('#helpBox');if(b&&!b.classList.contains('hidden'))b.innerHTML=helpHTML();});
-$('#scrLen').onchange=()=>newScramble($('#seed').value||undefined);
 $('#planRef').checked=store.get('planRef',false);$('#planRef').onchange=()=>{store.set('planRef',$('#planRef').checked);if(planState.plan)$('#planBtn').click();};
 $('#f2lPairs').onchange=()=>{if(f2lState.mode==='live')showF2LState();};
 // boot
-$('#crossColor').value=store.get('crossColor','white');setScrLenOptions();
-document.body.dataset.tab=curTab;$('#mtitle').textContent='Scramble';
-renderTimes();renderHistory();renderAnimBtn();newScramble();RS.bootSeed=scr.seed;setTimeout(rsStart,0);applyMobile();setTimeout(()=>{buildCrossTable();tablesReady=true;if(curTab==='cross')refreshCross();},300);
+$('#crossColor').value=store.get('crossColor','white');
+document.body.dataset.tab=curTab;$('#mtitle').textContent='Cross';
+renderTimes();renderHistory();renderAnimBtn();newScramble();applyMobile();setTimeout(()=>{buildCrossTable();tablesReady=true;if(curTab==='cross')refreshCross();},300);
 

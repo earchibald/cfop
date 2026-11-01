@@ -6,17 +6,17 @@
 // The cube cannot see its stickers: it counts its turns from the last reset, and a turn it missed
 // leaves the count off until the next reset. Scan my cube (the camera, scan.js) and Paint my cube
 // (paint.js) read the real state and hand it to conn.correct (gan.js): from then on every state
-// from the cube is corrected, here, in the cube tab and in the lab. The fix is kept by the cube's
+// from the cube is corrected, here, in the smart cube sheet and in the lab. The fix is kept by the cube's
 // name in cw:ganFix, with the day it was made, and goes to the link on connect. My cube is solved
 // drops it: the cube counts from solved again.
 // Without Web Bluetooth, the page can reach a cube through the Twistwright app for macOS
 // (bridge.js): the app serves the page and the chooser is a list in this dialog. A Mac with
 // neither gets the download dialog instead.
-// Every change of the link goes out as a cw:smart event on document, for the cube tab in the top
-// bar (cubetab.js): {type:'connect',conn}, 'disconnect', 'gone', and each 'move', 'state', 'gyro'
+// Every change of the link goes out as a cw:smart event on document, for the smart cube sheet
+// (cubetab.js): {type:'connect',conn}, 'disconnect', 'gone', and each 'move', 'state', 'gyro'
 // and 'battery' message.
 // The charge: the link asks the cube for it on connect and once a minute (gan.js), and the dialog
-// shows it by the cube's name as a small battery with the percent, smartBatteryDraw. The cube tab
+// shows it by the cube's name as a small battery with the percent, smartBatteryDraw. The smart cube sheet
 // and the lab draw theirs the same way.
 let smartConn=null,smartCube=null,smartBusy=false,smartTimer=0,smartMacWait=null;
 function smartNotify(detail){if(typeof document!=='undefined')document.dispatchEvent(new CustomEvent('cw:smart',{detail}));}
@@ -276,8 +276,8 @@ function smartIsKnown(d,known){return !!(known[d.name]||Object.values(known).som
 // The look for a cube, as the lab does it: the chooser (the browser's own with Web Bluetooth, a
 // list over the bridge), or, with `known`, the look with no click, where a known cube is taken as
 // soon as it is heard. `where` is the place that shows the look: 'dialog' (this dialog) or 'tab'
-// (the Smart cube tab, cubetab.js). One look at a time: smartLook {where, why, end}. `why` is
-// 'show' for the look that the tab starts when it opens (it ends when the user leaves the tab) and
+// (the smart cube sheet, cubetab.js). One look at a time: smartLook {where, why, end}. `why` is
+// 'show' for the look the sheet starts while Smart cube is the cube (it ends when another is picked) and
 // 'drop' for the one after the link drops (it goes on wherever the user is).
 let smartLook=null,smartPickSeq=0;
 async function smartPick(known,where,why,seq){
@@ -357,10 +357,10 @@ function smartCanLook(){
   if(smartMode()==='bridge')return true;
   return smartMode()==='bt'&&!!Object.keys(smartKnown()).length&&typeof navigator.bluetooth.getDevices==='function';
 }
-// The look with no click: when the Smart cube tab opens with no cube ('show'), and when the link
-// drops ('drop'). What it says goes to the tab.
+// The look with no click: while Smart cube is the cube and none is connected ('show'), and when the link
+// drops ('drop'). What it says goes to the sheet.
 function smartAuto(why){if(smartCanLook())smartConnect({auto:true,where:'tab',why:why||'show'});}
-// What a look says: in the dialog, its status line; on the tab, a cw:smart 'look' event.
+// What a look says: in the dialog, its status line; in the sheet, a cw:smart 'look' event.
 function smartSay(where,t){if(where==='dialog')smartStatus(t);else smartNotify({type:'look',text:t});}
 // o.where: the place that shows the look ('dialog' by default, or 'tab'). o.auto: the look with no
 // click (smartAuto). A press of Connect while a look runs ends that look and starts the chooser.

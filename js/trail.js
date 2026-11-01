@@ -1,4 +1,4 @@
-// The move trail (1.42.0): the last moves of a smart cube, on the Smart cube tab (cubeTabMovesDraw)
+// The move trail (1.42.0): the last moves of a smart cube, in the smart cube sheet (cubeTabMovesDraw)
 // and in the lab (labMovesDraw). Three zones, each over a segment of one line with its label under
 // it: Now (the last move, a tile filled with the color of the face it turned; every tile is one size), Recent (the four moves
 // before it, a bar of the face color under each) and Earlier (the moves before those, gray). Each

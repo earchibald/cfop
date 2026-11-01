@@ -99,7 +99,7 @@ function llShowApply(){const g=$('#llGroups');if(!g)return;
 if(typeof renderLLGroups==='function'){const draw=renderLLGroups;renderLLGroups=function(){draw();llFullGroup();llShowPanel();llShowApply();};}
 // A status click on a full PLL case draws the groups again, as it does for a two-look case.
 document.addEventListener('cw:status',e=>{if(String(e.detail).startsWith('pllf-'))renderLLGroups();});
-// ---------- the Scramble tab as home for level 5 ----------
+// ---------- the timer as home for level 5 ----------
 function timerHomeOn(){return !!store.get('timerHome',false)&&method==='cfop';}
 function timerHomeApply(){document.body.classList.toggle('timerhome',timerHomeOn());weakDraw();}
 // Weak spots: the slowest cases by the mean of their last five times, from the case drills.
@@ -107,7 +107,8 @@ function weakSpots(){const out=[];for(const [k,arr] of Object.entries(times)){if
     if(k.startsWith('ll:')){const a=LL_ALL.find(x=>x.id===k.slice(3));if(!a)continue;name=a.name;id=a.id;}else if(k.startsWith('f2l:')){name='F2L case '+k.slice(4);}else continue;
     const last=arr.slice(-5);out.push({name,id,ms:last.reduce((t,x)=>t+x.ms,0)/last.length});}
   return out.sort((a,b)=>b.ms-a.ms).slice(0,3);}
-function weakDraw(){const sec=$('#tab-solve');if(!sec)return;const body=sec;let el=$('#weakSpots');
+// Weak spots sit over the CFOP plan, under the timer (#everyMore; an Everywhere sheet in the stage view).
+function weakDraw(){const body=$('#everyMore');if(!body)return;let el=$('#weakSpots');
   if(!timerHomeOn()){if(el)el.remove();return;}
   if(!el){el=document.createElement('section');el.id='weakSpots';el.className='panel weakspots';body.prepend(el);}
   const w=weakSpots(),today=(times.solve||[]).filter(x=>new Date(x.t).toDateString()===new Date().toDateString());
@@ -118,7 +119,7 @@ function weakDraw(){const sec=$('#tab-solve');if(!sec)return;const body=sec;let 
   $('#weakMenu').onclick=e=>{e.stopPropagation();openMethodPop();};}
 // ---------- events ----------
 document.addEventListener('cw:status',()=>{begCfopCard();if($('#methodLevel'))startLevelRow();});
-document.addEventListener('cw:tab',e=>{if(e.detail==='progress')begCfopCard();if(e.detail==='solve')weakDraw();if(e.detail==='cross')crossLessonShow(store.get('crossLesson',null));});
+document.addEventListener('cw:tab',e=>{if(e.detail==='progress')begCfopCard();if(e.detail==='cross')crossLessonShow(store.get('crossLesson',null));});
 document.addEventListener('cw:method',()=>{begCubeLine();begCfopCard();timerHomeApply();crossLessonShow(store.get('crossLesson',null));});
 document.addEventListener('cw:cubesrc',begCubeLine);
 document.addEventListener('cw:smart',e=>{const t=e.detail&&e.detail.type;if(t==='connect'||t==='disconnect'||t==='gone')begCubeLine();});

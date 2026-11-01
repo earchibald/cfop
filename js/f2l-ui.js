@@ -8,7 +8,7 @@
 // tile or the Right arrow: the move goes on the player (the layer turns) and on fg.made, the list
 // of moves since the reset point. The Left arrow covers the last move again (fgBack: the player
 // steps back and the guide goes back to the snapshot it took before the move, fg.hist). On a smart
-// cube the cube itself uncovers a move when the user makes it (fgSmartRead, from the cube tab's
+// cube the cube itself uncovers a move when the user makes it (fgSmartRead, from the smart cube sheet's
 // state through cw:smart events); a wrong move shows the way back and New hint from here.
 //
 // The reset point (fg.base, in the solving frame: the cross color down) is the scramble with the
@@ -118,7 +118,7 @@ function fgRead(X){
   fgSchedule(f.src==='smart'?FG_WAIT_MS:0);
 }
 function fgOn(s,begun){s.away=false;s.off=[];s.begun=begun;}
-// Off a begun hint (a smart cube): the moves since it was left, as the cube tab reads them.
+// Off a begun hint (a smart cube): the moves since it was left, as the smart cube sheet reads them.
 function fgAway(s,X0,X){
   const p=X0&&typeof cubeTabPath==='function'?cubeTabPath(X0,X):null;
   if(!s.away){s.away=true;s.off=[];}

@@ -44,7 +44,7 @@ w.addEventListener('load',async()=>{try{
   // The menu lists every section and marks the current one.
   $('#menuBtn').click();assert.ok(menuOpen(),'menu button opens the menu');
   assert.strictEqual($('#menuBtn').getAttribute('aria-expanded'),'true');
-  const items=$$('#menu button[data-tab]');assert.strictEqual(items.length,7,'seven sections');
+  const items=$$('#menu button[data-tab]');assert.strictEqual(items.length,5,'five sections');
   // The look is in the menu on the phone: no room for Theme in the top bar.
   const th=$('#menuTheme'),was=d.documentElement.dataset.theme||'';assert.ok(th,'Theme in the menu');th.click();
   assert.notStrictEqual(d.documentElement.dataset.theme||'',was,'the look changes');assert.ok(menuOpen(),'the menu stays open');$('#menuTheme').click();

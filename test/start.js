@@ -231,8 +231,8 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   $('#crossLesson [data-part="2"]').click();assert.ok($('#crossLessonReveal'),'Do it offers the moves');
   $('#crossLessonEnd').click();assert.ok(!$('#crossLesson'),'the lesson closes');
   w.goTab('ref');assert.strictEqual(d.body.dataset.cube,'none','no cube on Reference');
-  w.goTab('solve');assert.strictEqual(d.body.dataset.cube,'wide','the Scramble tab has it across the top');
-  assert.strictEqual($('#rail button[data-tab="solve"]').textContent.replace(/\d/,'').trim(),'Scramble','Solve is now Scramble');
+  assert.ok(!$('#rail button[data-tab="solve"]')&&!$('#tab-solve'),'no Scramble tab');
+  assert.strictEqual($('#rail button[data-tab="cross"] .k').textContent,'1','Cross is section 1');
 
   // ----- level 4: the sets, some cases, the quiz, then OLL · PLL on what is left -----
   ({w,d,errs}=await boot());
@@ -259,8 +259,8 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   // ----- level 5: one setup page, then the timer as home -----
   ({w,d,errs}=await boot());
   $('#start [data-level="5"]').click();$('#start [data-five="hide"]').click();$('#start [data-finish="timer"]').click();
-  assert.strictEqual(d.body.dataset.tab,'solve');assert.ok(d.body.classList.contains('timerhome'),'the Scramble tab is home, with a large timer');
-  assert.ok($('#weakSpots'),'Weak spots');assert.strictEqual(st()['f2l-1'],'finished','Full CFOP marks every case');
+  assert.strictEqual(d.body.dataset.tab,'cross');assert.ok(d.body.classList.contains('timerhome'),'the timer is home');
+  assert.ok($('#everyMore #weakSpots'),'Weak spots, under the timer');assert.strictEqual(st()['f2l-1'],'finished','Full CFOP marks every case');
   assert.strictEqual(JSON.parse(w.localStorage.getItem('cw:hideTime')),true,'Hide the time is saved');
   // A second visit: no level page.
   ({w,d,errs}=await boot({'cw:method':'"cfop"','cw:level':'5'}));
@@ -268,7 +268,7 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   // A cube picked on the pages once does not come back at a later track's end: only a pick made on
   // the way changes the cube.
   w.eval("START.src='screen';START.picked=false;setCubeSrc('mine');startPick(4)");
-  w.eval("startFinish('cfop','solve')");
+  w.eval("startFinish('cfop','cross')");
   assert.strictEqual(w.eval('cubeSrc()'),'mine','the cube in the menu stays');
   assert.ok(!w.document.querySelector('#vcubeWin:not([hidden])'),'no virtual cube window');
   assert.deepStrictEqual(errs,[],'no script errors');

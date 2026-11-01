@@ -16,7 +16,9 @@ function scrambleFromCube(cube,name,stay){
   if(!applyAlg(new Cube(),scr).equals(res.cube))return {ok:false,errors:['The scramble does not match the cube.']};
   loadScramble(name||customName('cube'),scr,true);go();return {ok:true,moves:scr};
 }
-function goSolveTab(){const t=isBeg()?'bsolve':'solve';if(curTab!==t)goTab(t);focusPlayer();}
+// The beginner method goes to Solve my cube. CFOP stays on its tab, unless the tab has no player
+// (Reference): then Cross.
+function goSolveTab(){const t=isBeg()?'bsolve':typeof PLACE_NONE!=='undefined'&&PLACE_NONE.has(curTab)?'cross':curTab;if(curTab!==t)goTab(t);focusPlayer();}
 
 function openEnter(){
   if($('#enterBg'))return;

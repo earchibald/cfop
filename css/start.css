@@ -5,7 +5,7 @@
 /* ===== The cube in the section ===== */
 /* The player is not at the top of the page. main.main is a grid: the beginner home and the section
    in view on the left, the cube slot (js/place.js) on the right (body[data-cube="side"]); across the
-   top for a scramble section ("wide"); gone for Reference and the Smart cube tab ("none"). */
+   top for a scramble section ("wide"); gone for Reference ("none"). */
 .main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:var(--gap);align-items:start}
 .main>*{grid-column:1}
 .main>#cubeSlot{grid-column:2;grid-row:1/span 2;position:sticky;top:calc(var(--toph,58px) + 12px);max-height:calc(100vh - var(--toph,58px) - 24px);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
@@ -29,7 +29,6 @@ body[data-kind="beg"]:not([data-begview="player"]) .main>#cubeSlot{display:none}
 .planfold>summary h2{display:inline;margin:0}
 .planfold>summary h2::after{content:" ▸";color:var(--muted)}
 .planfold[open]>summary h2::after{content:" ▾"}
-.planfold .planwas{font-size:12px;font-family:var(--mono)}
 @media (max-width:1000px){.main{grid-template-columns:minmax(0,1fr) 280px}}
 @media (max-width:760px){.main{grid-template-columns:minmax(0,1fr)}.main>#cubeSlot{grid-column:1;grid-row:auto;position:static;max-height:none;overflow:visible}
   body[data-cube="side"] .player{grid-template-columns:minmax(0,1fr)}}
@@ -321,12 +320,10 @@ body[data-kind="beg"][data-cube="wide"][data-gd="won"] .gd-part{align-self:cente
 .llplan{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;padding:8px 12px;border-radius:10px;background:var(--panel2)}
 .llplan>span:nth-child(2){flex:1;min-width:200px}
 .llhide{display:none!important}
-.weakspots{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:18px}.weakspots h3{margin:0 0 6px}.weakspots p{margin:4px 0}
+.weakspots{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:18px}.everymore{display:flex;flex-direction:column;gap:var(--gap)}.everymore .weakspots{grid-template-columns:1fr}.weakspots h3{margin:0 0 6px}.weakspots p{margin:4px 0}
 .weaklist{margin:0 0 8px;padding-left:20px}.weaklist li{display:flex;justify-content:space-between;gap:12px;padding:2px 0}
-body.timerhome[data-tab="solve"] .timer{font-size:96px}
-body.timerhome[data-tab="solve"] .player{grid-template-columns:300px minmax(0,1fr) minmax(320px,1.1fr)}
 @media (max-width:760px){.lh{grid-template-columns:1fr}.lh-pic{width:96px}.lh-body h2{font-size:22px}.lh-act>button{flex:1}}
-@media (max-width:760px){body.timerhome[data-tab="solve"] .timer{font-size:56px}body.timerhome[data-tab="solve"] .player{grid-template-columns:minmax(0,1fr)}.weakspots,.begcfop{grid-template-columns:1fr}}
+@media (max-width:760px){.weakspots,.begcfop{grid-template-columns:1fr}}
 /* One look with the getting-started pages: a crumb over each section ("3×3 Beginner · Practice",
    placeCrumb in js/place.js), as the pages have "Getting started · Basics", and the section's first
    heading in the pages' larger scale. A tab with the cube across the top (body[data-cube="wide"]) has

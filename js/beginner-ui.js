@@ -91,7 +91,6 @@ function renderChip(){$('#methodName').textContent=methodInfo().name;
   $$('#methodPop .mcard').forEach(c=>c.classList.toggle('on',c.dataset.method===method));}
 function setMethod(m,opts){
   if(!METHODS[m])m='cfop';const changed=m!==method;method=m;applyMethodData();store.set('method',m);
-  setScrLenOptions();
   renderChip();renderProgress();
   if(changed||(opts&&opts.force)){goTab(store.get(tabKey(),homeTab()));}
   document.dispatchEvent(new CustomEvent('cw:method',{detail:m}));

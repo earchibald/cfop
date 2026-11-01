@@ -24,7 +24,7 @@ w.addEventListener('load',async()=>{try{
   // The Keys button says Hotkeys.
   assert.strictEqual($('#helpBtn').title,'Hotkeys (?)','the Keys button says Hotkeys');
   // The key badge goes after the text, once.
-  assert.strictEqual(w.tipText($('#newSeed')),'A new random scramble · N','the badge key follows the text');
+  assert.strictEqual(w.tipText($('#newSeed')),'A new WCA scramble: a random state, as in a competition · N','the badge key follows the text');
   assert.ok(/\(A\)\.?$/.test(w.tipText($('#animBtn'))),'a key already named is not added again');
   // A hover: the browser's tooltip is held off at once, the card comes after a wait.
   // A first visit opens the method chooser after 300 ms and focuses a card: let that pass, then close it.
@@ -37,14 +37,14 @@ w.addEventListener('load',async()=>{try{
   await sleep(450);
   const card=$('#tipcard');
   assert.ok(card&&!card.classList.contains('hidden')&&card.getAttribute('role')==='tooltip','the card shows');
-  assert.strictEqual(card.textContent,'A new random scramble · N','the card carries the text and the key');
+  assert.strictEqual(card.textContent,'A new WCA scramble: a random state, as in a competition · N','the card carries the text and the key');
   assert.strictEqual(w.tipsShown(),b,'the card is for the button');
   // Moving onto the badge inside the button keeps the card.
   mouse(b,'mouseout',b.querySelector('.hk'));
   assert.strictEqual(w.tipsShown(),b,'a move inside the button keeps the card');
   // Moving away hides the card and gives the title back.
   mouse(b,'mouseout',d.body);
-  assert.ok(!w.tipsShown()&&b.title==='A new random scramble'&&!b.dataset.tip,'the card hides and the title comes back');
+  assert.ok(!w.tipsShown()&&b.title==='A new WCA scramble: a random state, as in a competition'&&!b.dataset.tip,'the card hides and the title comes back');
   // A quick pass never shows the card.
   mouse(b,'mouseover');mouse(b,'mouseout',d.body);await sleep(450);
   assert.ok(!w.tipsShown(),'a quick pass shows nothing');
@@ -64,7 +64,7 @@ w.addEventListener('load',async()=>{try{
   assert.strictEqual(w.tipsShown(),t,'the focused control has the card');
   await sleep(450);assert.strictEqual(w.tipsShown(),t,'the hover does not take the card over');
   mouse(b,'mouseout',d.body);t.blur();
-  assert.ok(!w.tipsShown()&&b.title==='A new random scramble','the hovered control has its title back');
+  assert.ok(!w.tipsShown()&&b.title==='A new WCA scramble: a random state, as in a competition','the hovered control has its title back');
   // The card never holds a title for an element that is gone: the title comes back on hide.
   const g=$('#reScramble');mouse(g,'mouseover');await sleep(450);
   assert.strictEqual(w.tipsShown(),g);mouse(g,'mouseout',d.body);

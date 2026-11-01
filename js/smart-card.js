@@ -1,6 +1,6 @@
 // ================= The reference card =================
-// A small floating window with one case, for the Smart cube tab: a case name said to the tab
-// (smart-listen.js) opens it beside the live cube, and smartCardOpen(entry) opens it from code.
+// A small floating window with one case, for the smart cube sheet: a case name said to its Listen
+// (smart-listen.js) opens it over the stage, and smartCardOpen(entry) opens it from code.
 // `entry` is a Listen catalog entry ({kind, id, name}, listenCatalog in listen.js); the card is
 // built from the same data as the details window (modalForLL, modalForPLL, modalForF2L in app.js).
 // The card: the group and the name in the head, the picture with its views as chips (Top, Side,

@@ -1,8 +1,7 @@
-// ================= Voice commands for the Smart cube tab =================
-// The Smart cube tab (cubetab.js) listens for five kinds of thing.
-// "Reset", or "reset cube": the list of moves is emptied, the picture is lined up with the cube in
-// the hands (as Reset view does, while the picture follows the tilt: Lock off) and the stage is
-// read again. The hold stays.
+// ================= Voice commands for the smart cube sheet =================
+// The smart cube sheet (cubetab.js) listens for five kinds of thing.
+// "Reset", or "reset cube": the list of moves is emptied and the stage is read again. The hold
+// stays.
 // "Clear moves", or "clear": the list of moves is emptied, as the Clear moves button does. Nothing
 // else changes.
 // "Top yellow, front green": the hold, how the cube sits in the hands, so the moves and the stage
@@ -11,10 +10,10 @@
 // stays in front), else the hold the fewest turns away is taken. "Green toward me" is the front
 // too. A bottom color ("bottom white") is taken as the top's opposite, and must be one, or the line
 // says so and nothing changes. A hold said with moves on the list puts the whole-cube turn on the
-// list, as the turn buttons do, so the moves before it still read right; an empty list takes none.
-// "X", "x prime", "x counterclockwise", "back x", "x two", and the same for y and z: a press of
-// the turn button under the picture (cubeTabTurn), so the turn goes on the list and the hold moves
-// on. A letter alone acts only on the final guess: an early "x" may yet become "x prime".
+// list, so the moves before it still read right; an empty list takes none. The cube on the page
+// turns to the hold (js/live.js).
+// "X", "x prime", "x counterclockwise", "back x", "x two", and the same for y and z: a turn of
+// the whole cube (cubeTabTurn), so the turn goes on the list and the hold moves on. A letter alone acts only on the final guess: an early "x" may yet become "x prime".
 // A case name ("T perm", "Sune", "F2L 12"): the reference card (smart-card.js) opens beside the
 // cube with that case, its moves covered and uncovered one per second. The names go through the
 // Reference's matcher (listen.js: listenCatalog, listenRankAll, listenDecide): a sure winner shows;
@@ -24,15 +23,14 @@
 // case while the top is being oriented, a PLL case after (smartListenSection). In a card, five
 // commands: "reveal moves" and "hide moves" (listenCommand), "play", "stop" and "close"
 // (smartCardCommand, pure).
-// The Listen button sits with Clear moves and Hidden faces, beside the picture, in view with the
-// cube. A click listens until Stop; a hold of the button listens once, while it is held. While it
+// The Listen button sits with Clear moves in the sheet. A click listens until Stop; a hold of the button listens once, while it is held. While it
 // listens, the hints under the line say what to say (SMART_HINTS). The line says what was heard
-// and what was done. The listening ends when the user leaves the tab, and when the link drops. One
+// and what was done. The listening ends when the link drops. One
 // microphone: the Reference's Listen and this one stop each other.
 // The recognizer is a dictation model: it hears "wait" for white, "read" for red and "blew" for
 // blue, so each color has the words it comes out as (SMART_COLOR_WORDS). A command must be the whole
 // of what was said, bar the small words around it ("the top is yellow and the bottom is white"): a
-// color word inside talk is no command. The tab's own commands are read first, so a color word is
+// color word inside talk is no command. The sheet's own commands are read first, so a color word is
 // never taken for a case. As in listen.js, an action comes on two early guesses in a row, or on the
 // final one, and only the new end of a long result is read.
 // Pure (no DOM): smartWords, smartTurn, smartCommand, smartHoldFor, smartCardCommand.
@@ -139,17 +137,16 @@ function smartCardCommand(text){
   if(/^(stop|pause|freeze)( (playing|play|moves?|algorithm|alg|animation|cube|loop|animating))?$/.test(t))return 'stop';
   return null;}
 
-// ----- the tab: do what was said -----
+// ----- the sheet: do what was said -----
 // Returns the words for the line under the buttons.
 function smartListenApply(cmd){
   if(cmd.cmd==='error')return cmd.msg;
   if(!cubeTab.conn)return 'The cube is not connected.';
   if(cmd.cmd==='reset'){
     cubeTab.moves=[];
-    const live=cubeTabLive();if(live)cubeTabKeep();
     cubeTabStageReset();if(cubeTab.target)cubeTabSettle();
     cubeTabWindow();
-    return live?'Reset. The moves are cleared and the picture is lined up with your cube.':'Reset. The moves are cleared.';}
+    return 'Reset. The moves are cleared.';}
   if(cmd.cmd==='clear')return cubeTabClear()?'The moves are cleared.':'No moves to clear.';
   if(cmd.cmd==='turn'){cubeTabTurn(cmd.m);return `Turned ${cmd.m}. Held ${cubeTabHoldWords(cubeTab.hold)}.`;}
   const cur=cubeTab.hold||CUBE_TAB_HOLDS[0],h=smartHoldFor(cmd,cur);
@@ -157,11 +154,7 @@ function smartListenApply(cmd){
   const turns=cubeTabHoldDelta(cur,h);
   if(!turns.length)return `Already held ${cubeTabHoldWords(h)}.`;
   if(cubeTab.moves.length)for(const m of turns)cubeTab.moves=cubeTabMerge(cubeTab.moves,m);
-  cubeTab.hold=h.moves.length?h:null;
-  if(cubeTabLive()){cubeTabKeep();cubeTabAwayCheck();} // the cube sits as said: the heading lines the picture up with it; a cube that sits otherwise brings the band
-  else{if(!cubeTab.q)cubeTab.q=[0,0,0,1];cubeTab.qTo=h.q;cubeTabTurnView();}
-  if(!cubeTab.stillTimer&&cubeTab.target)cubeTabSettle();
-  cubeTabWindow();
+  cubeTabSetHold(h); // the picture on the page turns with it (js/live.js)
   return `Held ${cubeTabHoldWords(cubeTab.hold)}. The moves and the stage read that way.`;}
 // What a card command does, in words for the line.
 function smartCardVoice(c){
@@ -175,16 +168,16 @@ function smartCardVoice(c){
 const SMART_LISTEN={on:false,hold:false,rec:null,used:{},pend:null,catalog:null,choices:null};
 const SMART_RECENT=8;
 const SMART_SAY='Say "reset", "clear moves", "top yellow, front green", "x prime", or a case name such as "T perm".';
-// The hints while the tab listens: four groups, each with the things to say and one short line on
+// The hints while the sheet listens: four groups, each with the things to say and one short line on
 // what they do. Short, so the hints fit beside the cube with no scroll.
 const SMART_HINTS=[
   {head:'Cube',say:['Reset','Clear moves','Top yellow, front green'],what:'Start over, clear the list, or set the hold.'},
-  {head:'Turn',say:['x','x prime','back x','y','z'],what:'Turn the whole cube, as the buttons do.'},
+  {head:'Turn',say:['x','x prime','back x','y','z'],what:'Say how you turned the whole cube.'},
   {head:'Case',say:['T perm','Sune','F2L 12'],what:'Open its card, with the moves covered.'},
   {head:'Card',say:['Reveal','Hide','Play','Stop','Close'],what:'Show, cover or play the moves. Close the card.'}];
 function smartListenSupported(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition);}
 const smartListenPre=()=>SMART_LISTEN.on?'Listening. ':'';
-// The hints: drawn once, shown while the tab listens.
+// The hints: drawn once, shown while the sheet listens.
 function smartListenHintsDraw(){
   const el=$('#cubeWinHints');if(!el)return;
   if(!el.childElementCount){
@@ -225,9 +218,9 @@ function smartListenShow(c,msg,heard){smartListenAsk(null);smartCardOpen(c);smar
 // The set the stage on the cube points to, for a tie between an OLL and a PLL name.
 function smartListenSection(){const st=typeof cubeTab!=='undefined'&&cubeTab.stage?cubeTab.stage.stage:null;
   return st==='eo'||st==='co'?'oll':st==='cp'||st==='ep'||st==='auf'?'pll':st==='f2l'?'f2l':null;}
-// What a sentence (with the recognizer's alternatives) asks for: {cmd} for the tab (reset, a hold,
+// What a sentence (with the recognizer's alternatives) asks for: {cmd} for the sheet (reset, a hold,
 // an error), {card} for the open card, {pick} from the chips, the matcher's {hit, strong, choices,
-// ranked} for a case name, or {} for nothing. The tab's own commands come first.
+// ranked} for a case name, or {} for nothing. The sheet's own commands come first.
 function smartListenAction(fresh){
   for(const f of fresh){const c=smartCommand(f);if(c)return {cmd:c};}
   for(const f of fresh){const c=smartCardCommand(f);if(c)return {card:c};}
@@ -313,7 +306,7 @@ function smartListenStop(){
   const row=$('#cubeWinListenRow');if(row){const t=row.querySelector('.txt');t.textContent=t.textContent.replace(/^Listening\. /,'');if(/^(Heard so far|Say )/.test(t.textContent))smartListenSay('');}}
 // The button let go after a hold: the recognizer stops and gives its final sentence.
 function smartListenRelease(){const rec=SMART_LISTEN.rec;if(SMART_LISTEN.hold&&rec)try{rec.stop();}catch(e){}}
-// The tab's button, wired once. A click toggles. A hold of 300 ms listens once, until the button
+// The sheet's button, wired once. A click toggles. A hold of 300 ms listens once, until the button
 // is let go; the click after it does nothing.
 function smartListenMount(){
   const b=$('#cubeWinListen');if(!b||b.dataset.ready)return;b.dataset.ready='1';
@@ -326,5 +319,5 @@ function smartListenMount(){
   smartListenButton();}
 // The Reference's Listen starts: this one stops. (listen.js declares listenStart as a global function; the global is rebound here.)
 if(typeof listenStart==='function'){const start=listenStart;listenStart=function(){if(SMART_LISTEN.on||SMART_LISTEN.hold)smartListenStop();return start.apply(this,arguments);};}
-// The tab was wired before this script loaded (cubetab.js): wire the button now.
+// The sheet was wired before this script loaded (cubetab.js): wire the button now.
 if(typeof document!=='undefined')smartListenMount();

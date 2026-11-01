@@ -140,7 +140,7 @@ w.addEventListener('load',async()=>{try{
   $('#f2lMode button[data-m="guide"]').click();await until(()=>!$('#fgMain').hidden,'Guide again');
   // Keys: the badges, and the Right arrow outside the guide still steps the player.
   await settled();assert.ok($('#fgNew .hk')&&$('#fgCard .fg-hk'),'key badges');
-  tab('solve');const i0=w.seqState.idx;key('ArrowLeft');assert.strictEqual(w.seqState.idx,i0-1,'the arrows are the player\'s on another tab');
+  tab('cross');const i0=w.seqState.idx;key('ArrowLeft');assert.strictEqual(w.seqState.idx,i0-1,'the arrows are the player\'s on another tab');
   assert.deepStrictEqual(errs,[],'no script errors');
   console.log('f2l-ui: Guide mode, the drill, the arrows, the tree, the solved list, return and set up, Read my cube ok');process.exit(0);
 }catch(e){console.error('f2l-ui: FAIL',e.message,errs);process.exit(1);}});

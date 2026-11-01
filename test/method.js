@@ -75,7 +75,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   key('keydown','?');assert.ok(!$('#helpBox').classList.contains('hidden'),'? opens the keys card');
   key('keydown','?');assert.ok($('#helpBox').classList.contains('hidden'),'? again closes it');
   // Each method remembers its tab.
-  w.goTab('progress');w.setMethod('cfop');assert.strictEqual(d.body.dataset.tab,'solve','CFOP returns to its tab');
+  w.goTab('progress');w.setMethod('cfop');assert.strictEqual(d.body.dataset.tab,'cross','CFOP returns to its tab');
   w.goTab('f2l');w.setMethod('beginner');assert.strictEqual(d.body.dataset.tab,'progress','the beginner method returns to its tab');
   w.setMethod('cfop');assert.strictEqual(d.body.dataset.tab,'f2l');
   assert.strictEqual($('#animBtn').getAttribute('aria-pressed'),'false','the setting turned off in beginner mode holds in CFOP');

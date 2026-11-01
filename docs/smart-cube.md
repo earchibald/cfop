@@ -4,7 +4,7 @@
 |---|---|
 | Protocol, cipher, Bluetooth link | `js/gan.js` (no DOM) |
 | Smart cube dialog | `js/smart-ui.js`, opened by `#smartBtn` in the seed bar (3x3 only) |
-| The Smart cube tab | `js/cubetab.js`: tab 7 of the CFOP rail, the live cube large in the main panel with every control beside it (turns, the tilt of the cube, the moves, the stage, Listen); `test/cubetab.js`. The voice: `js/smart-listen.js`; the reference card a case name opens: `js/smart-card.js` |
+| The smart cube sheet | `js/cubetab.js`: an Everywhere sheet of every CFOP section while Smart cube is the cube (the Connect card, then the name, the charge, the stage, the moves and Listen); the cube on the page follows the cube (`js/live.js`); `test/cubetab.js`. The voice: `js/smart-listen.js`; the reference card a case name opens: `js/smart-card.js`. The Smart cube tab, 1.35 to 1.63, is gone |
 | Tests | `test/gan.js` (protocol), `test/smart-ui.js` (dialog), `test/fake-gan.js` (a fake GAN cube) |
 | Saved MAC addresses | `cw:ganMac`, a map from the Bluetooth name to the address |
 | The macOS app (Bluetooth bridge for Safari) | `mac/` (Swift, AppKit, Network, CoreBluetooth); `js/bridge.js` is the page side; `test/bridge.js` and `test/fake-bridge.js` |
@@ -241,6 +241,17 @@ everything inside scales (0.7 to 2.6, no wider than the screen); the place and
 the zoom are kept in `cw:smartCard`. Esc closes the card; a modal takes Esc
 first. `test/cubetab.js`, `test/smart-listen.js`, `test/smart-card.js`.
 
+
+Version 1.64.0 takes the tab away. A smart cube is one of the cubes of the page, as the virtual
+cube is: the cube on the stage in every CFOP section follows it (`js/live.js`), so the tab's large
+picture showed the same cube twice. What the tab added is one sheet in `#everyMore`, an Everywhere
+sheet of the stage view and under the timer elsewhere: the Connect card while Smart cube is picked
+and none is connected (a known cube connects with no click, as the tab did when it opened), then
+the cube's name and charge, Options, the stage, the trail, Clear moves and Listen. The hold the
+moves and the stage read with is the hold the cube on the page shows (the scramble's grip, or the
+hold row on the cube), and a hold or a whole-cube turn said to Listen turns that picture. The
+tilt picture, Lock, Reset view, the band, the turn buttons and Front view went with the tab; a
+cube that connects no longer moves the page. A saved `smart` tab opens the home tab.
 Version 1.39.0 makes the tab connect as the lab does (`smartAuto`,
 `smartConnect` in `js/smart-ui.js`). Connect on the tab opens the chooser at
 once: the browser's own, or the list over the bridge, on the Connect card. No

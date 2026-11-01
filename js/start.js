@@ -381,7 +381,7 @@ START_SCREENS['t3-check']=()=>{const names=stSteps(),labels=['Not yet','Shaky','
     <div class="st-rows">${names.map((n,i)=>`<div class="st-row"><span class="mono muted">${i}</span><b>${esc(n)}</b><span class="st-st s${m[i]}">${st[m[i]]}</span><div class="st-seg" role="group" aria-label="${esc(n)}">${labels.map((l,v)=>`<button data-step="${i}" data-v="${v}" aria-pressed="${m[i]===v}" title="${esc(n+': '+l)}">${l}</button>`).join('')}</div></div>`).join('')}</div></div>
   <div class="st-side"><div class="st-box"><span class="st-lbl">So far</span><b class="st-big">${learned} of 9 learned</b><div class="st-strip">${m.map(v=>`<i class="s${v}"></i>`).join('')}</div>
       <span class="muted">${rest===0?'All nine are learned. CFOP is next.':rest+(rest===1?' step is':' steps are')+' still to learn. CFOP is open now. The beginner steps stay in the menu.'}</span></div>
-    <div class="st-box"><b>Not sure? Solve one.</b><span class="muted">Mix up your cube and solve it with the timer. Your first time goes on the Progress tab. Optional.</span><button class="st-link" data-check="timer" title="Go to the Scramble tab with the timer">Solve one with the timer →</button></div>
+    <div class="st-box"><b>Not sure? Solve one.</b><span class="muted">Mix up your cube and solve it with the timer. Your first time goes on the Progress tab. Optional.</span><button class="st-link" data-check="timer" title="Go to the timer">Solve one with the timer →</button></div>
     <button class="primary" data-check="cfop" title="Save the marks and go on">${rest===0?'On to CFOP →':'Save, then on to CFOP →'}</button>
     <button class="st-link" data-check="${rest===0?'home':'review'}" title="Go to the beginner method">${rest===0?'Go to the beginner home':'Review the '+rest+' first'}</button></div></div>`;};
 function startSaveCheck(){const v=['','learning','finished'];startMark(START.check.map((_,i)=>'beg-'+i).filter((_,i)=>START.check[i]===2),'finished');
@@ -450,18 +450,17 @@ START_SCREENS['t4-quiz']=()=>{if(!START.quiz)startQuizNew();const Q=START.quiz;
     <div class="st-box"><b>How it picks</b><span class="muted">Up to ten cases from the ones you marked. A case you miss goes back to Learning. Nothing is lost: change it later on any case.</span></div>
     <button class="st-link" data-finish="ll" title="Go to OLL · PLL">See what is left to learn →</button></div></div>`;};
 // ---------- Track 5 · already a speedcuber ----------
-START_SCREENS['t5-setup']=()=>{if(!START.five)START.five={all:true,insp:store.get('insp',true),hide:store.get('hideTime',false),rs:true};const F=START.five;
-  const notes={mine:'Space starts and stops the timer. Total time only.',smart:'A smart cube connects next. The live view is on the Smart cube tab.',screen:'Keys turn it. Good for practice, not for times you compare.'};
+START_SCREENS['t5-setup']=()=>{if(!START.five)START.five={all:true,insp:store.get('insp',true),hide:store.get('hideTime',false)};const F=START.five;
+  const notes={mine:'Space starts and stops the timer. Total time only.',smart:'A smart cube connects next. The cube on the page follows its turns.',screen:'Keys turn it. Good for practice, not for times you compare.'};
   const sw=(k,label,tip)=>`<button class="st-switch" data-five="${k}" aria-pressed="${!!F[k]}" title="${esc(tip)}"><i aria-hidden="true"></i>${esc(label)}</button>`;
   return `${stBar('',stBack('level','← Change my level'))}
   <div class="st-center st-left"><div class="st-head"><h1>Set up, then time.</h1><p class="muted">Four choices. The timer ones are in Settings later.</p></div>
   <div class="st-grid2"><div class="st-box"><span class="st-lbl">1 · Your cube</span>${stSources(false)}<span class="muted">${esc(notes[START.src]||'')}</span></div>
     <div class="st-box"><span class="st-lbl">2 · What you know</span>${sw('all','Full CFOP: every case Learned','Mark every CFOP case Learned')}<button class="st-link" data-go="t4-sets" title="Pick the sets you know">Not all of it? Pick the sets →</button></div>
-    <div class="st-box"><span class="st-lbl">3 · The timer</span>${sw('insp','15 s inspection','Inspection before each solve')}${sw('hide','Hide the time while I solve','Show only the final time')}${sw('rs','Random-state scrambles','Scrambles from a random state, as in competition')}</div>
+    <div class="st-box"><span class="st-lbl">3 · The timer</span>${sw('insp','15 s inspection','Inspection before each solve')}${sw('hide','Hide the time while I solve','Show only the final time')}</div>
     <div class="st-box"><span class="st-lbl">4 · Bring your times <span class="tag">new idea</span></span><span class="muted">Paste a csTimer export. Your averages and best start from there, not from zero.</span><button class="small" disabled title="Not built yet">Paste an export (not built yet)</button></div></div>
-  <div class="st-foot"><span class="spacer"></span><button class="primary" data-finish="timer" title="Go to the Scramble tab with the timer">Go to the timer →</button></div></div>`;};
+  <div class="st-foot"><span class="spacer"></span><button class="primary" data-finish="timer" title="Go to the timer">Go to the timer →</button></div></div>`;};
 function startSaveFive(){const F=START.five;store.set('insp',F.insp);$('#inspChk').checked=F.insp;store.set('hideTime',F.hide);
-  $('#scrLen').value=F.rs?'rs':String(SCR_LENS[1]);
   if(F.all){for(const i of [2,3,4,5])startMark(START_SETS[i].ids(),'finished');startSetKnown('cross',2);startSetKnown('f2lfeel',2);startSetKnown('oll',2);}
   store.set('timerHome',true);}
 // The first solve on the virtual cube: a mixed-up cube, and the guided solve on it.
@@ -513,7 +512,7 @@ function startWire(el){
   on('[data-ready]',b=>{const a=b.dataset.ready;startFinish('beginner','bsolve',()=>{if(a==='scan'){if(typeof openScan==='function')openScan();}else if(typeof openPaint==='function')openPaint();});});
   on('[data-way]',b=>{START.way=b.dataset.way;START.check=null;startGo(b.dataset.to);});
   on('[data-step]',b=>{START.check[+b.dataset.step]=+b.dataset.v;startDraw();});
-  on('[data-check]',b=>{const a=b.dataset.check;startSaveCheck();if(a==='cfop')startGo('t3-bridge');else if(a==='timer')startFinish('cfop','solve');else startFinish('beginner','learn');});
+  on('[data-check]',b=>{const a=b.dataset.check;startSaveCheck();if(a==='cfop')startGo('t3-bridge');else if(a==='timer')startFinish('cfop','cross');else startFinish('beginner','learn');});
   on('[data-set]',b=>{START.sets[+b.dataset.set]=+b.dataset.v;startDraw();});
   on('[data-cases]',b=>{START.caseSet=+b.dataset.cases;startGo('t4-cases');});
   on('[data-case]',b=>{const id=b.dataset.case,cur=llState.status[id]||'';startMark([id],LL_ORDER[(LL_ORDER.indexOf(cur)+1)%3]);startDraw();});
@@ -535,9 +534,9 @@ function startQuizTimer(){const Q=START.quiz;if(!Q||Q.mode!=='do')return;
 function startEnd(where){
   if(where==='beg'){START.level=START.level||1;startMark(['beg-0'],'finished');startFinish('beginner','learn');return;}
   if(where==='cross'){startFinish('cfop','cross',()=>{store.set('crossLesson',0);if(typeof crossLessonShow==='function')crossLessonShow(0);});return;}
-  if(where==='menu'){startFinish('cfop','solve',()=>setTimeout(openMethodPop,50));return;}
+  if(where==='menu'){startFinish('cfop','cross',()=>setTimeout(openMethodPop,50));return;}
   if(where==='ll'){startFinish('cfop','ll',()=>{if(typeof llShowSet==='function')llShowSet('left');});return;}
-  if(where==='timer'){startSaveFive();startFinish('cfop','solve',()=>{if(START.src==='smart')smartConnectNow();if(typeof timerHomeApply==='function')timerHomeApply();});return;}
+  if(where==='timer'){startSaveFive();startFinish('cfop','cross',()=>{if(START.src==='smart')smartConnectNow();if(typeof timerHomeApply==='function')timerHomeApply();});return;}
 }
 // The keys while the pages are open: the virtual cube takes its six (js/screencube.js runs first),
 // Space runs the quiz timer, and the site's own keys wait.
