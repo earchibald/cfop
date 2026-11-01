@@ -1,0 +1,161 @@
+/* Stage view (js/stageview.js, docs/stage-view.md): CFOP on a computer. The cube is the page; the
+   rail, the sheets, the step badge, the hold and the action bar float over it as glass. Loads last. */
+:root{--stage-bg:#cfd2d9;--glass:rgba(245,245,247,.86);--glass-shadow:0 10px 30px rgba(20,22,30,.16)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--stage-bg:#111113;--glass:rgba(24,24,27,.8);--glass-shadow:0 10px 30px rgba(0,0,0,.32)}}
+:root[data-theme="dark"]{--stage-bg:#111113;--glass:rgba(24,24,27,.8);--glass-shadow:0 10px 30px rgba(0,0,0,.32)}
+body:not(.sv) :is(#svCol,#svBadge,#svBig,#svAsk,#svActs,#svFloats){display:none!important}
+.svglass,body.sv nav#rail,body.sv .svsheet,body.sv #svCol :is(#seedBar,#scrPill){background:var(--glass);border:1px solid var(--line);border-radius:14px;
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:var(--glass-shadow)}
+
+/* ---- the page is one screen: the top bar, then the stage ---- */
+body.sv:not(.starting){height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+body.sv .top{position:relative;top:0;flex:none}
+body.sv .page{flex:1;min-height:0;max-width:none;margin:0;padding:0;display:block;position:relative}
+body.sv .wrap{--svcol:clamp(300px,33vw,520px);--svleft:112px;display:block;position:relative;height:100%;background:var(--stage-bg);overflow:hidden}
+body.sv .foot{position:absolute;right:20px;bottom:5px;z-index:4;padding:0;font-size:11px}
+body.sv :is(#begBar,.progresspanel,#keyPanel){display:none!important}
+
+/* ---- the cube ---- */
+body.sv #cubeSlot{position:absolute;inset:0;display:block;max-height:none;overflow:visible;z-index:0}
+body.sv #player{display:block;position:absolute;inset:0}
+body.sv #player>.cubebox{position:absolute;inset:0;background:transparent;border:0;border-radius:0;box-shadow:none;padding:0}
+body.sv #player .cubebox svg#cube{position:absolute;top:70px;left:var(--svleft);width:calc(100% - var(--svleft) - var(--svcol) - 40px);height:calc(100% - 150px);max-height:none;transition:left .35s,width .35s,opacity .35s}
+body.sv[data-svfocus] #player .cubebox svg#cube{left:60px;width:calc(100% - 120px)}
+body.sv .cubebox .draghint{left:calc(var(--svleft) + (100% - var(--svleft) - var(--svcol) - 40px)/2);bottom:72px;transform:translateX(-50%)}
+body.sv:has(#svAsk:not([hidden])) #player .cubebox svg#cube{opacity:.18}
+
+/* the hold: glass, top right of the cube */
+body.sv .cubebox .viewbtns{top:16px;right:calc(var(--svcol) + 32px);padding:6px 8px;gap:6px;background:var(--glass);border-radius:14px;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:var(--glass-shadow);z-index:3}
+body.sv .cubebox .viewbtns .lbl{font-size:12px}
+body.sv .cubebox .viewbtns .ht{width:18px;height:18px;border-radius:4px}
+
+/* the action bar: the cube source, then the cube's own buttons */
+#svActs{position:absolute;left:var(--svleft);bottom:16px;z-index:3;display:flex;align-items:center;gap:2px;padding:4px;flex-wrap:wrap;max-width:calc(100% - var(--svleft) - var(--svcol) - 48px)}
+#svActs :is(.animbtn,.savebtn,.svsrc){position:static;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;font-size:13px;font-weight:500;border-radius:10px;background:transparent;border:1px solid transparent;color:var(--muted);box-shadow:none}
+#svActs :is(.animbtn,.savebtn,.svsrc):hover{color:var(--text);border-color:var(--line)}
+#svActs .animbtn[aria-pressed="true"]{color:var(--text);background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:color-mix(in srgb,var(--accent) 55%,transparent)}
+#svActs .animbtn[aria-pressed="true"] svg{color:inherit}
+#svActs .svsrc{color:var(--text)}
+#svActs .svsrc[data-src="screen"] .cdot{background:var(--sticker-B)}
+#svActs .svsrc[data-src="mine"] .cdot{background:var(--sticker-W);box-shadow:inset 0 0 0 1px var(--muted)}
+#svActs .svsrc[data-src="smart"] .cdot{background:var(--good)}
+.svsep{width:1px;align-self:stretch;margin:4px 2px;background:var(--line)}
+
+/* the step badge: the section and what the player shows */
+#svBadge{position:absolute;top:16px;left:var(--svleft);z-index:3;display:flex;align-items:center;gap:10px;padding:8px 12px;font-size:14px;max-width:calc(100% - var(--svleft) - var(--svcol) - 330px);white-space:nowrap;overflow:hidden}
+#svBadge #svBadgeSub{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis}
+#svBadge #svBadgeSub:empty{display:none}
+
+/* ---- the sections: a glass rail at the top left ---- */
+body.sv nav#rail{position:absolute;top:16px;left:16px;z-index:3;padding:6px;gap:2px;align-self:auto;max-height:calc(100% - 32px);overflow-y:auto;scrollbar-width:none}
+body.sv nav#rail button{position:relative;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:66px;padding:10px 4px 8px;font-size:11px;line-height:1.15;white-space:normal;text-align:center;border-radius:10px}
+body.sv nav#rail button .k{position:absolute;top:3px;right:5px;width:auto;font-size:9px}
+body.sv nav#rail button .sec-sq{width:14px;height:14px;border-radius:4px}
+body.sv nav#rail button.on{background:var(--panel2)}
+body.sv nav#rail button .dot{position:absolute;top:6px;left:6px;margin:0}
+
+/* ---- the column of sheets: the right third ---- */
+#svCol{position:absolute;top:16px;right:16px;bottom:26px;width:var(--svcol);z-index:2;display:flex;flex-direction:column;gap:10px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:0 3px 8px;transition:opacity .3s;border-radius:16px}
+#svCol.svdrop{outline:2px dashed var(--link);outline-offset:-2px}
+.svhead{display:flex;align-items:center;gap:8px;padding:0 4px;flex:none}
+.svhead2{margin-top:4px;padding-top:8px;border-top:1px solid var(--line)}
+.sveb{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
+#svSec{color:var(--sec,var(--muted))}
+:root:not([data-theme="dark"]) #svSec[data-sec="cross"]{color:var(--muted)}
+.svtip{flex:1;text-align:right;font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.svlink{background:transparent;border:0;padding:2px 4px;font-size:12px;color:var(--link)}
+.svmain,.svevery{display:flex;flex-direction:column;gap:10px;flex:none}
+body.sv #svMain main.main{display:flex;flex-direction:column;gap:10px}
+body.sv #svMain .tab.on{gap:10px}
+body.sv:not([data-cube="none"]) #svMain .grid2{display:flex;flex-direction:column;gap:10px}
+body.sv #svCol :is(#seedBar,#scrPill){padding:10px 12px}
+body.sv #seedBar .seedrow input{width:130px}
+body.sv #seedBar>.muted{font-size:12px}
+.svadd{display:flex;gap:8px;flex-wrap:wrap;flex:none}
+.svadd[hidden]{display:none}
+.svchip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:13px;border-radius:999px;background:var(--glass);border:1px solid var(--line);color:var(--muted);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.svchip svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8}
+
+/* a sheet: a strip (grip, title, fold, dock, close), then the panel */
+body.sv .svsheet{padding:0 14px 14px;flex:none;align-self:stretch;width:auto}
+body.sv #svCol .svsheet:not(.svfloat){width:100%}
+.svbar{display:flex;align-items:center;gap:4px;margin:0 -14px 12px;padding:7px 6px 7px 8px;border-bottom:1px solid var(--line);cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none}
+.svfolded>.svbar,.svfolded>summary>.svbar{border-bottom:0;margin-bottom:-14px}
+.svgrip{display:inline-flex;color:var(--faint)}
+.svgrip svg{width:10px;height:14px;fill:currentColor}
+.svbar .svtitle{all:unset;flex:1;min-width:0;display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:600;border-radius:6px;padding:2px 4px}
+.svbar .svtitle:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.svname{white-space:nowrap;flex:none;max-width:70%;overflow:hidden;text-overflow:ellipsis}
+.svsub{font-weight:400;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.svchev{display:inline-flex;margin-left:auto;color:var(--muted)}
+.svchev svg,.svib svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.svfolded .svchev svg{transform:rotate(-90deg)}
+.svbar .svib{background:transparent;border-color:transparent;color:var(--muted);padding:4px;border-radius:6px;display:inline-flex}
+.svbar .svib:hover{color:var(--text);border-color:var(--line)}
+.svsheet:not(.svfloat) .svib[data-sv="dock"]{display:none}
+body.sv .svfold>:not(.svbar){display:none!important}
+body.sv .svclosed{display:none!important}
+body.sv .svh{display:none}
+body.sv .panel:not(details)>[data-svdet]>summary{display:none}
+body.sv details[data-svdet]>summary{display:block;list-style:none;cursor:default}
+body.sv details[data-svdet]>summary::-webkit-details-marker{display:none}
+body.sv details[data-svdet]>summary>:not(.svbar){display:none}
+body.sv .svsheet .seqhead{display:none}
+body.sv #svEvery .timerpanel .timer{font-size:46px}
+/* a sheet off the column floats over the stage, in a layer of its own */
+#svFloats{position:absolute;inset:0;z-index:30;pointer-events:none}
+#svFloats>*{pointer-events:auto}
+body.sv[data-svfocus] #svFloats{opacity:.1}
+body.sv .svsheet.svfloat{position:fixed;z-index:30;max-height:calc(100vh - 24px);overflow:auto;box-shadow:0 22px 56px rgba(0,0,0,.42)}
+body.sv .svsheet.svdrag{opacity:.93;transition:none}
+body.svdragging,body.svdragging *{cursor:grabbing!important;user-select:none!important}
+
+/* ---- a section with no cube (Reference, Smart cube): the sheets as a page over the stage ---- */
+body.sv[data-cube="none"] :is(#cubeSlot,#svBadge,#svEvery,.svhead2,.svtip){display:none!important}
+body.sv[data-cube="none"] #svCol{left:var(--svleft);width:auto;right:16px;max-width:1300px}
+body.sv[data-cube="none"] #svCol .panel{background:var(--glass)}
+
+/* ---- focus: inspection and the solve fade the rest ---- */
+body.sv :is(.top,nav#rail,#svBadge,#svActs,.cubebox .viewbtns,.foot){transition:opacity .3s}
+body.sv[data-svfocus] :is(.top,nav#rail,#svBadge,#svActs,.cubebox .viewbtns,.foot,.cubebox .draghint){opacity:.14}
+body.sv[data-svfocus] #svCol{opacity:.1}
+body.sv[data-svfocus] #svCol:hover,body.sv[data-svfocus] nav#rail:hover{opacity:1}
+#svBig{position:absolute;inset:0;z-index:6;pointer-events:none;display:flex;align-items:center;justify-content:center}
+#svBig[hidden]{display:none}
+#svBig.svsolved{left:var(--svleft);right:calc(var(--svcol) + 32px)}
+#svBig.svsolve{align-items:flex-start;padding-top:22px}
+#svBig .svcard{pointer-events:auto;padding:22px 34px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.svinsp{border-color:color-mix(in srgb,var(--accent) 50%,var(--line))}
+.svinsp .sveb{color:var(--accent)}
+:root:not([data-theme="dark"]) .svinsp .sveb{color:var(--warn)}
+.svinsp svg{width:140px;height:140px}
+.svring0{fill:none;stroke:var(--panel3);stroke-width:8}
+.svring{fill:none;stroke:var(--accent);stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .2s linear}
+.svinsp text{font:700 60px var(--sans);fill:var(--text)}
+.svclock{text-align:center;pointer-events:none}
+.svtime{font-family:var(--mono);font-size:88px;font-weight:600;letter-spacing:-.03em;line-height:1}
+.svclock .muted{margin-top:8px;font-size:13px}
+.svwin{border-color:color-mix(in srgb,var(--good) 55%,var(--line));box-shadow:0 0 0 6px color-mix(in srgb,var(--good) 14%,transparent),0 20px 50px rgba(0,0,0,.4)}
+.svwin-h{display:flex;align-items:center;gap:8px;color:var(--good);font-weight:700;font-size:22px}
+.svwin-h svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.svwin-t{font-size:76px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.svpill{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:7px;padding:3px 10px;font-size:13px;color:var(--muted);background:var(--panel)}
+.svpill.good{color:var(--good);border-color:color-mix(in srgb,var(--good) 50%,var(--line))}
+
+/* ---- no cube yet: the stage asks ---- */
+#svAsk{position:absolute;top:0;bottom:0;left:96px;right:calc(var(--svcol) + 32px);z-index:5;display:flex;align-items:center;justify-content:center;padding:24px}
+#svAsk[hidden]{display:none}
+.svask-in{max-width:780px;width:100%;padding:28px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.svask-in h2{font-size:28px;letter-spacing:-.01em}
+.svask-in>p{margin:0}
+.svask-mark{width:56px;height:56px}
+.svpicks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;margin-top:8px}
+.svpick{display:flex;flex-direction:column;align-items:flex-start;gap:9px;text-align:left;padding:18px;border-radius:16px;background:var(--panel2);min-height:190px}
+.svpick b{font-size:17px}
+.svpick .muted{font-size:13px;line-height:1.45}
+.svico{width:44px;height:44px;border-radius:12px;background:var(--panel3);display:flex;align-items:center;justify-content:center}
+.svico svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
+.svask-foot{font-size:13px}
+@media (max-width:1100px){.svpicks{grid-template-columns:1fr}.svpick{min-height:0}}
+@media (prefers-reduced-motion:reduce){body.sv #player .cubebox svg#cube,#svCol,.svring{transition:none}}
+body.sv .tab.on[data-crumb]::before{display:none}

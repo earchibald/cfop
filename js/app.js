@@ -883,6 +883,9 @@ function openSettings(open){if($('#setBg'))return;
     <label class="setrow" title="Turn the layer on the cube for each move in the player"><input type="checkbox" id="setAnim"${animOn()?' checked':''}> Animate the moves</label>
     <label class="setrow" title="Show the back, left and bottom, as in a mirror behind the cube"><input type="checkbox" id="setHidden"${hiddenOn()?' checked':''}> Show the hidden faces</label>
     <p class="muted">The Animate and Hidden faces chips on the cube change the same settings. Animate is off when your device asks for less motion.</p>
+    <h3>Layout</h3>
+    <label class="setrow" title="CFOP on a computer: the cube fills the page, and the panels of each section are sheets beside it"><input type="checkbox" id="setStage"${store.get('stageView',true)!==false?' checked':''}> Stage view: the cube fills the page</label>
+    <p class="muted">The sections float over the cube. Each panel is a sheet on the right: fold it, close it, or drag it off to float. Off: the page as before.</p>
     <h3>Timer</h3>
     <label class="setrow" title="Count down 15 seconds to look at the cube before the timer starts, as in a competition"><input type="checkbox" id="setInsp"${store.get('insp',true)?' checked':''}> 15 s inspection</label>
     <p class="muted">The box by the timer changes the same setting.</p>
