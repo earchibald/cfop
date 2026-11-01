@@ -149,6 +149,8 @@ body.cba .cubebox .viewbtns .ht[data-cb="R"]::after,body.cba .cubebox .viewbtns 
 .timer.ready{color:var(--good)}
 .timer.run{color:var(--text)}
 .timerhint{text-align:center;font-size:13px;color:var(--muted)}
+/* Full solve shows on the Cross tab of CFOP only: the other tabs keep one list each. */
+.fullchk{display:none}body[data-kind="speed"][data-tab="cross"] .fullchk{display:inline}
 .timerpanel .row{color:var(--muted)}
 .stats{display:grid;grid-template-columns:repeat(5,1fr);font-family:var(--mono);font-size:12px;margin-top:10px;color:var(--muted);text-align:center}
 .stats b{display:block;font-size:15px;color:var(--text);font-weight:500;letter-spacing:-.02em}

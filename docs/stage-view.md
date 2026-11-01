@@ -77,6 +77,13 @@ two-phase solver with the first answer of 22 moves or fewer, so a seed always gi
 The length menu and the cubing.js pool (`js/scramble.js`) are gone. `scripts/vendor.js` still fetches
 cubing.js; nothing loads it.
 
+## Times
+
+One list holds every full solve, Full solves (the timer scope `solve`, the old Scramble tab's list). Cross,
+Lab, Reference and Smart cube time into it. On the Cross tab the Full solve box by the timer (on by
+default, `cw:timeFull`) can be cleared to time the cross alone, into Cross. F2L and OLL · PLL keep their
+own lists, and a case drill times into its case.
+
 ## Undo
 
 `js/undo.js` keeps one queue. Before each input (a key, a click, a drag, a change) it takes a snapshot

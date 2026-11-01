@@ -99,6 +99,12 @@ w.addEventListener('load',async()=>{try{
   key('keydown','d');key('keydown','c');assert.ok(!$('#askBg'),'C does nothing while the timer runs');
   key('keydown',' ','Space');key('keyup',' ','Space');assert.strictEqual($('#stN').textContent,'2','D does nothing while the timer runs');
   w.eval('times[timer.scope]=[];renderTimes()');
+  // One list for full solves: Cross, Lab, Reference and Smart cube time into it. Full solve off: the Cross tab times the cross.
+  assert.ok($('#fullChk').checked,'Full solve is on by default');assert.strictEqual($('#timesScope').textContent,'Times: Full solves','the Cross tab times full solves');
+  w.recordTime(20000);tab('lab');assert.strictEqual($('#timesScope').textContent,'Times: Full solves','the Lab shares the list');assert.strictEqual($('#stN').textContent,'1','the same times');
+  tab('f2l');assert.strictEqual($('#timesScope').textContent,'Times: F2L','F2L keeps its own list');
+  tab('cross');$('#fullChk').click();assert.strictEqual($('#timesScope').textContent,'Times: Cross','off: the cross alone');
+  $('#fullChk').click();assert.strictEqual($('#timesScope').textContent,'Times: Full solves','on again');w.eval('times[timer.scope]=[];renderTimes()');
   // Every control with a key carries a badge with that key.
   for(const [id,k] of [['animBtn','A'],['autoPlay','P'],['delLast','D'],['clearTimes','C'],['helpBtn','?'],['newSeed','N']])
     assert.strictEqual($('#'+id+' .hk').textContent,k,id+' shows its key');

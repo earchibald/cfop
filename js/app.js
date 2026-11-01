@@ -219,7 +219,7 @@ function thumb3D(cube){const f=cube.toFacelets();return `<svg viewBox="40 30 320
 // drill: a name when the player shows a case drill instead of the current scramble. Tab changes keep a drill.
 var seqState={moves:[],idx:0,shown:-1,label:'scramble',base:new Cube(),drill:null,yours:null}; // var: tests read it from the window. yours: where your moves start (js/cubemenu.js)
 function setSequence(moves,label,base,drill){stopAuto();seqState.shown=-1;seqState.yours=null;seqState.moves=Array.isArray(moves)?moves:parseAlg(moves);seqState.label=label||'';seqState.base=base||puzzleCube();seqState.idx=seqState.moves.length;
-  if(!drill&&seqState.drill){currentLabel=scrLabel;if(/^(ll|f2l):/.test(timer.scope))setScope(TAB_SCOPE[curTab]||'solve');}
+  if(!drill&&seqState.drill){currentLabel=scrLabel;if(/^(ll|f2l):/.test(timer.scope))setScope(tabScope(curTab));}
   seqState.drill=drill||null;$('#drillNote').classList.toggle('hidden',!drill);$('#drillName').textContent=drill||'';
   renderSequence();applySequence();document.dispatchEvent(new CustomEvent('cw:sequence',{detail:{drill:seqState.drill}}));}
 function cubeAtSeq(i){return applyAlg(seqState.base,seqState.moves.slice(0,i));}
@@ -327,7 +327,7 @@ function avg(arr,n){if(arr.length<n)return null;const a=arr.slice(-n).map(x=>x.m
 function renderTimes(){const arr=scopeTimes();$('#stLast').textContent=fmt(arr.length?arr[arr.length-1].ms:null);$('#stAo5').textContent=fmt(avg(arr,5));$('#stAo12').textContent=fmt(avg(arr,12));const best=arr.length?Math.min(...arr.map(x=>x.ms)):null;$('#stBest').textContent=fmt(best);$('#stN').textContent=arr.length;
   $('#times').innerHTML=arr.slice(-40).map((x,i)=>`<span class="${x.ms===best?'best':''}" title="${esc(x.label||'')} · ${new Date(x.t).toLocaleString()}. Click to delete this time">${fmt(x.ms)}</span>`).reverse().join('');$('#timesScope').textContent='Times: '+scopeName();}
 // The timer scope as words: a tab name, or the case name for a case drill.
-function scopeName(){const s=timer.scope;if(s.startsWith('ll:')){const a=LL_ALL.find(x=>x.id===s.slice(3));return a?a.name:s.slice(3);}if(s.startsWith('f2l:'))return 'F2L case #'+s.slice(4);return {solve:'Scramble',cross:'Cross',f2l:'F2L',ll:'OLL · PLL',lab:'Lab',ref:'Reference'}[s]||s;}
+function scopeName(){const s=timer.scope;if(s.startsWith('ll:')){const a=LL_ALL.find(x=>x.id===s.slice(3));return a?a.name:s.slice(3);}if(s.startsWith('f2l:'))return 'F2L case #'+s.slice(4);return {solve:'Full solves',cross:'Cross',f2l:'F2L',ll:'OLL · PLL',lab:'Lab',ref:'Reference'}[s]||s;}
 function setScope(s){timer.scope=s;renderTimes();}
 function recordTime(ms){const arr=times[timer.scope]||(times[timer.scope]=[]);arr.push({ms,t:Date.now(),label:currentLabel()});store.set('times',times);renderTimes();if(onTimerStop)onTimerStop(ms);}
 let onTimerStop=null;const scrLabel=()=>curTab==='f2l'?'f2l '+scr.seed:scr.seed;let currentLabel=scrLabel;
@@ -412,13 +412,17 @@ function puzzleCube(){return new Cube();}
 function applyMethodData(){const i=methodInfo();document.body.dataset.method=method;document.body.dataset.kind=i.kind;document.body.dataset.puzzle=i.puzzle;setDrawN(puzzleN());}
 applyMethodData();
 let curTab='cross';
-const TAB_SCOPE={solve:'solve',cross:'cross',f2l:'f2l',ll:'ll',lab:'lab',ref:'ref',smart:'solve',learn:'solve',bsolve:'solve',practice:'solve',progress:'solve',cheat:'solve'};
+const TAB_SCOPE={solve:'solve',cross:'cross',f2l:'f2l',ll:'ll',lab:'solve',ref:'solve',smart:'solve',learn:'solve',bsolve:'solve',practice:'solve',progress:'solve',cheat:'solve'};
 const BEGINNER_TABS=['learn','bsolve','practice','progress','cheat'];
+// One list for full solves (1.63): Cross, Lab, Reference and Smart cube time into 'solve'. With Full solve
+// off (cw:timeFull, the box by the timer) the Cross tab times the cross alone, into 'cross'. F2L and
+// OLL · PLL keep their own lists. The old 'lab' and 'ref' lists stay in cw:times, unshown.
+function tabScope(t){const s=TAB_SCOPE[t]||'solve';return s==='cross'&&$('#fullChk').checked?'solve':s;}
 function railButtons(){return $$('#'+methodInfo().rail+' button');}
 function tabKey(){return (mobileMQ.matches?'m':'')+methodInfo().tabKey;}
 function homeTab(){return isBeg()?'learn':mobileMQ.matches?'ref':'cross';}
 $$('nav.rail button').forEach(b=>b.onclick=()=>{curTab=b.dataset.tab;$$('nav.rail button').forEach(x=>x.classList.toggle('on',x===b));$$('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+curTab));
-  document.body.dataset.tab=curTab;$('#mtitle').textContent=b.lastChild.textContent;store.set(tabKey(),curTab);setScope(TAB_SCOPE[curTab]);onEnterTab(curTab);document.dispatchEvent(new CustomEvent('cw:tab',{detail:curTab}));
+  document.body.dataset.tab=curTab;$('#mtitle').textContent=b.lastChild.textContent;store.set(tabKey(),curTab);setScope(tabScope(curTab));onEnterTab(curTab);document.dispatchEvent(new CustomEvent('cw:tab',{detail:curTab}));
   // The desktop Reference opens with its own heading at the top of the window, under the top bar, not the player.
   // So does the Smart cube tab: the live cube and every control beside it come into view together.
   const sec=$('#tab-'+curTab);if((curTab==='ref'||curTab==='smart')&&!mobileMQ.matches&&sec&&sec.scrollIntoView)sec.scrollIntoView({behavior:'smooth',block:'start'});});
@@ -429,6 +433,7 @@ function nextForTab(){({solve:()=>newScramble(),cross:()=>$('#crossNew').click()
 function hintForTab(){({cross:()=>$('#crossReveal').click(),f2l:()=>{if(f2lState.mode!=='guide')(f2lState.mode==='live'?$('#f2lReveal'):$('#f2lCaseReveal')).click();},ll:()=>$('#llHint').click(),ortega:()=>{const b=$('#twRevealOrtega');if(b)b.click();},cll:()=>{const b=$('#twRevealCll');if(b)b.click();},parity:()=>{const b=$('#fwReveal');if(b)b.click();}}[curTab]||(()=>{}))();}
 $('#autoNext').checked=store.get('autoNext',false);$('#autoNext').onchange=()=>store.set('autoNext',$('#autoNext').checked);
 // 15 s inspection (cw:insp, on by default): the box by the timer and the one in Settings are the same setting.
+$('#fullChk').checked=store.get('timeFull',true);$('#fullChk').onchange=()=>{store.set('timeFull',$('#fullChk').checked);if(!/^(ll|f2l):/.test(timer.scope))setScope(tabScope(curTab));};
 $('#inspChk').checked=store.get('insp',true);$('#inspChk').onchange=()=>store.set('insp',$('#inspChk').checked);
 onTimerStop=()=>{if($('#autoNext').checked&&(curTab==='cross'||curTab==='f2l'||curTab==='ll'||curTab==='ssolve'||curTab==='fsolve'))setTimeout(nextForTab,150);};
 

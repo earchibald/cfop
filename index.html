@@ -65,10 +65,11 @@
       <div class="row" style="justify-content:center;margin-top:4px;font-size:13px">
         <label title="Count down 15 seconds to look at the cube before the timer starts, as in a competition"><input type="checkbox" id="inspChk"> 15 s inspection</label>
         <label title="Load a new scramble as soon as the timer stops"><input type="checkbox" id="autoNext"> Next on stop</label>
+        <label class="fullchk" title="Keep the time of the whole solve in one list, Full solves. Clear the box to time the cross alone"><input type="checkbox" id="fullChk"> Full solve</label>
       </div>
       <div class="stats"><div title="The last time">last<b id="stLast">—</b></div><div title="The average of the last five, with the best and the worst left out">ao5<b id="stAo5">—</b></div><div title="The average of the last twelve, with the best and the worst left out">ao12<b id="stAo12">—</b></div><div title="The best time">best<b id="stBest">—</b></div><div title="How many times">n<b id="stN">0</b></div></div>
       <div class="times" id="times"></div>
-      <div class="row" style="margin-top:4px;justify-content:space-between"><span class="muted" style="font-size:13px" id="timesScope">times: solve</span><span><button class="small ghost" id="timerBack" title="Show your progress in this panel">Progress</button><button class="small ghost" id="delLast" title="Delete the last time (D)">Delete last<span class="hk" aria-hidden="true">D</span></button><button class="small ghost" id="clearTimes" title="Clear all times (C)">Clear<span class="hk" aria-hidden="true">C</span></button></span></div>
+      <div class="row" style="margin-top:4px;justify-content:space-between"><span class="muted" style="font-size:13px" id="timesScope">Times: Full solves</span><span><button class="small ghost" id="timerBack" title="Show your progress in this panel">Progress</button><button class="small ghost" id="delLast" title="Delete the last time (D)">Delete last<span class="hk" aria-hidden="true">D</span></button><button class="small ghost" id="clearTimes" title="Clear all times (C)">Clear<span class="hk" aria-hidden="true">C</span></button></span></div>
     </div>
     <div class="panel progresspanel" id="progressPanel">
       <span class="lbl">your progress</span>
