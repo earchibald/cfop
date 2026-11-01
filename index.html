@@ -88,6 +88,31 @@
       <button class="ln-link" id="keyLesson" title="Open the lesson on the parts of the cube and the move letters">Open the Basics lesson</button>
     </div>
     <div class="everymore cfop-only" id="everyMore">
+      <!-- The smart cube sheet (js/cubetab.js, the voice commands in js/smart-listen.js, the reference card in js/smart-card.js): the cube on the page follows the cube; this shows the stage, the moves and the voice -->
+      <div class="panel cubewin hidden" id="cubeWin">
+        <div class="cw-head"><h2 class="nm"></h2><span class="dot" aria-hidden="true"></span><span class="batt" id="cubeWinBatt" hidden></span><span class="grow"></span><button class="small ghost" id="cubeWinOptions" title="Open the Smart cube window: scan or paint the colors of the cube, use it as the scramble, or disconnect">Options</button></div>
+        <div class="cw-aside">
+          <div class="cw-stage" id="cubeWinStage"><div class="st-name" aria-live="polite"></div><div class="st-sub"></div><div class="st-alg" aria-label="The moves of this case"></div></div>
+          <div class="cw-moves" id="cubeWinMoves" aria-label="Your last moves"></div>
+          <div class="cw-row" id="cubeWinView"><div class="cw-side"><button class="small ghost" id="cubeWinClear" title="Empty the list of moves">Clear moves</button><button class="small" id="cubeWinListen" aria-pressed="false" title='Listen for "reset", "clear moves", "top yellow, front green", "x prime" and case names such as "T perm": click to listen until Stop; hold, say one thing and let go'>Listen</button></div></div>
+          <div class="cw-listen hidden" id="cubeWinListenRow" role="status"><span class="listen-dot" aria-hidden="true"></span><span class="txt"></span><span class="heard"></span><span class="ask listen-ask"></span></div>
+          <div class="cw-hints hidden" id="cubeWinHints" aria-label="What you can say"></div>
+          <p class="muted cw-note" id="cubeWinNote"></p>
+          <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect" title="Look for your cube and connect it again">Connect again</button></div>
+        </div>
+      </div>
+      <div class="panel hidden" id="smartHome">
+        <h2>Smart cube</h2>
+        <p class="muted">Connect a GAN smart cube with Bluetooth. Each turn of your cube turns the layer on the cube here. This sheet names the stage of your solve and the case on the cube. It listens for your voice: a reset, how you hold the cube, or a case name, which opens a small reference card.</p>
+        <p class="muted">A cube that you connected before connects by itself. Turn a face to wake it up.</p>
+        <div class="row"><button class="primary" id="smartTabConnect" title="Look for your cube and connect it">Connect a smart cube</button></div>
+        <p class="muted" id="smartTabStatus" role="status"></p>
+        <div id="smartTabList" class="hidden smart-look">
+          <p class="muted" id="smartTabListNote"></p>
+          <div class="scan-row" id="smartTabListItems"></div>
+          <div class="scan-row"><button class="small ghost" id="smartTabListCancel" title="Stop the search and choose no cube">Cancel</button></div>
+        </div>
+      </div>
       <details class="panel planfold" id="planFold">
         <summary title="Show a CFOP plan for this scramble"><h2>Reveal a CFOP plan for this scramble</h2></summary>
         <div class="row" style="justify-content:space-between;margin-top:10px">
@@ -125,7 +150,6 @@
     <button data-tab="ll" data-sec="ll" title="Train the last layer: the two-look OLL and PLL cases"><span class="k">3</span><i class="sec-sq"></i>OLL · PLL</button>
     <button data-tab="lab" data-sec="lab" title="Take an algorithm apart: what each move does, commutators, conjugates"><span class="k">4</span><i class="sec-sq"></i>Lab</button>
     <button data-tab="ref" data-sec="ref" title="Every case with its picture and algorithm"><span class="k">5</span><i class="sec-sq"></i>Reference</button>
-    <button data-tab="smart" data-sec="smart" title="Your smart cube, live: each turn of the cube turns the layer here, with the stage of your solve and the voice commands"><span class="k">6</span><i class="sec-sq"></i><span class="dot" aria-hidden="true"></span>Smart cube</button>
   </nav>
   <nav class="rail" id="brail">
     <button data-tab="learn" data-sec="learn" title="The lessons, one per step"><span class="k">1</span><i class="sec-sq"></i>Learn</button>
@@ -260,41 +284,6 @@
       <div class="panel"><details class="fold" id="foldF2L"><summary title="Open or close the F2L list"><h3>F2L (41 cases, front-right slot)</h3></summary><div class="wide"><table id="refF2L"></table></div></details></div>
       <div class="panel"><h3>Notation</h3><p>Face turns: <span class="mono">U R F D L B</span> clockwise when you look at that face. <span class="mono">'</span> is counterclockwise. <span class="mono">2</span> is a half turn. Lower-case <span class="mono">r u f</span> turn two layers. <span class="mono">M E S</span> are the middle slices (M follows L, E follows D, S follows F). <span class="mono">x y z</span> rotate the whole cube like R, U, F.</p><p>Scrambles are applied with white up and green in front, the WCA rule. Solving plans start with one rotation (<span class="mono">z2</span> for a white cross) and then contain only face turns: hold the cube still, cross color down, and turn faces.</p></div>
     </div>
-    </section>
-    <!-- SMART CUBE (js/cubetab.js, the voice commands in js/smart-listen.js, the reference card in js/smart-card.js) -->
-    <section class="tab" id="tab-smart" data-sec="smart">
-      <div class="panel cubewin" id="cubeWin" hidden>
-        <div class="cw-head"><h2 class="nm"></h2><span class="dot" aria-hidden="true"></span><span class="batt" id="cubeWinBatt" hidden></span><span class="grow"></span><button class="small ghost" id="cubeWinOptions" title="Open the Smart cube window: scan or paint the colors of the cube, use it as the scramble, or disconnect">Options</button></div>
-        <div class="cw-body">
-          <div class="cw-main">
-            <svg id="cubeWinSvg" viewBox="0 0 400 360" role="img" aria-label="Your smart cube, live"></svg>
-            <div class="cw-warn hidden" id="cubeWinWarn" role="status"><span class="txt"></span><span class="btns"><button class="small" id="cubeWinMatch" title="Turn the hold to match the cube. The turn goes on the list">Read as held</button><button class="small ghost" id="cubeWinKeep" title="The cube did not turn: line the picture up with the hold again.">Keep this hold</button></span></div>
-            <div class="cw-hold" id="cubeWinHold" role="group" aria-label="How you hold the cube"><span class="lbl" title="How you hold the cube. A tile sets the hold. No turn goes on the list.">Top</span><span class="grp" data-place="up"></span><span class="lbl">Front</span><span class="grp" data-place="front"></span></div>
-            <div class="cw-turns" id="cubeWinTurns" role="group" aria-label="Turn the whole cube"><span class="lbl" title="Turned the cube in your hands? Press the same turn here, so the picture, the moves and the stage read as you hold it.">Turn the cube</span></div>
-          </div>
-          <div class="cw-aside">
-            <div class="cw-stage" id="cubeWinStage"><div class="st-name" aria-live="polite"></div><div class="st-sub"></div><div class="st-alg" aria-label="The moves of this case"></div></div>
-            <div class="cw-moves" id="cubeWinMoves" aria-label="Your last moves"></div>
-            <div class="cw-row" id="cubeWinView"><div class="cw-side"><button class="small ghost hidden" id="cubeWinLock" aria-pressed="true" title="Lock the picture to the hold. Off, the picture turns as you turn the cube in your hands">Lock</button><button class="small ghost hidden" id="cubeWinReset" title="Line the picture up with the cube in your hands">Reset view</button><button class="small ghost" id="cubeWinClear" title="Empty the list of moves">Clear moves<span class="hk">C</span></button><button class="small ghost" id="cubeWinFront" aria-pressed="false" title="The cube from above and to the right, with three faces in view. Press to see it straight on, the front face alone">Front view<span class="hk">V</span></button><button class="small ghost" id="cubeWinHidden" aria-pressed="false" title="Show the hidden faces: the faces turned away from you, as in a mirror behind the cube">Hidden faces</button><button class="small" id="cubeWinListen" aria-pressed="false" title='Listen for "reset", "clear moves", "top yellow, front green", "x prime" and case names such as "T perm": click to listen until Stop; hold, say one thing and let go'>Listen</button></div></div>
-            <div class="cw-listen hidden" id="cubeWinListenRow" role="status"><span class="listen-dot" aria-hidden="true"></span><span class="txt"></span><span class="heard"></span><span class="ask listen-ask"></span></div>
-            <div class="cw-hints hidden" id="cubeWinHints" aria-label="What you can say"></div>
-            <p class="muted cw-note" id="cubeWinNote"></p>
-            <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect" title="Look for your cube and connect it again">Connect again</button></div>
-          </div>
-        </div>
-      </div>
-      <div class="panel" id="smartHome">
-        <h2>Smart cube</h2>
-        <p class="muted">Connect a GAN smart cube with Bluetooth. Each turn of your cube turns the layer here, large. The page names the stage of your solve and the case on the cube. It listens for your voice: a reset, how you hold the cube, or a case name, which opens a small reference card beside the cube.</p>
-        <p class="muted">A cube that you connected before connects by itself when you open this tab. Turn a face to wake it up.</p>
-        <div class="row"><button class="primary" id="smartTabConnect" title="Look for your cube and connect it">Connect a smart cube</button></div>
-        <p class="muted" id="smartTabStatus" role="status"></p>
-        <div id="smartTabList" class="hidden smart-look">
-          <p class="muted" id="smartTabListNote"></p>
-          <div class="scan-row" id="smartTabListItems"></div>
-          <div class="scan-row"><button class="small ghost" id="smartTabListCancel" title="Stop the search and choose no cube">Cancel</button></div>
-        </div>
-      </div>
     </section>
     <!-- BEGINNER: Learn (js/learn.js) -->
     <section class="tab" id="tab-learn" data-sec="learn"><div class="panel"><h2>Learn</h2></div></section>

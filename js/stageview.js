@@ -14,7 +14,7 @@
 // section and sheet) keep the choices. Every text put in markup here goes through svEsc.
 const SV={on:false,marks:new Map(),fmarks:new Map(),phase:'',obs:null,raf:0,drag:null,ate:false};
 const SV_TITLES={planFold:'CFOP plan',f2lGuide:'Guide',f2lLive:'Live pairs',f2lCases:'Train cases',f2lCaseOut:'This case',
-  f2lCaseList:'Cases',f2lStatsPanel:'Per-case times',llCurrent:'This case',labOut:'What it moves',labWhy:'Why it works',weakSpots:'Weak spots'};
+  f2lCaseList:'Cases',f2lStatsPanel:'Per-case times',llCurrent:'This case',labOut:'What it moves',labWhy:'Why it works',weakSpots:'Weak spots',cubeWin:'Smart cube'};
 const SV_ICON={
   grip:'<svg viewBox="0 0 12 16" aria-hidden="true"><circle cx="4" cy="4" r="1.2"/><circle cx="8" cy="4" r="1.2"/><circle cx="4" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="4" cy="12" r="1.2"/><circle cx="8" cy="12" r="1.2"/></svg>',
   fold:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>',
@@ -117,7 +117,8 @@ function svTitle(p){if(SV_TITLES[p.id])return SV_TITLES[p.id];
   const sec=p.closest('.tab');return sec?svSecName(sec.id.slice(4)):'Sheet';}
 function svSub(p){if(p.classList.contains('seqpanel'))return ($('#seqLabel')||{}).textContent||'';
   if(p.classList.contains('timerpanel')){const n=($('#stN')||{}).textContent;return n&&n!=='0'?n+' times':'';}return '';}
-// The sheets for every section: Your moves, the timer, then the CFOP plan and Weak spots (#everyMore).
+// The sheets for every section: Your moves, the timer, then #everyMore: the smart cube sheet (while a
+// smart cube is the cube, js/cubetab.js), the CFOP plan and Weak spots.
 function svEveryPanels(){return [$('#player .seqpanel,#svEvery .seqpanel,#svFloats>.seqpanel'),$('#svEvery .timerpanel,#svFloats>.timerpanel'),...$$('#everyMore>.panel,#svFloats>[data-svevery]')].filter(Boolean);}
 // A closed details shows its summary alone, so a details sheet keeps its strip in the summary.
 function svHost(p){return p.tagName==='DETAILS'?p.querySelector(':scope>summary')||p:p;}
@@ -159,7 +160,7 @@ function svFloatBox(f){const W=innerWidth,H=innerHeight,w=Math.min(f.w||360,W-24
   const top=(h?Math.max(0,h.getBoundingClientRect().bottom):0)+8;
   return {w,x:Math.round(Math.max(8,Math.min(f.x,W-w-8))),y:Math.round(Math.max(top,Math.min(f.y,H-48)))};}
 function svAddDraw(list,st){const box=$('#svAdd');if(!box)return;
-  const shut=list.filter(x=>st[x.key]&&st[x.key].closed);
+  const shut=list.filter(x=>st[x.key]&&st[x.key].closed&&!x.p.classList.contains('hidden'));
   box.innerHTML=shut.map(x=>`<button type="button" class="svchip" data-svadd="${svEsc(x.key)}" title="Open ${svEsc(svTitle(x.p))} again">${SV_ICON.plus}${svEsc(svTitle(x.p))}</button>`).join('');
   box.hidden=!shut.length;}
 function svSet(key,patch){const st=svState();const s=Object.assign({},st[key]||{},patch);

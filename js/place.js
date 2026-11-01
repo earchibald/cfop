@@ -3,11 +3,11 @@
 // cube slot (#cubeSlot) beside the sections in main.main, and CSS places the slot for the section
 // in view (css/start.css): a scramble section (a beginner's Solve my cube) has it across the
 // top with the scramble controls (the seed bar); another section has it in a column beside its
-// text, with a pill for the scramble; a section with none (Reference, the Smart cube tab, the
+// text, with a pill for the scramble; a section with none (Reference, the
 // Cheat sheet) shows no player. body[data-cube] is wide, side or none.
 // Nothing moves after the start: some modules write their whole section again (guide.js), so the
 // player never lives inside one.
-const PLACE_NONE=new Set(['ref','smart','sref','fref','cheat']);
+const PLACE_NONE=new Set(['ref','sref','fref','cheat']);
 const PLACE_WIDE=new Set(['ssolve','fsolve','bsolve']);
 function placeKind(tab){return PLACE_NONE.has(tab)?'none':PLACE_WIDE.has(tab)?'wide':'side';}
 function placeInit(){

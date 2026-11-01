@@ -795,13 +795,7 @@ body[data-kind="beg"][data-key] #progressPanel,body[data-kind="beg"][data-key] .
 }
 @media (max-width:359px){body[data-kind="beg"] .top h1{display:none!important}}
 
-/* The smart cube tab (cubetab.js): the live cube large in the main panel, every control beside it. The rail button carries a dot while a cube is connected. */
-[data-sec="smart"]{--sec:var(--text)}
-#tab-smart{scroll-margin-top:calc(var(--toph,58px) + 12px)} /* the tab opens scrolled to its panel, under the top bar, so the controls are in view with the cube */
-nav.rail button .dot{display:none;width:8px;height:8px;border-radius:50%;background:var(--good);flex:none;margin-left:-4px;box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 50%,transparent);animation:livedot 1.6s ease-out infinite}
-nav.rail button.live .dot{display:inline-block}
-nav.rail button.off .dot{background:var(--muted);animation:none;box-shadow:none}
-nav.rail button.warn .dot{background:var(--warn);box-shadow:0 0 0 0 color-mix(in srgb,var(--warn) 50%,transparent)}
+/* The smart cube sheet (cubetab.js): an Everywhere sheet while a smart cube is the cube. The cube on the page is the live cube; the sheet holds the stage, the moves and Listen. */
 @keyframes livedot{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 50%,transparent)}70%,100%{box-shadow:0 0 0 6px transparent}}
 /* The charge of a smart cube (smartBatteryDraw): a small battery filled to the level, and the percent */
 .batt{display:inline-flex;align-items:center;gap:5px;flex:none;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--muted);cursor:help}
@@ -810,40 +804,17 @@ nav.rail button.warn .dot{background:var(--warn);box-shadow:0 0 0 0 color-mix(in
 .batt-box::after{content:"";position:absolute;right:-4px;top:2px;width:2px;height:3px;background:currentColor;border-radius:0 1px 1px 0}
 .batt-fill{position:absolute;left:1px;top:1px;bottom:1px;max-width:calc(100% - 2px);background:var(--good);border-radius:1px}
 .batt.low{color:var(--warn)}.batt.low .batt-fill{background:var(--warn)}
-.cubewin[hidden],#smartHome[hidden]{display:none}
-#smartHome h2::before{content:"";display:inline-block;width:12px;height:12px;border-radius:4px;background:var(--sec);margin-right:10px;vertical-align:-1px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
 .cubewin .cw-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 .cubewin .cw-head h2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cubewin .cw-head .grow{flex:1}
 .cubewin .dot{width:9px;height:9px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 50%,transparent);animation:livedot 1.6s ease-out infinite;flex:none}
 .cubewin.off .dot{background:var(--muted);animation:none;box-shadow:none}
 .cubewin.off .cw-head h2{color:var(--muted)}
-.cubewin .cw-body{display:grid;grid-template-columns:minmax(0,3fr) minmax(280px,2fr);gap:18px;align-items:start}
-.cubewin .cw-main{min-width:0}
-.cubewin #cubeWinSvg{width:100%;height:auto;max-height:min(72vh,680px);display:block;background:var(--cube-bg);border-radius:var(--rb)}
 .cubewin .cw-aside{display:flex;flex-direction:column;gap:10px;min-width:0}
 .cubewin .cw-note{font-size:13px;margin:0}
 .cubewin .cw-moves{margin:0 -10px} /* the trail (css/trail.css); its padding leaves room for the arrow */
 .cubewin .cw-row{display:flex;align-items:flex-start;gap:8px}
 .cubewin .cw-side{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
-.cubewin .cw-side .small[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--panel))}
-.cubewin .cw-warn{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:10px;padding:8px 10px;font-size:13px;line-height:1.35;border:1px solid var(--warn);border-radius:var(--rb);background:color-mix(in srgb,var(--warn) 12%,var(--panel))}
-.cubewin .cw-warn .txt{flex:1 1 180px}
-.cubewin .cw-warn .btns{display:inline-flex;gap:6px;margin-left:auto}
-/* The hold row (cubetab.js): a tile for each top color and each front color, the hold's pressed. One row under the picture. */
-.cubewin .cw-hold{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin-top:10px}
-.cubewin .cw-hold .lbl{font-size:13px;color:var(--muted);cursor:help}
-.cubewin .cw-hold .lbl+.grp+.lbl{margin-left:10px}
-.cubewin .cw-hold .grp{display:inline-flex;gap:5px}
-.cubewin .cw-hold .ht{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border-radius:6px;border:1px solid var(--sticker-line);background:var(--c)}
-.cubewin .cw-hold .ht:hover{border-color:var(--muted)}
-.cubewin .cw-hold .ht[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:2px}
-body.cba .cubewin .cw-hold .ht::after{content:attr(data-cb);font:700 12px/1 var(--mono,ui-monospace,monospace);color:#15161a}
-body.cba .cubewin .cw-hold .ht[data-cb="R"]::after,body.cba .cubewin .cw-hold .ht[data-cb="B"]::after{color:#fff}
-.cubewin .cw-turns{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin-top:10px}
-.cubewin .cw-turns .lbl{font-size:13px;color:var(--muted);margin-right:2px;cursor:help}
-.cubewin .cw-turns .grp{display:inline-flex;gap:4px}
-.cubewin .cw-turns button{min-width:42px;padding:5px 10px;font-family:var(--mono);font-size:15px;font-weight:500}
 #cubeWinListen{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;touch-action:manipulation;font-weight:600} /* a hold listens once; no callout, no selection */
 #cubeWinListen.on{color:var(--accent-ink);background:var(--accent);border-color:transparent}
 body:not(.can-listen) #cubeWinListen,body:not(.can-listen) #cubeWinListenRow,body:not(.can-listen) #cubeWinHints{display:none}
@@ -851,7 +822,7 @@ body:not(.can-listen) #cubeWinListen,body:not(.can-listen) #cubeWinListenRow,bod
 .cubewin .cw-listen .listen-dot{align-self:center}.cubewin .cw-listen.on .listen-dot{background:var(--accent);opacity:1;animation:listenPulse 1.4s ease-in-out infinite}
 .cubewin .cw-listen .txt{flex:1 1 200px}.cubewin .cw-listen .heard{flex:1 0 100%;color:var(--muted);font-size:12.5px}.cubewin .cw-listen .heard:empty{display:none}
 .cubewin .cw-listen .ask{flex:1 0 100%}.cubewin .cw-listen .ask:empty{display:none}
-/* The hints while the tab listens (smart-listen.js): four groups, each a head, the things to say as
+/* The hints while the sheet listens (smart-listen.js): four groups, each a head, the things to say as
    chips and one short line on what they do. The long note goes meanwhile, so the hints fit in view. */
 .cubewin .cw-hints{display:grid;grid-template-columns:minmax(0,1fr);gap:9px 16px;padding:10px 12px 11px;font-size:13px;line-height:1.3;border:1px solid var(--line);border-radius:var(--rb);background:var(--panel2)}
 .cubewin .cw-hints .lbl{grid-column:1/-1;font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
@@ -871,11 +842,7 @@ body:not(.can-listen) #cubeWinListen,body:not(.can-listen) #cubeWinListenRow,bod
 .cubewin .st-alg .mv.done{color:var(--muted);border-color:var(--good);background:color-mix(in srgb,var(--good) 18%,var(--panel))}
 .cubewin .mv.rot{font-style:italic;color:var(--muted)}
 .cubewin .scan-row{margin:0}
-@media (prefers-reduced-motion:reduce){nav.rail button .dot,.cubewin .dot,.cubewin .cw-listen .listen-dot{animation:none}.cubewin .cw-stage{transition:none}}
-@media (max-width:960px){.cubewin .cw-body{grid-template-columns:1fr}
-  .cubewin.listening #cubeWinSvg{max-height:40vh} /* one column: the picture gives way while it listens, so the hints under it come into view */
-  .cubewin .cw-hints{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}} /* and the groups sit two to a row where the width allows */
-@media (max-width:760px){.cubewin #cubeWinSvg{max-height:50vh}}
+@media (prefers-reduced-motion:reduce){.cubewin .dot,.cubewin .cw-listen .listen-dot{animation:none}.cubewin .cw-stage{transition:none}}
 
 /* The reference card (smart-card.js): a small floating window with one case, dragged by its head and zoomed by the grip at its corner. Everything inside is in em, so the zoom scales it all. */
 .smartcard{position:fixed;z-index:12;width:340px;font-size:13px;padding:.7em 1em .9em;box-shadow:var(--shadow);display:flex;flex-direction:column;max-height:calc(100vh - 16px);box-sizing:border-box;overflow:hidden}

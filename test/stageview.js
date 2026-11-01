@@ -28,6 +28,17 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.ok($('#svEvery .seqpanel')&&$('#svEvery .timerpanel'),'Your moves and the timer are sheets for every section');
   assert.ok(!$('#svCol #seedBar')&&!$('#svCol #scrPill'),'no scramble card in the column');
   assert.ok(!$('#rail button[data-tab="solve"]')&&!$('#tab-solve'),'no Scramble tab');
+  // No Smart cube tab (1.64): the smart cube is an Everywhere sheet, there while Smart cube is the cube.
+  assert.ok(!$('#rail button[data-tab="smart"]')&&!$('#tab-smart'),'no Smart cube tab');
+  {const sw=$('#cubeWin'),sh=$('#smartHome');assert.ok(sw.closest('#svEvery')&&sh.closest('#svEvery')&&sw.classList.contains('svsheet'),'the smart cube sheet is in Everywhere');
+    assert.ok(sw.classList.contains('hidden')&&sh.classList.contains('hidden'),'a regular cube: no smart cube sheet');
+    w.eval("setCubeSrc('smart')");assert.ok(!sh.classList.contains('hidden'),'Smart cube: the Connect card');
+    assert.strictEqual(sh.querySelector('.svbar .svname').textContent,'Smart cube','titled Smart cube');assert.strictEqual(sw.querySelector('.svbar .svname').textContent,'Smart cube');
+    w.eval("setCubeSrc('mine')");assert.ok(sh.classList.contains('hidden'));}
+  // Reference has no cube: no Undo or Scan or paint over it.
+  $('#rail button[data-tab="ref"]').click();await sleep(20);assert.strictEqual(d.body.dataset.cube,'none');
+assert.strictEqual(w.getComputedStyle($('#svTR')).display,'none','no Undo on Reference');
+  $('#rail button[data-tab="cross"]').click();await sleep(20);assert.notStrictEqual(w.getComputedStyle($('#svTR')).display,'none','Undo on Cross');
   assert.ok($('#svActs #animBtn')&&$('#svActs #hiddenBtn'),'the cube buttons are on the action bar');
   assert.strictEqual($('#svBadgeSec').textContent,'Cross','the badge names the section: Cross is first');
   assert.strictEqual($('#svBadge .svinfo').textContent,'Scramble Info','the badge offers Scramble Info');

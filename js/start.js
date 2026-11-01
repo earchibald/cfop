@@ -451,7 +451,7 @@ START_SCREENS['t4-quiz']=()=>{if(!START.quiz)startQuizNew();const Q=START.quiz;
     <button class="st-link" data-finish="ll" title="Go to OLL · PLL">See what is left to learn →</button></div></div>`;};
 // ---------- Track 5 · already a speedcuber ----------
 START_SCREENS['t5-setup']=()=>{if(!START.five)START.five={all:true,insp:store.get('insp',true),hide:store.get('hideTime',false)};const F=START.five;
-  const notes={mine:'Space starts and stops the timer. Total time only.',smart:'A smart cube connects next. The live view is on the Smart cube tab.',screen:'Keys turn it. Good for practice, not for times you compare.'};
+  const notes={mine:'Space starts and stops the timer. Total time only.',smart:'A smart cube connects next. The cube on the page follows its turns.',screen:'Keys turn it. Good for practice, not for times you compare.'};
   const sw=(k,label,tip)=>`<button class="st-switch" data-five="${k}" aria-pressed="${!!F[k]}" title="${esc(tip)}"><i aria-hidden="true"></i>${esc(label)}</button>`;
   return `${stBar('',stBack('level','← Change my level'))}
   <div class="st-center st-left"><div class="st-head"><h1>Set up, then time.</h1><p class="muted">Four choices. The timer ones are in Settings later.</p></div>

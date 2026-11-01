@@ -1,18 +1,17 @@
-// Voice commands for the Smart cube tab (js/smart-listen.js): the words of a command ("reset",
+// Voice commands for the smart cube sheet (js/smart-listen.js): the words of a command ("reset",
 // "top yellow, bottom white", "green toward me"; talk is no command; a pair that is no pair, or a
 // front that is on top, is said so), the card commands (reveal, hide, play, stop, close, said
 // alone), the hold a command names from the hold now (the front stays when it can, else the
-// fewest turns), and the tab: the Listen button with Clear moves and Hidden faces, beside the
-// picture, a click listens until Stop, a hold of the button listens once, the hints while it
-// listens, "reset" empties the list and takes the heading again with the tilt live (Lock off),
-// "clear moves" empties the list alone, a hold goes
-// on the list only with moves on it, an early guess acts on two in a row, a case name opens the
+// fewest turns), and the sheet: the Listen button with Clear moves, a click listens until Stop, a
+// hold of the button listens once, the hints while it listens, "reset" and "clear moves" empty the
+// list, the hold follows the player's picture and a hold said turns the picture, a hold goes on the
+// list only with moves on it, an early guess acts on two in a row, a case name opens the
 // reference card (close calls as chips, a pick by click or by the next sentence, a weak name asks
 // while a card is open, the stage breaks a tie), the card commands, the Reference's Listen and
-// this one stop each other, and the listening ends with the tab and with the link. With a fake
-// recognizer and a fake GAN cube.
+// this one stop each other, the listening goes on in another section, and ends with the link. With
+// a fake recognizer and a fake GAN cube.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
-const {fakeDevice,mfDataFor,gyroMsg}=require('./fake-gan');
+const {fakeDevice,mfDataFor}=require('./fake-gan');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
 function fakeStorage(seed){const m=new Map(Object.entries(seed||{}));return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear(),map:m};}
 const MAC='AB:12:34:5C:9D:E1';
@@ -93,20 +92,23 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   const g=hf({up:2,front:null},holdOf(['y']));assert.ok(g.cube.center[0]===2&&g.cube.center[2]===1,'green up from red in front keeps red in front');
   assert.strictEqual(hf({up:null,front:0},null),null,'white cannot face you with white on top');
   assert.strictEqual(hf({up:null,front:3},null),null,'nor yellow');
-  // ----- in the tab -----
+  // ----- in the sheet -----
   const c1=w.applyAlg(new Cube(),['R','U',"F'",'L2','D','B',"R'"]);set(c1);
   dev=fakeDevice(4,MAC,cube,{mfData:mfDataFor(MAC),name:'GAN12uiM_A1B2'});
   click($('#smartBtn'));await sleep(20);click($('#smartConnect'));
   assert.ok(await until(()=>!$('#smartUse').disabled),'connected: '+$('#smartStatus').textContent);
-  run('cubeTab.stillMs=150;cubeTab.revealMs=120;cubeTab.awayMs=60;SMART_CARD.ms=60');
-  esc();assert.strictEqual(ev('curTab'),'smart','the page is on the tab');
+  run('cubeTab.stillMs=150;cubeTab.revealMs=120;SMART_CARD.ms=60');
+  esc();assert.ok(!$('#tab-smart')&&ev('curTab')!=='smart','no Smart cube tab: the page stays on its section');
+  assert.ok(!$('#cubeWin').classList.contains('hidden')&&$('#cubeWin').closest('#everyMore'),'the smart cube sheet shows, under the timer');
+  // The hold follows the player's picture: the scramble's grip (a white cross: z2, yellow up), or a tile of the hold row.
+  assert.strictEqual(ev('cubeTab.hold'),ev('CUBE_TAB_HOLD_BY').get(w.applyAlg(new Cube(),['z2']).center.join()),'held as the picture shows: yellow up');
+  run('PLAYER.hold={top:0,front:2};drawMain();playerHoldDraw()');assert.strictEqual(ev('cubeTab.hold'),null,'a tile: white up, green in front');
   const btn=()=>$('#cubeWinListen'),row=()=>$('#cubeWinListenRow'),txt=()=>row().querySelector('.txt').textContent,heard=()=>row().querySelector('.heard').textContent;
   const chips=()=>$$('#cubeWinListenRow .ask button').map(b=>b.textContent),hints=()=>$('#cubeWinHints');
   const readout=()=>$$('#cubeWinMoves .mv').map(s=>s.textContent).join(' ');
-  const warnOn=()=>!$('#cubeWinWarn').classList.contains('hidden');
   const card=()=>$('#smartCard'),cardName=()=>card()&&card().querySelector('.sc-head .nm').textContent,onCount=()=>$$('#smartCard .algbig .sp-m.on').length,allCount=()=>$$('#smartCard .algbig .sp-m').length;
-  assert.ok(btn()&&btn().closest('.cw-side')&&btn().previousElementSibling===$('#cubeWinHidden'),'Listen sits with Clear moves and Hidden faces');
-  assert.ok(btn().closest('.cw-aside')&&$('#cubeWinSvg').closest('.cw-main'),'beside the picture, not under it');
+  assert.ok(btn()&&btn().closest('.cw-side')&&btn().previousElementSibling===$('#cubeWinClear'),'Listen sits with Clear moves');
+  assert.ok(btn().closest('#cubeWin')&&!$('#cubeWinSvg')&&!$('#cubeWinTurns')&&!$('#cubeWinHold'),'in the sheet: no picture, turn buttons or hold row of its own');
   assert.ok(/"reset"/.test(btn().title)&&/top yellow, front green/.test(btn().title)&&/x prime/.test(btn().title)&&/T perm/.test(btn().title),'the button says what to say: '+btn().title);
   assert.ok(row().classList.contains('hidden'),'nothing heard yet: no line');assert.strictEqual(row().getAttribute('role'),'status');
   assert.ok(hints().classList.contains('hidden'),'no hints until it listens');
@@ -121,7 +123,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
     [['Reset','Clear moves','Top yellow, front green'],['x','x prime','back x','y','z'],['T perm','Sune','F2L 12'],['Reveal','Hide','Play','Stop','Close']],'the things to say');
   assert.ok($$('#cubeWinHints .what').every(s=>s.textContent.length>20&&s.textContent.length<50),'each line on what they do is short');
   assert.ok($('#cubeWin').classList.contains('listening'),'the long note goes while it listens');
-  assert.ok(hints().closest('.cw-aside'),'beside the picture');
+  assert.ok(hints().closest('#cubeWin'),'in the sheet');
   // Moves on the list, then "reset": the list is emptied, the stage read again. The hold stays.
   run("cubeTab.moves=['R','U'];cubeTabMovesDraw()");assert.strictEqual(readout(),'R U');
   rec.say(0,'reset',true);
@@ -138,7 +140,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.strictEqual(ev('cubeTab.hold'),holdOf(['z2']),'yellow up, green in front');
   assert.strictEqual(readout(),'','an empty list takes no turn');
   assert.strictEqual(txt(),'Listening. Held yellow up, green in front. The moves and the stage read that way.');
-  assert.ok(await until(()=>!ev('cubeTab.qraf')&&w.quatAngle(ev('cubeTab.q'),holdOf(['z2']).q)<1,1500),'the picture turns to the hold');
+  assert.deepStrictEqual({...ev('PLAYER.hold')},{top:3,front:2},'the cube on the page turns to the hold');
   // The same hold said again: nothing changes.
   rec.say(2,'top yellow bottom white',true);assert.match(txt(),/Already held yellow up, green in front\./);assert.strictEqual(ev('cubeTab.hold'),holdOf(['z2']));
   // With moves on the list, the turn goes on it: white up again is z2.
@@ -217,8 +219,9 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   rec.say(29,'back y',true);assert.strictEqual(readout(),"R x' y'");assert.strictEqual(ev('cubeTab.hold'),after(["x'","y'"]));
   rec.say(30,'why',true);assert.strictEqual(readout(),"R x'",'y after y\' takes both off, as the buttons do');
   rec.say(31,'z counter-clockwise',true);assert.strictEqual(readout(),"R x' z'");
-  click($('#cubeWinTurns button[data-turn="z"]'));assert.strictEqual(readout(),"R x'",'the button and the voice are one list');
-  rec.say(32,'x',true);assert.strictEqual(readout(),'R');assert.strictEqual(ev('cubeTab.hold'),h0,'back to the hold');assert.ok(!card(),'no card for a turn');
+  rec.say(32,'z two',true);rec.say(33,'z prime',true);assert.strictEqual(readout(),"R x'",'z2 then z\' after z\' take them off');
+  rec.say(34,'x',true);assert.strictEqual(readout(),'R');assert.strictEqual(ev('cubeTab.hold'),h0,'back to the hold');assert.ok(!card(),'no card for a turn');
+  assert.deepStrictEqual({...ev('PLAYER.hold')},{top:h0.cube.center[0],front:h0.cube.center[2]},'the picture turned with each turn');
   // The recognizer stops on its own after a quiet spell: it starts again.
   rec.end();await sleep(300);assert.strictEqual(rec.started,2,'started again');
   // Stop: the line keeps the last outcome, without the word Listening. The hints go.
@@ -242,28 +245,14 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   w.smartCardClose();
   // One microphone: the Reference's Listen and this one stop each other.
   click($('#listenBtn'));assert.ok(ev('LISTEN.on'),'the Reference listens');
-  click(btn());assert.ok(ev('SMART_LISTEN.on')&&!ev('LISTEN.on'),'the tab takes the microphone');
+  click(btn());assert.ok(ev('SMART_LISTEN.on')&&!ev('LISTEN.on'),'the sheet takes the microphone');
   click($('#listenBtn'));assert.ok(ev('LISTEN.on')&&!ev('SMART_LISTEN.on'),'and gives it back');assert.strictEqual(btn().textContent,'Listen');
   w.listenStop();
-  // The tilt live (Lock off): "reset" takes the heading again, as Reset view does, and the band goes. The hold stays.
+  // Another section: the sheet is there too, and the listening goes on.
   click(btn());const rec4=recs[recs.length-1];
-  assert.ok(ev('cubeTab.lock'),'Lock is on by default');run('cubeTabSetLock(false)');
-  const rawOf=q=>({x:q[0],y:-q[2],z:q[1],w:q[3]}),tilt=q=>dev.notify(gyroMsg(4,rawOf(w.quatMul(w.quatConj(ev('cubeTab.basis')||[0,0,0,1]),q))));
-  const hy=ev('cubeTab.hold');assert.ok(hy&&hy.cube.center[0]===3,'yellow up from the last hold');
-  tilt(hy.q);await sleep(30);assert.ok(ev('cubeTab.gyro'),'the tilt is on');assert.ok(!warnOn());
-  const hy2=H.find(h=>h.cube.equals(w.applyAlg(hy.cube,['y2'])));
-  tilt(hy2.q);assert.ok(await until(()=>warnOn(),500),'turned a half turn: the band');
-  const basis1=ev('cubeTab.basis');
-  rec4.say(0,'reset',true);
-  assert.ok(!warnOn()&&!ev('cubeTab.away'),'reset: the band goes');assert.ok(w.quatAngle(ev('cubeTab.basis'),basis1)>80,'the heading moved');
-  assert.strictEqual(ev('cubeTab.hold'),hy,'the hold stays');assert.strictEqual(txt(),'Listening. Reset. The moves are cleared and the picture is lined up with your cube.');
-  // A hold said while the cube sits another way: the band says so, as the buttons would.
-  rec4.say(1,'top white bottom yellow',true);assert.strictEqual(ev('cubeTab.hold')?ev('cubeTab.hold').cube.center[0]:0,0,'white up');
-  assert.ok(await until(()=>warnOn(),500),'the cube still sits yellow up: the band');assert.match($('#cubeWinWarn .txt').textContent,/^Your cube sits with yellow up, .* read with white up/);
-  tilt((ev('cubeTab.hold')||H[0]).q);await sleep(100);assert.ok(!warnOn(),'turned over as said: no band');
-  // Another tab: the listening ends with the tab. Back on the tab, the button is at rest.
-  w.goTab('cross');assert.ok(!ev('SMART_LISTEN.on')&&rec4.stopped===1,'the listening ends when the user leaves the tab');
-  w.goTab('smart');assert.ok(btn().textContent==='Listen'&&hints().classList.contains('hidden'),'back on the tab: at rest');
+  w.goTab('f2l');assert.ok(ev('SMART_LISTEN.on')&&!rec4.stopped,'the listening goes on in another section');
+  assert.ok(!$('#cubeWin').classList.contains('hidden'),'the sheet is there too');
+  click(btn());assert.ok(!ev('SMART_LISTEN.on')&&btn().textContent==='Listen'&&hints().classList.contains('hidden'),'Stop: at rest');
   // The link drops: the listening ends and the button is off.
   click(btn());const rec5=recs[recs.length-1];assert.ok(ev('SMART_LISTEN.on'));
   dev.gatt.disconnect();await sleep(20);

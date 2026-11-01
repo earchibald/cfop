@@ -1,4 +1,4 @@
-/* The move trail (js/trail.js), on the Smart cube tab and in the lab: zones over one line, Now, Recent
+/* The move trail (js/trail.js), in the smart cube sheet and in the lab: zones over one line, Now, Recent
    and Earlier, each tile one size, the number of each move over it, the face color on Now and under
    Recent. The document is oldest first; .rtl turns the row round, so Now sits on the left. The newest end stays in place
    and the old end runs out of the box. Shared by index.html and lab/index.html, so it uses only the

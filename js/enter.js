@@ -17,7 +17,7 @@ function scrambleFromCube(cube,name,stay){
   loadScramble(name||customName('cube'),scr,true);go();return {ok:true,moves:scr};
 }
 // The beginner method goes to Solve my cube. CFOP stays on its tab, unless the tab has no player
-// (Reference, the Smart cube tab): then Cross.
+// (Reference): then Cross.
 function goSolveTab(){const t=isBeg()?'bsolve':typeof PLACE_NONE!=='undefined'&&PLACE_NONE.has(curTab)?'cross':curTab;if(curTab!==t)goTab(t);focusPlayer();}
 
 function openEnter(){

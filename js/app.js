@@ -67,8 +67,7 @@ function drawDragHint(){const h=$('#dragHint');if(h)h.classList.toggle('hidden',
 // Hidden faces (cw:hidden, off by default): the back, left and bottom drawn as in a mirror behind the
 // cube (hiddenFacePolys in js/draw.js). The cube draws smaller so the faces fit the box.
 function hiddenOn(){return !!store.get('hidden',false);}
-// The smart cube window (js/cubetab.js) follows the same setting.
-function setHidden(on){store.set('hidden',!!on);drawMain();if(typeof cubeTabHiddenDraw==='function')cubeTabHiddenDraw();}
+function setHidden(on){store.set('hidden',!!on);drawMain();}
 function view3D(){return hiddenOn()?{yaw:view.yaw,pitch:view.pitch,hidden:true,scale:40}:{yaw:view.yaw,pitch:view.pitch};}
 // The hold row under the cube (js/live.js) turns the picture: rot, or a turned cube on the net.
 function drawMain(){
@@ -357,7 +356,6 @@ document.addEventListener('keydown',e=>{const el=document.activeElement,tag=el?e
   if(e.code==='Space'){e.preventDefault();if(e.repeat)return;if(timerHidden())toggleAuto();else timerPress();return;}
   if(timer.state==='running')return;
   if(typeof f2lGuideKey==='function'&&f2lGuideKey(e))return; // the F2L guide: the arrows make and cover moves
-  if(typeof cubeTabKeys==='function'&&cubeTabKeys(e))return; // the Smart cube tab: C clears the moves
   if(e.key>='1'&&e.key<='9'){const b=railButtons()[+e.key-1];if(b)b.click();}
   const jump=e.shiftKey?5:1;
   if(e.key==='ArrowLeft'){e.preventDefault();seqGo(seqState.idx-jump);}if(e.key==='ArrowRight'){e.preventDefault();seqGo(seqState.idx+jump);}
@@ -412,9 +410,9 @@ function puzzleCube(){return new Cube();}
 function applyMethodData(){const i=methodInfo();document.body.dataset.method=method;document.body.dataset.kind=i.kind;document.body.dataset.puzzle=i.puzzle;setDrawN(puzzleN());}
 applyMethodData();
 let curTab='cross';
-const TAB_SCOPE={solve:'solve',cross:'cross',f2l:'f2l',ll:'ll',lab:'solve',ref:'solve',smart:'solve',learn:'solve',bsolve:'solve',practice:'solve',progress:'solve',cheat:'solve'};
+const TAB_SCOPE={solve:'solve',cross:'cross',f2l:'f2l',ll:'ll',lab:'solve',ref:'solve',learn:'solve',bsolve:'solve',practice:'solve',progress:'solve',cheat:'solve'};
 const BEGINNER_TABS=['learn','bsolve','practice','progress','cheat'];
-// One list for full solves (1.63): Cross, Lab, Reference and Smart cube time into 'solve'. With Full solve
+// One list for full solves (1.63): Cross, Lab and Reference time into 'solve'. With Full solve
 // off (cw:timeFull, the box by the timer) the Cross tab times the cross alone, into 'cross'. F2L and
 // OLL · PLL keep their own lists. The old 'lab' and 'ref' lists stay in cw:times, unshown.
 function tabScope(t){const s=TAB_SCOPE[t]||'solve';return s==='cross'&&$('#fullChk').checked?'solve':s;}
@@ -424,9 +422,8 @@ function homeTab(){return isBeg()?'learn':mobileMQ.matches?'ref':'cross';}
 $$('nav.rail button').forEach(b=>b.onclick=()=>{curTab=b.dataset.tab;$$('nav.rail button').forEach(x=>x.classList.toggle('on',x===b));$$('.tab').forEach(t=>t.classList.toggle('on',t.id==='tab-'+curTab));
   document.body.dataset.tab=curTab;$('#mtitle').textContent=b.lastChild.textContent;store.set(tabKey(),curTab);setScope(tabScope(curTab));onEnterTab(curTab);document.dispatchEvent(new CustomEvent('cw:tab',{detail:curTab}));
   // The desktop Reference opens with its own heading at the top of the window, under the top bar, not the player.
-  // So does the Smart cube tab: the live cube and every control beside it come into view together.
-  const sec=$('#tab-'+curTab);if((curTab==='ref'||curTab==='smart')&&!mobileMQ.matches&&sec&&sec.scrollIntoView)sec.scrollIntoView({behavior:'smooth',block:'start'});});
-// A saved tab that is gone (CFOP's Scramble tab, before 1.63) opens the method's home tab.
+  const sec=$('#tab-'+curTab);if(curTab==='ref'&&!mobileMQ.matches&&sec&&sec.scrollIntoView)sec.scrollIntoView({behavior:'smooth',block:'start'});});
+// A saved tab that is gone (CFOP's Scramble tab, before 1.63; the Smart cube tab, before 1.64) opens the method's home tab.
 function goTab(name){const b=$(`nav.rail button[data-tab="${name}"]`)||$(`nav.rail button[data-tab="${homeTab()}"]`);if(b)b.click();}
 function onEnterTab(t){if(!seqState.drill)showForTab();else if(t==='f2l'&&f2lState.mode==='live')showF2LState();else if(t==='f2l'&&f2lState.mode==='guide'&&typeof fgShow==='function')fgShow();if(t==='cross')refreshCross();}
 function nextForTab(){({solve:()=>newScramble(),cross:()=>$('#crossNew').click(),f2l:()=>(f2lState.mode==='guide'?$('#fgNew'):f2lState.mode==='live'?$('#f2lNew'):$('#f2lRandomCase')).click(),ll:()=>$('#llNext').click(),ssolve:()=>newScramble(),ortega:()=>{const b=$('#twNextOrtega');if(b)b.click();},cll:()=>{const b=$('#twNextCll');if(b)b.click();},fsolve:()=>newScramble(),parity:()=>{const b=$('#fwNext');if(b)b.click();}}[curTab]||(()=>{}))();}
@@ -856,7 +853,7 @@ $('#themeBtn').onclick=toggleTheme;;
 // The keys card. Beginner mode has no timer, so Space plays there and the timer row is left out.
 function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHidden();
   const rows=[[k('←')+' '+k('→'),'one move back or forward'],[k('⇧')+' + arrows','five moves at a time'],[k('Home')+' '+k('End'),'the start, the end'],
-    [k('space'),beg?'play, pause':'timer: hold, release to start · press to stop'],[k('P'),'play, pause'],[k('A'),'animation on or off'],...(beg?[]:[[k('D'),'delete the last time'],[k('C'),typeof cubeTabShown==='function'&&cubeTabShown()?'clear the moves':'clear all times']]),
+    [k('space'),beg?'play, pause':'timer: hold, release to start · press to stop'],[k('P'),'play, pause'],[k('A'),'animation on or off'],...(beg?[]:[[k('D'),'delete the last time'],[k('C'),'clear all times']]),
     [k('1')+'–'+k(String(railButtons().length)),'switch tab'],...(beg?[]:[[k('N'),'next scramble / case'],[k('H'),'reveal the answer']]),[k('?'),'this card'],['drag cube','orbit the view']];
   // The virtual cube's keys, in the layout of its Keys window: they come before the keys above.
   let vc='';if(typeof cubeSrc==='function'&&cubeSrc()==='screen'&&typeof vcubeLayout==='function'){const v=screenKeys(vcubeLayout()),ks=fs=>fs.map(f=>k(esc(v[f]))).join(' ');

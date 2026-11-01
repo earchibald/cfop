@@ -5,7 +5,7 @@
 /* ===== The cube in the section ===== */
 /* The player is not at the top of the page. main.main is a grid: the beginner home and the section
    in view on the left, the cube slot (js/place.js) on the right (body[data-cube="side"]); across the
-   top for a scramble section ("wide"); gone for Reference and the Smart cube tab ("none"). */
+   top for a scramble section ("wide"); gone for Reference ("none"). */
 .main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:var(--gap);align-items:start}
 .main>*{grid-column:1}
 .main>#cubeSlot{grid-column:2;grid-row:1/span 2;position:sticky;top:calc(var(--toph,58px) + 12px);max-height:calc(100vh - var(--toph,58px) - 24px);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}

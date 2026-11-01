@@ -11,7 +11,7 @@ from its board C5:
 
 Built in 1.62.0 as `js/stageview.js` and `css/stageview.css`. 1.63.0 took the Scramble tab out (Cross is
 section 1), put the scramble in Scramble Info (`js/scrinfo.js`), added Undo (`js/undo.js`), Scan or
-paint, and Maximize cube.
+paint, and Maximize cube. 1.64.0 took the Smart cube tab out: a smart cube is an Everywhere sheet.
 
 ## Where it is on
 
@@ -26,14 +26,18 @@ was. `?classic` in the address turns it off for one visit. Settings > Layout tur
 | The stage | The cube, full size. With a cube picked the stage is the page |
 | Top left | The rail: each section with its color and its key |
 | Beside the rail | The step badge: the section, and Scramble Info (a dot while the player shows a drill) |
-| Top right of the cube | Scan or paint (a regular cube only) and Undo; the hold (Top, Front, Net) under them |
+| Top right of the cube | Scan or paint (a regular cube only) and Undo; the hold (Top, Front, Net) under them. None on Reference |
 | Bottom left | The action bar: the cube source (a click opens the cube menu), Animate, Hidden faces, Virtual cube, Save image |
-| Right third | The column: Current Moves when there are some, the sheets of the section, then Everywhere (Your moves, Timer, CFOP plan, Weak spots for level 5), then Add for closed sheets |
+| Right third | The column: Current Moves when there are some, the sheets of the section, then Everywhere (Your moves, Timer, Smart cube while a smart cube is the cube, CFOP plan, Weak spots for level 5), then Add for closed sheets |
 | Top bar, after the cube chip | Maximize Cube (Minimize Cube while on) |
 | Center | The big moment: the inspection count, the clock, Solved! |
 
-Reference and the Smart cube tab have no player cube. Their sheets fill the stage beside the rail, as
-a page of their own.
+Reference has no player cube. Its sheets fill the stage beside the rail, as a page of their own, with
+no Undo or Scan or paint over them.
+
+There is no Smart cube section (1.64). A smart cube is a cube of the page: the cube on the stage follows
+it, and the Smart cube sheet under Everywhere holds the rest: the Connect card, then the cube's name
+and charge, the stage of the solve, the last moves, Clear moves and Listen (`js/cubetab.js`).
 
 ## Sheets
 
@@ -80,7 +84,7 @@ cubing.js; nothing loads it.
 ## Times
 
 One list holds every full solve, Full solves (the timer scope `solve`, the old Scramble tab's list). Cross,
-Lab, Reference and Smart cube time into it. On the Cross tab the Full solve box by the timer (on by
+Lab and Reference time into it. On the Cross tab the Full solve box by the timer (on by
 default, `cw:timeFull`) can be cleared to time the cross alone, into Cross. F2L and OLL · PLL keep their
 own lists, and a case drill times into its case.
 
@@ -138,5 +142,4 @@ From the boards, for later:
 - Pop out (a sheet as its own window): the Mac app's window, the Quest's panel.
 - The Layout chip (Solving, Learning, Drill sets of sheets).
 - Messages ("Pair solved") and the section's own step on the badge ("F2L · pair 3 of 4").
-- The Smart cube tab folded into the cube source and the Everywhere sheets.
 - Snap guides for free sheets (C2), the shelf (C3) for a narrow window and the phone.

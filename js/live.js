@@ -9,7 +9,9 @@
 // from js/cubetab.js, cubePlayerTurn), while the cube on the page is the cube in your hands
 // (liveInStep). When it is not, a note under the moves says so, with Use my cube. When a cube
 // connects and is not in step, the page asks once whether to make it the scramble; Don't ask
-// again turns the ask off, and Settings turns it on again (cw:smartAsk).
+// again turns the ask off, and Settings turns it on again (cw:smartAsk). The smart cube sheet reads
+// its moves and its stage with the hold the picture shows (liveHoldSync), and a hold said to its
+// Listen turns the picture (liveHoldFromTab).
 // The Cross tab's Check my plan follows the moves made on the player (a step back, then a move, backs
 // out the moves after it), and moves typed there show on the player (crossFollow, crossTyped).
 const PLAYER={hold:null}; // {top, front}: color indices, or null for the player's own hold
@@ -46,6 +48,17 @@ function playerHoldDraw(){
   const D=playerHeldCube();
   $$('#viewHold .ht').forEach(b=>{const at=b.parentNode.dataset.place==='up'?0:2;b.setAttribute('aria-pressed',String(!!D&&D.center[at]===+b.dataset.c));});
   const box=$('#viewHold');if(box)box.classList.toggle('held',!!PLAYER.hold);
+  liveHoldSync();
+}
+// The smart cube sheet (js/cubetab.js) reads the moves and the stage as the picture holds the cube.
+function liveHoldSync(){
+  if(typeof cubeTab==='undefined'||typeof cubeTabSetHold!=='function'||isBeg())return;
+  const D=playerHeldCube(),h=D&&liveHoldOf(D);if(h)cubeTabSetHold(h,true);
+}
+// A hold said to the sheet's Listen ("top yellow, front green", "x prime"): the picture turns to it.
+function liveHoldFromTab(){
+  const c=(cubeTab.hold||CUBE_TAB_HOLDS[0]).cube.center;PLAYER.hold={top:c[0],front:c[2]};
+  if(view.mode==='net')setViewNet(false);else drawMain();playerHoldDraw();
 }
 function playerHoldMount(){
   for(const [place,cs] of [['up',CUBE_TAB_TOPS],['front',CUBE_TAB_FRONTS]]){
@@ -140,7 +153,7 @@ function crossTyped(){clearTimeout(crossTypeTimer);crossTypeTimer=setTimeout(()=
 if(typeof document!=='undefined'){
   playerHoldMount();
   document.addEventListener('cw:smartmoves',e=>liveSmartMoves(e.detail||{}));
-  document.addEventListener('cw:smart',e=>{const t=e.detail&&e.detail.type;if(t==='connect')LIVE.asked=false;if(t==='disconnect'||t==='gone'||t==='connect')liveNoteDraw();});
+  document.addEventListener('cw:smart',e=>{const t=e.detail&&e.detail.type;if(t==='connect'){LIVE.asked=false;liveHoldSync();}if(t==='disconnect'||t==='gone'||t==='connect')liveNoteDraw();});
   for(const ev of ['cw:sequence','cw:scramble','cw:tab','cw:method'])document.addEventListener(ev,()=>{liveNoteDraw();playerHoldDraw();});
   document.addEventListener('cw:step',playerHoldDraw);
   document.addEventListener('cw:yourmove',crossFollow);

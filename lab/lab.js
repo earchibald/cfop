@@ -92,7 +92,7 @@
 // moves with two opposite faces in the other order, goes on from there (f2lAlong); a hint is asked
 // for anew only when the cube is off every one of them. A step not yet begun re-picks on a mode
 // or order change.
-// The moves since the connect sit in a box of their own under the picture, as the cube tab's
+// The moves since the connect sit in a box of their own under the picture, as the site's smart cube sheet's
 // readout: merged as they come, the last ten shown, a triangle for more, Clear moves, and Clear
 // last (Shift+C), which takes the last move off the list alone.
 // The hold: the cube names its moves with its white face up and green in front, however it is
@@ -245,7 +245,7 @@ function labAtClamp(n){
   if(lab.goal&&lab.goal.at>n)lab.goal.at=n;
   if(f){if(f.at>n)f.at=n;if(f.step&&f.step.at>n)f.step.at=n;}
 }
-// The box under the picture, as the cube tab's readout (cubeTabMovesDraw): the last LAB_SHOWN moves as
+// The box under the picture, as the site's smart cube sheet's readout (cubeTabMovesDraw): the last LAB_SHOWN moves as
 // a trail (js/trail.js, the site's cw:trailDir), the count in the head, Clear last and Clear moves.
 function labMovesDraw(){
   const el=$('#moves'),ms=lab.moves;
