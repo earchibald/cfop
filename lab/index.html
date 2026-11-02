@@ -96,6 +96,9 @@ aside h2 .count{font-family:var(--mono);font-size:12px;text-transform:none;lette
 .spoil:hover .sp-m:not(.on){background:var(--text);box-shadow:0 0 0 2px var(--text)}
 .sp-m.on{background:none;box-shadow:none;color:inherit;user-select:auto;-webkit-user-select:auto}
 .sp-btn{font-family:var(--sans);font-size:11.5px;padding:1px 7px;margin-left:6px;vertical-align:1px;color:var(--muted)}.spoil:hover .sp-btn{color:var(--text)}.spoil.open .sp-btn{display:none}
+.patwin .togs{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 0}.patwin .togs button{padding:3px 10px;font-size:12.5px;color:var(--muted);background:transparent}
+.patwin .togs button[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--panel))}.patwin .togs button[aria-pressed="true"]::before{content:'✓ ';color:var(--accent)}
+.patwin .ent .pair{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}.patwin .ent .pair .pos{color:var(--faint);font-size:12px;min-width:76px}.patwin .ent .pair .cs{color:var(--text);font-weight:600;font-size:12.5px}.patwin .ent .pair code{color:var(--text)}
 .patwin .none{color:var(--faint);font-size:13px;padding:8px 0}
 /* The F2L guide: a window as Patterns, to its right by default. */
 .f2lwin{left:432px;width:380px}
@@ -250,6 +253,7 @@ body.cba .pt-tile{display:flex;align-items:center;justify-content:center}
 </aside>
 <section class="patwin" id="pat" hidden role="dialog" aria-labelledby="patTitle">
   <div class="head" title="Drag to move the window"><b id="patTitle">Patterns</b><span class="count" id="patCount"></span><span class="grow"></span><button id="patNew" title="Press when you have scrambled the cube. No moves are made: the patterns start over, and the cross on the bottom as held is the first goal. The entry counts its solutions by length up to 7 moves and lists up to three of the shortest, first move shown: click a line to reveal the next move. The cross goes in the list when you make it, with your moves.">New scramble<kbd>N</kbd></button><button class="ghost" id="patClear" title="Empty the list of patterns">Clear</button><button id="patClose" title="Close the window">Close<kbd>Esc</kbd></button></div>
+  <div class="togs" id="patTogs" role="group" aria-label="What to recognize"><button class="pat-tog" data-pat="cross" aria-pressed="true" title="Name the cross: at New scramble, its shortest solutions; then the moves you made it in">Cross</button><button class="pat-tog" data-pat="f2l" aria-pressed="true" title="Name each free pair as one of the 41 F2L cases, with its moves covered">F2L</button><button class="pat-tog" data-pat="ll" aria-pressed="true" title="Name the two-look OLL or PLL case on the cube, with its algorithm covered">OLL · PLL</button></div>
   <div class="list" id="patList" aria-label="The patterns found, newest first"></div>
 </section>
 <section class="patwin f2lwin" id="f2l" hidden role="dialog" aria-labelledby="f2lTitle">
@@ -286,6 +290,7 @@ body.cba .pt-tile{display:flex;align-items:center;justify-content:center}
 <script src="../js/paint.js"></script>
 <script src="smack.js"></script>
 <script src="../js/f2l.js"></script>
+<script src="../js/patterns.js"></script>
 <script src="lab.js"></script>
 </body>
 </html>

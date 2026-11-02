@@ -12,7 +12,8 @@
 //   moves: the algorithm as held, with a whole-cube turn first where the cross is not down, a U
 //          turn before it where the case needs one, and the last U turn for the edges. Empty for
 //          the cross, the pairs and a solved cube.
-//   held:  the cube as it came in; down: the color of the cross taken
+//   held:  the cube as it came in; down: the color of the cross taken; turn: the whole-cube turn
+//          that brings that cross down ([] when it is down)
 // The cross is looked for with each color down. The one furthest along wins: a cross, then more
 // pairs, then the last layer steps. Until a cross is complete, only `prefer` (a color name, white
 // by default) counts, so a fresh scramble reads as the cross the user means to build. With the
@@ -49,7 +50,7 @@ function cfopStage(held,prefer){
     if(!best||s>best.s)best={r,X,p,down,s};
   }
   const {r,X,p,down}=best,color=COLOR_NAMES_E[down],turn=r?[r]:[];
-  const base={stage:'',name:'',sub:'',moves:[],held,down:color};
+  const base={stage:'',name:'',sub:'',moves:[],held,down:color,turn};
   if(p.solved)return {...base,stage:'solved',name:'Solved'};
   if(!p.cross)return {...base,stage:'cross',name:'Cross',sub:`${p.edges} of 4 ${color} edges`+(p.edges===4?`: turn the ${color} layer to match the centers`:'')};
   if(!p.f2l)return {...base,stage:'f2l',name:'F2L',sub:`${p.pairs} of 4 pairs`};
