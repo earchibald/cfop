@@ -113,6 +113,12 @@
           <div class="scan-row"><button class="small ghost" id="smartTabListCancel" title="Stop the search and choose no cube">Cancel</button></div>
         </div>
       </div>
+      <!-- Patterns (js/patterns-ui.js, the reading in js/patterns.js, shared with the lab): the cases the cube on the page shows, named -->
+      <div class="panel patpanel hidden" id="patPanel">
+        <div class="row pat-head"><h2>Patterns</h2><span class="muted pat-count" id="patCount"></span><span class="grow"></span><button class="small ghost" id="patClear" title="Empty the list of patterns">Clear</button></div>
+        <div class="pat-togs" role="group" aria-label="What to recognize"><button type="button" class="small pat-tog" data-pat="cross" aria-pressed="false" title="Name the cross: at a new scramble, its shortest solutions; then the moves you made it in">Cross</button><button type="button" class="small pat-tog" data-pat="f2l" aria-pressed="false" title="Name each free pair as one of the 41 F2L cases, with its moves covered">F2L</button><button type="button" class="small pat-tog" data-pat="ll" aria-pressed="false" title="Name the two-look OLL or PLL case on the cube, with its algorithm covered">OLL · PLL</button></div>
+        <div class="pat-list" id="patList" aria-live="polite" aria-label="The patterns found, newest first"></div>
+      </div>
       <details class="panel planfold" id="planFold">
         <summary title="Show a CFOP plan for this scramble"><h2>Reveal a CFOP plan for this scramble</h2></summary>
         <div class="row" style="justify-content:space-between;margin-top:10px">
@@ -329,6 +335,7 @@
 <script src="js/bridge.js"></script>
 <script src="js/smart-ui.js"></script>
 <script src="js/stage.js"></script>
+<script src="js/patterns.js"></script>
 <script src="js/trail.js"></script>
 <script src="js/cubetab.js"></script>
 <script src="js/f2l-ui.js"></script>
@@ -342,6 +349,7 @@
 <script src="js/live.js"></script>
 <script src="js/vcube.js"></script>
 <script src="js/crosslook.js"></script>
+<script src="js/patterns-ui.js"></script>
 <script src="js/start.js"></script>
 <script src="js/start-app.js"></script>
 <script src="js/levelmenu.js"></script>
