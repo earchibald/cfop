@@ -1024,3 +1024,25 @@ body.onboard .foot{padding-bottom:56px}
 .look-say{margin:0 0 4px;font-weight:500}
 .look-why{margin:0;font-size:13.5px}
 @media (max-width:760px){.look-row{flex-wrap:wrap}.look-row .muted{flex-basis:100%;white-space:normal}.look-cube{width:170px;height:157px}}
+/* Patterns (js/patterns-ui.js): three toggles, not exclusive, then the cases named, newest first */
+.patpanel .pat-head .grow{flex:1}
+.patpanel .pat-count{font-size:13px}
+.patpanel .pat-togs{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 10px}
+.patpanel .pat-tog{color:var(--muted);background:transparent}
+.patpanel .pat-tog[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--panel))}
+.patpanel .pat-tog[aria-pressed="true"]::before{content:'✓ ';color:var(--accent)}
+.patpanel .pat-list{display:flex;flex-direction:column;max-height:360px;overflow-y:auto}
+.patpanel .pat-none{margin:0;font-size:13px}
+.patpanel .pat-ent{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.patpanel .pat-ent:first-child{border-top:0}
+.patpanel .pat-ent time{grid-row:span 3;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;padding-top:2px}
+.patpanel .pat-ent .pat-line b{font-weight:600;margin-right:4px}
+.patpanel .pat-ent>code,.patpanel .pat-sols code{font-size:13px}
+.patpanel .pat-ent>code,.patpanel .pat-data,.patpanel .pat-sols{grid-column:2}
+.patpanel .pat-data{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 8px}
+.patpanel .pat-data b{color:var(--text);font-weight:600}
+.patpanel .pat-sols{display:flex;flex-direction:column;gap:3px}
+.patpanel .pat-sols .more{font-size:12px;color:var(--muted)}
+.patpanel .pat-pair{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+.patpanel .pat-pair .pos{font-size:12px;color:var(--muted);min-width:76px}
+.patpanel .pat-pair .cs{font-weight:600;font-size:13px}

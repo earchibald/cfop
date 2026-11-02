@@ -54,9 +54,12 @@
 // knobs judge right, and the knobs that would judge them best. Save data writes the records as a
 // JSON file for tuning away from the lab. See docs/lab-fat-moves.md.
 // Patterns (P): each state the cube reports is read as the CFOP stage of the cube as held
-// (cfopStage, js/stage.js), with the color on the bottom as held as the cross. A two-look OLL or
-// PLL case goes in the Patterns window with the moves that solve it as held, newest first, the same
-// case once until another comes or the cube is solved; kept in cw:labPatterns. P opens the window,
+// (cfopStage, js/stage.js, through js/patterns.js, which the site's Patterns sheet shares), with the
+// color on the bottom as held as the cross. Three toggles under the head, not exclusive, all on by
+// default (cw:labPatOn): Cross, F2L (each free pair as one of the 41 cases, one entry for the pairs
+// together, with the book's moves) and OLL · PLL (a two-look case with the moves that solve it as
+// held). An entry goes in newest first, the same case once until another comes or the cube is
+// solved; kept in cw:labPatterns. P opens the window,
 // Esc or P closes it. New scramble (N) is the user's word that the cube in their hands is a fresh
 // scramble: it makes no moves. The matcher starts over with the cross on the bottom as held as its
 // first goal: an entry for the cube as it is, with the shortest cross, the count of the solutions
@@ -106,10 +109,9 @@
 // The pictures are SVG text from renderCube3D and from numbers, as on the site: no user text.
 const lab={conn:null,shown:null,target:null,queue:[],anim:null,raf:0,asked:false,want:false,patOpen:{},
   q:null,qTo:null,qraf:0,qAt:0,raw:null,basis:null,gyro:false,moves:[],jump:false,hold:null,iso:false,hidden:false,view:{yaw:0,pitch:0},drag:null,
-  battLogged:null,keys:'',holdSrc:'load',busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patLast:null,goal:null,patPos:null,f2l:null,f2lPos:null,winTop:'pat',copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false,
+  battLogged:null,keys:'',holdSrc:'load',busy:false,reading:false,listEnd:null,pickSeq:0,macWait:null,det:null,turn:null,snap:30,twist:null,twistMs:45,twistTimer:0,pats:[],patT:null,patOn:null,goal:null,patPos:null,f2l:null,f2lPos:null,winTop:'pat',copyTimer:0,copyStateTimer:0,times:[],trace:[],traceRaf:0,confirmOpen:false,
   fat:null,fatQ:[],fatV:new Map(),fatAts:[],askAt:0,fatRecs:[],fatTruth:'any',fatLast:null,fatRaf:0};
 const LAB_SHOWN=10,LAB_TRACE_MS=4000,LAB_PAT_MAX=200,LAB_CROSS_MAX=7,LAB_SOLS_SHOWN=3;
-const LAB_PAT_STEPS={eo:'OLL edges',co:'OLL corners',cp:'PLL corners',ep:'PLL edges'};
 // The cameras: straight on, the cube as it sits in space; and isometric, a little from the right
 // and above, the site's usual view.
 const LAB_FLAT={yaw:0,pitch:0},LAB_ISO={yaw:-32,pitch:28};
@@ -521,9 +523,9 @@ function labHeldIn(cube,h){return cube&&h&&h.moves.length?applyAlg(cube,h.moves)
 // After New scramble the cross on the bottom as held is the first goal: once made, it goes in the
 // list with the moves it took, and the goal is spent.
 function labPatRead(cube){
-  if(!cube||typeof cfopStage!=='function')return;
-  const held=labHeld(cube),st=cfopStage(held,LAB_COLORS[held.center[3]]);
-  if(lab.goal&&st.stage!=='cross'&&st.down===lab.goal.color){
+  if(!cube||typeof patStep!=='function')return;
+  const held=labHeld(cube),prefer=LAB_COLORS[held.center[3]],on=lab.patOn;
+  if(lab.goal&&on.cross&&patCrossMade(held,lab.goal.color)){
     const g=lab.goal,moves=lab.moves.slice(g.at),n=moves.length;lab.goal=null;
     lab.pats.unshift({t:Date.now(),step:'Cross',name:n+(n===1?' move':' moves'),moves:moves.join(' '),
       sub:`The ${g.color} cross, made in ${n} moves. The shortest was ${g.optimal}.`});
@@ -531,27 +533,29 @@ function labPatRead(cube){
     labPatSave();labPatDraw();
     labLog('cross',`Cross: ${g.color} in ${n} moves (shortest ${g.optimal}): ${moves.join(' ')||'no moves'}.`);
   }
-  if(st.stage==='solved'){lab.patLast=null;return;}
-  const step=LAB_PAT_STEPS[st.stage];if(!step)return;
-  const key=st.stage+':'+st.name;if(key===lab.patLast)return;lab.patLast=key;
-  lab.pats.unshift({t:Date.now(),step,name:st.name,moves:st.moves.join(' '),sub:st.sub});
+  const es=patStep(lab.patT,held,on,prefer);if(!es.length)return;const t=Date.now();
+  es.forEach((e,i)=>{const x={t:t+i,step:e.step,name:e.name,moves:e.moves?e.moves.join(' '):'',sub:e.sub};
+    if(e.pairs)x.pairs=e.pairs.map(p=>({pos:p.pos,n:p.n,grp:p.grp,moves:p.moves.join(' ')}));lab.pats.unshift(x);});
   if(lab.pats.length>LAB_PAT_MAX)lab.pats.length=LAB_PAT_MAX;
   labPatSave();labPatDraw();
 }
+// The toggles: Cross, F2L, OLL · PLL; any number on, all on by default (cw:labPatOn).
+function labPatOnLoad(){try{const o=JSON.parse(localStorage.getItem('cw:labPatOn')||'null');if(o&&typeof o==='object')return {cross:!!o.cross,f2l:!!o.f2l,ll:!!o.ll};}catch(e){}return {cross:true,f2l:true,ll:true};}
+function labPatOnDraw(){document.querySelectorAll('#patTogs .pat-tog').forEach(b=>b.setAttribute('aria-pressed',String(!!lab.patOn[b.dataset.pat])));}
+function labPatToggle(kind){lab.patOn[kind]=!lab.patOn[kind];try{localStorage.setItem('cw:labPatOn',JSON.stringify(lab.patOn));}catch(e){}labPatOnDraw();
+  if(lab.patOn[kind]){lab.patT=patTracker();labPatRead(lab.target||lab.shown);}}
 // New scramble (N): the cube in the hands is a fresh scramble; no moves are made. The entry holds
 // the cross on the bottom as held: its color, the shortest length, the count of the solutions by
 // length up to LAB_CROSS_MAX and the shortest ones, in letters as held (reframe puts the bottom as
 // held where the engine's D cross is). The matcher starts over, with that cross as its goal.
 function labPatNew(){
-  const cube=lab.target||lab.shown||new Cube(),held=labHeld(cube),color=LAB_COLORS[held.center[3]];
-  const r=crossSolutions(reframe(held),LAB_CROSS_MAX),made=r.optimal===0;
-  const lens=[];if(!made)for(let n=r.optimal;n<=LAB_CROSS_MAX;n++)lens.push(n+' moves: '+(r.byLen[n]||[]).length);
-  if(!made&&!lens.length)lens.push('none in '+LAB_CROSS_MAX+' moves or fewer');
-  const counts=made?'already made':lens.join(' · '),sols=r.byLen[r.optimal]||[];
+  const cube=lab.target||lab.shown||new Cube(),held=labHeld(cube);lab.patT=patTracker();
+  if(!lab.patOn.cross){lab.goal=null;labPatShow(true);labF2LReset();labLog('scramble',`New scramble, as held ${labHoldWords(lab.hold)}. Cross is off in Patterns.`);return;}
+  const r=patCross(held,LAB_CROSS_MAX),{color,made,lens,sols}=r,counts=made?'already made':lens.join(' · ');
   const e={t:Date.now(),step:'Scramble',name:made?'Cross made':'Cross first',moves:'',cross:{color,optimal:r.optimal,counts,lens,sols},
     sub:`As held: ${labHoldWords(lab.hold)}. The cross on the bottom is ${color}. Each solution is counted once, up to ${LAB_CROSS_MAX} moves.`};
   lab.pats.unshift(e);if(lab.pats.length>LAB_PAT_MAX)lab.pats.length=LAB_PAT_MAX;
-  lab.patLast=null;lab.goal=made?null:{color,optimal:r.optimal,at:lab.moves.length};
+  lab.goal=made?null:{color,optimal:r.optimal,at:lab.moves.length};
   labPatSave();labPatDraw();labPatShow(true);labF2LReset();
   labLog('scramble',`New scramble, as held ${labHoldWords(lab.hold)}. ${color} cross: ${made?'already made':`shortest ${r.optimal}; ${counts}`}.`);
 }
@@ -562,7 +566,7 @@ function labPatDraw(){
   const el=$('#patList'),n=lab.pats.length,mk=(tag,cls,text)=>{const x=document.createElement(tag);if(cls)x.className=cls;if(text!=null)x.textContent=text;return x;};
   $('#patCount').textContent=n?n+(n===1?' pattern':' patterns'):'';$('#patClear').disabled=!n;
   el.textContent='';
-  if(!n){el.appendChild(mk('div','none','No patterns yet. A two-look OLL or PLL case the cube shows goes here.'));return;}
+  if(!n){el.appendChild(mk('div','none','No patterns yet. A cross, an F2L case or a two-look OLL or PLL case the cube shows goes here.'));return;}
   for(const e of lab.pats){
     const d=mk('div','ent'),t=new Date(e.t),p=x=>String(x).padStart(2,'0');
     d.appendChild(mk('time',null,`${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}`));
@@ -572,6 +576,8 @@ function labPatDraw(){
       data.appendChild(document.createTextNode(c.optimal?`: shortest ${c.optimal}`:': already made'));for(const l of c.lens||[c.counts])data.appendChild(mk('span','len',l));d.appendChild(data);
       if(c.sols&&c.sols.length){const s=mk('div','sols');c.sols.slice(0,LAB_SOLS_SHOWN).forEach((sol,i)=>{const line=mk('code');line.appendChild(labSpoil(sol,e.t+':sol:'+i));s.appendChild(line);});
         if(c.sols.length>LAB_SOLS_SHOWN)s.appendChild(mk('span','more',`+${c.sols.length-LAB_SOLS_SHOWN} more`));d.appendChild(s);}}
+    if(e.pairs){const s=mk('div','sols');e.pairs.forEach((q,i)=>{const line=mk('div','pair');line.title=`${q.pos}: case ${q.n}, ${q.grp.toLowerCase()}`;
+      line.appendChild(mk('span','pos',q.pos));line.appendChild(mk('span','cs','Case '+q.n));const c=mk('code');c.appendChild(labSpoil(q.moves,e.t+':pair:'+i));line.appendChild(c);s.appendChild(line);});d.appendChild(s);}
     el.appendChild(d);
   }
 }
@@ -637,7 +643,7 @@ function labWinDrag(w,key){
 }
 // The window in front: the last one opened or pressed. Esc closes it first.
 function labWinFront(id){lab.winTop=id;for(const x of ['pat','f2l']){const el=$('#'+x);if(el)el.style.zIndex=x===id?'7':'6';}}
-function labPatClear(){lab.pats=[];lab.patLast=null;labPatSave();labPatDraw();}
+function labPatClear(){lab.pats=[];lab.patT=patTracker();labPatSave();labPatDraw();}
 // ----- the F2L guide: the first two layers, one pair at a time -----
 // lab.f2l: open; mode ('shortest' or 'corner'); order (the four slot names, cw:labF2LOrder); combo
 // (Look for combinations); target (a pair the user clicked, or null); done (the pairs the guide has
@@ -1486,7 +1492,8 @@ function labStart(){
   $('#macGo').onclick=labMacGo;$('#macCopy').onclick=labCopyMac;$('#copyState').onclick=labCopyState;$('#mac').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();labMacGo();}});
   $('#confirmYes').onclick=()=>labConfirmEnd(true);$('#confirmNo').onclick=()=>labConfirmEnd(false);
   $('#sideBtn').onclick=()=>labSide($('#side').hidden);
-  lab.pats=labPatLoad();labPatDraw();$('#patBtn').onclick=()=>labPatShow($('#pat').hidden);$('#patClose').onclick=()=>labPatShow(false);$('#patClear').onclick=labPatClear;$('#patNew').onclick=labPatNew;labWinDrag($('#pat'),'cw:labPat');
+  lab.pats=labPatLoad();lab.patT=patTracker();lab.patOn=labPatOnLoad();labPatOnDraw();labPatDraw();
+  document.querySelectorAll('#patTogs .pat-tog').forEach(b=>b.onclick=()=>labPatToggle(b.dataset.pat));$('#patBtn').onclick=()=>labPatShow($('#pat').hidden);$('#patClose').onclick=()=>labPatShow(false);$('#patClear').onclick=labPatClear;$('#patNew').onclick=labPatNew;labWinDrag($('#pat'),'cw:labPat');
   labF2LStart();
   $('#patList').addEventListener('click',e=>{const s=e.target.closest&&e.target.closest('.spoil');if(!s||s.classList.contains('one'))return;e.preventDefault();labSpoilStep(s,!!e.target.closest('.sp-btn'));});
   document.addEventListener('keydown',labKeys);

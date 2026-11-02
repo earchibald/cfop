@@ -330,6 +330,15 @@ async function page(){
   key('Escape');assert.ok($('#pat').hidden,'Esc closes the window');key('p');assert.ok(!$('#pat').hidden);key('p');assert.ok($('#pat').hidden,'P closes it too');
   click($('#patBtn'));assert.ok(!$('#pat').hidden,'the button opens it');click($('#patClose'));assert.ok($('#pat').hidden,'Close closes it');
   await show(new Cube());click($('#patClear'));assert.strictEqual(L().pats.length,0,'Clear empties the list');
+  // The toggles under the head: Cross, F2L, OLL · PLL, all three on in the lab. F2L: a free pair is named as its
+  // case, with the book's moves covered; off, it is not, and the toggle is kept (cw:labPatOn)
+  assert.deepStrictEqual($$('#patTogs .pat-tog').map(b=>b.dataset.pat+':'+b.getAttribute('aria-pressed')),['cross:true','f2l:true','ll:true'],'all three on');
+  {const f12=require('./vm-load')('js/engine.js','js/algs.js')('F2L_CASES')[11];await show(w.applyAlg(new Cube(),inv(f12.alg)));
+    assert.strictEqual(L().pats.length,1,'an F2L case');assert.strictEqual(L().pats[0].step,'F2L');assert.strictEqual(L().pats[0].name,'Case '+f12.n);
+    const pr=$$('#patList .ent')[0].querySelector('.pair');assert.strictEqual(pr.querySelector('.cs').textContent,'Case '+f12.n);assert.strictEqual(pr.querySelector('.pos').textContent,'front right');assert.ok(pr.querySelector('.spoil'),'covered');
+    await show(new Cube());click($('#patClear'));
+    click($('#patTogs .pat-tog[data-pat="f2l"]'));assert.strictEqual($('#patTogs .pat-tog[data-pat="f2l"]').getAttribute('aria-pressed'),'false');assert.strictEqual(JSON.parse(storage.getItem('cw:labPatOn')).f2l,false,'kept');
+    await show(w.applyAlg(new Cube(),inv(f12.alg)));assert.strictEqual(L().pats.length,0,'F2L off: no entry');await show(new Cube());}
   // New scramble (N): no moves are made. The cube in the hands is the scramble: the entry holds the cross on the
   // bottom as held (white up, so yellow), its shortest length, the count by length up to 7 and the shortest
   // solutions; the matcher starts over with that cross as its goal and lists it, with the moves, when it is made
