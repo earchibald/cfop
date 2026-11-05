@@ -70,14 +70,15 @@ function hiddenOn(){return !!store.get('hidden',false);}
 function setHidden(on){store.set('hidden',!!on);drawMain();}
 function view3D(){return hiddenOn()?{yaw:view.yaw,pitch:view.pitch,hidden:true,scale:40}:{yaw:view.yaw,pitch:view.pitch};}
 // The hold row under the cube (js/live.js) turns the picture: rot, or a turned cube on the net.
-// Cross Trainer (js/crosstrain.js) grays all but the cross edges of the stickers drawn; Find the
+// Cross Trainer (js/crosstrain.js) dims all but the cross edges of the stickers drawn, to its level; Find the
 // edges puts a class on each sticker, so a click names it.
 function drawMain(){
   const f=displayedCube.toFacelets();const svg=$('#cube');const H=typeof playerHoldView==='function'?playerHoldView(displayedCube):null,v={...view3D(),...(H?{rot:H.rot}:{})};
-  const fd=g=>(typeof crossTrainFade==='function'&&crossTrainFade(g))||fadeSet,cls=typeof crossFindCls==='function'?crossFindCls():null;
-  if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');const g=H?applyAlg(displayedCube,H.moves).toFacelets():f;svg.innerHTML=renderNet(g,{fade:H?(typeof crossTrainFade==='function'&&crossTrainFade(g))||null:fd(g)});}
-  else if(anim.move&&anim.t<1){svg.setAttribute('viewBox','0 0 400 360');const g=anim.from.toFacelets();svg.innerHTML=renderCube3D(g,{...v,fade:fd(g),move:anim.move,t:Math.max(anim.t,0.01)});}
-  else{svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(f,{...v,fade:fd(f),lift:mainLift,cls});}
+  const ct=g=>typeof crossTrainFade==='function'?crossTrainFade(g):null,cls=typeof crossFindCls==='function'?crossFindCls():null;
+  const fd=(g,base=fadeSet)=>{const t=ct(g);return t?{fade:t,dim:crossTrainDim()}:{fade:base};};
+  if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');const g=H?applyAlg(displayedCube,H.moves).toFacelets():f;svg.innerHTML=renderNet(g,fd(g,H?null:fadeSet));}
+  else if(anim.move&&anim.t<1){svg.setAttribute('viewBox','0 0 400 360');const g=anim.from.toFacelets();svg.innerHTML=renderCube3D(g,{...v,...fd(g),move:anim.move,t:Math.max(anim.t,0.01)});}
+  else{svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(f,{...v,...fd(f),lift:mainLift,cls});}
   drawDragHint();
 }
 // The mark: the solved cube in the player view, half way through R. The same code draws
@@ -888,13 +889,16 @@ function openSettings(open){if($('#setBg'))return;
     <p class="muted">The Animate and Hidden faces chips on the cube change the same settings. Animate is off when your device asks for less motion.</p>
     <h3>Layout</h3>
     <label class="setrow" title="CFOP on a computer: the cube fills the page, and the panels of each section are sheets beside it"><input type="checkbox" id="setStage"${store.get('stageView',true)!==false?' checked':''}> Stage view: the cube fills the page</label>
-    <p class="muted">The sections float over the cube. Each panel is a sheet on the right: fold it, close it, or drag it off to float. Off: the page as before.</p>
+    <p class="muted">The sections float over the cube. Each panel is a sheet on the right: fold it, or drag it off to float. Its × puts it back. Off: the page as before.</p>
     <h3>Timer</h3>
     <label class="setrow" title="Count down 15 seconds to look at the cube before the timer starts, as in a competition"><input type="checkbox" id="setInsp"${store.get('insp',true)?' checked':''}> 15 s inspection</label>
     <p class="muted">The box by the timer changes the same setting.</p>
     <h3>Pictures</h3>
     <label class="setrow" title="Turn each case algorithm on the cube, over and over: on a hover or focus of a case card, and in the details window"><input type="checkbox" id="setPlayPics"${store.get('playPics',false)?' checked':''}> Play case animations</label>
     <p class="muted">The details window opens on Play. On a computer, a case card plays under the pointer. When this is off, the details window opens on the picture, and Play is one tap away. Off when your device asks for less motion.</p>
+    ${typeof crossDimPct==='function'?`<h3>Cross Trainer</h3>
+    <label class="setrow setrange" title="How bright the pieces that are not cross edges show while Cross Trainer is on. 0% is black"><span>Other pieces</span><input type="range" id="setCrossDim" min="0" max="${CROSS_DIM_MAX}" step="1" value="${crossDimPct()}"><output id="setCrossDimOut">${crossDimPct()}%</output></label>
+    <p class="muted">The cube shows the change as you move the slider. Make it lower to see only the cross edges and the centers. At 0% the other pieces are black.</p>`:''}
     <h3>Color Blind Assist</h3>
     <label class="setrow" title="Put the letter of its color on each sticker: W white, Y yellow, R red, O orange, G green, B blue"><input type="checkbox" id="setCba"${store.get('cba',false)?' checked':''}> Show a letter on each sticker</label>
     <p class="muted">W white, Y yellow, R red, O orange, G green, B blue. A gray sticker has no letter.</p>
@@ -914,15 +918,18 @@ function openSettings(open){if($('#setBg'))return;
    <div class="row" style="justify-content:flex-end;margin-top:14px"><button id="setCancel" title="Close and keep the settings as they were">Cancel<span class="hk">Esc</span></button><button class="primary" id="setSave" title="Keep these settings and close">Save<span class="hk">Enter</span></button></div>
    <div class="appver" id="appVer">Twistwright ${esc(APP_VERSION)}</div>
   </div>`;
-  const close=()=>{document.removeEventListener('keydown',keys,true);document.removeEventListener('keyup',keys,true);bg.remove();$('#settingsBtn').focus();};
+  const dim0=typeof crossDimPct==='function'?crossDimPct():null;
+  const close=()=>{if(dim0!=null&&crossDimPct()!==dim0){store.set('crossDim',dim0);drawMain();}document.removeEventListener('keydown',keys,true);document.removeEventListener('keyup',keys,true);bg.remove();$('#settingsBtn').focus();};
   const save=()=>{setAnim($('#setAnim').checked);if($('#setHidden').checked!==hiddenOn())setHidden($('#setHidden').checked);store.set('insp',$('#setInsp').checked);$('#inspChk').checked=$('#setInsp').checked;store.set('refNext',$('#setRefNext').checked);store.set('playPics',$('#setPlayPics').checked);setCba($('#setCba').checked);
-    store.set('trailDir',$('#setTrailRtl').checked?'rtl':'ltr');store.set('smartAsk',$('#setSmartAsk').checked);if(typeof cubeTabMovesDraw==='function')cubeTabMovesDraw();close();};
+    store.set('trailDir',$('#setTrailRtl').checked?'rtl':'ltr');store.set('smartAsk',$('#setSmartAsk').checked);if(typeof cubeTabMovesDraw==='function')cubeTabMovesDraw();if(dim0!=null&&$('#setCrossDim')){const d=+$('#setCrossDim').value;close();store.set('crossDim',d);drawMain();return;}close();};
   const keys=e=>{if(e.key==='Tab')return;e.stopPropagation();if(e.type!=='keydown')return;
     // Enter in Your data belongs to its box and its buttons.
     if(e.key==='Escape'){e.preventDefault();close();}else if(e.key==='Enter'&&!(e.target.closest&&e.target.closest('#setData'))){e.preventDefault();save();}};
   document.body.appendChild(bg);
   bg.addEventListener('click',e=>{if(e.target===bg)close();});
   $('#setCancel').onclick=close;$('#setSave').onclick=save;
+  // Cross Trainer's level: the cube shows each move of the slider; Cancel puts it back.
+  const cd=$('#setCrossDim');if(cd)cd.oninput=()=>{$('#setCrossDimOut').textContent=cd.value+'%';store.set('crossDim',+cd.value);drawMain();};
   // The Listen log: to the clipboard, or shown in the window where the clipboard is not allowed.
   const lb=$('#setListenLog');if(lb)lb.onclick=()=>{const t=listenLogText();const show=()=>{let ta=$('#setListenText');if(!ta){ta=document.createElement('textarea');ta.id='setListenText';ta.readOnly=true;ta.rows=6;ta.style.width='100%';lb.parentNode.after(ta);}ta.value=t;ta.select();};
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>{lb.textContent='Copied';},show);else show();};

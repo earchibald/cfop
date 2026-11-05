@@ -46,6 +46,21 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   $('#rail button[data-tab="f2l"]').click();await sleep(20);
   assert.strictEqual(run(`crossTrainFade(displayedCube.toFacelets())`),null,'no fade on another tab');
   $('#rail button[data-tab="cross"]').click();await sleep(20);
+  // The level of the other pieces: 22% over black by default; Settings > Cross Trainer moves it, 0% is black.
+  const blacks=()=>$$('#cube polygon[fill="#000"]').length,dimmed=v=>$$('#cube polygon[opacity="'+v+'"]').length;
+  assert.ok(blacks()>0&&dimmed(0.22)>0,'22% over black by default');
+  $('#settingsBtn').click();const sl=$('#setCrossDim');assert.ok(sl,'the slider in Settings');
+  assert.strictEqual(+sl.max,40,'up to 40%');assert.strictEqual(sl.value,'22');assert.ok(sl.closest('label').title,'the slider has a title');
+  sl.value='0';sl.dispatchEvent(new w.Event('input',{bubbles:true}));
+  assert.strictEqual($('#setCrossDimOut').textContent,'0%');
+  assert.ok(blacks()>0&&dimmed(0.22)===0,'the cube shows 0% at once: black');
+  $('#setCancel').click();assert.ok(dimmed(0.22)>0,'Cancel puts 22% back');assert.strictEqual(w.localStorage.getItem('cw:crossDim'),'22');
+  $('#settingsBtn').click();$('#setCrossDim').value='35';$('#setCrossDim').dispatchEvent(new w.Event('input',{bubbles:true}));$('#setSave').click();
+  assert.strictEqual(w.localStorage.getItem('cw:crossDim'),'35','Save keeps it');assert.ok(dimmed(0.35)>0,'the cube at 35%');
+  w.localStorage.setItem('cw:crossDim','0');run('drawMain()');
+  assert.strictEqual($$('#cube polygon[opacity="0"]').length,0,'at 0% the other stickers are not drawn: black shows');
+  run(`(view.mode='net',drawMain())`);assert.strictEqual($$('#cube rect[fill="#000"]').length,54-14,'the net: 40 stickers black');
+  assert.strictEqual($$('#cube rect').length,54,'the net: no color drawn over a black one');run(`(view.mode='3d',drawMain())`);w.localStorage.setItem('cw:crossDim','22');
   ct.click();assert.strictEqual(w.localStorage.getItem('cw:crossTrain'),'false','off, and kept');
   // Find the edges: a pick of each white edge; a miss counts.
   $('#crossFindBtn').click();assert.ok(run('CF.on'),'Find starts');

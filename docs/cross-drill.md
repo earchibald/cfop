@@ -41,7 +41,14 @@ the mean of the last five and the best. `cw:crossFinds` keeps the last 100: `{ms
 A button on the cube, on the Cross tab only (in the stage view, in the action bar). On, the cube in
 view keeps the colors of the four cross edges and the centers. Every other piece is gray. It follows
 whatever turns the cube: a virtual cube's keys, a smart cube's turns, the player's steps. So the eye
-learns to see the four edges alone. `cw:crossTrain`, off by default. It waits while a find runs, as
+learns to see the four edges alone. `cw:crossTrain`, off by default.
+
+How bright the other pieces show is a setting (1.67): Settings > Cross Trainer, Other pieces, a
+slider from 40% down to 0%, black. 22% by default, the level of 1.66. `cw:crossDim` keeps the
+percent. The cube shows each move of the slider; Cancel puts the old level back. At 0% only the
+cross edges and the centers have color: no cue from the other pieces. `drawMain` passes the level
+as `dim` to `renderCube3D` and `renderNet`: a faded sticker goes over black at that opacity, so the
+net and the hidden faces go black too, not the page color under them. It waits while a find runs, as
 the find would be no test with the edges lit.
 
 `drawMain` in `app.js` asks `crossTrainFade` for the stickers it draws (the turning cube too, and the
