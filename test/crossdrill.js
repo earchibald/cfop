@@ -1,7 +1,8 @@
 // The Cross drill (js/crossdrill.js, js/crosstrain.js): a drill seed gives a scramble whose best
 // cross is exactly that long, in each cross color; the same seed gives the same scramble; the Length
 // menu loads one; Find the edges times the four cross edges picked on the cube; Cross Trainer grays
-// all but the cross edges and the centers, and only on the Cross tab.
+// all but the cross edges and the centers, and only on the Cross tab; F2L Trainer does the same for
+// the eight F2L pieces on the F2L tab, at the same level.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
 function fakeStorage(seed){const m=new Map(Object.entries(seed||{}));return {getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear(),map:m};}
@@ -62,6 +63,21 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   run(`(view.mode='net',drawMain())`);assert.strictEqual($$('#cube rect[fill="#000"]').length,54-14,'the net: 40 stickers black');
   assert.strictEqual($$('#cube rect').length,54,'the net: no color drawn over a black one');run(`(view.mode='3d',drawMain())`);w.localStorage.setItem('cw:crossDim','22');
   ct.click();assert.strictEqual(w.localStorage.getItem('cw:crossTrain'),'false','off, and kept');
+  // F2L Trainer: on the F2L tab only; the eight F2L pieces and the centers keep their colors, the rest at the same level.
+  const ft=$('#f2lTrainBtn');assert.ok(ft,'the F2L Trainer button');
+  assert.strictEqual(run(`f2lTrainFade(displayedCube.toFacelets())`),null,'off: no fade');
+  ft.click();assert.strictEqual(ft.getAttribute('aria-pressed'),'true','on');assert.strictEqual(w.localStorage.getItem('cw:f2lTrain'),'true','kept');
+  assert.strictEqual(run(`trainFade(displayedCube.toFacelets())`),null,'no F2L fade on the Cross tab');
+  $('#rail button[data-tab="f2l"]').click();await sleep(20);
+  const ff=run(`f2lTrainFade(displayedCube.toFacelets())`);assert.ok(ff,'a fade on the F2L tab');
+  assert.strictEqual(ff.size,6+4*3+4*2,'the centers, four corners and four edges');
+  assert.ok(run(`(()=>{const f=displayedCube.toFacelets(),k=f2lTrainFade(f);
+    const pieces=[...cornerFacelet,...edgeFacelet].filter(p=>p.some(i=>k.has(i)));
+    return pieces.length===8&&pieces.every(p=>p.every(i=>k.has(i)))&&cornerFacelet.filter(c=>c.some(i=>k.has(i))).every(c=>c.some(i=>f[i]===0))
+      &&edgeFacelet.filter(e=>e.some(i=>k.has(i))).every(e=>e.every(i=>f[i]!==0&&f[i]!==3));})()`),'white corners and the edges with no white or yellow, whole');
+  assert.ok($$('#cube polygon[opacity="0.22"]').length>0,'the picture grays the rest at the Cross Trainer level');
+  ft.click();assert.strictEqual(run(`trainFade(displayedCube.toFacelets())`),null,'off again');
+  $('#rail button[data-tab="cross"]').click();await sleep(20);
   // Find the edges: a pick of each white edge; a miss counts.
   $('#crossFindBtn').click();assert.ok(run('CF.on'),'Find starts');
   assert.ok(/0 of 4/.test($('#crossFindOut').textContent),'the count');

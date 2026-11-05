@@ -1,10 +1,10 @@
-// ===== Cross Trainer and Find the edges =====
-// Two drills for the cross, on the Cross tab of CFOP (docs/cross-drill.md).
+// ===== Cross Trainer, Find the edges and F2L Trainer =====
+// Two drills for the cross, on the Cross tab of CFOP (docs/cross-drill.md), and F2L Trainer on the F2L tab.
 // Cross Trainer, the button on the cube (cw:crossTrain, off by default): the cube in view keeps the
 // colors of the four cross edges and the centers, and every other piece is gray, as it turns: a
 // virtual cube's keys, a smart cube's turns, the player's steps. drawMain (app.js) asks
 // crossTrainFade for the stickers it draws, and crossTrainDim for how bright the other pieces show:
-// Settings > Cross Trainer, cw:crossDim, 0 (black) to CROSS_DIM_MAX percent, 22 by default.
+// Settings > Cross and F2L Trainer, cw:crossDim, 0 (black) to CROSS_DIM_MAX percent, 22 by default.
 // Find the edges, in the Cross drill sheet: a clock starts, and a click on each cross edge on the
 // cube lifts it out with a glow. The fourth stops the clock. A click on another piece is a miss. A
 // change of the cube in view (a turn, a step) stops it. Cross Trainer waits while a find runs.
@@ -26,6 +26,21 @@ function crossTrainDim(){return crossDimPct()/100;}
 function crossTrainDraw(){const b=$('#crossTrainBtn');if(!b)return;const on=crossTrainOn();b.setAttribute('aria-pressed',String(on));
   b.title=on?'Cross Trainer is on: only the cross edges and the centers show their colors. Press to show every color':'Cross Trainer: gray every piece but the four cross edges and the centers, as you turn the cube';}
 function crossTrainSet(on){store.set('crossTrain',!!on);crossTrainDraw();drawMain();}
+// ---- F2L Trainer ----
+// The F2L tab's twin of Cross Trainer, the button on the cube there (cw:f2lTrain, off by default):
+// the eight F2L pieces keep their colors, with the centers: the four corners with the cross color
+// and the four edges with neither the cross color nor its opposite. Every other piece shows at the
+// same level as Cross Trainer's, cw:crossDim.
+function f2lTrainOn(){return !!store.get('f2lTrain',false);}
+function f2lOnF2L(){return typeof method!=='undefined'&&method==='cfop'&&typeof curTab!=='undefined'&&curTab==='f2l';}
+function f2lTrainFade(f){if(!f2lTrainOn()||!f2lOnF2L())return null;const ci=crossColorIndex(),op=(ci+3)%6,keep=new Set([4,13,22,31,40,49]);
+  for(const c of cornerFacelet)if(c.some(i=>f[i]===ci))c.forEach(i=>keep.add(i));
+  for(const e of edgeFacelet)if(!e.some(i=>f[i]===ci||f[i]===op))e.forEach(i=>keep.add(i));return keep;}
+function f2lTrainDraw(){const b=$('#f2lTrainBtn');if(!b)return;const on=f2lTrainOn();b.setAttribute('aria-pressed',String(on));
+  b.title=on?'F2L Trainer is on: only the eight F2L pieces and the centers show their colors. Press to show every color':'F2L Trainer: gray every piece but the four F2L corners, the four middle edges and the centers, as you turn the cube';}
+function f2lTrainSet(on){store.set('f2lTrain',!!on);f2lTrainDraw();drawMain();}
+// The stickers drawMain keeps in color: Cross Trainer's on the Cross tab, F2L Trainer's on the F2L tab.
+function trainFade(f){return crossTrainFade(f)||f2lTrainFade(f);}
 // ---- Find the edges ----
 function crossFindCls(){return CF.on?i=>'pk'+i:null;}
 // The cross edge with a sticker at i in facelets f, by the color of its other sticker; null for another piece.
@@ -62,6 +77,7 @@ function crossFindDraw(){const o=$('#crossFindOut');if(!o)return;const name=cros
 // ---- wiring ----
 (()=>{const cube=$('#cube'),tb=$('#crossTrainBtn'),fb=$('#crossFindBtn'),auto=$('#crossFindAuto');
   if(tb)tb.onclick=()=>crossTrainSet(!crossTrainOn());crossTrainDraw();
+  const ft=$('#f2lTrainBtn');if(ft)ft.onclick=()=>f2lTrainSet(!f2lTrainOn());f2lTrainDraw();
   if(fb)fb.onclick=()=>{if(CF.on)crossFindStop('Find stopped.');else crossFindStart();};
   if(auto){auto.checked=!!store.get('crossFindAuto',false);auto.onchange=()=>store.set('crossFindAuto',auto.checked);}
   // A click with no drag picks the sticker under the pointer. The drag of the cube captures the

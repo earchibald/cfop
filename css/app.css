@@ -1052,6 +1052,8 @@ body.onboard .foot{padding-bottom:56px}
 .cubebox .crosstrainbtn{right:auto;left:8px;bottom:38px}
 @media (max-width:760px){.cubebox .crosstrainbtn{left:4px;bottom:30px}}
 body:not([data-tab="cross"]) #crossTrainBtn,body:not([data-method="cfop"]) #crossTrainBtn{display:none!important}
+/* F2L Trainer: the same place on the F2L tab */
+body:not([data-tab="f2l"]) #f2lTrainBtn,body:not([data-method="cfop"]) #f2lTrainBtn{display:none!important}
 /* Find the edges: the row under the cross plans; a miss shakes the cube */
 .crossfind{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .crossfind #crossFindOut{margin-top:6px}

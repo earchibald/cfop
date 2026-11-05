@@ -70,11 +70,11 @@ function hiddenOn(){return !!store.get('hidden',false);}
 function setHidden(on){store.set('hidden',!!on);drawMain();}
 function view3D(){return hiddenOn()?{yaw:view.yaw,pitch:view.pitch,hidden:true,scale:40}:{yaw:view.yaw,pitch:view.pitch};}
 // The hold row under the cube (js/live.js) turns the picture: rot, or a turned cube on the net.
-// Cross Trainer (js/crosstrain.js) dims all but the cross edges of the stickers drawn, to its level; Find the
+// Cross Trainer and F2L Trainer (js/crosstrain.js) dim all but the cross edges, or the F2L pieces, of the stickers drawn, to one level; Find the
 // edges puts a class on each sticker, so a click names it.
 function drawMain(){
   const f=displayedCube.toFacelets();const svg=$('#cube');const H=typeof playerHoldView==='function'?playerHoldView(displayedCube):null,v={...view3D(),...(H?{rot:H.rot}:{})};
-  const ct=g=>typeof crossTrainFade==='function'?crossTrainFade(g):null,cls=typeof crossFindCls==='function'?crossFindCls():null;
+  const ct=g=>typeof trainFade==='function'?trainFade(g):null,cls=typeof crossFindCls==='function'?crossFindCls():null;
   const fd=(g,base=fadeSet)=>{const t=ct(g);return t?{fade:t,dim:crossTrainDim()}:{fade:base};};
   if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');const g=H?applyAlg(displayedCube,H.moves).toFacelets():f;svg.innerHTML=renderNet(g,fd(g,H?null:fadeSet));}
   else if(anim.move&&anim.t<1){svg.setAttribute('viewBox','0 0 400 360');const g=anim.from.toFacelets();svg.innerHTML=renderCube3D(g,{...v,...fd(g),move:anim.move,t:Math.max(anim.t,0.01)});}
@@ -896,8 +896,8 @@ function openSettings(open){if($('#setBg'))return;
     <h3>Pictures</h3>
     <label class="setrow" title="Turn each case algorithm on the cube, over and over: on a hover or focus of a case card, and in the details window"><input type="checkbox" id="setPlayPics"${store.get('playPics',false)?' checked':''}> Play case animations</label>
     <p class="muted">The details window opens on Play. On a computer, a case card plays under the pointer. When this is off, the details window opens on the picture, and Play is one tap away. Off when your device asks for less motion.</p>
-    ${typeof crossDimPct==='function'?`<h3>Cross Trainer</h3>
-    <label class="setrow setrange" title="How bright the pieces that are not cross edges show while Cross Trainer is on. 0% is black"><span>Other pieces</span><input type="range" id="setCrossDim" min="0" max="${CROSS_DIM_MAX}" step="1" value="${crossDimPct()}"><output id="setCrossDimOut">${crossDimPct()}%</output></label>
+    ${typeof crossDimPct==='function'?`<h3>Cross and F2L Trainer</h3>
+    <label class="setrow setrange" title="How bright the other pieces show while Cross Trainer or F2L Trainer is on. 0% is black"><span>Other pieces</span><input type="range" id="setCrossDim" min="0" max="${CROSS_DIM_MAX}" step="1" value="${crossDimPct()}"><output id="setCrossDimOut">${crossDimPct()}%</output></label>
     <p class="muted">The cube shows the change as you move the slider. Make it lower to see only the cross edges and the centers. At 0% the other pieces are black.</p>`:''}
     <h3>Color Blind Assist</h3>
     <label class="setrow" title="Put the letter of its color on each sticker: W white, Y yellow, R red, O orange, G green, B blue"><input type="checkbox" id="setCba"${store.get('cba',false)?' checked':''}> Show a letter on each sticker</label>

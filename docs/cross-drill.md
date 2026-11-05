@@ -43,7 +43,7 @@ view keeps the colors of the four cross edges and the centers. Every other piece
 whatever turns the cube: a virtual cube's keys, a smart cube's turns, the player's steps. So the eye
 learns to see the four edges alone. `cw:crossTrain`, off by default.
 
-How bright the other pieces show is a setting (1.67): Settings > Cross Trainer, Other pieces, a
+How bright the other pieces show is a setting (1.67): Settings > Cross and F2L Trainer (Cross Trainer before 1.69), Other pieces, a
 slider from 40% down to 0%, black. 22% by default, the level of 1.66. `cw:crossDim` keeps the
 percent. The cube shows each move of the slider; Cancel puts the old level back. At 0% only the
 cross edges and the centers have color: no cue from the other pieces. `drawMain` passes the level
@@ -58,3 +58,10 @@ net), and `crossFindCls` for a class on each sticker while a find runs.
 
 - Find the edges by a smart cube: a tap on a face to name an edge.
 - The finds by length in a table, and the gap from optimal of each cross solved on the cube.
+
+## F2L Trainer (1.69)
+
+The same idea on the F2L tab: a button on the cube, F2L Trainer (`#f2lTrainBtn`, `cw:f2lTrain`, off by
+default). The eight F2L pieces keep their colors, with the centers: the four corners with the cross
+color and the four edges with neither the cross color nor its opposite. Every other piece shows at
+the Cross Trainer's level, `cw:crossDim`. It only changes what the cube shows; it sets nothing up.
