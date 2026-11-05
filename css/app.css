@@ -428,6 +428,8 @@ details.fold>summary:hover h3{color:var(--text)}
 .modal.settings .setarea p{margin:0}
 .modal.settings .setrow{display:flex;gap:8px;align-items:center;cursor:pointer}
 .modal.settings .setrow+p{margin:4px 0 0 26px;font-size:13px}
+.modal.settings .setrange{gap:10px}.modal.settings .setrange input[type=range]{flex:1;min-width:0;accent-color:var(--accent,currentColor)}.modal.settings .setrange output{min-width:3.2em;text-align:right;font-variant-numeric:tabular-nums}
+.modal.settings .setrange+p{margin-left:0}
 .modal.settings #dataText{display:block;width:100%;box-sizing:border-box;margin-top:8px;font-family:var(--mono);font-size:12px;resize:vertical}
 .modal.settings #setData>p{font-size:13px}
 .modal.settings .data-msg{margin-top:8px;font-size:13px}

@@ -46,7 +46,8 @@ function moveGeom(move,size){
 // The polygons of the cube picture, far to near. Each is {pts,fill} and a sticker also
 // has {stroke,faded}. Options: yaw, pitch, scale, cx, cy (the center on the page),
 // fade (a Set of facelet indices that keep full color), color(ci,idx) for the sticker
-// fill, body for the plastic between stickers, cls(idx) for a class on each sticker,
+// fill, dim (0..1): how bright a sticker out of fade shows, over black (without it, 0.22 see-through),
+// body for the plastic between stickers, cls(idx) for a class on each sticker,
 // move with t (0..1) for a part turn, and rot, a 3×3 matrix (three rows) that turns the
 // whole cube before the camera: how a smart cube is held. Turning the body +90° about y
 // shows the same picture as the move y' from the fixed camera.
@@ -106,6 +107,7 @@ function cubePolys(facelets,opts={}){
     }
   }
   if(lift)polys.push(...liftPolys(facelets,lifted,lift,{cam,proj,color,body,cls:opts.cls,labels:!opts.color||opts.labels}));
+  if(opts.dim!=null)for(const p of polys)if(p.faded)p.dim=opts.dim;
   return polys;
 }
 // The lifted pieces of cubePolys, far to near, each face as much of it as the cube leaves in view.
@@ -214,8 +216,12 @@ function polysSVG(polys){const g=polys.find(p=>p.glow);
   const shape=(p,pre,rest)=>p.cut?`<path${pre} d="${[p.pts,p.cut].map(P=>'M'+P.map(q=>q.map(v=>v.toFixed(2)).join(',')).join('L')+'Z').join('')}" fill-rule="evenodd"${rest}/>`:
     `<polygon${pre} points="${p.pts.map(q=>q.map(v=>v.toFixed(2)).join(',')).join(' ')}"${rest}/>`;
   return (g?`<defs><filter id="cwLiftGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter></defs>`:'')+polys.map(p=>p.glow?
-  shape(p,'',` fill="${p.fill}" filter="url(#cwLiftGlow)" opacity="${p.glow}"`):shape(p,p.cls?` class="${p.cls}"`:'',` fill="${p.fill}"${p.faded||p.op?` opacity="${+((p.faded?0.22:1)*(p.op||1)).toFixed(3)}"`:''}${p.stroke?` stroke="${p.stroke}" stroke-width="0.6" stroke-linejoin="round"`:''}`)+
-  (p.ci!=null?polyLabel(p):'')).join('');}
+  shape(p,'',` fill="${p.fill}" filter="url(#cwLiftGlow)" opacity="${p.glow}"`):
+  (p.dim!=null?shape(p,p.cls&&!p.dim?` class="${p.cls}"`:'',` fill="#000"${p.op?` opacity="${p.op}"`:''}`):'')+
+  (p.dim===0?'':shape(p,p.cls?` class="${p.cls}"`:'',` fill="${p.fill}"${p.faded||p.op?` opacity="${polyOp(p)}"`:''}${p.stroke?` stroke="${p.stroke}" stroke-width="0.6" stroke-linejoin="round"`:''}`)+
+  (p.ci!=null?polyLabel(p):''))).join('');}
+// How much of a sticker shows: a faded one 0.22, or its dim over black; a dimmed or mirrored one less.
+function polyOp(p){return +((p.faded?p.dim??0.22:1)*(p.op||1)).toFixed(3);}
 // Color Blind Assist: a letter for each sticker color (W R G Y O B). The letter is always in the
 // picture and hidden by CSS unless body.cba is set, so a change of the setting draws nothing again.
 // A gray sticker (a color that does not matter, or is not known) has no letter.
@@ -224,7 +230,7 @@ function stickerLabel(ci,x,y,size,op){const L=COLOR_VARS[ci];if(!L||!(size>2))re
 // The letter of a 3D sticker: at its center, sized by its area on the screen.
 function polyLabel(p){const P=p.pts;let a=0,x=0,y=0;
   for(let i=0;i<P.length;i++){const q=P[i],r=P[(i+1)%P.length];a+=q[0]*r[1]-r[0]*q[1];x+=q[0];y+=q[1];}
-  return stickerLabel(p.ci,x/P.length,y/P.length,0.62*Math.sqrt(Math.abs(a)/2),p.faded||p.op?+((p.faded?0.22:1)*(p.op||1)).toFixed(3):0);}
+  return stickerLabel(p.ci,x/P.length,y/P.length,0.62*Math.sqrt(Math.abs(a)/2),p.faded||p.op?polyOp(p):0);}
 // The kind of piece a facelet belongs to: 'center', 'edge' or 'corner'.
 function pieceKind(idx,n){n=n||3;const p=idx%(n*n),i=Math.floor(p/n),j=p%n;const e=x=>x===0||x===n-1;return e(i)&&e(j)?'corner':e(i)||e(j)?'edge':'center';}
 // The box round the polygons, with a margin, as a viewBox string.
@@ -249,8 +255,11 @@ function renderNet(facelets,opts={}){
   const n=opts.n||DRAW_N;
   const to54=i=>i;
   const s=opts.size||30;let out='';
+  const op=opts.dim??0.22;
   for(const c of netCells(n,{tile:s-2,gap:2,pad:1,ox:19,oy:19})){const faded=opts.fade&&!opts.fade.has(to54(c.idx));
-    out+=netRect(facelets[c.idx],c.x,c.y,c.s,c.s,`rx="3"${faded?' opacity="0.22"':''} stroke="var(--sticker-line)" stroke-width="1"`).replace(/<text /,faded?'<text opacity="0.22" ':'<text ');}
+    if(faded&&opts.dim!=null)out+=`<rect x="${c.x}" y="${c.y}" width="${c.s}" height="${c.s}" rx="3" fill="#000" stroke="var(--sticker-line)" stroke-width="1"/>`;
+    if(faded&&op===0)continue;
+    out+=netRect(facelets[c.idx],c.x,c.y,c.s,c.s,`rx="3"${faded?` opacity="${op}"`:''} stroke="var(--sticker-line)" stroke-width="1"`).replace(/<text /,faded?`<text opacity="${op}" `:'<text ');}
   return out;
 }
 // Every sticker of the piece that sticker idx (0..53) sits on: one for a center, two for an edge,

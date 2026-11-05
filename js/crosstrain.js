@@ -3,7 +3,8 @@
 // Cross Trainer, the button on the cube (cw:crossTrain, off by default): the cube in view keeps the
 // colors of the four cross edges and the centers, and every other piece is gray, as it turns: a
 // virtual cube's keys, a smart cube's turns, the player's steps. drawMain (app.js) asks
-// crossTrainFade for the stickers it draws.
+// crossTrainFade for the stickers it draws, and crossTrainDim for how bright the other pieces show:
+// Settings > Cross Trainer, cw:crossDim, 0 (black) to CROSS_DIM_MAX percent, 22 by default.
 // Find the edges, in the Cross drill sheet: a clock starts, and a click on each cross edge on the
 // cube lifts it out with a glow. The fourth stops the clock. A click on another piece is a miss. A
 // change of the cube in view (a turn, a step) stops it. Cross Trainer waits while a find runs.
@@ -19,6 +20,9 @@ function crossTrainOn(){return !!store.get('crossTrain',false);}
 // edge. null: no fade (off, another tab, a find running).
 function crossTrainFade(f){if(!crossTrainOn()||!crossOnCross()||CF.on)return null;const ci=crossColorIndex(),keep=new Set([4,13,22,31,40,49]);
   for(const e of edgeFacelet)if(f[e[0]]===ci||f[e[1]]===ci){keep.add(e[0]);keep.add(e[1]);}return keep;}
+const CROSS_DIM_MAX=40,CROSS_DIM_DEF=22;
+function crossDimPct(){const v=+store.get('crossDim',CROSS_DIM_DEF);return Number.isFinite(v)?Math.max(0,Math.min(CROSS_DIM_MAX,Math.round(v))):CROSS_DIM_DEF;}
+function crossTrainDim(){return crossDimPct()/100;}
 function crossTrainDraw(){const b=$('#crossTrainBtn');if(!b)return;const on=crossTrainOn();b.setAttribute('aria-pressed',String(on));
   b.title=on?'Cross Trainer is on: only the cross edges and the centers show their colors. Press to show every color':'Cross Trainer: gray every piece but the four cross edges and the centers, as you turn the cube';}
 function crossTrainSet(on){store.set('crossTrain',!!on);crossTrainDraw();drawMain();}
