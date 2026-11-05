@@ -60,7 +60,7 @@ w.addEventListener('load',async()=>{try{
 
   // F2L cases work like the OLL/PLL cards: status button, click opens the window, shift-click selects,
   // Next case starts a drill with a per-case timer scope, Reveal shows the answer.
-  tab('f2l');$('#f2lMode button[data-m="cases"]').click();
+  tab('f2l');$('#f2lDrillBtn').click();$('#f2lDrillMenu [data-m="cases"]').click();
   assert.ok(!$('#f2lCaseGrid').closest('.panel').classList.contains('hidden'),'F2L case grid shows');
   const fc=$('#f2lCaseGrid .case');const fn=fc.dataset.n;
   const fst=()=>$(`#f2lCaseGrid .case[data-n="${fn}"] .stbtn`);

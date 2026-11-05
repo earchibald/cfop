@@ -522,8 +522,14 @@ function crossCheckNow(quiet){let ms;try{ms=parseAlg($('#crossTry').value);apply
 
 // ---------- F2L tab ----------
 const f2lState={mode:'guide',key:null,cube:null,extra:[],plan:null,caseSel:new Set(F2L_CASES.map(c=>c.n)),curCase:null,caseSetup:null,caseAUF:''};
-// Three modes: Guide (js/f2l-ui.js), Live (the pair plan behind Reveal) and The 41 cases.
-$$('#f2lMode button').forEach(b=>b.onclick=()=>{f2lState.mode=b.dataset.m;$$('#f2lMode button').forEach(x=>x.classList.toggle('on',x===b));$('#f2lLive').classList.toggle('hidden',f2lState.mode!=='live');$('#f2lGuide').classList.toggle('hidden',f2lState.mode!=='guide');['#f2lCases','#f2lCaseOut','#f2lCaseList','#f2lStatsPanel'].forEach(s=>$(s).classList.toggle('hidden',f2lState.mode!=='cases'));if(f2lState.mode==='guide'){if(typeof fgShow==='function')fgShow();}else if(f2lState.mode==='live')showF2LState();else{renderCaseStats();if(!seqState.drill)showScr();}});
+// Three modes: Guide (js/f2l-ui.js), Live (the pair plan behind Reveal) and The 41 cases. The F2L
+// drill button on the cube picks one (js/f2ldrill.js); cw:f2lDrill keeps it.
+const F2L_MODES=['guide','live','cases'];
+// The panels of mode m, and no other.
+function f2lPanels(m){$('#f2lLive').classList.toggle('hidden',m!=='live');$('#f2lGuide').classList.toggle('hidden',m!=='guide');['#f2lCases','#f2lCaseOut','#f2lCaseList','#f2lStatsPanel'].forEach(s=>$(s).classList.toggle('hidden',m!=='cases'));}
+function setF2LMode(m){if(!F2L_MODES.includes(m))m='guide';f2lState.mode=m;store.set('f2lDrill',m);f2lPanels(m);
+  if(f2lState.mode==='guide'){if(typeof fgShow==='function')fgShow();}else if(f2lState.mode==='live')showF2LState();else{renderCaseStats();if(!seqState.drill)showScr();}
+  document.dispatchEvent(new CustomEvent('cw:f2lmode',{detail:m}));}
 // The F2L state of the current scramble: rotate, solve the cross, then solve pairs until the chosen number is left.
 function f2lKey(){return [scr.moves.join(' '),crossRotation(),$('#f2lPairs').value].join('|');}
 function ensureF2L(cb){if(f2lState.key===f2lKey()){cb();return;}ensureTables(()=>{let c=toFrame(scr.cube);const r=crossRotation();const extra=r?[r]:[];const csm=parseAlg(solveCross(c,0,1).solutions[0]);c=applyAlg(c,csm);extra.push(...csm);
@@ -561,7 +567,8 @@ function renderF2LCaseOut(){const n=f2lState.curCase;if(!n)return;const f=F2L_CA
   const nb=$('#f2lNameBtn');if(nb)nb.onclick=()=>openCaseModal(modalForF2L(f));
   const b=$('#f2lCaseLab');if(b)b.onclick=()=>loadLab(f.alg,'F2L case #'+n);
   const p=$('#f2lCasePlay');if(p)p.onclick=()=>{setSequence(f2lSolution(),'solution for this case — press ▶ to step',f2lSetupCube(),'F2L case');seqState.idx=0;applySequence();focusPlayer();};}
-$('#f2lRandomCase').onclick=()=>{const pool=F2L_CASES.filter(c=>f2lState.caseSel.has(c.n));if(!pool.length){$('#f2lCaseOut').innerHTML='<p>Select at least one case.</p>';return;}setF2LCase(pool[Math.floor(Math.random()*pool.length)].n);};
+// Next case: a selected case of the group in view (All groups: any selected case).
+$('#f2lRandomCase').onclick=()=>{const g=$('#f2lGroup').value;const pool=F2L_CASES.filter(c=>f2lState.caseSel.has(c.n)&&(g==='all'||c.grp===g));if(!pool.length){$('#f2lCaseOut').innerHTML=g==='all'?'<p>Select at least one case.</p>':'<p>Select at least one case in this group.</p>';return;}setF2LCase(pool[Math.floor(Math.random()*pool.length)].n);};
 $('#f2lCaseReveal').onclick=()=>{if(!f2lState.curCase)return;f2lState.caseRevealed=!f2lState.caseRevealed;renderF2LCaseOut();};
 
 // ---------- LL trainer ----------

@@ -28,7 +28,8 @@ w.addEventListener('load',async()=>{try{
   await sleep(100);
   // Guide is the default mode, with the scramble and the dashed solved part in the player.
   tab('f2l');
-  assert.ok($('#f2lMode button[data-m="guide"]').classList.contains('on'),'Guide is the default mode');
+  assert.strictEqual($('#f2lDrillName').textContent,'Guide','the F2L drill button on the cube names it');
+  assert.ok(!$('#f2lMode'),'no mode switch in the sheet: the button on the cube holds it');
   assert.ok(!$('#f2lGuide').classList.contains('hidden')&&$('#f2lLive').classList.contains('hidden'),'the Guide panel shows');
   // A scramble with no pair solved by chance, so four steps lie ahead.
   let seed,scr;
@@ -135,9 +136,25 @@ w.addEventListener('load',async()=>{try{
   key('ArrowRight');assert.strictEqual(w.fg.made.length,0,'no move while a drill is in');
   $('#drillBack').click();await until(()=>!$('#fgMain').hidden,'the guide resumes');
   // The other modes still work.
-  $('#f2lMode button[data-m="live"]').click();assert.ok($('#f2lGuide').classList.contains('hidden')&&!$('#f2lLive').classList.contains('hidden'),'Live mode');
-  $('#f2lMode button[data-m="cases"]').click();assert.ok(!$('#f2lCaseGrid').closest('.panel').classList.contains('hidden'),'Cases mode');
-  $('#f2lMode button[data-m="guide"]').click();await until(()=>!$('#fgMain').hidden,'Guide again');
+  // The F2L drill button: a menu of the three drills, each with its choice under it.
+  const menu=$('#f2lDrillMenu'),btn=$('#f2lDrillBtn');
+  const pick=sel=>{btn.click();assert.ok(!menu.hidden,'the menu opens');assert.strictEqual(btn.getAttribute('aria-expanded'),'true');
+    menu.querySelector(sel).click();assert.ok(menu.hidden,'a pick closes the menu');};
+  btn.click();assert.ok(!menu.hidden&&menu.querySelector('[data-m="guide"][aria-checked="true"]'),'Guide is checked');
+  assert.deepStrictEqual([...menu.querySelectorAll('.fdm-mode b')].map(b=>b.textContent),['Guide','Real cross-solved states','The 41 cases']);
+  assert.deepStrictEqual([...menu.querySelectorAll('[data-pairs]')].map(b=>b.textContent),['4','3','2','1'],'Pairs left under Real cross-solved states');
+  assert.strictEqual(menu.querySelectorAll('[data-grp]').length,6,'All groups and the five groups under The 41 cases');
+  w.document.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  menu.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.ok(menu.hidden,'Esc closes the menu');
+  pick('[data-m="live"]');assert.ok($('#f2lGuide').classList.contains('hidden')&&!$('#f2lLive').classList.contains('hidden'),'Live mode');
+  assert.strictEqual($('#f2lDrillName').textContent,'Cross solved');
+  pick('[data-pairs="2"]');assert.strictEqual($('#f2lPairs').value,'2','a pick under the drill sets its choice');
+  assert.match(btn.title,/2 pairs left/,'the tip names the choice');
+  pick('[data-grp="Basic inserts"]');assert.ok(!$('#f2lCaseGrid').closest('.panel').classList.contains('hidden'),'a group picks Cases mode');
+  assert.strictEqual($('#f2lGroup').value,'Basic inserts');assert.ok($$('#f2lCaseGrid .case').length===4,'the grid shows the group');
+  for(let k=0;k<6;k++){$('#f2lRandomCase').click();assert.strictEqual($('#f2lCaseOut .tag').textContent,'Basic inserts','Next case draws from the group');}
+  $('#drillBack').click();pick('[data-grp="all"]');assert.strictEqual($('#f2lGroup').value,'all');
+  pick('[data-m="guide"]');await until(()=>!$('#fgMain').hidden,'Guide again');
   // Keys: the badges, and the Right arrow outside the guide still steps the player.
   await settled();assert.ok($('#fgNew .hk')&&$('#fgCard .fg-hk'),'key badges');
   tab('cross');const i0=w.seqState.idx;key('ArrowLeft');assert.strictEqual(w.seqState.idx,i0-1,'the arrows are the player\'s on another tab');

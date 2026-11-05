@@ -51,6 +51,7 @@
       <button class="animbtn hidbtn" id="hiddenBtn" aria-pressed="false" title="Show the hidden faces: the back, left and bottom, as in a mirror behind the cube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8l8-4 8 4-8 4z"/><path d="M4 8v8l8 4v-8"/><path d="M20 8v8l-8 4" stroke-dasharray="2 2.4"/></svg>Hidden faces</button>
       <button class="animbtn vcubebtn" id="vcubeBtn" aria-pressed="false" title="Turn the cube here with the keys or the buttons of a small window, as a virtual cube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M7 11h1M11 11h2M16 11h1M8 14h8"/></svg>Virtual cube</button>
       <button class="animbtn crosstrainbtn" id="crossTrainBtn" aria-pressed="false" title="Cross Trainer: gray every piece but the four cross edges and the centers, as you turn the cube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>Cross Trainer</button>
+      <div class="f2ldrill" id="f2lDrill"><button type="button" class="animbtn f2ldrillbtn" id="f2lDrillBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="f2lDrillMenu" title="The F2L drill. Click to pick another drill"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="12" width="16" height="8" rx="1"/><path d="M4 16h16M9.3 12v8M14.7 12v8"/><rect x="14.7" y="4" width="5.3" height="5.3" rx="1"/></svg><span id="f2lDrillName">Guide</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14l5-5 5 5"/></svg></button><div class="f2ldrill-menu" id="f2lDrillMenu" role="menu" aria-label="F2L drill" hidden></div></div>
       <button class="savebtn" id="saveImgBtn" title="Save the cube picture as an image file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>Save image</button>
       <div class="draghint" id="dragHint" aria-hidden="true"><svg viewBox="0 0 24 16"><path d="M3 12a9 9 0 0 1 18 0"/><path d="M3 12l-1.6-3.2M3 12l3.3-1.3"/><path d="M21 12l1.6-3.2M21 12l-3.3-1.3"/></svg><span>Drag to rotate</span></div>
     </div>
@@ -197,10 +198,6 @@
     </section>
     <!-- F2L -->
     <section class="tab" id="tab-f2l" data-sec="f2l">
-      <div class="panel">
-        <div class="row" style="justify-content:space-between"><h2>F2L</h2>
-          <div class="status-sel" id="f2lMode"><button data-m="guide" class="on" title="One pair at a time, with a hint as a drill">Guide</button><button data-m="live" title="Scrambles with the cross solved, pairs left to do">Real cross-solved states</button><button data-m="cases" title="The 41 standard cases, one at a time">The 41 cases</button></div></div>
-      </div>
       <div class="panel fg" id="f2lGuide">
         <p class="muted" style="margin-top:0">One pair at a time. The hint is a drill: the first move shows, and every other move shows when you make it. Pick a pair, a way, or an order. The cube on the left follows.</p>
         <div class="row"><button class="primary" id="fgNew" title="A new scramble with the cross solved">New scramble<span class="hk" aria-hidden="true">N</span></button><button id="fgRead" title="Find your cube again: show the camera two or three faces, or paint the stickers that differ">Read my cube</button><button id="fgReturn" disabled title="The moves that bring your cube back to the scramble">Return to scramble</button><button id="fgSetup" disabled title="Your cube as it is becomes the scramble">Set up from current</button></div>
@@ -224,7 +221,7 @@
       </div>
       <div class="panel hidden" id="f2lCases">
         <p class="muted">The 41 standard cases for the front-right slot. Select cases, then train. The button under each case changes its status: Not started → Learning → Learned. Click a case to open its details. Shift-click a case to add it to training or remove it.</p>
-        <div class="row"><button class="primary" id="f2lRandomCase" title="Put a case from the selected ones on the cube">Next case<span class="hk" aria-hidden="true">N</span></button><button id="f2lCaseReveal" title="Show the algorithm for this case, one move at a time">Reveal<span class="hk" aria-hidden="true">H</span></button><select id="f2lGroup" title="Show one group of cases, or all"><option value="all">All groups</option></select></div>
+        <div class="row"><button class="primary" id="f2lRandomCase" title="Put a case from the selected ones on the cube">Next case<span class="hk" aria-hidden="true">N</span></button><button id="f2lCaseReveal" title="Show the algorithm for this case, one move at a time">Reveal<span class="hk" aria-hidden="true">H</span></button><select id="f2lGroup" title="Show and train one group of cases, or all"><option value="all">All groups</option></select></div>
       </div>
       <div class="panel hidden" id="f2lCaseOut"><p class="muted">Press Next case to start a drill. The cube shows the case with a random U turn, so you recognize it and do not memorize the setup. Your scramble is kept. Press Back to scramble to return to it.</p></div>
       <div class="panel hidden" id="f2lCaseList">
@@ -357,6 +354,7 @@
 <script src="js/crosslook.js"></script>
 <script src="js/patterns-ui.js"></script>
 <script src="js/crosstrain.js"></script>
+<script src="js/f2ldrill.js"></script>
 <script src="js/start.js"></script>
 <script src="js/start-app.js"></script>
 <script src="js/levelmenu.js"></script>

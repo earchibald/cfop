@@ -1052,6 +1052,34 @@ body.onboard .foot{padding-bottom:56px}
 .cubebox .crosstrainbtn{right:auto;left:8px;bottom:38px}
 @media (max-width:760px){.cubebox .crosstrainbtn{left:4px;bottom:30px}}
 body:not([data-tab="cross"]) #crossTrainBtn,body:not([data-method="cfop"]) #crossTrainBtn{display:none!important}
+/* The F2L drill (js/f2ldrill.js): one button on the cube on the F2L tab of CFOP only, where Cross
+   Trainer sits on the Cross tab; its menu opens upward, the choices of each drill under it */
+.cubebox .f2ldrill{position:absolute;left:8px;bottom:38px;z-index:4}
+@media (max-width:760px){.cubebox .f2ldrill{left:4px;bottom:30px}.cubebox .f2ldrill-menu{bottom:auto;top:calc(100% + 6px)}}
+body:not([data-tab="f2l"]) #f2lDrill,body:not([data-method="cfop"]) #f2lDrill{display:none!important}
+.f2ldrill{position:relative}
+.cubebox .f2ldrill .f2ldrillbtn{position:static}
+.f2ldrillbtn[aria-expanded="true"]{color:var(--text);border-color:var(--muted)}
+.f2ldrillbtn .chev{width:12px;height:12px;margin-left:1px;transition:transform .15s}
+.f2ldrillbtn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.f2ldrill-menu{position:absolute;left:0;bottom:calc(100% + 6px);width:min(320px,calc(100vw - 24px));max-height:min(70vh,520px);overflow:auto;overscroll-behavior:contain;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:6px;display:flex;flex-direction:column;gap:2px;z-index:30;font-weight:400;text-align:left}
+.f2ldrill-menu[hidden]{display:none}
+.f2ldrill-menu .fdm-head{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:4px 8px 2px}
+.f2ldrill-menu button{font:inherit;color:var(--text);background:transparent;border:1px solid transparent;cursor:pointer;box-shadow:none}
+.f2ldrill-menu .fdm-mode{display:grid;grid-template-columns:16px 1fr;column-gap:8px;align-items:center;padding:7px 8px;border-radius:10px;text-align:left;width:100%}
+.f2ldrill-menu .fdm-mode b{font-size:14px;font-weight:600}
+.f2ldrill-menu .fdm-note{grid-column:2;font-size:12px;color:var(--muted);line-height:1.35}
+.f2ldrill-menu .fdm-dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--muted);box-sizing:border-box}
+.f2ldrill-menu .fdm-mode[aria-checked="true"] .fdm-dot{border-color:var(--text);background:radial-gradient(circle,var(--text) 0 2.5px,transparent 3px)}
+.f2ldrill-menu .fdm-mode[aria-checked="true"]{background:color-mix(in srgb,var(--accent) 16%,transparent)}
+.f2ldrill-menu button:hover{border-color:var(--line)}
+.f2ldrill-menu button:focus-visible{outline:2px solid var(--link);outline-offset:-1px}
+.f2ldrill-menu .fdm-sub{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:0 0 6px 15px;padding:2px 0 2px 16px;border-left:2px solid var(--line)}
+.f2ldrill-menu .fdm-list{flex-direction:column;align-items:stretch;gap:1px}
+.f2ldrill-menu .fdm-lbl{font-size:12px;color:var(--muted);margin-right:4px}
+.f2ldrill-menu .fdm-chip{font-size:13px;padding:3px 10px;border-radius:999px;border-color:var(--line);min-width:30px}
+.f2ldrill-menu .fdm-list .fdm-chip{border-radius:8px;border-color:transparent;text-align:left;padding:4px 8px}
+.f2ldrill-menu .fdm-chip[aria-checked="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--panel));font-weight:600}
 /* Find the edges: the row under the cross plans; a miss shakes the cube */
 .crossfind{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .crossfind #crossFindOut{margin-top:6px}

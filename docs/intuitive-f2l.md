@@ -6,7 +6,7 @@ drills based on the actual cube." This is the plan for that track. Nothing of it
 
 ## What there is now
 
-- The F2L tab has three modes: Guide (the default; one pair at a time on the scramble, the hint
+- The F2L tab has three modes, picked by the F2L drill button on the cube (`js/f2ldrill.js`): Guide (the default; one pair at a time on the scramble, the hint
   as a drill, `js/f2l-ui.js`), Real cross-solved states, and The 41 cases (pick cases, train
   them). The 41 cases mode is the "picking the cases" the notes reject as the way in.
 - `js/f2l.js` already has what a teacher needs: `f2lBasic` (free a stuck piece, then one of the
