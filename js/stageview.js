@@ -78,7 +78,7 @@ function svBuild(){if($('#svCol'))return;const wrap=$('.wrap');
   $('#svReset').onclick=svReset;acts.querySelector('#svSrc').onclick=e=>{e.stopPropagation();const c=$('#cubeChip');if(c)c.click();};
   ask.addEventListener('click',e=>{const b=e.target.closest('[data-src]');if(!b)return;svAskPick(b.dataset.src);});
   big.addEventListener('click',e=>{const b=e.target.closest('[data-sv]');if(!b)return;
-    if(b.dataset.sv==='next'){svBigClose();if(typeof nextForTab==='function')nextForTab();}
+    if(b.dataset.sv==='next'){svBigClose();if(typeof liveFreshGo==='function'&&liveFreshGo())return;if(typeof nextForTab==='function')nextForTab();}
     else if(b.dataset.sv==='close')svBigClose();});}
 function svAskHTML(){return `<div class="svask-in svglass">
   <svg class="svask-mark" viewBox="0 0 26 26" aria-hidden="true"><path d="M13 2 24 7.5 13 13 2 7.5Z" fill="var(--sticker-W)"/><path d="M2 7.5 13 13v11L2 18.5Z" fill="var(--sticker-G)"/><path d="M24 7.5 13 13v11l11-5.5Z" fill="var(--sticker-R)"/></svg>
@@ -263,11 +263,11 @@ function svBigDraw(ph,text){const g=$('#svBig');if(!g)return;g.hidden=false;g.cl
       <svg viewBox="0 0 140 140" aria-hidden="true"><circle cx="70" cy="70" r="60" class="svring0"/><circle cx="70" cy="70" r="60" class="svring" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C*(1-f)).toFixed(1)}" transform="rotate(-90 70 70)"/><text x="70" y="70" text-anchor="middle" dominant-baseline="central">${svEsc(text)}</text></svg>
       <div class="muted">Hold <span class="kbd">space</span>, then let go to start the timer.</div></div>`;}
   else g.innerHTML=`<div class="svclock"><div class="svtime">${svEsc(text)}</div><div class="muted">Press <span class="kbd">space</span> to stop</div></div>`;}
-function svSolved(text){const g=$('#svBig');if(!g)return;const best=($('#stBest')||{}).textContent,ao5=($('#stAo5')||{}).textContent;
+function svSolved(text){const g=$('#svBig');if(!g)return;const fresh=typeof liveFresh==='function'&&liveFresh();const best=($('#stBest')||{}).textContent,ao5=($('#stAo5')||{}).textContent;
   g.hidden=false;g.className='svbig svsolved';
   g.innerHTML=`<div class="svglass svcard svwin" role="status"><div class="svwin-h">${SV_ICON.check}Solved!</div><div class="svwin-t">${svEsc(text)}</div>
     <div class="row" style="justify-content:center;gap:8px">${best&&best===text?'<span class="svpill good">Your best</span>':''}${ao5&&ao5!=='—'?`<span class="svpill">ao5 ${svEsc(ao5)}</span>`:''}</div>
-    <div class="row" style="justify-content:center;gap:8px;margin-top:6px"><button type="button" class="primary" data-sv="next" title="A new scramble">Next scramble<span class="hk" aria-hidden="true">N</span></button><button type="button" data-sv="close" title="Close this card">Close<span class="hk" aria-hidden="true">Esc</span></button></div></div>`;}
+    <div class="row" style="justify-content:center;gap:8px;margin-top:6px"><button type="button" class="primary" data-sv="next" title="${fresh?svEsc(LIVE_FRESH_TIP):'A new scramble'}">${svEsc(fresh||'Next scramble')}<span class="hk" aria-hidden="true">N</span></button><button type="button" data-sv="close" title="Close this card">Close<span class="hk" aria-hidden="true">Esc</span></button></div></div>`;}
 function svBigClose(){const g=$('#svBig');if(g){g.hidden=true;g.innerHTML='';g.className='svbig';}}
 // ---- wiring ----
 function svInit(){const t=$('#timer');
@@ -283,7 +283,9 @@ function svInit(){const t=$('#timer');
   ['cw:sequence','cw:scramble'].forEach(n=>document.addEventListener(n,()=>{if(SV.on){svBadge();if(!SV.phase)svBigClose();}}));
   document.addEventListener('cw:cubesrc',()=>{svSrc();svAskDraw();});document.addEventListener('cw:smart',svSrc);
   document.addEventListener('keydown',e=>{if(!SV.on||!$('#svBig.svsolved'))return;
-    if(e.key==='Escape'){svBigClose();e.stopPropagation();}else if(e.key===' ')svBigClose();},true);
+    if(e.key==='Escape'){svBigClose();e.stopPropagation();}else if(e.key===' ')svBigClose();
+    // A fresh start on a smart cube: N is the card's button, as it says (New OLL · PLL, not Next case).
+    else if((e.key==='n'||e.key==='N')&&typeof liveFresh==='function'&&liveFresh()){const b=$('#svBig [data-sv="next"]');if(b){e.preventDefault();e.stopPropagation();b.click();}}},true);
   if(typeof matchMedia==='function'){const q=matchMedia('(max-width: 760px)');if(q&&q.addEventListener)q.addEventListener('change',svApply);}
   addEventListener('resize',()=>{if(SV.on)svSheets();});
   document.addEventListener('change',e=>{if(e.target&&e.target.id==='setStage'){store.set('stageView',e.target.checked);svApply();}});

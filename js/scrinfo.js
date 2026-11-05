@@ -39,7 +39,8 @@ function siSubHTML(){const s=SI.sub;
     return siAskHTML('restore');}
   if(s==='speedy')return siAskHTML('speedy');
   if(s==='read-restore'||s==='read-speedy')return `<p>Show the page your cube.</p><div class="siacts"><button type="button" class="primary" data-si="scan-${s.slice(5)}" title="Read the cube with the camera">Scan with the camera</button><button type="button" data-si="paint-${s.slice(5)}" title="Click each color onto a map">Paint the colors</button><button type="button" data-si="cancel" title="Go back">Cancel</button></div>`;
-  return `<div class="siacts"><button type="button" class="primary" data-si="new" title="A new WCA scramble">New scramble<span class="hk" aria-hidden="true">N</span></button><button type="button" data-si="restore" title="Take your cube from where it is now back to this scramble">Restore scramble</button><button type="button" data-si="speedy" title="Take your cube to solved">Speedy Solve</button></div>
+  const fresh=typeof liveFresh==='function'&&liveFresh();
+  return `<div class="siacts"><button type="button" class="primary" data-si="new" title="${fresh?siEsc(LIVE_FRESH_TIP):'A new WCA scramble'}">${fresh?siEsc(fresh):'New scramble'}<span class="hk" aria-hidden="true">N</span></button><button type="button" data-si="restore" title="Take your cube from where it is now back to this scramble">Restore scramble</button><button type="button" data-si="speedy" title="Take your cube to solved">Speedy Solve</button></div>
     <div class="siseed"><input id="siSeedIn" placeholder="seed name" title="Type any word for its WCA scramble. The same word always gives the same scramble" spellcheck="false" autocomplete="off"><button type="button" class="small" data-si="seed" title="Load the scramble of this seed name">Go</button></div>`;}
 function siAskHTML(kind){return `<p>Where is your cube now?</p><div class="siacts"><button type="button" class="primary" data-si="solved-${kind}" title="Your cube is solved">It's solved</button><button type="button" data-si="read-${kind}" title="Scan your cube, or paint its colors">Scan or paint</button><button type="button" data-si="cancel" title="Go back">Cancel</button></div>`;}
 function siDraw(){if(!SI.pane)return;SI.pane.innerHTML=siPaneHTML();
@@ -61,7 +62,7 @@ function siMount(el){if(!el||el.dataset.si)return;el.dataset.si='1';el.setAttrib
   el.addEventListener('mouseleave',siLeave);
   el.addEventListener('click',e=>{e.stopPropagation();if(SI.pane&&SI.anchor===el&&SI.pinned)siClose();else siOpen(el,true);});}
 function siAct(a){
-  if(a==='new'){siClose();newScramble();return;}
+  if(a==='new'){siClose();if(!(typeof liveFreshGo==='function'&&liveFreshGo()))newScramble();return;}
   if(a==='back'){siClose();showForTab();return;}
   if(a==='seed'){const v=(SI.pane.querySelector('#siSeedIn')||{}).value;if(!v||!v.trim())return;siClose();newScramble(v.trim());return;}
   if(a==='cancel'){SI.sub='';siDraw();return;}

@@ -97,6 +97,30 @@ function liveConnected(state){
 // Use my cube: the cube in your hands becomes the scramble, on the tab in view.
 function liveUse(){const st=typeof cubeTab!=='undefined'&&cubeTab.target;if(!st)return;
   scrambleFromCube(st,customName('smart'),true);liveNoteDraw();}
+// ----- a fresh start on a smart cube: New Cross, New F2L, New OLL · PLL -----
+// While a smart cube is the cube and connected, Cross, F2L and OLL · PLL make no scramble: you
+// scramble the cube in your hands, and New Cross (New F2L, New OLL · PLL) marks it, as it is now,
+// as the start (liveUse). The New controls of the section take that label and that job
+// (liveFreshDraw): the Cross drill's button, the F2L New scramble buttons, the scramble pill,
+// Scramble Info and the Solved! card. Next case keeps its drill. Next on stop marks nothing, as the
+// cube is not scrambled yet. The Cross drill's Length has no use: you make the scramble.
+const LIVE_FRESH={cross:'New Cross',f2l:'New F2L',ll:'New OLL · PLL'};
+const LIVE_FRESH_TIP='Scramble your smart cube first. Then press this: your cube as it is now becomes the start. The page makes no moves';
+// The label of a fresh start on `tab` (the tab in view by default), or '' when New makes a scramble.
+function liveFresh(tab){tab=tab||curTab;
+  return liveOn()&&!!cubeTab.target&&(typeof cubeSrc!=='function'||cubeSrc()==='smart')&&LIVE_FRESH[tab]||'';}
+// A New control was pressed: mark the cube as the start, if this is a fresh start. True if it was.
+function liveFreshGo(){if(!liveFresh())return false;liveUse();return true;}
+// The New controls: the fresh label and tip, or their own. Each keeps its key badge.
+function liveFreshDraw(){
+  for(const [id,tab] of [['#crossNew','cross'],['#fgNew','f2l'],['#f2lNew','f2l'],['#scrPillNew',curTab]]){
+    const b=$(id);if(!b||!b.firstChild)continue;
+    if(b.dataset.label==null){b.dataset.label=b.firstChild.textContent;b.dataset.tip=b.title;}
+    const l=liveFresh(tab),t=l||b.dataset.label,tip=l?LIVE_FRESH_TIP:b.dataset.tip;
+    if(b.firstChild.textContent!==t)b.firstChild.textContent=t;if(b.title!==tip)b.title=tip;}
+  const d=$('#crossDiff');if(!d)return;if(d.dataset.tip==null)d.dataset.tip=d.parentNode.title||'';
+  const off=!!liveFresh('cross');d.disabled=off;d.parentNode.title=off?'Not with a smart cube: you scramble the cube yourself':d.dataset.tip;
+}
 // The ask: Use my cube or Skip, with Don't ask again. Enter uses it, Esc skips.
 function liveAsk(){
   if($('#liveAskBg'))return;
@@ -155,6 +179,7 @@ if(typeof document!=='undefined'){
   document.addEventListener('cw:smartmoves',e=>liveSmartMoves(e.detail||{}));
   document.addEventListener('cw:smart',e=>{const t=e.detail&&e.detail.type;if(t==='connect'){LIVE.asked=false;liveHoldSync();}if(t==='disconnect'||t==='gone'||t==='connect')liveNoteDraw();});
   for(const ev of ['cw:sequence','cw:scramble','cw:tab','cw:method'])document.addEventListener(ev,()=>{liveNoteDraw();playerHoldDraw();});
+  for(const ev of ['cw:smart','cw:tab','cw:method','cw:cubesrc'])document.addEventListener(ev,liveFreshDraw);
   document.addEventListener('cw:step',playerHoldDraw);
   document.addEventListener('cw:yourmove',crossFollow);
   // A plan belongs to its scramble: a new one empties Check my plan.

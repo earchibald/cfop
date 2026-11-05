@@ -1,7 +1,8 @@
 // Your moves (js/live.js): the hold row turns the player's picture and renames the virtual cube's
 // keys; a smart cube that connects away from the page's cube brings the ask (Use my cube, Skip,
 // Don't ask again); in step, its turns go on the player; the Cross tab's Check my plan follows
-// the moves made, and moves typed there go on the player.
+// the moves made, and moves typed there go on the player. With a smart cube, New Cross (New F2L,
+// New OLL · PLL) marks the cube as it is as the start, and makes no scramble.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
 const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
@@ -78,6 +79,44 @@ w.addEventListener('load',async()=>{try{
   ev('cw:smartmoves',{moves:['B'],from:E("applyAlg(new Cube(),['L'])"),to:E('cubeTab.target')});
   assert.strictEqual(E('seqState.moves.length'),n1,'out of step: no move');assert.ok(!$('#liveNote').hidden,'the note');
   E('cubeTab.conn=null;cubeTab.target=null');ev('cw:smart',{type:'disconnect'});assert.ok($('#liveNote').hidden,'no note with no cube');
+
+  // A fresh start on a smart cube: New Cross, New F2L, New OLL · PLL. The page makes no scramble:
+  // the cube in your hands, as it is now, is the start.
+  const label=s=>$(s).firstChild.textContent,same=(a,b)=>E('cubeTabKey')(a)===E('cubeTabKey')(b);
+  E("newScramble('live-f')");E("goTab('cross')");
+  assert.strictEqual(label('#crossNew'),'New cross scramble','no smart cube: a scramble');assert.strictEqual(label('#scrPillNew'),'New');
+  E("setCubeSrc('smart')");assert.strictEqual(label('#crossNew'),'New cross scramble','Smart cube picked, none connected: still a scramble');
+  const mixed=E("applyAlg(new Cube(),parseAlg(\"F R' D2 B L U2 R F' D\"))");w.__mixed=mixed;
+  E("cubeTab.conn={send:()=>Promise.resolve()};cubeTab.target=window.__mixed");ev('cw:smart',{type:'state'});
+  assert.strictEqual(label('#crossNew'),'New Cross','connected: New Cross');assert.ok($('#crossNew .hk'),'the key badge stays');
+  assert.strictEqual(label('#scrPillNew'),'New Cross','the scramble pill too');assert.ok(/^Scramble your smart cube first/.test($('#crossNew').title),'the tip says what it does');
+  assert.ok($('#crossDiff').disabled,'no Length: you scramble the cube yourself');
+  click($('#crossNew'));
+  assert.ok(/^smart-/.test(E('scr.seed'))&&same(E('scr.cube'),mixed),'New Cross: the cube as it is is the scramble');
+  assert.ok(E('liveInStep(cubeTab.target)'),'the player shows the cube in your hands');
+  // Make the cross, scramble again, then N: the start moves to the cube as it is now.
+  const turn2=ms=>{const from=E('cubeTab.target'),to=E(`applyAlg(cubeTab.target,${JSON.stringify(ms)})`);w.__to=to;E('cubeTab.target=window.__to');ev('cw:smartmoves',{moves:ms,from,to});return to;};
+  turn2(['U']);assert.strictEqual($('#crossTry').value,'D','your moves go on the player');
+  const again=turn2(['R','F2','L']);
+  d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'n',bubbles:true}));
+  assert.ok(same(E('scr.cube'),again),'N: New Cross from the cube as it is');assert.strictEqual($('#crossTry').value,'','an empty plan');
+  // Scramble Info's New is New Cross too.
+  turn2(['B']);w.siOpen($('#scrPillInfo')||$('#svInfo'),true);const siNew=$('#siPane [data-si="new"]');
+  assert.strictEqual(siNew.firstChild.textContent,'New Cross','Scramble Info: New Cross');click(siNew);assert.ok(same(E('scr.cube'),E('cubeTab.target')),'and it marks the cube');
+  // Next on stop marks nothing: the cube is not scrambled yet.
+  const seed=E('scr.seed');$('#autoNext').checked=true;E('onTimerStop()');await sleep(250);
+  assert.strictEqual(E('scr.seed'),seed,'Next on stop: no fresh start');$('#autoNext').checked=false;
+  // F2L: New F2L, in Guide mode and Live.
+  E("goTab('f2l')");assert.strictEqual(label('#fgNew'),'New F2L');assert.strictEqual(label('#f2lNew'),'New F2L');assert.strictEqual(label('#scrPillNew'),'New F2L');
+  turn2(['D','R']);click($('#fgNew'));assert.ok(same(E('scr.cube'),E('cubeTab.target')),'New F2L marks the cube');
+  // OLL · PLL: New OLL · PLL on the pill and in Scramble Info; Next case keeps its drill.
+  E("goTab('ll')");assert.strictEqual(label('#scrPillNew'),'New OLL · PLL');assert.strictEqual(label('#llNext'),'Next case','Next case stays');
+  turn2(['L']);click($('#scrPillNew'));assert.ok(same(E('scr.cube'),E('cubeTab.target')),'New OLL · PLL marks the cube');
+  // The link goes: a scramble again.
+  E('cubeTab.conn=null;cubeTab.target=null');ev('cw:smart',{type:'disconnect'});E("goTab('cross')");
+  assert.strictEqual(label('#crossNew'),'New cross scramble','no cube: a scramble again');assert.ok(!$('#crossDiff').disabled,'Length again');
+  assert.strictEqual($('#crossNew').title,'A new scramble to train the cross on','its own tip');
+  E("setCubeSrc('mine')");
 
   // The virtual cube: a key goes on the player and on Check my plan.
   E("setCubeSrc('screen')");E("newScramble('live-2')");E("goTab('cross')");await sleep(50);
