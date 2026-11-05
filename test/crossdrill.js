@@ -70,12 +70,34 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.strictEqual(run(`trainFade(displayedCube.toFacelets())`),null,'no F2L fade on the Cross tab');
   $('#rail button[data-tab="f2l"]').click();await sleep(20);
   const ff=run(`f2lTrainFade(displayedCube.toFacelets())`);assert.ok(ff,'a fade on the F2L tab');
-  assert.strictEqual(ff.size,6+4*3+4*2,'the centers, four corners and four edges');
+  // The styles: chips while it is on; F2L-3 (the first two layers) by default.
+  const sg=$('#f2lStyle');assert.ok(sg&&!sg.hidden,'the style chips show while it is on');
+  assert.deepStrictEqual($$('#f2lStyle button').map(b=>b.textContent),['F2L-1','F2L-2','F2L-3'],'three styles');
+  assert.strictEqual($('#f2lStyle button[aria-pressed="true"]').textContent,'F2L-3','F2L-3 by default');
+  // F2L-3: the first two layers, every piece with no yellow: the cross edges too.
+  assert.ok(run(`(()=>{const f=displayedCube.toFacelets(),k=f2lTrainFade(f);return k.size===6+4*3+8*2
+    &&[...cornerFacelet,...edgeFacelet].every(p=>p.some(i=>f[i]===3)?p.every(i=>!k.has(i)):p.every(i=>k.has(i)));})()`),'F2L-3: every piece with no yellow, whole');
+  assert.ok($$('#cube polygon[opacity="0.22"]').length>0,'the picture grays the rest at the Cross Trainer level');
+  // F2L-2: the eight F2L pieces alone.
+  $$('#f2lStyle button')[1].click();assert.strictEqual(w.localStorage.getItem('cw:f2lStyle'),'2','the style kept');
+  assert.strictEqual(run(`f2lTrainFade(displayedCube.toFacelets()).size`),6+4*3+4*2,'F2L-2: the centers, four corners and four edges');
   assert.ok(run(`(()=>{const f=displayedCube.toFacelets(),k=f2lTrainFade(f);
     const pieces=[...cornerFacelet,...edgeFacelet].filter(p=>p.some(i=>k.has(i)));
     return pieces.length===8&&pieces.every(p=>p.every(i=>k.has(i)))&&cornerFacelet.filter(c=>c.some(i=>k.has(i))).every(c=>c.some(i=>f[i]===0))
-      &&edgeFacelet.filter(e=>e.some(i=>k.has(i))).every(e=>e.every(i=>f[i]!==0&&f[i]!==3));})()`),'white corners and the edges with no white or yellow, whole');
-  assert.ok($$('#cube polygon[opacity="0.22"]').length>0,'the picture grays the rest at the Cross Trainer level');
+      &&edgeFacelet.filter(e=>e.some(i=>k.has(i))).every(e=>e.every(i=>f[i]!==0&&f[i]!==3));})()`),'F2L-2: white corners and the edges with no white or yellow, whole');
+  // F2L-1: the cross and the pair the guide is on.
+  $$('#f2lStyle button')[0].click();await sleep(500);
+  assert.ok(run(`fgActive()&&!!fg.step`),'the guide has a pair');
+  assert.ok(run(`(()=>{const f=displayedCube.toFacelets(),k=f2lTrainFade(f);if(k.size!==6+4*2+2+3)return false;
+    const want=fgWords()[fg.step.slot].colors.slice(0,2).map(c=>COLOR_NAMES.indexOf(c)).sort().join();
+    const e=edgeFacelet.filter(e=>e.some(i=>k.has(i))&&!e.some(i=>f[i]===0)),c=cornerFacelet.filter(c=>c.some(i=>k.has(i)));
+    return e.length===1&&c.length===1&&e[0].map(i=>f[i]).sort().join()===want&&c[0].some(i=>f[i]===0)
+      &&c[0].map(i=>f[i]).filter(x=>x!==0).sort().join()===want&&edgeFacelet.filter(e=>e.some(i=>f[i]===0)).every(e=>e.every(i=>k.has(i)));})()`),"F2L-1: the white cross edges, and the corner and edge of the guide's pair");
+  // Off the guide, the first pair in the order that is not solved: on a solved cube, the first.
+  assert.ok(run(`(()=>{const m=f2lState.mode;f2lState.mode='cases';const s=new Cube().toFacelets(),r=f2lTrainPair(s);
+    const c=phys(new Cube()).center,o=fg.order[0];f2lState.mode=m;return r.join()===[c[F2L_SLOT_FACES[o][0]],c[F2L_SLOT_FACES[o][1]]].join();})()`),'off the guide: the first pair in the order');
+  ft.click();assert.ok(sg.hidden,'the chips hide when it is off');
+  $$('#f2lStyle button')[2].click();assert.strictEqual(ft.getAttribute('aria-pressed'),'true','a style turns it on');
   ft.click();assert.strictEqual(run(`trainFade(displayedCube.toFacelets())`),null,'off again');
   $('#rail button[data-tab="cross"]').click();await sleep(20);
   // Find the edges: a pick of each white edge; a miss counts.

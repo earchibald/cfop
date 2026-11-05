@@ -65,3 +65,17 @@ The same idea on the F2L tab: a button on the cube, F2L Trainer (`#f2lTrainBtn`,
 default). The eight F2L pieces keep their colors, with the centers: the four corners with the cross
 color and the four edges with neither the cross color nor its opposite. Every other piece shows at
 the Cross Trainer's level, `cw:crossDim`. It only changes what the cube shows; it sets nothing up.
+
+### Three styles (1.70)
+
+While F2L Trainer is on, three chips sit beside the button (`#f2lStyle`, `cw:f2lStyle`, F2L-3 by default):
+
+- **F2L-1**: the cross and one pair. The pair is the one the F2L guide is on; off the guide, or before
+  it picks one, the first pair in the guide's order (`cw:f2lOrder`) that is not solved. The slots are
+  named as the solve holds the cube, cross color down (`f2lTrainPair`). When the guide moves to
+  another pair, the cube draws again (`f2lTrainGuide`, called by `fgDraw`).
+- **F2L-2**: the eight F2L pieces alone, with no cross (1.69's view).
+- **F2L-3**: the first two layers: every piece with no sticker of the cross color's opposite, so the
+  cross edges too. The default.
+
+A click on a chip picks the style and turns the trainer on.

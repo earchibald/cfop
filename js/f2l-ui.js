@@ -325,6 +325,7 @@ function fgDraw(){
   const fo=a&&box&&box.contains(a)&&a.dataset?(a.dataset.ord?`[data-ord="${a.dataset.ord}"]`:a.dataset.chip?`[data-chip="${a.dataset.chip}"]`:a.dataset.use?`[data-use="${a.dataset.use}"]`:a.dataset.next?'.gm.next':null):null;
   const dir=a&&a.dataset&&a.dataset.dir;
   fgDrawAll();
+  if(typeof f2lTrainGuide==='function')f2lTrainGuide(); // F2L Trainer's F2L-1 shows the guide's pair
   if(fo&&!box.contains(document.activeElement)){const b=(dir&&$(`#f2lGuide ${fo}[data-dir="${dir}"]:not(:disabled)`))||$(`#f2lGuide ${fo}:not(:disabled)`);if(b)b.focus();}
 }
 function fgDrawAll(){
