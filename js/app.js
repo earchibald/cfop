@@ -70,11 +70,14 @@ function hiddenOn(){return !!store.get('hidden',false);}
 function setHidden(on){store.set('hidden',!!on);drawMain();}
 function view3D(){return hiddenOn()?{yaw:view.yaw,pitch:view.pitch,hidden:true,scale:40}:{yaw:view.yaw,pitch:view.pitch};}
 // The hold row under the cube (js/live.js) turns the picture: rot, or a turned cube on the net.
+// Cross Trainer (js/crosstrain.js) grays all but the cross edges of the stickers drawn; Find the
+// edges puts a class on each sticker, so a click names it.
 function drawMain(){
   const f=displayedCube.toFacelets();const svg=$('#cube');const H=typeof playerHoldView==='function'?playerHoldView(displayedCube):null,v={...view3D(),...(H?{rot:H.rot}:{})};
-  if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');svg.innerHTML=H?renderNet(applyAlg(displayedCube,H.moves).toFacelets(),{}):renderNet(f,{fade:fadeSet});}
-  else if(anim.move&&anim.t<1){svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(anim.from.toFacelets(),{...v,fade:fadeSet,move:anim.move,t:Math.max(anim.t,0.01)});}
-  else{svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(f,{...v,fade:fadeSet,lift:mainLift});}
+  const fd=g=>(typeof crossTrainFade==='function'&&crossTrainFade(g))||fadeSet,cls=typeof crossFindCls==='function'?crossFindCls():null;
+  if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');const g=H?applyAlg(displayedCube,H.moves).toFacelets():f;svg.innerHTML=renderNet(g,{fade:H?(typeof crossTrainFade==='function'&&crossTrainFade(g))||null:fd(g)});}
+  else if(anim.move&&anim.t<1){svg.setAttribute('viewBox','0 0 400 360');const g=anim.from.toFacelets();svg.innerHTML=renderCube3D(g,{...v,fade:fd(g),move:anim.move,t:Math.max(anim.t,0.01)});}
+  else{svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(f,{...v,fade:fd(f),lift:mainLift,cls});}
   drawDragHint();
 }
 // The mark: the solved cube in the player view, half way through R. The same code draws
@@ -497,7 +500,13 @@ function refreshCross(){if(!tablesReady){$('#crossOpt').textContent='…';ensure
   $('#crossTryOut').innerHTML='';}
 $('#crossReveal').onclick=()=>{crossState.revealed=!crossState.revealed;refreshCross();};
 $('#crossPlus1').onchange=refreshCross;$('#crossColor').onchange=()=>{store.set('crossColor',$('#crossColor').value);if(!seqState.drill)showForTab();refreshCross();planState.plan=null;renderLLGroups();renderF2LGrid();if(mobileMQ.matches)renderMobileRef();$('#planOut').innerHTML='<p class="muted">Cross color changed. Press Plan.</p>';};
-$('#crossNew').onclick=()=>{ensureTables(()=>{const diff=$('#crossDiff').value;for(let k=0;k<200;k++){const seed=randomSeedName();const c=toFrame(wcaState(seed));const d=buildCrossTable()[crossIndex(c)];if(diff==='any'||(diff==='easy'&&d<=5)||(diff==='hard'&&d>=7)){newScramble(seed);return;}}newScramble();});};
+// Length: any, easy, hard pick from WCA scrambles; an exact length makes a drill scramble
+// (js/crossdrill.js), as a random scramble seldom has a cross of 2, 3 or 8 moves.
+$('#crossDiff').value=store.get('crossDiff','any');if(!$('#crossDiff').value)$('#crossDiff').value='any';
+$('#crossDiff').onchange=()=>store.set('crossDiff',$('#crossDiff').value);
+$('#crossNew').onclick=()=>{ensureTables(()=>{const diff=$('#crossDiff').value;
+  if(/^\d$/.test(diff)){newScramble(crossDrillSeed(+diff,$('#crossColor').value));return;}
+  for(let k=0;k<200;k++){const seed=randomSeedName();const c=toFrame(wcaState(seed));const d=buildCrossTable()[crossIndex(c)];if(diff==='any'||(diff==='easy'&&d<=5)||(diff==='hard'&&d>=7)){newScramble(seed);return;}}newScramble();});};
 // Check my plan. quiet: the moves are on the player already (js/live.js: made on the cube, or typed),
 // so the player stays as it is.
 $('#crossCheck').onclick=()=>crossCheckNow(false);

@@ -27,8 +27,8 @@ was. `?classic` in the address turns it off for one visit. Settings > Layout tur
 | Top left | The rail: each section with its color and its key |
 | Beside the rail | The step badge: the section, and Scramble Info (a dot while the player shows a drill) |
 | Top right of the cube | Scan or paint (a regular cube only) and Undo; the hold (Top, Front, Net) under them. None on Reference |
-| Bottom left | The action bar: the cube source (a click opens the cube menu), Animate, Hidden faces, Virtual cube, Save image |
-| Right third | The column: Current Moves when there are some, the sheets of the section, then Everywhere (Your moves, Timer, Smart cube while a smart cube is the cube, CFOP plan, Weak spots for level 5), then Add for closed sheets |
+| Bottom left | The action bar: the cube source (a click opens the cube menu), Animate, Hidden faces, Virtual cube, Cross Trainer (the Cross section only, `docs/cross-drill.md`), Save image |
+| Right third | The column: Current Moves when there are some, the sheets of the section, then Everywhere (Your moves, Timer, Smart cube while a smart cube is the cube, CFOP plan, Weak spots for level 5) |
 | Top bar, after the cube chip | Maximize Cube (Minimize Cube while on) |
 | Center | The big moment: the inspection count, the clock, Solved! |
 
@@ -42,16 +42,18 @@ and charge, the stage of the solve, the last moves, Clear moves and Listen (`js/
 ## Sheets
 
 Each top-level panel of the section in view is a sheet. The module puts a strip at its top: a grip,
-the title, fold, dock (only while it floats) and close. The title comes from `SV_TITLES` by panel id,
+the title, fold, and, while it floats, a cross that puts it back. The title comes from `SV_TITLES` by panel id,
 else from the panel's heading, which then hides. A panel that is a `details` (the CFOP plan) keeps its
 strip in its summary, so it shows while folded, and fold opens and closes the details. A panel
 that holds a `details` (the full PLL and F2L lists) folds that details.
 
 - Fold: the title or the arrow.
-- Close: the cross. Add, at the foot of the column, opens it again.
+- No close (1.66). A sheet never goes away: the owner found a closed sheet lost, above all with the
+  cube maximized, where Add did not show. A sheet closed before 1.66 comes back.
 - Float: drag the strip off the column. The sheet moves to `#svFloats`, a layer over the stage
-  (Safari clips a fixed element inside a scrolling column with rounded corners). Drop it on the
-  column, or press dock, and it goes back to its place.
+  (Safari clips a fixed element inside a scrolling column with rounded corners). Its place in the
+  column keeps a stand-in (`.svghost`: the title, "Floating · put back"). Drop the sheet on the
+  column, press its cross, or click the stand-in, and it goes back to its place.
 - Restore panes: every sheet of the section open and in the column.
 
 The page keeps the choices by section and sheet in `cw:svSheets`: `{"cross:p1": {"fold": true},
@@ -103,8 +105,8 @@ The cube gets the page. The rail is a column of color chips with the key number 
 the section. The sheets are vertical tabs at the right edge, a grip and a title each. A panel that its
 section hides (an F2L mode not in use) has no tab. A click on a tab tears its sheet off: it floats left of
 the tabs, under Undo and the hold, at the tab's height, beside the floats already there. Drag a tab off
-to float its sheet where it is let go. Drop a floating sheet on the tabs, or press dock, and it is a tab
-again. Floating sheets stay where they are. Kept in `cw:svMax`.
+to float its sheet where it is let go. A floating sheet keeps its tab, lit (`.svout`); a click on it, a
+drop of the sheet on the tabs, or its cross puts it back. Floating sheets stay where they are. Kept in `cw:svMax`.
 
 A float stays on the stage: under the top bar, so its strip can be grabbed, and on the screen. Its
 height ends at the bottom of the window. A float taken by its strip comes to the front. While a sheet

@@ -16,14 +16,16 @@ function wcaRandomState(r){
   for(let i=0;i<7;i++){co.push(Math.floor(r()*3));s+=co[i];}co.push((3-s%3)%3);
   for(let i=0;i<11;i++){eo.push(Math.floor(r()*2));t+=eo[i];}eo.push(t%2);
   return new Cube(cp,co,ep,eo);}
+// A drill seed (js/crossdrill.js) makes its own state; any other seed a random one.
+function wcaMake(seed,r){return (typeof crossDrillState==='function'&&crossDrillState(seed,r))||wcaRandomState(r);}
 var WCA={max:22,cache:new Map()}; // var: tests read it from the window
 // The scramble of a seed: {state, moves}. Kept, as a seed is asked for again (history, the cross drill).
 function wcaFor(seed){seed=String(seed);if(WCA.cache.has(seed))return WCA.cache.get(seed);
   const r=rng('wca:'+seed);let state,sol;
-  for(;;){state=wcaRandomState(r);sol=solveTwoPhase(state,{maxLen:WCA.max,target:WCA.max,timeMs:1e9});if(sol&&sol.length>=2)break;}
+  for(;;){state=wcaMake(seed,r);sol=solveTwoPhase(state,{maxLen:WCA.max,target:WCA.max,timeMs:1e9});if(sol&&sol.length>=2)break;}
   const out={state,moves:parseAlg(invertAlg(sol))};
   if(WCA.cache.size>60)WCA.cache.delete(WCA.cache.keys().next().value);
   WCA.cache.set(seed,out);return out;}
 // The state alone, with no search: for a check of many seeds (the Cross tab's easy and hard).
-function wcaState(seed){const r=rng('wca:'+seed);return wcaRandomState(r);}
+function wcaState(seed){const r=rng('wca:'+seed);return wcaMake(seed,r);}
 function wcaScramble(seed){return wcaFor(seed).moves.slice();}
