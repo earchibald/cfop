@@ -82,6 +82,17 @@ assert.strictEqual(w.getComputedStyle($('#svTR')).display,'none','no Undo on Ref
   t.className='timer';await sleep(0);
   assert.ok(!d.body.dataset.svfocus,'the stop ends focus');assert.ok(/Solved!/.test($('#svBig').textContent)&&/3\.21/.test($('#svBig').textContent),'Solved! and the time');
   d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.ok($('#svBig').hidden,'Esc closes the card');
+  // A smart cube: the card's Next is New Cross, and it marks the cube as it is as the start.
+  const pg=s=>new w.Function('return ('+s+')')();
+  pg(`goTab('cross'),setCubeSrc('smart'),cubeTab.conn={send:()=>Promise.resolve()},cubeTab.target=applyAlg(new Cube(),parseAlg("R U2 F' L D")),svSolved('4.56')`);
+  const nx=$('#svBig [data-sv="next"]');assert.strictEqual(nx.firstChild.textContent,'New Cross','Solved! with a smart cube: New Cross');
+  click(nx);assert.ok($('#svBig').hidden&&/^smart-/.test(w.scr.seed)&&pg('cubeTabKey(scr.cube)===cubeTabKey(cubeTab.target)'),'New Cross: the cube is the scramble');
+  // On OLL · PLL, N on the card is New OLL · PLL, not Next case.
+  pg(`goTab('ll'),cubeTab.target=applyAlg(new Cube(),parseAlg("F U R U' R' F'")),svSolved('2.10')`);
+  assert.strictEqual($('#svBig [data-sv="next"]').firstChild.textContent,'New OLL · PLL');
+  d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'n',bubbles:true}));
+  assert.ok($('#svBig').hidden&&!w.seqState.drill&&pg('cubeTabKey(scr.cube)===cubeTabKey(cubeTab.target)'),'N: New OLL · PLL, no case drill');
+  pg("cubeTab.conn=null,cubeTab.target=null,setCubeSrc('mine'),goTab('cross')");
   // ----- Scramble Info -----
   const info=$('#svInfo');click(info);let pane=$('#siPane');assert.ok(pane,'a click opens the pane');
   assert.strictEqual($('#siSeed').textContent,w.scr.seed,'the seed');assert.strictEqual($('#siCode').textContent,[...w.scr.moves].join(' '),'the moves');

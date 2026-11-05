@@ -436,7 +436,7 @@ $('#autoNext').checked=store.get('autoNext',false);$('#autoNext').onchange=()=>s
 // 15 s inspection (cw:insp, on by default): the box by the timer and the one in Settings are the same setting.
 $('#fullChk').checked=store.get('timeFull',true);$('#fullChk').onchange=()=>{store.set('timeFull',$('#fullChk').checked);if(!/^(ll|f2l):/.test(timer.scope))setScope(tabScope(curTab));};
 $('#inspChk').checked=store.get('insp',true);$('#inspChk').onchange=()=>store.set('insp',$('#inspChk').checked);
-onTimerStop=()=>{if($('#autoNext').checked&&(curTab==='cross'||curTab==='f2l'||curTab==='ll'||curTab==='ssolve'||curTab==='fsolve'))setTimeout(nextForTab,150);};
+onTimerStop=()=>{if($('#autoNext').checked&&!(typeof liveFresh==='function'&&liveFresh())&&(curTab==='cross'||curTab==='f2l'||curTab==='ll'||curTab==='ssolve'||curTab==='fsolve'))setTimeout(nextForTab,150);};
 
 // ---------- cross color / orientation ----------
 const CROSS_ROT={white:'z2',yellow:'',green:"x'",blue:'x',red:'z',orange:"z'"};
@@ -505,7 +505,7 @@ $('#crossPlus1').onchange=refreshCross;$('#crossColor').onchange=()=>{store.set(
 // (js/crossdrill.js), as a random scramble seldom has a cross of 2, 3 or 8 moves.
 $('#crossDiff').value=store.get('crossDiff','any');if(!$('#crossDiff').value)$('#crossDiff').value='any';
 $('#crossDiff').onchange=()=>store.set('crossDiff',$('#crossDiff').value);
-$('#crossNew').onclick=()=>{ensureTables(()=>{const diff=$('#crossDiff').value;
+$('#crossNew').onclick=()=>{if(typeof liveFreshGo==='function'&&liveFreshGo())return;ensureTables(()=>{const diff=$('#crossDiff').value;
   if(/^\d$/.test(diff)){newScramble(crossDrillSeed(+diff,$('#crossColor').value));return;}
   for(let k=0;k<200;k++){const seed=randomSeedName();const c=toFrame(wcaState(seed));const d=buildCrossTable()[crossIndex(c)];if(diff==='any'||(diff==='easy'&&d<=5)||(diff==='hard'&&d>=7)){newScramble(seed);return;}}newScramble();});};
 // Check my plan. quiet: the moves are on the player already (js/live.js: made on the cube, or typed),
@@ -536,7 +536,7 @@ function showF2LState(){ensureF2L(()=>{
 $('#f2lPlan').innerHTML=f2lState.revealed?renderF2LPlan():'<p class="muted">Pair plan hidden. Solve the pairs, then reveal.</p>';});}
 function renderF2LPlan(){const p=f2lState.plan;if(!p)return '<p>No plan found.</p>';let cur=f2lState.cube;const seqFor=[];const html=p.steps.map((s,i)=>{const h=stepHTML(`Pair ${i+1}: ${s.slot}`,describePair(cur,s.slot),s.moves,'p'+i,`${s.moves.length} moves`);seqFor.push(['p'+i,cur,s.moves]);cur=applyAlg(cur,s.moves);return h;}).join('');
   setTimeout(()=>wireSteps($('#f2lPlan'),key=>{const e=seqFor.find(x=>x[0]===key);return {cube:phys(e[1]),moves:e[2]};}),0);const total=p.steps.reduce((a,b)=>a+b.moves.length,0);return `<div class="muted" style="font-size:14px">${total} moves for ${p.steps.length} pair${p.steps.length>1?'s':''}, shortest-first order.</div>`+html;}
-$('#f2lNew').onclick=()=>newScramble();$('#f2lReveal').onclick=()=>ensureF2L(()=>{f2lState.revealed=!f2lState.revealed;showF2LState();});
+$('#f2lNew').onclick=()=>{if(!(typeof liveFreshGo==='function'&&liveFreshGo()))newScramble();};$('#f2lReveal').onclick=()=>ensureF2L(()=>{f2lState.revealed=!f2lState.revealed;showF2LState();});
 // cases grid. The cards work like the OLL/PLL cards: a status button, click for details, shift-click to select.
 const groups=[...new Set(F2L_CASES.map(c=>c.grp))];groups.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;$('#f2lGroup').appendChild(o);});
 const f2lId=n=>'f2l-'+n;

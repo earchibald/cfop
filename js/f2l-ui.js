@@ -42,7 +42,7 @@ function fgSource(){
 function fgInit(){
   fg.mode=store.get('f2lMode','shortest')==='corner'?'corner':'shortest';
   const o=store.get('f2lOrder',null);fg.order=Array.isArray(o)&&o.length===4&&F2L_ORDER_DEFAULT.every(n=>o.includes(n))?o.slice():F2L_ORDER_DEFAULT.slice();
-  $('#fgNew').onclick=()=>newScramble();
+  $('#fgNew').onclick=()=>{if(!(typeof liveFreshGo==='function'&&liveFreshGo()))newScramble();};
   $('#fgRead').onclick=fgReadCube;
   $('#fgReturn').onclick=fgReturn;$('#fgSetup').onclick=fgSetup;
   $('#fgShortest').onclick=()=>fgMode('shortest');$('#fgCorner').onclick=()=>fgMode('corner');

@@ -18,7 +18,7 @@ function placeInit(){
   pill.innerHTML='<span class="muted">Scramble</span> <b id="scrPillSeed"></b><button type="button" class="svinfo" id="scrPillInfo" title="The scramble: its moves, New scramble, Restore scramble and Speedy Solve">Info</button><button class="small" id="scrPillNew" title="A new scramble">New<span class="hk" aria-hidden="true">N</span></button>';
   slot.append(pill,$('#seedBar'),$('#begBar'),$('#player'));
   main.prepend(slot);
-  $('#scrPillNew').onclick=()=>{if(typeof nextForTab==='function')nextForTab();else newScramble();};
+  $('#scrPillNew').onclick=()=>{if(typeof liveFreshGo==='function'&&liveFreshGo())return;if(typeof nextForTab==='function')nextForTab();else newScramble();};
   placePlayer();
 }
 function placeSeed(){const el=$('#scrPillSeed');if(el&&typeof scr!=='undefined')el.textContent=scr.seed||'';}
