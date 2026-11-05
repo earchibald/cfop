@@ -1046,3 +1046,14 @@ body.onboard .foot{padding-bottom:56px}
 .patpanel .pat-pair{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
 .patpanel .pat-pair .pos{font-size:12px;color:var(--muted);min-width:76px}
 .patpanel .pat-pair .cs{font-weight:600;font-size:13px}
+/* Cross Trainer (js/crosstrain.js): on the cube on the Cross tab of CFOP only, above Hidden faces */
+.cubebox .crosstrainbtn{right:auto;left:8px;bottom:38px}
+@media (max-width:760px){.cubebox .crosstrainbtn{left:4px;bottom:30px}}
+body:not([data-tab="cross"]) #crossTrainBtn,body:not([data-method="cfop"]) #crossTrainBtn{display:none!important}
+/* Find the edges: the row under the cross plans; a miss shakes the cube */
+.crossfind{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.crossfind #crossFindOut{margin-top:6px}
+.crossfind #crossFindOut b{color:var(--text)}
+#cube.cfmiss{animation:cfmiss .28s}
+@keyframes cfmiss{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@media (prefers-reduced-motion:reduce){#cube.cfmiss{animation:none}}

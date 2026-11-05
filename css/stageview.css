@@ -71,12 +71,15 @@ body.sv:not([data-cube="none"]) #svMain .grid2{display:flex;flex-direction:colum
 body.sv #svCol :is(#seedBar,#scrPill){padding:10px 12px}
 body.sv #seedBar .seedrow input{width:130px}
 body.sv #seedBar>.muted{font-size:12px}
-.svadd{display:flex;gap:8px;flex-wrap:wrap;flex:none}
-.svadd[hidden]{display:none}
-.svchip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:13px;border-radius:999px;background:var(--glass);border:1px solid var(--line);color:var(--muted);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
-.svchip svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8}
+/* the stand-in a floating sheet leaves in its place: a click puts the sheet back */
+.svghost{display:flex;align-items:center;gap:8px;flex:none;width:100%;padding:8px 12px;font-size:13px;text-align:left;border:1px dashed var(--line);border-radius:12px;background:transparent;color:var(--muted);cursor:pointer}
+.svghost:hover{color:var(--text);border-color:var(--link)}
+.svghost svg{width:14px;height:14px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.svghost .svgt{font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.svghost .svgs{margin-left:auto;white-space:nowrap}
+.svghost[hidden]{display:none}
 
-/* a sheet: a strip (grip, title, fold, dock, close), then the panel */
+/* a sheet: a strip (grip, title, fold; the x of a float puts it back), then the panel */
 body.sv .svsheet{padding:0 14px 14px;flex:none;align-self:stretch;width:auto}
 body.sv #svCol .svsheet:not(.svfloat){width:100%}
 .svbar{display:flex;align-items:center;gap:4px;margin:0 -14px 12px;padding:7px 6px 7px 8px;border-bottom:1px solid var(--line);cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none}
@@ -94,7 +97,6 @@ body.sv #svCol .svsheet:not(.svfloat){width:100%}
 .svbar .svib:hover{color:var(--text);border-color:var(--line)}
 .svsheet:not(.svfloat) .svib[data-sv="dock"]{display:none}
 body.sv .svfold>:not(.svbar){display:none!important}
-body.sv .svclosed{display:none!important}
 body.sv .svh{display:none}
 body.sv .panel:not(details)>[data-svdet]>summary{display:none}
 body.sv details[data-svdet]>summary{display:block;list-style:none;cursor:default}
@@ -223,13 +225,15 @@ body.sv.svmax .svtabs{display:flex}
 .svtabs.svdrop{outline:2px dashed var(--link);outline-offset:-2px}
 .svtab{writing-mode:vertical-rl;display:flex;align-items:center;gap:8px;padding:10px 6px;width:34px;font-size:13px;font-weight:600;background:transparent;border:1px solid transparent;border-radius:9px;color:var(--muted);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;white-space:nowrap}
 .svtab:hover{color:var(--text);border-color:var(--line)}
+.svtab.svout{color:var(--text);background:var(--glass);border-color:var(--link)}
 .svtab .svgrip svg{width:10px;height:14px;fill:currentColor;transform:rotate(90deg)}
 body.sv.svmax #svCol{right:calc(16px + 44px + 8px);width:min(420px,42vw);bottom:auto;max-height:calc(100% - 42px);z-index:5}
 body.sv.svmax #svCol:not(:has(#siCur)){display:none}
-body.sv.svmax #svCol>:is(.svhead,.svadd){display:none}
-body.sv.svmax #svCol .svsheet{display:none!important}
+body.sv.svmax #svCol>.svhead{display:none}
+body.sv.svmax #svCol :is(.svsheet,.svghost){display:none!important}
 body.sv.svmax[data-cube="none"] #svCol{left:var(--svleft);right:calc(16px + 44px + 8px);width:auto;max-width:none}
 body.sv.svmax[data-cube="none"] #svCol:not(:has(#siCur)){display:flex}
 body.sv.svmax[data-cube="none"] #svCol .svsheet:not(.hidden){display:block!important}
+body.sv.svmax[data-cube="none"] #svCol .svghost:not([hidden]){display:flex!important}
 body.sv.svmax[data-cube="none"] .svtabs{display:none}
 @media (prefers-reduced-motion:reduce){body.sv :is(#svTR,#svTabs){transition:none}}

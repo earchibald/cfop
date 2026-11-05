@@ -50,6 +50,7 @@
       <button class="animbtn" id="animBtn" aria-pressed="false" title="Turn the layer on the cube for each move (A)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6"/><path d="M18 3v4h-4"/><path d="M20 12a8 8 0 0 1-13.7 5.6"/><path d="M6 21v-4h4"/></svg>Animate<span class="hk" aria-hidden="true">A</span></button>
       <button class="animbtn hidbtn" id="hiddenBtn" aria-pressed="false" title="Show the hidden faces: the back, left and bottom, as in a mirror behind the cube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8l8-4 8 4-8 4z"/><path d="M4 8v8l8 4v-8"/><path d="M20 8v8l-8 4" stroke-dasharray="2 2.4"/></svg>Hidden faces</button>
       <button class="animbtn vcubebtn" id="vcubeBtn" aria-pressed="false" title="Turn the cube here with the keys or the buttons of a small window, as a virtual cube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M7 11h1M11 11h2M16 11h1M8 14h8"/></svg>Virtual cube</button>
+      <button class="animbtn crosstrainbtn" id="crossTrainBtn" aria-pressed="false" title="Cross Trainer: gray every piece but the four cross edges and the centers, as you turn the cube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>Cross Trainer</button>
       <button class="savebtn" id="saveImgBtn" title="Save the cube picture as an image file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>Save image</button>
       <div class="draghint" id="dragHint" aria-hidden="true"><svg viewBox="0 0 24 16"><path d="M3 12a9 9 0 0 1 18 0"/><path d="M3 12l-1.6-3.2M3 12l3.3-1.3"/><path d="M21 12l1.6-3.2M21 12l-3.3-1.3"/></svg><span>Drag to rotate</span></div>
     </div>
@@ -174,16 +175,20 @@
         <div id="crossTryOut" style="margin-top:8px"></div>
       </div>
       <div class="panel">
-        <h2>Cross tuning</h2>
-        <p class="muted">The player cube shows the full scramble. Plan the cross in your head, then check against every optimal solution. To see the cross, drag the cube, or press white on top in the row on the cube.</p>
+        <h2>Cross drill</h2>
+        <p class="muted">Each scramble is made for the cross. Pick a length: the best cross takes exactly that many moves. Find the four cross edges, plan the cross in your head, then solve it and check against every optimal solution.</p>
         <div class="row">
           <button class="primary" id="crossNew" title="A new scramble to train the cross on">New cross scramble<span class="hk" aria-hidden="true">N</span></button>
-          <label title="How many moves the best cross takes">Difficulty <select id="crossDiff"><option value="any">any</option><option value="easy">easy (≤5)</option><option value="hard">hard (≥7)</option></select></label>
+          <label title="How many moves the best cross takes">Length <select id="crossDiff"><option value="any">any</option><option value="easy">easy (≤5)</option><option value="hard">hard (≥7)</option><option value="2">2 moves</option><option value="3">3 moves</option><option value="4">4 moves</option><option value="5">5 moves</option><option value="6">6 moves</option><option value="7">7 moves</option><option value="8">8 moves</option></select></label>
           <button id="crossReveal" title="Show the best cross plans, one move at a time">Reveal<span class="hk" aria-hidden="true">H</span></button>
           <label style="font-size:14px" title="Also list the plans one move longer than the best"><input type="checkbox" id="crossPlus1"> include 1-move-longer plans</label>
         </div>
         <div class="row" style="margin-top:10px"><span>Optimal length: <b class="big" id="crossOpt">—</b></span><span class="muted" id="crossCount"></span></div>
         <div id="crossSols" style="margin-top:8px"></div>
+        <div class="crossfind">
+          <div class="row"><button id="crossFindBtn" title="Click the four cross edges on the cube as fast as you can. A clock times you">Find the edges</button><label style="font-size:14px" title="Start Find the edges with each new cross scramble"><input type="checkbox" id="crossFindAuto"> with each scramble</label></div>
+          <div id="crossFindOut" class="muted" aria-live="polite">Find the four cross edges on the cube: a click on each. Drag the cube to see its back.</div>
+        </div>
       </div>
       <div class="panel">
         <h3>What to look for</h3>
@@ -319,6 +324,7 @@
 <script src="js/loop.js"></script>
 <script src="js/solver.js"></script>
 <script src="js/wca.js"></script>
+<script src="js/crossdrill.js"></script>
 <script src="js/resync.js"></script>
 <script src="js/beginner.js"></script>
 <script src="js/algs.js"></script>
@@ -350,6 +356,7 @@
 <script src="js/vcube.js"></script>
 <script src="js/crosslook.js"></script>
 <script src="js/patterns-ui.js"></script>
+<script src="js/crosstrain.js"></script>
 <script src="js/start.js"></script>
 <script src="js/start-app.js"></script>
 <script src="js/levelmenu.js"></script>
