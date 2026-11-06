@@ -102,7 +102,7 @@ function svApply(){const want=svWanted();
   svPut(slot,wrap,$('#svCol'));
   svPut($('main.main'),$('#svMain'));
   svPut($('#player .seqpanel'),$('#svEvery'));svPut($('#player .timerpanel'),$('#svEvery'));svPut($('#everyMore'),$('#svEvery'));
-  svPut(SV.acts,box);['animBtn','hiddenBtn','vcubeBtn','crossTrainBtn','f2lTrainBtn','f2lStyle','f2lPairRow','saveImgBtn'].forEach(id=>svPut($('#'+id),SV.acts));
+  svPut(SV.acts,box);['animBtn','hiddenBtn','vcubeBtn','crossTrainBtn','f2lTrainBtn','f2lStyle','f2lOverGrp','f2lPairRow','saveImgBtn'].forEach(id=>svPut($('#'+id),SV.acts));
   svRefresh();}
 function svRefresh(){if(!SV.on)return;svMaxDraw();svSheets();svBadge();svSrc();svAskDraw();if(typeof siCurDraw==='function')siCurDraw();}
 // ---- sheets ----

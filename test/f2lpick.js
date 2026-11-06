@@ -78,4 +78,31 @@ lap('two '+JSON.stringify(kinds));
 // A tie goes to the pick before.
 {for(const c of cubes){const L=lens(c),min=Math.min(...Object.values(L.o)),ties=Object.keys(L.o).filter(k=>L.o[k]===min);if(ties.length<2)continue;
   for(const k of ties)deq(f2ltPick(c,CI,'shortest',{prefer:[k]}).keys,[k],'the tie to the pick before');break;}}
+// Overlay: on any scramble, in any cross color and hold, the drawn cube T·A has the cross solved,
+// the F2L corners and the F2L edges outside the cross where A has them; it is a cube the solvers
+// read; a move of A moves it the same way; an F2L edge in a cross place is skipped, gray, never
+// solved; the last layer is gray; a cube with its cross solved draws as it is.
+{const f2ltOverlay=g('f2ltOverlay'),f2ltGray=g('f2ltGray'),f2ltKey=g('f2ltKey'),fromFacelets=g('fromFacelets'),crossIndex=g('crossIndex'),buildCrossTable=g('buildCrossTable');
+  const slotSolved=g('slotSolved'),f2lSlot=g('f2lSlot');let skips=0;
+  for(let t=0;t<60;t++){const ci=t%6,turn=['','y','x z',"z' y2",'x2','y x'][Math.floor(t/6)%6];
+    const A=applyAlg(applyAlg(new Cube(),randomMoveScramble('ov'+t,25)),parseAlg(turn||'U U\''));const ov=f2ltOverlay(A,ci),O=ov.T.mul(A);
+    const fr=f2ltFrame(O,ci);assert.strictEqual(buildCrossTable()[crossIndex(fr.X)],0,'the cross solved');
+    assert.ok(fromFacelets(reframe(O).toFacelets()).ok,'a real cube');deq(O.center,A.center,'the centers stay');
+    const fa=A.toFacelets(),fo=O.toFacelets(),op=(ci+3)%6;
+    for(const c of cornerFacelet)if(c.some(i=>fa[i]===ci))deq(c.map(i=>fo[i]),c.map(i=>fa[i]),'an F2L corner where it is');
+    for(const e of edgeFacelet){const a=fa[e[0]],b=fa[e[1]];if([a,b].includes(ci)||[a,b].includes(op))continue;
+      if(ov.skip.includes(f2ltKey(a,b)))continue;deq(e.map(i=>fo[i]),e.map(i=>fa[i]),'an F2L edge where it is');}
+    for(const k of ov.skip){skips++;assert.ok(!slotSolved(fr.X,f2lSlot(fr.slot[k])),'a skipped pair is never solved');
+      const [a,b]=k.split('-').map(Number);assert.ok(edgeFacelet.some(e=>e.some(i=>fa[i]===a)&&e.some(i=>fa[i]===b)&&e.some(i=>Math.floor(i/9)===A.center.indexOf(ci))),'its edge is in a cross place');}
+    const M=parseAlg("R U' F2 y M' D");deq(ov.T.mul(applyAlg(A,M)).toFacelets(),applyAlg(O,M).toFacelets(),'a move turns both alike');
+    const gr=f2ltGray(fo,ov);for(const p of cornerFacelet.concat(edgeFacelet)){const c=p.map(i=>fo[i]);
+      if(c.includes(op))assert.ok(p.every(i=>gr[i]===6),'the last layer gray');
+      else if(p.length===2&&ov.skip.includes(f2ltKey(c[0],c[1])))assert.ok(p.every(i=>gr[i]===6),'a skipped edge gray');
+      else deq(p.map(i=>gr[i]),c,'the rest in color');}}
+  assert.ok(skips>0,'some scrambles have an F2L edge in the cross');
+  {const c=withCross('ovsolved'),ov=f2ltOverlay(c,CI);assert.ok(ov.T.isSolved(),'the cross solved: nothing changes');deq(ov.skip,[],'and nothing skipped');}
+  // A pick skips the pairs Overlay can not show.
+  {const c=cubes[0],all=f2ltPairs(CI);
+    const p=f2ltPick(c,CI,'shortest',{skip:all.slice(0,3)});deq(p.keys,[all[3]],'the one pair not skipped');}
+  lap('overlay');}
 console.log('f2lpick ok ('+(Date.now()-T0)+' ms)');

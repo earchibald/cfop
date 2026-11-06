@@ -71,13 +71,15 @@ function setHidden(on){store.set('hidden',!!on);drawMain();}
 function view3D(){return hiddenOn()?{yaw:view.yaw,pitch:view.pitch,hidden:true,scale:40}:{yaw:view.yaw,pitch:view.pitch};}
 // The hold row under the cube (js/live.js) turns the picture: rot, or a turned cube on the net.
 // Cross Trainer and F2L Trainer (js/crosstrain.js) dim all but the cross edges, or the F2L pieces, of the stickers drawn, to one level; Find the
-// edges puts a class on each sticker, so a click names it.
+// edges puts a class on each sticker, so a click names it. F2L Trainer's Overlay (js/f2ltrain.js)
+// draws each cube with the cross put in place: trainLook.
 function drawMain(){
-  const f=displayedCube.toFacelets();const svg=$('#cube');const H=typeof playerHoldView==='function'?playerHoldView(displayedCube):null,v={...view3D(),...(H?{rot:H.rot}:{})};
+  const look=c=>typeof trainLook==='function'?trainLook(c):c.toFacelets();
+  const f=look(displayedCube);const svg=$('#cube');const H=typeof playerHoldView==='function'?playerHoldView(displayedCube):null,v={...view3D(),...(H?{rot:H.rot}:{})};
   const ct=g=>typeof trainFade==='function'?trainFade(g):null,cls=typeof crossFindCls==='function'?crossFindCls():null;
   const fd=(g,base=fadeSet)=>{const t=ct(g);return t?{fade:t,dim:crossTrainDim()}:{fade:base};};
-  if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');const g=H?applyAlg(displayedCube,H.moves).toFacelets():f;svg.innerHTML=renderNet(g,fd(g,H?null:fadeSet));}
-  else if(anim.move&&anim.t<1){svg.setAttribute('viewBox','0 0 400 360');const g=anim.from.toFacelets();svg.innerHTML=renderCube3D(g,{...v,...fd(g),move:anim.move,t:Math.max(anim.t,0.01)});}
+  if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');const g=H?look(applyAlg(displayedCube,H.moves)):f;svg.innerHTML=renderNet(g,fd(g,H?null:fadeSet));}
+  else if(anim.move&&anim.t<1){svg.setAttribute('viewBox','0 0 400 360');const g=look(anim.from);svg.innerHTML=renderCube3D(g,{...v,...fd(g),move:anim.move,t:Math.max(anim.t,0.01)});}
   else{svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(f,{...v,...fd(f),lift:mainLift,cls});}
   drawDragHint();
 }

@@ -56,9 +56,12 @@ function f2lTrainPair(f){const G=typeof fg!=='undefined'?fg:null,act=!!G&&typeof
   return cols(order.find(n=>!solved(cols(n)))||order[0]);}
 // F2L-1's pairs: the one the Pair menu picks (js/f2ltrain.js: one pair, Shortest, Fastest or Two at
 // once, two pairs), else the guide's.
-function f2lTrainPairs(f){const p=typeof f2ltChoice==='function'?f2ltChoice(f):null;return p&&p.length?p:[f2lTrainPair(f)];}
+// Overlay keeps out the pairs it can not show (f2loFit).
+function f2lTrainPairs(f){const p=typeof f2ltChoice==='function'?f2ltChoice(f):null,r=p&&p.length?p:[f2lTrainPair(f)];
+  return typeof f2loFit==='function'?f2loFit(r,f):r;}
 function f2lTrainFade(f){if(!f2lTrainOn()||!f2lOnF2L())return null;const ci=crossColorIndex(),op=(ci+3)%6,style=f2lTrainStyle(),keep=new Set([4,13,22,31,40,49]);
-  const add=p=>p.forEach(i=>keep.add(i)),has=(p,x)=>p.some(i=>f[i]===x);
+  // A gray sticker (6) is a piece Overlay made up: never lit.
+  const add=p=>{if(!p.some(i=>f[i]===6))p.forEach(i=>keep.add(i));},has=(p,x)=>p.some(i=>f[i]===x);
   if(style===3){for(const p of cornerFacelet.concat(edgeFacelet))if(!has(p,op))add(p);return keep;}
   if(style===1){for(const e of edgeFacelet)if(has(e,ci))add(e);
     for(const [a,b] of f2lTrainPairs(f)){for(const e of edgeFacelet)if(has(e,a)&&has(e,b))add(e);

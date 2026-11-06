@@ -21,6 +21,10 @@
 // f2ltPick(cube, ci, how, o)     the same, run to the end
 // f2ltStill(cube, ci, pick, o)   true while the pick still holds: its pairs not solved, and no
 //                                farther from solved (with the cross) than when it was picked
+// f2ltOverlay(cube, ci)          Overlay (1.73): the cube with the cross put in place, as a fixed
+//                                relabel of the pieces: {T, ci, skip}; draw T.mul(cube) for any cube
+//                                after it, so the moves turn the cross out of place as they would
+// f2ltGray(f, ov)                facelets of T.mul(cube) with the made-up pieces gray (color 6)
 const F2L_SPEED={U:1,R:1,L:1.25,F:1.6,D:2.2,B:2.5};
 const F2L_SPEED_HALF=1.4;    // a half turn costs this many quarter turns of its face
 const F2L_FAST_EXTRA=2;      // fastest: a solution at most this many moves longer than the shortest
@@ -57,11 +61,12 @@ function f2ltPieces(f,ci,key){
 // n2: the moves of the next pair after it (setup, then). cost (fastest): its F2L_SPEED cost.
 // track: the pairs f2ltStill follows and how many moves they took when picked.
 // o.prefer: keys of the pick before; a tie goes to them, so the light does not hop between equals.
+// o.skip: keys not to pick (the pairs Overlay can not show).
 function* f2ltSteps(cube,ci,how,o={}){
   const fr=f2ltFrame(cube,ci);if(!fr)return {how,keys:[],why:'cross'};
   const X=fr.X,pref=new Set(o.prefer||[]),B=()=>({left:o.nodeLimit||F2L_PICK_NODES});
   if(buildCrossTable()[crossIndex(X)]>F2LT_CROSS_NEAR)return {how,keys:[],why:'cross'};
-  const open=f2lOpen(X),keep=f2lKeep(X);
+  const sk=new Set(o.skip||[]),open=f2lOpen(X).filter(n=>!sk.has(fr.key[n])),keep=f2lKeep(X);
   if(!open.length)return {how,keys:[],why:'solved'};
   const K=n=>fr.key[n],rank=n=>(pref.has(K(n))?0:1)*10+F2L_ORDER_DEFAULT.indexOf(n);
   const better=(a,b)=>!b||a.v<b.v||(a.v===b.v&&a.r<b.r);
@@ -112,3 +117,43 @@ function f2ltStill(cube,ci,pick,o={}){
   const tg=pick.track.keys.map(k=>fr.slot[k]);
   return f2lLen(fr.X,[...tg,...f2lKeep(fr.X)],{left:o.nodeLimit||F2L_PICK_NODES},pick.track.len)!=null;
 }
+// ---- Overlay ----
+// The user's cube A0 can have the cross anywhere. Overlay draws a cube O0 in its place: the cross
+// solved, the eight F2L pieces where A0 has them, the last-layer pieces made up (they draw gray).
+// O0 = T·A0 for one relabel of the pieces, T = O0·A0⁻¹; T names each real piece as the piece O0
+// shows in its place. Every cube after it is drawn as T·A, so a move of the real cube moves the
+// drawn cube the same way: the cross turns out of place, the pair goes in. The centers stay.
+// An F2L edge in a cross place has no place in O0: it goes where the cross pushed a piece out, drawn
+// gray, never at home, and its pair is in skip (keys). O0 keeps the parity and the twist sums of A0,
+// so T is a cube the face moves make and T·A is a cube the solvers read.
+function f2ltOverlay(cube,ci){
+  const op=(ci+3)%6,F0=cube.center.indexOf(ci);if(F0<0)return null;
+  const face=i=>Math.floor(i/9),want=i=>cube.center[face(i)];
+  // The edge, and its turn, that sits solved at place p.
+  const homeAt=p=>{for(let j=0;j<12;j++)for(let o=0;o<2;o++)
+    if(edgeColor[j][0]===want(edgeFacelet[p][o])&&edgeColor[j][1]===want(edgeFacelet[p][(1+o)%2]))return {j,o};
+    return null;};
+  const has=(j,c)=>edgeColor[j].includes(c),f2l=j=>!has(j,ci)&&!has(j,op),ll=j=>has(j,op);
+  const cross=[...Array(12).keys()].filter(p=>edgeFacelet[p].some(i=>face(i)===F0));
+  const ep=cube.ep.slice(),eo=cube.eo.slice(),used=new Set(),skip=[],free=[];
+  for(const p of cross){const h=homeAt(p);ep[p]=h.j;eo[p]=h.o;used.add(h.j);if(f2l(cube.ep[p]))skip.push(cube.ep[p]);}
+  // Outside the cross: an F2L edge or a last-layer edge stays; a place a cross edge held is free.
+  const open=[];
+  for(let p=0;p<12;p++){if(cross.includes(p))continue;const j=cube.ep[p];
+    if(f2l(j)||ll(j))used.add(j);else open.push(p);}
+  // The pieces still out go there: skipped F2L edges first, never at home.
+  const rest=[...Array(12).keys()].filter(j=>!used.has(j)).sort((a,b)=>f2l(b)-f2l(a));
+  for(const j of rest){const k=open.findIndex(p=>!f2l(j)||homeAt(p).j!==j),p=open.splice(k<0?0:k,1)[0];
+    const h=homeAt(p);ep[p]=j;eo[p]=h.j===j?1-h.o:0;}
+  // Keep A0's edge parity and flip sum: swap or flip last-layer edges, which draw gray.
+  const lls=[...Array(12).keys()].filter(p=>ll(ep[p]));
+  const par=a=>{let n=0;const s=new Set();for(let i=0;i<a.length;i++){if(s.has(i))continue;let k=i,L=0;while(!s.has(k)){s.add(k);k=a[k];L++;}n+=L-1;}return n%2;};
+  if(par(ep)!==par(cube.ep)){const [x,y]=lls;[ep[x],ep[y]]=[ep[y],ep[x]];}
+  if(eo.reduce((a,b)=>a+b,0)%2!==cube.eo.reduce((a,b)=>a+b,0)%2)eo[lls[0]]^=1;
+  const O0=new Cube(cube.cp.slice(),cube.co.slice(),ep,eo,cube.center.slice());
+  return {T:O0.mul(cube.inverse()),ci,skip:skip.map(j=>f2ltKey(edgeColor[j][0],edgeColor[j][1]))};
+}
+function f2ltGray(f,ov){const op=(ov.ci+3)%6,sk=new Set(ov.skip),g=f.slice();
+  for(const p of cornerFacelet.concat(edgeFacelet)){const c=p.map(i=>f[i]);
+    if(c.includes(op)||(p.length===2&&sk.has(f2ltKey(c[0],c[1]))))for(const i of p)g[i]=6;}
+  return g;}
