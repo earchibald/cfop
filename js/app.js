@@ -26,7 +26,14 @@ function caseState(alg,pre){return reframe(applyAlg(new Cube(),invertAlg([...(pr
 // algorithm makes in all (rotationMoves), so a turn at the end of the inverse is not lost.
 function caseSetupMoves(alg,pre){const ms=parseAlg(alg);return removeRotations([...rotationMoves(applyAlg(new Cube(),ms)),...parseAlg(invertAlg([...(pre||[]),...ms]))]);}
 // ---------- SVG cube rendering: js/draw.js ----------
-const view={yaw:-32,pitch:28,mode:'3d'};
+// The camera (cw:cubeView, the View chip and the V key): Isometric view looks from above and to the
+// right, three faces in view; Player view looks straight on, as you see the cube in your hands, the
+// front face alone until the cube tilts (a smart cube's tilt, js/live.js) or a drag turns it.
+const VIEW_CAMS={iso:{yaw:-32,pitch:28,scale:52,hidden:40},player:{yaw:0,pitch:0,scale:68,hidden:50}};
+const view={yaw:-32,pitch:28,mode:'3d',cam:store.get('cubeView','iso')==='player'?'player':'iso'};
+view.yaw=VIEW_CAMS[view.cam].yaw;view.pitch=VIEW_CAMS[view.cam].pitch;
+// The drag's turn off: the camera of the view in use.
+function viewHome(){const c=VIEW_CAMS[view.cam];view.yaw=c.yaw;view.pitch=c.pitch;}
 let displayedCube=new Cube();let fadeSet=null;
 // Animation: a layer turns on the player cube when the player steps one move. One setting for every
 // method, on by default (cw:animate); the Animate chip on the cube, the A key and Settings change it.
@@ -63,17 +70,30 @@ function showCubeMoved(from,move,cube,fade){
 // The "Drag to rotate" hint shows in the 3D view until the first drag of the session.
 let dragHintDone=false;
 function drawDragHint(){const h=$('#dragHint');if(h)h.classList.toggle('hidden',dragHintDone||view.mode!=='3d');const a=$('#animBtn');if(a)a.classList.toggle('hidden',view.mode!=='3d');
-  const hb=$('#hiddenBtn');if(hb){hb.classList.toggle('hidden',view.mode!=='3d');hb.setAttribute('aria-pressed',String(hiddenOn()));}}
+  const hb=$('#hiddenBtn');if(hb){hb.classList.toggle('hidden',view.mode!=='3d');hb.setAttribute('aria-pressed',String(hiddenOn()));
+    const still=!viewMirrors()&&hiddenOn(),t=still?'Player view looks straight on, so the hidden faces sit behind the cube. They show as a smart cube tilts, or in Isometric view':'Show the hidden faces: the back, left and bottom, as in a mirror behind the cube';
+    if(hb.title!==t)hb.title=t;hb.classList.toggle('dim',still);}
+  viewBtnDraw();}
+// The View chip: the name of the view in use; a press (or V) changes it.
+function viewBtnDraw(){const b=$('#viewBtn');if(!b)return;b.classList.toggle('hidden',view.mode!=='3d');
+  const iso=view.cam==='iso',l=iso?'Isometric view':'Player view';if(b.firstElementChild&&b.firstElementChild.nextSibling&&b.firstElementChild.nextSibling.textContent!==l)b.firstElementChild.nextSibling.textContent=l;
+  b.setAttribute('aria-pressed',String(!iso));
+  const t=iso?'Isometric view: the cube from above and to the right, three faces in view. Press for Player view, straight on (V)':'Player view: the cube straight on, as you hold it. Press for Isometric view, from above and to the right (V)';if(b.title!==t)b.title=t;}
+function setViewCam(cam){view.cam=cam==='player'?'player':'iso';store.set('cubeView',view.cam);viewHome();drawMain();}
 // Hidden faces (cw:hidden, off by default): the back, left and bottom drawn as in a mirror behind the
 // cube (hiddenFacePolys in js/draw.js). The cube draws smaller so the faces fit the box.
 function hiddenOn(){return !!store.get('hidden',false);}
 function setHidden(on){store.set('hidden',!!on);drawMain();}
-function view3D(){return hiddenOn()?{yaw:view.yaw,pitch:view.pitch,hidden:true,scale:40}:{yaw:view.yaw,pitch:view.pitch};}
-// The hold row under the cube (js/live.js) turns the picture: rot, or a turned cube on the net.
+// In Player view the faces turned away sit right behind the cube: the mirrors show only while a
+// smart cube's tilt turns it (liveTiltLive in js/live.js).
+function viewMirrors(){return hiddenOn()&&(view.cam==='iso'||(typeof liveTiltLive==='function'&&liveTiltLive()));}
+function view3D(){const c=VIEW_CAMS[view.cam];return viewMirrors()?{yaw:view.yaw,pitch:view.pitch,hidden:true,scale:c.hidden}:{yaw:view.yaw,pitch:view.pitch,scale:c.scale};}
+// The hold row under the cube (js/live.js) turns the picture: rot, or a turned cube on the net. A smart
+// cube's tilt (liveTiltRot) turns the 3D picture in its place; the net stays on the hold.
 // Cross Trainer and F2L Trainer (js/crosstrain.js) dim all but the cross edges, or the F2L pieces, of the stickers drawn, to one level; Find the
 // edges puts a class on each sticker, so a click names it.
 function drawMain(){
-  const f=displayedCube.toFacelets();const svg=$('#cube');const H=typeof playerHoldView==='function'?playerHoldView(displayedCube):null,v={...view3D(),...(H?{rot:H.rot}:{})};
+  const f=displayedCube.toFacelets();const svg=$('#cube');const H=typeof playerHoldView==='function'?playerHoldView(displayedCube):null,T=typeof liveTiltRot==='function'?liveTiltRot(displayedCube):null,v={...view3D(),...(T?{rot:T}:H?{rot:H.rot}:{})};
   const ct=g=>typeof trainFade==='function'?trainFade(g):null,cls=typeof crossFindCls==='function'?crossFindCls():null;
   const fd=(g,base=fadeSet)=>{const t=ct(g);return t?{fade:t,dim:crossTrainDim()}:{fade:base};};
   if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');const g=H?applyAlg(displayedCube,H.moves).toFacelets():f;svg.innerHTML=renderNet(g,fd(g,H?null:fadeSet));}
@@ -343,8 +363,9 @@ $('#histBtn').onclick=()=>$('#history').classList.toggle('hidden');
 // view controls
 // The hold tiles beside Net are js/live.js's. Net shows the six faces flat; a second press puts the
 // cube back.
-function setViewNet(on){view.mode=on?'net':'3d';if(!on){view.yaw=-32;view.pitch=28;}$('#viewNet').setAttribute('aria-pressed',String(on));drawMain();}
+function setViewNet(on){view.mode=on?'net':'3d';if(!on)viewHome();$('#viewNet').setAttribute('aria-pressed',String(on));drawMain();}
 $('#viewNet').onclick=()=>setViewNet(view.mode!=='net');
+$('#viewBtn').onclick=()=>setViewCam(view.cam==='iso'?'player':'iso');
 // Drag to rotate. preventDefault and body.cube-drag keep the drag from selecting page text.
 (()=>{let drag=null;const svg=$('#cube');const stop=()=>{drag=null;document.body.classList.remove('cube-drag');};
 svg.addEventListener('pointerdown',e=>{if(view.mode!=='3d')return;e.preventDefault();drag={x:e.clientX,y:e.clientY,yaw:view.yaw,pitch:view.pitch};document.body.classList.add('cube-drag');if(svg.setPointerCapture)svg.setPointerCapture(e.pointerId);});
@@ -394,7 +415,7 @@ document.addEventListener('keydown',e=>{const el=document.activeElement,tag=el?e
   const jump=e.shiftKey?5:1;
   if(e.key==='ArrowLeft'){e.preventDefault();seqGo(seqState.idx-jump);}if(e.key==='ArrowRight'){e.preventDefault();seqGo(seqState.idx+jump);}
   if(e.key==='Home'){e.preventDefault();seqGo(0);}if(e.key==='End'){e.preventDefault();seqGo(seqState.moves.length);}
-  if(e.key==='p'||e.key==='P'){toggleAuto();}if(e.key==='a'||e.key==='A'){setAnim(!animOn());}
+  if(e.key==='p'||e.key==='P'){toggleAuto();}if(e.key==='a'||e.key==='A'){setAnim(!animOn());}if((e.key==='v'||e.key==='V')&&view.mode==='3d')setViewCam(view.cam==='iso'?'player':'iso');
   if(e.key==='n'||e.key==='N'){nextForTab();}if(e.key==='h'||e.key==='H'){hintForTab();}
   if(e.key==='?'){e.preventDefault();$('#helpBtn').click();}
   if(!timerHidden()){if(e.key==='d'||e.key==='D')deleteLast();if(e.key==='c'||e.key==='C')clearTimes();}
@@ -583,7 +604,7 @@ $('#f2lSelUnlearned').onclick=()=>{f2lState.caseSel=new Set(F2L_CASES.filter(c=>
 function f2lSetupCube(){return applyAlg(new Cube(),[...(crossRotation()?[crossRotation()]:[]),...f2lState.caseSetup]);}
 function setF2LCase(n){const f=F2L_CASES.find(c=>c.n===n);f2lState.curCase=n;const auf=AUFS[Math.floor(Math.random()*4)];// state = inv(alg) then U^-auf ; solve = auf then alg
   const setup=caseSetupMoves(f.alg,auf?[auf]:[]);f2lState.caseSetup=setup;f2lState.caseAUF=auf;f2lState.caseRevealed=false;currentLabel=()=>'F2L case #'+n;timer.scope='f2l:'+n;renderTimes();
-  view.mode='3d';view.yaw=-32;view.pitch=28;const r=crossRotation();setSequence([...(r?[r]:[]),...setup],'setup for case (from solved, white up: rotate, then turn)',undefined,'F2L case');renderF2LCaseOut();}
+  view.mode='3d';viewHome();const r=crossRotation();setSequence([...(r?[r]:[]),...setup],'setup for case (from solved, white up: rotate, then turn)',undefined,'F2L case');renderF2LCaseOut();}
 function f2lSolution(){const f=F2L_CASES.find(c=>c.n===f2lState.curCase);return removeRotations([...(f2lState.caseAUF?[f2lState.caseAUF]:[]),...parseAlg(f.alg)]);}
 function renderF2LCaseOut(){const n=f2lState.curCase;if(!n)return;const f=F2L_CASES.find(c=>c.n===n);const arr=times['f2l:'+n]||[];const rev=f2lState.caseRevealed;
   $('#f2lCaseOut').innerHTML=`<div class="row" style="justify-content:space-between"><div><span class="tag">${esc(f.grp)}</span><b ${rev?'id="f2lNameBtn" style="cursor:pointer;text-decoration:underline dotted" title="Open the details of this case"':''}>${rev?'F2L case #'+n:'?'}</b> <span class="muted" style="font-size:14px">${arr.length?`mean ${fmt(arr.reduce((x,y)=>x+y.ms,0)/arr.length)} over ${arr.length}`:'no times yet'}</span></div><div style="width:90px">${thumb3D(f2lSetupCube())}</div></div>
@@ -635,7 +656,7 @@ function llSetupFor(a){ // returns setup moves from solved
 }
 $('#llNext').onclick=()=>{const list=LL_ALL.filter(a=>llState.sel.has(a.id));const a=pick(list,$('#llProb').value==='realistic');if(!a){$('#llCurrent').innerHTML='<p>Select at least one case.</p>';return;}
   llState.cur=a;llState.hint=false;const setup=llSetupFor(a);llState.setup=setup;llState.cube=applyAlg(new Cube(),setup);currentLabel=()=>a.name;timer.scope='ll:'+a.id;renderTimes();
-  view.mode='3d';view.yaw=-32;view.pitch=28;const r=crossRotation();setSequence([...(r?[r]:[]),...setup],'setup for case (from solved, white up: rotate, then turn)',undefined,'OLL · PLL case');renderLLCurrent();};
+  view.mode='3d';viewHome();const r=crossRotation();setSequence([...(r?[r]:[]),...setup],'setup for case (from solved, white up: rotate, then turn)',undefined,'OLL · PLL case');renderLLCurrent();};
 function llHintHTML(a){const tests={'OLL edges':eoSolved,'OLL corners':ollSolved,'PLL corners':cpSolvedLL,'PLL edges':c=>AUFS.some(u=>applyAlg(c,u).isSolved())};
   const list={'OLL edges':ALG_DB.eo,'OLL corners':ALG_DB.co,'PLL corners':ALG_DB.cp,'PLL edges':ALG_DB.ep}[a.group];const r=findLLStep(llState.cube,list,tests[a.group]);
   const s=r?`<div class="big">${esc((r.pre?r.pre+' · ':'')+r.alg)}</div><div class="muted">${r.pre?'AUF '+r.pre+' first. ':''}${esc(a.recog)}</div>`:`<div class="big">${esc(a.alg)}</div>`;return s;}
@@ -893,7 +914,7 @@ $('#themeBtn').onclick=toggleTheme;;
 // The keys card. Beginner mode has no timer, so Space plays there and the timer row is left out.
 function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHidden();
   const rows=[[k('←')+' '+k('→'),'one move back or forward'],[k('⇧')+' + arrows','five moves at a time'],[k('Home')+' '+k('End'),'the start, the end'],
-    [k('space'),beg?'play, pause':'timer: hold, release to start · press to stop'],[k('P'),'play, pause'],[k('A'),'animation on or off'],...(beg?[]:[[k('D'),'delete the last time'],[k('C'),'clear all times']]),
+    [k('space'),beg?'play, pause':'timer: hold, release to start · press to stop'],[k('P'),'play, pause'],[k('A'),'animation on or off'],[k('V'),'Isometric view or Player view'],...(beg?[]:[[k('D'),'delete the last time'],[k('C'),'clear all times']]),
     [k('1')+'–'+k(String(railButtons().length)),'switch tab'],...(beg?[]:[[k('N'),'next scramble / case'],[k('H'),'reveal the answer']]),[k('?'),'this card'],['drag cube','orbit the view']];
   // The virtual cube's keys, in the layout of its Keys window: they come before the keys above.
   let vc='';if(typeof cubeSrc==='function'&&cubeSrc()==='screen'&&typeof vcubeLayout==='function'){const v=screenKeys(vcubeLayout()),ks=fs=>fs.map(f=>k(esc(v[f]))).join(' ');

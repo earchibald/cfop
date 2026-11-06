@@ -969,6 +969,13 @@ body.onboard .foot{padding-bottom:56px}
 /* The Virtual cube chip on the player cube, over Hidden faces, and its Keys window (js/vcube.js). */
 .cubebox .vcubebtn{bottom:38px}
 @media (max-width:760px){.cubebox .vcubebtn{right:4px;bottom:30px}}
+/* The View chip and the Tilt chip (js/app.js, js/live.js): above Virtual cube */
+.cubebox .viewbtn{bottom:68px}.cubebox .tiltbtn{bottom:98px}
+@media (max-width:760px){.cubebox .viewbtn{right:4px;bottom:56px}.cubebox .tiltbtn{right:4px;bottom:82px}}
+.cubebox .animbtn.dim{opacity:.55}
+.cw-tilt{margin:6px 0 0;font-size:13px;line-height:1.4;color:var(--muted)}
+.cw-tilt.away{color:var(--text);border-left:3px solid var(--warn);padding-left:8px}
+.cw-tilt.done{color:var(--text);border-left:3px solid var(--accent);padding-left:8px}
 /* Save image is an icon on the player cube, so the hold row fits beside it; the title says it. */
 .cubebox .savebtn{font-size:0;gap:0;padding:5px 6px}
 .cubebox .savebtn svg{width:14px;height:14px}
