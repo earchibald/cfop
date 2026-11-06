@@ -19,7 +19,7 @@ function undoSnap(){const g=(f,d)=>{try{return f();}catch(e){return d;}};
   if(typeof scr!=='undefined'){s.scr=scr.seed+'|'+scr.moves.join(' ');const inp=$('#seed');
     s._scr={seed:scr.seed,moves:scr.moves.slice(),custom:!inp||inp.value!==scr.seed};}
   if(typeof seqState!=='undefined'){const q=seqState;s.seq=q.moves.join(' ')+'|'+q.label+'|'+(q.drill||'')+'|'+(q.base&&q.base.key?q.base.key():'');
-    s._seq={moves:q.moves.slice(),label:q.label,base:q.base,drill:q.drill,idx:q.idx,yours:q.yours};}
+    s._seq={moves:q.moves.slice(),label:q.label,base:q.base,drill:q.drill,idx:q.idx,yours:q.yours,home:!!q.home};}
   return s;}
 // The keys that differ between two snapshots.
 function undoDiff(a,b){return UNDO_KEYS.filter(k=>a[k]!==b[k]);}
@@ -56,7 +56,7 @@ function undoRun(){const e=UNDO.list.pop();if(!e){undoDraw();return false;}
     if(k.has('src')&&typeof setCubeSrc==='function')setCubeSrc(b.src);
     if(k.has('scr')&&b._scr)loadScramble(b._scr.seed,b._scr.moves,b._scr.custom);
     if(k.has('tab')&&b.tab!==curTab)goTab(b.tab);
-    if((k.has('seq')||k.has('scr'))&&b._seq){const q=b._seq;setSequence(q.moves,q.label,q.base,q.drill);seqState.idx=q.idx;seqState.yours=q.yours;applySequence();}
+    if((k.has('seq')||k.has('scr'))&&b._seq){const q=b._seq;setSequence(q.moves,q.label,q.base,q.drill);seqState.home=q.home;seqState.idx=q.idx;seqState.yours=q.yours;seqState.shown=-1;applySequence();}
     if(k.has('anim'))setAnim(b.anim);
     if(k.has('hidden'))setHidden(b.hidden);
     if(k.has('net'))setViewNet(b.net==='net');

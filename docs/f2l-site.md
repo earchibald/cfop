@@ -67,7 +67,7 @@ changes only how the moves are uncovered.
 
 | Cube | Where the state comes from | How a move uncovers |
 |---|---|---|
-| The screen cube | The player: the scramble, the cross solved for you, and the moves uncovered so far. | The user makes the move on the screen cube: a click on the next covered move, or the Right arrow. The layer turns in the player. |
+| The screen cube | The player: the cube of the page as it is (1.71: the scramble, its grip turn and your moves, from any tab; no cross solved for you, so the cross line comes first), and the moves uncovered so far. A key of the virtual cube is read too (`fgFollow`). | The user makes the move on the screen cube: a click on the next covered move, or the Right arrow. The layer turns in the player. |
 | A regular cube (scanned, painted, typed) | The last reset point, plus the moves uncovered so far. The site trusts the user to make each move as it uncovers. | The same click or key. The user turns the real cube at the same time. |
 | A smart cube | The cube itself, through `cw:smart` events and the cube tab's hold. | The cube uncovers the move when the user makes it. No click. A wrong move shows the way back, as in the lab. |
 

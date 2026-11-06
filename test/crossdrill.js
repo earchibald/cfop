@@ -86,7 +86,12 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     return pieces.length===8&&pieces.every(p=>p.every(i=>k.has(i)))&&cornerFacelet.filter(c=>c.some(i=>k.has(i))).every(c=>c.some(i=>f[i]===0))
       &&edgeFacelet.filter(e=>e.some(i=>k.has(i))).every(e=>e.every(i=>f[i]!==0&&f[i]!==3));})()`),'F2L-2: white corners and the edges with no white or yellow, whole');
   // F2L-1: the cross and the pair the guide is on.
-  $$('#f2lStyle button')[0].click();await sleep(500);
+  $$('#f2lStyle button')[0].click();
+  // Before the cross, the guide has no pair: the first pair in the order not solved.
+  assert.ok(run(`(()=>{if(fg.step)return true;const c=phys(new Cube()).center,o=fg.order[0],r=f2lTrainPair(displayedCube.toFacelets());
+    return fg.order.some(n=>r.join()===[c[F2L_SLOT_FACES[n][0]],c[F2L_SLOT_FACES[n][1]]].join());})()`),'a pair before the guide has one');
+  for(let i=0;i<14&&!run('fg.X&&crossSolved(fg.X)');i++)run('fgNext()');
+  for(let i=0;i<40&&!run('!!fg.step&&!!fg.step.moves.length');i++)await sleep(50);
   assert.ok(run(`fgActive()&&!!fg.step`),'the guide has a pair');
   assert.ok(run(`(()=>{const f=displayedCube.toFacelets(),k=f2lTrainFade(f);if(k.size!==6+4*2+2+3)return false;
     const want=fgWords()[fg.step.slot].colors.slice(0,2).map(c=>COLOR_NAMES.indexOf(c)).sort().join();

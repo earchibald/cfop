@@ -90,7 +90,7 @@ function siRegular(kind,from){const to=kind==='restore'?scr.cube:new Cube(),move
 function siRun(kind,from,to){siStop();const moves=siPath(from,to);if(!moves)return;
   setSequence(moves,kind==='restore'?'back to the scramble':'speedy solve',from,kind==='restore'?'Back to the scramble':'Solved cube');seqState.idx=0;applySequence();
   const R={kind,timer:0};SI.run=R;anim.quick=110;
-  const end=()=>{siStop();if(kind==='restore')showForTab();};
+  const end=()=>{siStop();if(kind==='restore'){seqHome=null;showForTab();}}; // the home cube afresh: the scramble
   const step=()=>{if(SI.run!==R)return;if(seqState.idx>=seqState.moves.length){end();return;}seqState.idx++;applySequence();R.timer=setTimeout(step,140);};
   R.timer=setTimeout(step,moves.length?160:0);}
 function siStop(){if(SI.run){clearTimeout(SI.run.timer);SI.run=null;}anim.quick=0;}

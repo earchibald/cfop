@@ -1,5 +1,6 @@
 // The F2L Guide panel (js/f2l-ui.js): Guide is the default mode of the F2L tab; the player shows the
-// scramble with the cross solved for you; the chips and the step card draw; the hint is a drill
+// cube of the page as it is (no cross solved for you: the cross line first); the guide's moves stay
+// on that cube across a tab change; the chips and the step card draw; the hint is a drill
 // whose next move is a button; the Right arrow makes the next move (the player grows by one, the
 // guide marks it made) and the Left arrow covers it again; a whole step solves its pair and the
 // solved list grows; the tree offers the basic way with its case and the arc; a chip click sets the
@@ -22,25 +23,28 @@ const key=(k,el)=>(el||d.body).dispatchEvent(new w.KeyboardEvent('keydown',{key:
 const click=el=>el.dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true}));
 const tiles=()=>$$('#fgCard .fg-tile .gm');
 const made=()=>tiles().filter(t=>t.classList.contains('f2l-did')).length;
+const crossUp=async()=>{for(let i=0;i<14&&w.fg.X&&!w.crossSolved(w.fg.X);i++)key('ArrowRight');await until(()=>w.fg.X&&w.crossSolved(w.fg.X),'the cross made');};
 const settled=async()=>until(()=>w.fg.step&&w.fg.step.moves.length&&!w.fg.working&&!w.fg.step.busy&&w.fg.step.then,'a step with its ways');
 
 w.addEventListener('load',async()=>{try{
   await sleep(100);
-  // Guide is the default mode, with the scramble and the dashed solved part in the player.
+  // Guide is the default mode, with the cube of the page in the player: the scramble and its grip turn.
   tab('f2l');
   assert.ok($('#f2lMode button[data-m="guide"]').classList.contains('on'),'Guide is the default mode');
   assert.ok(!$('#f2lGuide').classList.contains('hidden')&&$('#f2lLive').classList.contains('hidden'),'the Guide panel shows');
   // A scramble with no pair solved by chance, so four steps lie ahead.
   let seed,scr;
   for(let k=1;k<9;k++){$('#seed').value='guide-'+k;$('#reScramble').click();seed=$('#seed').value;scr=Array.from(w.scr.moves);
-    await until(()=>moves().length>scr.length&&!$('#fgMain').hidden&&w.fg.X,'the guide reads the cube');
+    await until(()=>w.fg.X&&w.fg.key&&w.fg.key.endsWith('guide-'+k)&&(w.crossSolved(w.fg.X)||w.fg.cross&&w.fg.cross.moves.length),'the guide reads the cube');
+    assert.ok($('#seqLabel').textContent.includes('seed '+seed),'the player keeps the seed');
+    assert.deepStrictEqual(moves(),[...scr,'z2'],'the scramble and the grip turn: no cross solved for you');
+    if(!w.crossSolved(w.fg.X))assert.ok(/Make the white cross first/.test($('#fgCross').textContent)&&$$('#fgCross .gm').length,'the cross line first, as a drill');
+    await crossUp();
     if(solvedNow().length===0)break;}
-  assert.strictEqual(solvedNow().length,0,'no pair solved at the start');
-  assert.ok($('#seqLabel').textContent.includes('seed '+seed),'the player keeps the seed');
-  assert.deepStrictEqual(moves().slice(0,scr.length),scr,'the scramble comes first');
-  assert.ok($$('#scramble .m').slice(scr.length).every(e=>e.classList.contains('rot')),'the solved part is dashed');
+  assert.strictEqual(solvedNow().length,0,'no pair solved once the cross is made');
   assert.ok(/the virtual cube/.test($('#fgCube').textContent),'the cube line names the screen');
   assert.ok(/cross on the bottom: made/.test($('#fgCross').textContent),'the cross is made');
+  assert.deepStrictEqual(moves().slice(0,scr.length+1),[...scr,'z2'],'your cross moves follow the scramble');
   assert.strictEqual($$('#fgChips .fg-chip').length,4,'four chips');
   await settled();
   assert.strictEqual($$('#fgChips .fg-chip[aria-current]').length,1,'one target');
@@ -69,7 +73,12 @@ w.addEventListener('load',async()=>{try{
   // The Left arrow covers it again.
   key('ArrowLeft');
   assert.strictEqual(moves().length,len0,'the player shrinks');assert.strictEqual(made(),0,'nothing made');
-  assert.ok($('#fgReturn').disabled,'Return to scramble is off at the scramble');
+  // A tab change keeps the cube and the guide's moves.
+  key('ArrowRight');const keep=moves().join(' '),made1=w.fg.made.length;
+  tab('cross');assert.strictEqual(moves().join(' '),keep,'the Cross tab shows the same cube');
+  tab('ll');assert.strictEqual(moves().join(' '),keep,'so does OLL · PLL');
+  tab('f2l');await sleep(20);assert.strictEqual(moves().join(' '),keep,'and F2L again');assert.strictEqual(w.fg.made.length,made1,'the guide keeps its moves');
+  key('ArrowLeft');assert.strictEqual(moves().length,len0,'covered again');
   // A click on the next tile makes it. The whole step solves its pair.
   click(tiles()[0]);assert.strictEqual(made(),1,'a click makes the move');
   const target=w.fg.step.slot;
@@ -84,11 +93,11 @@ w.addEventListener('load',async()=>{try{
   if(other){click(other);await until(()=>w.fg.step&&w.fg.step.slot===other.dataset.chip&&w.fg.step.moves.length,'the clicked pair is the target');}
   // Return to scramble: every move covered again, the way back said.
   click($('#fgReturn'));
-  assert.strictEqual(moves().length,len0,'the player is back at the scramble');assert.strictEqual(w.fg.made.length,0);
+  assert.deepStrictEqual(moves(),[...scr,'z2'],'the player is back at the scramble');assert.strictEqual(w.fg.made.length,0);
   assert.ok(/Back to the scramble/.test($('#fgCube').textContent)&&$('#fgCube code'),'the way back is said');
   assert.strictEqual(w.fg.log.length,0,'the solved list is empty again');
   // Then and the count.
-  await settled();
+  await crossUp();await settled();
   assert.ok(/of 4 pairs/.test($('#fgCount').textContent),'the count');
   // Mode and order.
   click($('#fgCorner'));assert.strictEqual($('#fgCorner').getAttribute('aria-pressed'),'true');
@@ -107,7 +116,7 @@ w.addEventListener('load',async()=>{try{
   // Read my cube: the scanner opens as a refresh scan with the state the guide expects; the
   // stickers painted that differ find the cube two moves off the hint; Return to scramble says the
   // way back and covers the moves again; Set up from current makes the cube read the scramble.
-  await settled();key('ArrowRight');
+  await crossUp();await settled();key('ArrowRight');
   const ev=s=>w.eval(s),paintDiff=(truth,c)=>{const tf=truth.toFacelets(),ef=ev("scanResync").bases[0].cube.toFacelets();for(let p=0;p<9;p++){if(p===4||tf[9*c+p]===ef[9*c+p])continue;w.scanPick(tf[9*c+p]);click($(`#scanNet rect[data-id="${c}"][data-pos="${p}"]`));}};
   click($('#fgRead'));assert.ok($('#scanBg')&&/Read my cube/.test($('.modal.scan h2').textContent),'Read my cube opens a refresh scan');
   const expected=w.fgEngine(w.fg.X);
@@ -133,13 +142,13 @@ w.addEventListener('load',async()=>{try{
   tab('ll');$('#llNext').click();tab('f2l');
   assert.ok(!$('#fgDrill').hidden&&/A drill is in the player/.test($('#fgCross').textContent)&&$('#fgMain').hidden,'the guide pauses for a drill');
   key('ArrowRight');assert.strictEqual(w.fg.made.length,0,'no move while a drill is in');
-  $('#drillBack').click();await until(()=>!$('#fgMain').hidden,'the guide resumes');
+  $('#drillBack').click();await until(()=>$('#fgDrill').hidden&&w.fg.X&&!/A drill/.test($('#fgCross').textContent),'the guide resumes');
   // The other modes still work.
   $('#f2lMode button[data-m="live"]').click();assert.ok($('#f2lGuide').classList.contains('hidden')&&!$('#f2lLive').classList.contains('hidden'),'Live mode');
   $('#f2lMode button[data-m="cases"]').click();assert.ok(!$('#f2lCaseGrid').closest('.panel').classList.contains('hidden'),'Cases mode');
-  $('#f2lMode button[data-m="guide"]').click();await until(()=>!$('#fgMain').hidden,'Guide again');
+  $('#f2lMode button[data-m="guide"]').click();await until(()=>w.fg.X&&!$('#f2lGuide').classList.contains('hidden'),'Guide again');
   // Keys: the badges, and the Right arrow outside the guide still steps the player.
-  await settled();assert.ok($('#fgNew .hk')&&$('#fgCard .fg-hk'),'key badges');
+  await crossUp();await settled();assert.ok($('#fgNew .hk')&&$('#fgCard .fg-hk'),'key badges');
   tab('cross');const i0=w.seqState.idx;key('ArrowLeft');assert.strictEqual(w.seqState.idx,i0-1,'the arrows are the player\'s on another tab');
   assert.deepStrictEqual(errs,[],'no script errors');
   console.log('f2l-ui: Guide mode, the drill, the arrows, the tree, the solved list, return and set up, Read my cube ok');process.exit(0);

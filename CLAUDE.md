@@ -148,6 +148,15 @@ above. Add a new script with a `<script src>` tag after the one it depends on.
   `setSequence(moves, label, base, drill)` loads the player. Pass a `drill`
   name for anything that does not come from the current scramble, such as a
   case setup. The seed bar then shows a "Back to scramble" note.
+- One cube for the page (1.71, the owner's rule): the home cube is the scramble, its grip turn and
+  your moves (the virtual cube's keys, a smart cube's turns, the F2L guide's moves), with the step
+  in view. `seqState.home` says the player shows it; `applySequence` keeps it in `seqHome`
+  (`homeKeep`, keyed by `homeKey()`); `showScr()` puts it back as it was (a tab change, Back to
+  scramble), `showScr(true)` or `seqHome=null` starts it afresh (a new scramble, Show scramble,
+  Restore scramble). A smart cube's turns go on `seqHome` while a drill is in the player
+  (`liveHomeTurns`). No tab replaces it with moves of its own: the F2L guide reads it as it is
+  (no cross solved for you) and puts its moves on it (`fgHomeX`, `fgSeqAppend`, `fgFollow`);
+  Cross and F2L Trainer only dim it.
 - A case algorithm that turns the cube (a `y` first) is pictured and set up as the cube is held
   before the turn: `caseState(alg, pre)` and `caseSetupMoves(alg, pre)` in `app.js`. The 41 F2L
   cases cover every state of the front-right pair once; `test/f2l.js` checks it. Do not add a

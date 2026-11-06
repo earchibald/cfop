@@ -74,20 +74,28 @@ function liveOn(){return typeof cubeTab!=='undefined'&&!!cubeTab.conn&&puzzleN()
 // The cube on the player turned back to white up, green front, as a smart cube names its state.
 function liveNorm(c){const h=liveHoldOf(c);if(!h||c.isFour)return null;return h.moves.length?applyAlg(c,invertAlg(h.moves)):c;}
 function liveSame(a,b){const n=liveNorm(a);return !!n&&!!b&&cubeTabKey(n)===cubeTabKey(b);}
-// The F2L guide reads a smart cube itself.
-function liveFgOwns(){return typeof fgActive==='function'&&fgActive()&&typeof fg!=='undefined'&&fg.src==='smart';}
 function livePlayerCube(){return cubeAtSeq(seqState.idx);}
 // Does the player show the cube in your hands?
 function liveInStep(state){return !!state&&liveSame(livePlayerCube(),state);}
-// A smart cube moved: from `from` to `to` by `moves` (the cube's own names), or a first state.
+// A smart cube moved: from `from` to `to` by `moves` (the cube's own names), or a first state. The
+// turns go on the home cube (app.js): on the player when it shows it, else on the kept home cube
+// while a drill or a plan is in the player, so the cube of the page stays the cube in your hands on
+// every tab. The F2L guide reads the cube too, and shows the same home cube.
 function liveSmartMoves(d){
-  if(!liveOn()||liveFgOwns())return liveNoteDraw();
+  if(!liveOn())return liveNoteDraw();
   if(!d.from){liveConnected(d.to);return liveNoteDraw();}
   if(d.moves&&liveInStep(d.from)){
     for(const m of d.moves){const P=playerHeldCube(livePlayerCube());cubePlayerTurn(FACE_NAMES[P.center.indexOf(FACE_NAMES.indexOf(m[0]))]+m.slice(1),'smart');}
-  }
+  }else if(d.moves)liveHomeTurns(d);
   liveNoteDraw();
 }
+// The turns on the kept home cube, while the player shows something else.
+function liveHomeTurns(d){const h=seqHome;if(!h||seqState.home||h.key!==homeKey())return false;
+  let c=applyAlg(h.base,h.moves.slice(0,h.idx));if(!liveSame(c,d.from))return false;
+  let moves=h.moves.slice(0,h.idx);if(h.yours==null||h.yours>h.idx)h.yours=h.idx;
+  for(const m of d.moves){const P=playerHeldCube(c),x=FACE_NAMES[P.center.indexOf(FACE_NAMES.indexOf(m[0]))]+m.slice(1);
+    const j=moves.length-1,y=j>=h.yours?seqJoin(moves[j],x):undefined;moves=y===undefined?moves.concat(x):moves.slice(0,j).concat(y?[y]:[]);c=applyAlg(c,[x]);}
+  h.moves=moves;h.idx=moves.length;if(!/your moves/.test(h.label))h.label+=' · your moves';return true;}
 // The first state after a connect: in step, nothing to ask. Else ask, once per connect, unless the
 // ask is off.
 function liveConnected(state){
@@ -145,7 +153,7 @@ function liveAsk(){
 // The note under the moves, while a smart cube is connected and the player shows another cube.
 function liveNoteDraw(){
   let el=$('#liveNote');const st=typeof cubeTab!=='undefined'&&cubeTab.target;
-  const show=liveOn()&&!liveFgOwns()&&!!st&&!liveInStep(st);
+  const show=liveOn()&&!!st&&!liveInStep(st);
   if(!el){if(!show)return;const head=$('#player .seqhead');if(!head)return;
     const b=liveEl('button',{class:'small',id:'liveNoteUse',title:'Make the cube in your hands the scramble'},'Use my cube');b.onclick=liveUse;
     el=liveEl('div',{id:'liveNote',class:'livenote'},liveEl('span',{},'Your smart cube is not at this cube. Turn it to match, or use it as it is.'),b);head.after(el);}
