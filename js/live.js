@@ -15,7 +15,7 @@
 // The Cross tab's Check my plan follows the moves made on the player (a step back, then a move, backs
 // out the moves after it), and moves typed there show on the player (crossFollow, crossTyped).
 const PLAYER={hold:null}; // {top, front}: color indices, or null for the player's own hold
-const LIVE={asked:false,typing:false};
+const LIVE={asked:false,typing:false,map:null};
 const liveConj=q=>[-q[0],-q[1],-q[2],q[3]];
 // An element: tag, attributes (class, id, title, type, ...), then children (text or elements).
 function liveEl(tag,attrs,...kids){const x=document.createElement(tag);for(const [k,v] of Object.entries(attrs||{}))x.setAttribute(k,v);
@@ -104,7 +104,20 @@ function liveConnected(state){
 }
 // Use my cube: the cube in your hands becomes the scramble, on the tab in view.
 function liveUse(){const st=typeof cubeTab!=='undefined'&&cubeTab.target;if(!st)return;
-  scrambleFromCube(st,customName('smart'),true);liveNoteDraw();}
+  scrambleFromCube(liveReal(st),customName('smart'),true);liveNoteDraw();}
+// ----- a screen cube that is not the cube in your hands: the map -----
+// F2L Trainer's Overlay (js/f2ltrain.js) loads a scramble of its own while a smart cube is the cube.
+// The screen's cube is then M · the cube in your hands, as the lab's drill draws setup · P0⁻¹ · P:
+// M = setup · P0⁻¹, with P0 the cube in your hands at the start. Each state the smart cube sends
+// goes on as M · state (cubeTabShow, liveMapIn), so the cube on the page, the sheet's stage and the
+// F2L guide read the screen's cube, and each turn turns it as it turns your cube. The colors on the
+// screen are not your cube's: you look at the screen. liveMapSet(null) ends it.
+function liveMapIn(c){return LIVE.map&&c?LIVE.map.mul(c):c;}
+// The cube in your hands, from a state as the page keeps it.
+function liveReal(c){return LIVE.map&&c?LIVE.map.inverse().mul(c):c;}
+// A new map, or none: the state kept is turned from the old map to the new.
+function liveMapSet(M){const t=typeof cubeTab!=='undefined'?cubeTab.target:null,r=liveReal(t);
+  LIVE.map=M||null;if(t){cubeTab.target=liveMapIn(r);if(typeof cubeTabStir==='function')cubeTabStir();}liveNoteDraw();}
 // ----- a fresh start on a smart cube: New Cross, New F2L, New OLL · PLL -----
 // While a smart cube is the cube and connected, Cross, F2L and OLL · PLL make no scramble: you
 // scramble the cube in your hands, and New Cross (New F2L, New OLL · PLL) marks it, as it is now,

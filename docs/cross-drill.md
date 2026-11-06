@@ -153,3 +153,32 @@ of place as they would. Off, the real cube shows again.
 - A new scramble or another cross color puts the cross in again. On another tab the real cube
   shows; back on F2L, the overlay again.
 - The Patterns sheet, the F2L guide and Scramble Info still read the real cube.
+
+### Overlay as a scramble (1.74)
+
+The owner asked for one consistent cube: the overlay must be a full scramble to the "solve this"
+state, every piece remapped, and the user looks at the screen cube, not the cube in the hands. The
+lab's drill already worked this way (`quest/core.js` on `quest-cube-lab`: the picture is
+`setup · P0⁻¹ · P`), so 1.74 does the same on the site. It replaces the 1.73 notes above where
+they differ.
+
+- On: the home cube as it is (the scramble, its grip turn and your moves, `homeNow` in `app.js`)
+  goes through `f2ltOverlay` as before. O0 is a real cube, so `f2ltOverlayScramble` turns it to
+  white up, green front (`f2ltHome`) and finds the moves that make it from solved: the first
+  two-phase solution of 22 moves or fewer, as a WCA scramble takes. That loads as the scramble
+  (`overlay-MMDD-hhmmss`, a custom scramble in the history). There is no gray and no `trainLook`:
+  every part of the page (the player, the picture, F2L-1's picks, the F2L guide, Patterns,
+  Scramble Info) reads this one cube, and every pair can be lit, the one whose edge was in a
+  cross place too.
+- A smart cube, while it is the cube: `M = setup · P0⁻¹` (`LIVE.map`, `liveMapSet` in
+  `js/live.js`), with P0 the cube in the hands at the start. `cubeTabShow` takes each state as
+  `M · state` (`liveMapIn`), so the page stays in step, each turn goes on the player and turns the
+  screen's cube, and the sheet's stage reads the screen's cube. `liveReal` gives the cube in the
+  hands back; Use my cube and New F2L mark that one.
+- Off, or F2L Trainer off: the scramble from before, with your moves before and since
+  (`homeAppend`). With a smart cube the map goes, and the page is in step with the cube in the
+  hands again.
+- While it is on, a new scramble on the F2L tab (New scramble, New F2L on a smart cube) gets the
+  cross put in too (`f2loScramble`, asked first by `loadScramble`); another cross color puts that
+  cross in. On another tab the overlay scramble is the cube, as any scramble is; a new scramble
+  there ends Overlay, and so does Undo.
