@@ -37,7 +37,7 @@ function crossTrainSet(on){store.set('crossTrain',!!on);crossTrainDraw();drawMai
 //   cross edges too.
 // The centers keep their colors in each. Every other piece shows at Cross Trainer's level, cw:crossDim.
 const F2L_STYLES=[
-  {n:1,label:'F2L-1',title:'F2L-1: the cross and one pair, the pair the guide is on or the next one to solve'},
+  {n:1,label:'F2L-1',title:'F2L-1: the cross and one pair. The row of chips over it picks the pair: the guide\'s, the shortest, the fastest, two at once, or one you name'},
   {n:2,label:'F2L-2',title:'F2L-2: the eight F2L pieces alone, with no cross'},
   {n:3,label:'F2L-3',title:'F2L-3: the first two layers, the cross and the four pairs'}];
 function f2lTrainOn(){return !!store.get('f2lTrain',false);}
@@ -54,11 +54,15 @@ function f2lTrainPair(f){const G=typeof fg!=='undefined'?fg:null,act=!!G&&typeof
   const pin=act?(G.step&&G.step.slot)||G.target:null;if(pin)return cols(pin);
   const solved=([a,b])=>cornerFacelet.concat(edgeFacelet).filter(p=>{const s=new Set(p.map(i=>f[i]));return s.has(a)&&s.has(b)&&(p.length===2||s.has(ci));}).every(p=>f2lTrainHome(f,p));
   return cols(order.find(n=>!solved(cols(n)))||order[0]);}
+// F2L-1's pairs: the one the Pair menu picks (js/f2ltrain.js: one pair, Shortest, Fastest or Two at
+// once, two pairs), else the guide's.
+function f2lTrainPairs(f){const p=typeof f2ltChoice==='function'?f2ltChoice(f):null;return p&&p.length?p:[f2lTrainPair(f)];}
 function f2lTrainFade(f){if(!f2lTrainOn()||!f2lOnF2L())return null;const ci=crossColorIndex(),op=(ci+3)%6,style=f2lTrainStyle(),keep=new Set([4,13,22,31,40,49]);
   const add=p=>p.forEach(i=>keep.add(i)),has=(p,x)=>p.some(i=>f[i]===x);
   if(style===3){for(const p of cornerFacelet.concat(edgeFacelet))if(!has(p,op))add(p);return keep;}
-  if(style===1){const [a,b]=f2lTrainPair(f);for(const e of edgeFacelet)if(has(e,ci)||(has(e,a)&&has(e,b)))add(e);
-    for(const c of cornerFacelet)if(has(c,ci)&&has(c,a)&&has(c,b))add(c);return keep;}
+  if(style===1){for(const e of edgeFacelet)if(has(e,ci))add(e);
+    for(const [a,b] of f2lTrainPairs(f)){for(const e of edgeFacelet)if(has(e,a)&&has(e,b))add(e);
+      for(const c of cornerFacelet)if(has(c,ci)&&has(c,a)&&has(c,b))add(c);}return keep;}
   for(const c of cornerFacelet)if(has(c,ci))add(c);
   for(const e of edgeFacelet)if(!has(e,ci)&&!has(e,op))add(e);return keep;}
 function f2lTrainDraw(){const b=$('#f2lTrainBtn');if(!b)return;const on=f2lTrainOn(),st=F2L_STYLES[f2lTrainStyle()-1];b.setAttribute('aria-pressed',String(on));

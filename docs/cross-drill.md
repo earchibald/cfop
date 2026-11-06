@@ -79,3 +79,45 @@ While F2L Trainer is on, three chips sit beside the button (`#f2lStyle`, `cw:f2l
   cross edges too. The default.
 
 A click on a chip picks the style and turns the trainer on.
+
+### The pair F2L-1 lights (1.72)
+
+The owner asked for a choice of the pair: one pair named by its corner, or one the app picks by
+shortest, fastest, or a chance to build the next pair while solving this one, which lights two.
+While F2L-1 is pressed, a second row of chips sits over the style chips (`#f2lPairRow`,
+`js/f2ltrain.js`; the owner asked for options of F2L-1, not a second menu). Kept in `cw:f2lPair`:
+
+- **Guide**: 1.70's pair, the guide's (`f2lTrainPair`). The default.
+- Picked from the cube (`js/f2lpick.js`, pure, `test/f2lpick.js`):
+  - **Shortest**: the pair with the fewest moves from here, the cross and the solved pairs kept.
+  - **Fastest**: the pair whose quickest solution to turn costs least, up to two moves longer than
+    its shortest (`F2L_FAST_EXTRA`). The cost is per move (`F2L_SPEED`): U and R 1, L 1.25, F 1.6,
+    D 2.2, B 2.5; a half turn 1.4 times its face. The search turns faces only, so no M comes out.
+  - **Two at once**: two pairs. First, the two that one solution makes together, at most three
+    moves longer than the shorter alone (`F2L_COMBO_EXTRA`, as the guide's Also makes); the
+    fewest moves wins. Else the shortest pair and the pair one of its solutions sets up
+    (`f2lSetup`, as Sets up). Else the shortest pair and the pair shortest after it. The last
+    open pair shows alone.
+- One pair: four chips after a thin line, each a swatch of the pair's two colors, as the solve
+  holds the cube: front right, front left, back left, back right (`f2ltPairs`).
+
+The pressed way shows a swatch of each pair it lights. Its tooltip says what is lit and why
+("Lit: the green and red pair. It takes 7 moves.").
+
+A pair is a key of its two side colors (`"1-2"`, red and green), not a slot, so a pick stays on
+its pieces through every turn of the whole cube, and the stickers are found by color
+(`f2ltPieces`). `f2lTrainFade` asks `f2lTrainPairs`, which asks `f2ltChoice`.
+
+A pick is read from the cube in view, turned so the cross color is down (`f2ltFrame`). It is read
+again once the cube changes and rests 150 ms, one search per turn of the event loop
+(`f2ltSteps`), so the page does not stop (Two at once: about a quarter of a second, at worst
+about two thirds). It holds while its pairs are not solved and are no farther from solved than
+when it was picked (`f2ltStill`), so the light does not hop while the user works on a pair. A new
+pick prefers the pairs of the one before on a tie; with Two at once, the second pair becomes the
+first when the first is solved. A new scramble starts over. A pick needs the cross within three
+moves (`F2LT_CROSS_NEAR`): an insert opens the cross for a move or two. Further off, F2L-1 shows
+the guide's pair and the tooltip says to solve the cross first.
+
+Known limit: each search has a budget of 4 million nodes (`F2L_PICK_NODES`). A rare joint search
+of nine moves or more can run out in one hold and not in another, so Two at once can differ by
+hold on such a cube.

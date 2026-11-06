@@ -1069,3 +1069,15 @@ body:not([data-tab="f2l"]) #f2lTrainBtn,body:not([data-method="cfop"]) #f2lTrain
 #cube.cfmiss{animation:cfmiss .28s}
 @keyframes cfmiss{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 @media (prefers-reduced-motion:reduce){#cube.cfmiss{animation:none}}
+/* F2L Trainer: the row of the pair F2L-1 lights, over the style chips while F2L-1 is pressed (js/f2ltrain.js) */
+.cubebox #f2lPairRow{bottom:98px;flex-wrap:nowrap;max-width:calc(100% - 16px)}
+.cubebox #f2lPairRow button{font-size:11px;padding:2px 6px}
+.cubebox #f2lPairRow .f2lt-pair{padding:2px 3px!important}
+.cubebox #f2lPairRow :is(.f2lt-more,.f2lt-sw[data-k]){display:none}
+@media (max-width:760px){.cubebox #f2lPairRow{left:4px;bottom:82px}}
+#f2lPairRow[hidden],body:not([data-tab="f2l"]) #f2lPairRow,body:not([data-method="cfop"]) #f2lPairRow{display:none!important}
+#f2lPairRow button{display:inline-flex;align-items:center;gap:4px}
+#f2lPairRow .f2lt-pair{padding:2px 5px!important}
+#f2lPairRow .f2lt-gap{width:1px;align-self:stretch;margin:3px 2px;background:var(--line)}
+.f2lt-sw{display:inline-flex;border-radius:3px;overflow:hidden;box-shadow:0 0 0 1px var(--line);flex:none}
+.f2lt-sw i{display:block;width:7px;height:11px}
