@@ -5,7 +5,7 @@
 // after it; a pick holds while the pair gets no farther, and lets go when it is solved; a tie goes to
 // the pick before; a cross far off, or every pair solved, lights no pick; an insert that opens the cross keeps it.
 const assert=require('assert');
-const run=require('./vm-load')('js/engine.js','js/algs.js','js/f2l.js','js/f2lpick.js');
+const run=require('./vm-load')('js/engine.js','js/solver.js','js/algs.js','js/f2l.js','js/f2lpick.js');
 const g=name=>run(name);
 const J=x=>JSON.parse(JSON.stringify(x)),deq=(a,b,m)=>assert.deepStrictEqual(J(a),J(b),m);
 const Cube=g('Cube'),applyAlg=g('applyAlg'),parseAlg=g('parseAlg'),solveCross=g('solveCross'),randomMoveScramble=g('randomMoveScramble'),reframe=g('reframe');
@@ -78,14 +78,15 @@ lap('two '+JSON.stringify(kinds));
 // A tie goes to the pick before.
 {for(const c of cubes){const L=lens(c),min=Math.min(...Object.values(L.o)),ties=Object.keys(L.o).filter(k=>L.o[k]===min);if(ties.length<2)continue;
   for(const k of ties)deq(f2ltPick(c,CI,'shortest',{prefer:[k]}).keys,[k],'the tie to the pick before');break;}}
-// Overlay: on any scramble, in any cross color and hold, the drawn cube T·A has the cross solved,
-// the F2L corners and the F2L edges outside the cross where A has them; it is a cube the solvers
-// read; a move of A moves it the same way; an F2L edge in a cross place is skipped, gray, never
-// solved; the last layer is gray; a cube with its cross solved draws as it is.
-{const f2ltOverlay=g('f2ltOverlay'),f2ltGray=g('f2ltGray'),f2ltKey=g('f2ltKey'),fromFacelets=g('fromFacelets'),crossIndex=g('crossIndex'),buildCrossTable=g('buildCrossTable');
+// Overlay: on any scramble, in any cross color and hold, O = T·A has the cross solved, the F2L
+// corners and the F2L edges outside the cross where A has them; it is a real cube with A's centers;
+// a move of A moves it the same way; an F2L edge in a cross place is skipped, never solved; a cube
+// with its cross solved stays as it is. f2ltOverlayScramble: moves from solved that make O, turned
+// to white up, green front, and the map setup · P0⁻¹ of a smart cube turns it as P turns.
+{const f2ltOverlay=g('f2ltOverlay'),f2ltOverlayScramble=g('f2ltOverlayScramble'),f2ltHome=g('f2ltHome'),f2ltKey=g('f2ltKey'),fromFacelets=g('fromFacelets'),crossIndex=g('crossIndex'),buildCrossTable=g('buildCrossTable');
   const slotSolved=g('slotSolved'),f2lSlot=g('f2lSlot');let skips=0;
   for(let t=0;t<60;t++){const ci=t%6,turn=['','y','x z',"z' y2",'x2','y x'][Math.floor(t/6)%6];
-    const A=applyAlg(applyAlg(new Cube(),randomMoveScramble('ov'+t,25)),parseAlg(turn||'U U\''));const ov=f2ltOverlay(A,ci),O=ov.T.mul(A);
+    const A=applyAlg(applyAlg(new Cube(),randomMoveScramble('ov'+t,25)),parseAlg(turn||'U U\'')),ov=f2ltOverlay(A,ci),O=ov.T.mul(A);
     const fr=f2ltFrame(O,ci);assert.strictEqual(buildCrossTable()[crossIndex(fr.X)],0,'the cross solved');
     assert.ok(fromFacelets(reframe(O).toFacelets()).ok,'a real cube');deq(O.center,A.center,'the centers stay');
     const fa=A.toFacelets(),fo=O.toFacelets(),op=(ci+3)%6;
@@ -95,14 +96,15 @@ lap('two '+JSON.stringify(kinds));
     for(const k of ov.skip){skips++;assert.ok(!slotSolved(fr.X,f2lSlot(fr.slot[k])),'a skipped pair is never solved');
       const [a,b]=k.split('-').map(Number);assert.ok(edgeFacelet.some(e=>e.some(i=>fa[i]===a)&&e.some(i=>fa[i]===b)&&e.some(i=>Math.floor(i/9)===A.center.indexOf(ci))),'its edge is in a cross place');}
     const M=parseAlg("R U' F2 y M' D");deq(ov.T.mul(applyAlg(A,M)).toFacelets(),applyAlg(O,M).toFacelets(),'a move turns both alike');
-    const gr=f2ltGray(fo,ov);for(const p of cornerFacelet.concat(edgeFacelet)){const c=p.map(i=>fo[i]);
-      if(c.includes(op))assert.ok(p.every(i=>gr[i]===6),'the last layer gray');
-      else if(p.length===2&&ov.skip.includes(f2ltKey(c[0],c[1])))assert.ok(p.every(i=>gr[i]===6),'a skipped edge gray');
-      else deq(p.map(i=>gr[i]),c,'the rest in color');}}
+    if(t%6===0){const sc=f2ltOverlayScramble(A,ci);assert.ok(sc,'a scramble');
+      assert.ok(sc.moves.every(m=>/^[URFDLB]['2]?$/.test(m)),'face moves only');
+      assert.ok(applyAlg(new Cube(),sc.moves).equals(sc.O),'the moves make it');deq(sc.O.center,[0,1,2,3,4,5],'white up, green front');
+      deq(sc.O.toFacelets(),f2ltHome(O).toFacelets(),'O turned to white up, green front');
+      // The map of a smart cube: M·P is the screen's cube for P, at the start and after turns.
+      const Ah=f2ltHome(A),Mp=sc.O.mul(Ah.inverse());assert.ok(Mp.mul(Ah).equals(sc.O),'P0 to the setup');
+      const Q=parseAlg("R U R' F2 D'");assert.ok(Mp.mul(applyAlg(Ah,Q)).equals(applyAlg(sc.O,Q)),'a turn of P turns the screen alike');
+      deq(Mp.center,[0,1,2,3,4,5],'the map keeps the centers');}}
   assert.ok(skips>0,'some scrambles have an F2L edge in the cross');
   {const c=withCross('ovsolved'),ov=f2ltOverlay(c,CI);assert.ok(ov.T.isSolved(),'the cross solved: nothing changes');deq(ov.skip,[],'and nothing skipped');}
-  // A pick skips the pairs Overlay can not show.
-  {const c=cubes[0],all=f2ltPairs(CI);
-    const p=f2ltPick(c,CI,'shortest',{skip:all.slice(0,3)});deq(p.keys,[all[3]],'the one pair not skipped');}
   lap('overlay');}
 console.log('f2lpick ok ('+(Date.now()-T0)+' ms)');

@@ -169,7 +169,9 @@ function cubeTabPath(from,to){
 // The real cube's state came. Up to four moves past the last state, the moves go on the list; five
 // or more apart, the moves are not known, and the list keeps what it has. The rest of the page
 // follows the cube from here (cw:smartmoves, js/live.js).
+// While the screen's cube is mapped (js/live.js, liveMapIn), the state goes on as the map gives it.
 function cubeTabShow(cube){
+  if(typeof liveMapIn==='function')cube=liveMapIn(cube);
   const was=cubeTab.target,moved=cubeTabPath(was,cube);
   if(moved&&moved.length)cubeTabRecord(moved);
   if(!moved||moved.length)document.dispatchEvent(new CustomEvent('cw:smartmoves',{detail:{moves:moved,from:was,to:cube}}));

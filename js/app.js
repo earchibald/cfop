@@ -71,15 +71,13 @@ function setHidden(on){store.set('hidden',!!on);drawMain();}
 function view3D(){return hiddenOn()?{yaw:view.yaw,pitch:view.pitch,hidden:true,scale:40}:{yaw:view.yaw,pitch:view.pitch};}
 // The hold row under the cube (js/live.js) turns the picture: rot, or a turned cube on the net.
 // Cross Trainer and F2L Trainer (js/crosstrain.js) dim all but the cross edges, or the F2L pieces, of the stickers drawn, to one level; Find the
-// edges puts a class on each sticker, so a click names it. F2L Trainer's Overlay (js/f2ltrain.js)
-// draws each cube with the cross put in place: trainLook.
+// edges puts a class on each sticker, so a click names it.
 function drawMain(){
-  const look=c=>typeof trainLook==='function'?trainLook(c):c.toFacelets();
-  const f=look(displayedCube);const svg=$('#cube');const H=typeof playerHoldView==='function'?playerHoldView(displayedCube):null,v={...view3D(),...(H?{rot:H.rot}:{})};
+  const f=displayedCube.toFacelets();const svg=$('#cube');const H=typeof playerHoldView==='function'?playerHoldView(displayedCube):null,v={...view3D(),...(H?{rot:H.rot}:{})};
   const ct=g=>typeof trainFade==='function'?trainFade(g):null,cls=typeof crossFindCls==='function'?crossFindCls():null;
   const fd=(g,base=fadeSet)=>{const t=ct(g);return t?{fade:t,dim:crossTrainDim()}:{fade:base};};
-  if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');const g=H?look(applyAlg(displayedCube,H.moves)):f;svg.innerHTML=renderNet(g,fd(g,H?null:fadeSet));}
-  else if(anim.move&&anim.t<1){svg.setAttribute('viewBox','0 0 400 360');const g=look(anim.from);svg.innerHTML=renderCube3D(g,{...v,...fd(g),move:anim.move,t:Math.max(anim.t,0.01)});}
+  if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');const g=H?applyAlg(displayedCube,H.moves).toFacelets():f;svg.innerHTML=renderNet(g,fd(g,H?null:fadeSet));}
+  else if(anim.move&&anim.t<1){svg.setAttribute('viewBox','0 0 400 360');const g=anim.from.toFacelets();svg.innerHTML=renderCube3D(g,{...v,...fd(g),move:anim.move,t:Math.max(anim.t,0.01)});}
   else{svg.setAttribute('viewBox','0 0 400 360');svg.innerHTML=renderCube3D(f,{...v,...fd(f),lift:mainLift,cls});}
   drawDragHint();
 }
@@ -281,6 +279,17 @@ function showScr(fresh){if(isBeg()&&typeof showBegScr==='function'){showBegScr()
     if(h.idx!==seqState.idx){seqState.idx=h.idx;seqState.shown=-1;applySequence();}else homeKeep();}
   else{setSequence([...scr.moves,...(r?[r]:[])],'scramble · seed '+scr.seed+(r?' · last step '+r+' = solving grip: '+holdText(end).replace(/^Hold /,'').replace(/\.$/,''):''));seqState.home=true;homeKeep();}
   if(r){const el=$$('#scramble .m')[scr.moves.length];if(el){el.classList.add('rot');el.title='Rotation only, not a scramble move. '+holdText(end);}}}
+// The home cube as it is now: the cube, and your moves on it (after the scramble and its grip turn).
+function homeNow(){const h=seqState.home&&!seqState.drill?{moves:seqState.moves,idx:seqState.idx,base:seqState.base}:seqHome&&seqHome.key===homeKey()?seqHome:null;
+  const r=crossRotation(),start=homeStart();
+  if(!h)return {cube:applyAlg(scr.cube,r?[r]:[]),yours:[]};
+  return {cube:applyAlg(h.base,h.moves.slice(0,h.idx)),yours:h.moves.slice(start,Math.max(start,h.idx))};}
+// Your moves put back on the home cube, after the scramble and its grip turn (F2L Trainer's Overlay off).
+function homeAppend(ms){if(!ms.length)return;const lab=l=>l.replace(/ · your moves$/,'')+' · your moves';
+  if(seqState.home&&!seqState.drill){setSequence([...seqState.moves.slice(0,seqState.idx),...ms],lab(seqState.label),seqState.base);
+    seqState.home=true;seqState.yours=homeStart();homeKeep();return;}
+  const h=seqHome;if(!h||h.key!==homeKey())return;
+  h.moves=[...h.moves.slice(0,h.idx),...ms];h.idx=h.moves.length;h.yours=homeStart();h.label=lab(h.label);}
 // The current scramble as this tab shows it: F2L live adds the rotation and the solved cross.
 // A beginner tab that shows something else registers it in tabShow[tab].
 const tabShow={};
@@ -314,7 +323,9 @@ let history=store.get('history',[]);
 // A new scramble: a WCA scramble (js/wca.js), a random state made from a seed name. The same seed
 // always gives the same scramble.
 function newScramble(seed){seed=seed||randomSeedName();loadScramble(seed,wcaScramble(seed),false);}
+// F2L Trainer's Overlay (js/f2ltrain.js) can take a new scramble and load its own in its place.
 function loadScramble(seed,moves,custom){
+  if(typeof f2loScramble==='function'&&f2loScramble(seed,moves,custom))return;
   scr.seed=seed;$('#seed').value=custom?'':seed;$('#seed').placeholder=custom?seed:'seed name';
   scr.moves=Array.isArray(moves)?moves:parseAlg(moves);scr.cube=applyAlg(puzzleCube(),scr.moves);
   const ent={seed,len:scr.moves.length,t:Date.now()};if(custom)ent.moves=scr.moves.join(' ');

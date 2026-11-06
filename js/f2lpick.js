@@ -22,9 +22,9 @@
 // f2ltStill(cube, ci, pick, o)   true while the pick still holds: its pairs not solved, and no
 //                                farther from solved (with the cross) than when it was picked
 // f2ltOverlay(cube, ci)          Overlay (1.73): the cube with the cross put in place, as a fixed
-//                                relabel of the pieces: {T, ci, skip}; draw T.mul(cube) for any cube
-//                                after it, so the moves turn the cross out of place as they would
-// f2ltGray(f, ov)                facelets of T.mul(cube) with the made-up pieces gray (color 6)
+//                                relabel of the pieces: {T, ci, skip}; T.mul(cube) is that cube
+// f2ltOverlayScramble(cube, ci)  Overlay (1.74): that cube as a scramble from solved: {moves, O},
+//                                O the cube turned to white up, green front (the moves make it)
 const F2L_SPEED={U:1,R:1,L:1.25,F:1.6,D:2.2,B:2.5};
 const F2L_SPEED_HALF=1.4;    // a half turn costs this many quarter turns of its face
 const F2L_FAST_EXTRA=2;      // fastest: a solution at most this many moves longer than the shortest
@@ -118,14 +118,14 @@ function f2ltStill(cube,ci,pick,o={}){
   return f2lLen(fr.X,[...tg,...f2lKeep(fr.X)],{left:o.nodeLimit||F2L_PICK_NODES},pick.track.len)!=null;
 }
 // ---- Overlay ----
-// The user's cube A0 can have the cross anywhere. Overlay draws a cube O0 in its place: the cross
-// solved, the eight F2L pieces where A0 has them, the last-layer pieces made up (they draw gray).
-// O0 = T·A0 for one relabel of the pieces, T = O0·A0⁻¹; T names each real piece as the piece O0
-// shows in its place. Every cube after it is drawn as T·A, so a move of the real cube moves the
-// drawn cube the same way: the cross turns out of place, the pair goes in. The centers stay.
-// An F2L edge in a cross place has no place in O0: it goes where the cross pushed a piece out, drawn
-// gray, never at home, and its pair is in skip (keys). O0 keeps the parity and the twist sums of A0,
-// so T is a cube the face moves make and T·A is a cube the solvers read.
+// The user's cube A0 can have the cross anywhere. Overlay makes a cube O0 from it: the cross
+// solved, the eight F2L pieces where A0 has them, the other pieces put where they fit. O0 = T·A0
+// for one relabel of the pieces, T = O0·A0⁻¹. O0 keeps the parity and the twist sums of A0, so it
+// is a real cube: f2ltOverlayScramble finds the moves that make it from solved, and the site loads
+// them as the scramble. The cube in your hands then turns it as a drill does (the lab's drill:
+// setup · P0⁻¹ · P): js/live.js keeps that map for a smart cube.
+// An F2L edge in a cross place has no place of its own in O0: it goes where the cross pushed a
+// piece out, never at home, and its pair is in skip (keys).
 function f2ltOverlay(cube,ci){
   const op=(ci+3)%6,F0=cube.center.indexOf(ci);if(F0<0)return null;
   const face=i=>Math.floor(i/9),want=i=>cube.center[face(i)];
@@ -145,7 +145,7 @@ function f2ltOverlay(cube,ci){
   const rest=[...Array(12).keys()].filter(j=>!used.has(j)).sort((a,b)=>f2l(b)-f2l(a));
   for(const j of rest){const k=open.findIndex(p=>!f2l(j)||homeAt(p).j!==j),p=open.splice(k<0?0:k,1)[0];
     const h=homeAt(p);ep[p]=j;eo[p]=h.j===j?1-h.o:0;}
-  // Keep A0's edge parity and flip sum: swap or flip last-layer edges, which draw gray.
+  // Keep A0's edge parity and flip sum: swap or flip last-layer edges.
   const lls=[...Array(12).keys()].filter(p=>ll(ep[p]));
   const par=a=>{let n=0;const s=new Set();for(let i=0;i<a.length;i++){if(s.has(i))continue;let k=i,L=0;while(!s.has(k)){s.add(k);k=a[k];L++;}n+=L-1;}return n%2;};
   if(par(ep)!==par(cube.ep)){const [x,y]=lls;[ep[x],ep[y]]=[ep[y],ep[x]];}
@@ -153,7 +153,15 @@ function f2ltOverlay(cube,ci){
   const O0=new Cube(cube.cp.slice(),cube.co.slice(),ep,eo,cube.center.slice());
   return {T:O0.mul(cube.inverse()),ci,skip:skip.map(j=>f2ltKey(edgeColor[j][0],edgeColor[j][1]))};
 }
-function f2ltGray(f,ov){const op=(ov.ci+3)%6,sk=new Set(ov.skip),g=f.slice();
-  for(const p of cornerFacelet.concat(edgeFacelet)){const c=p.map(i=>f[i]);
-    if(c.includes(op)||(p.length===2&&sk.has(f2ltKey(c[0],c[1]))))for(const i of p)g[i]=6;}
-  return g;}
+// The whole-cube turn that puts the centers of c back at home: c·R has white up, green front.
+const F2LT_TURNS=(()=>{const out=[];for(const a of ['','x','x2',"x'",'z',"z'"])for(const b of ['','y','y2',"y'"])out.push([a,b].filter(Boolean));return out;})();
+function f2ltHome(c){for(const t of F2LT_TURNS){const R=applyAlg(new Cube(),t);if(c.mul(R).center.join()==='0,1,2,3,4,5')return c.mul(R);}return null;}
+// O0 as a scramble: the moves from solved (white up, green front) that make it, and that cube. The
+// first solution of 22 moves or fewer, as a WCA scramble takes (js/wca.js): quick.
+// null if no cross color center, or no solution in time.
+function f2ltOverlayScramble(cube,ci,o={}){
+  const ov=f2ltOverlay(cube,ci);if(!ov)return null;
+  const O=f2ltHome(ov.T.mul(cube));if(!O)return null;
+  const sol=solveTwoPhase(O,{maxLen:22,target:22,timeMs:o.timeMs||1500});if(!sol)return null;
+  const moves=parseAlg(invertAlg(sol));
+  return applyAlg(new Cube(),moves).equals(O)?{moves,O,skip:ov.skip}:null;}
