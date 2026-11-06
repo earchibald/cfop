@@ -1061,9 +1061,9 @@ body:not([data-tab="f2l"]) #f2lTrainBtn,body:not([data-method="cfop"]) #f2lTrain
 .f2lstyle button:hover{color:var(--text)}
 .f2lstyle button[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--panel))}
 /* in the cube box (not the stage view): a column at the left edge, over the button, clear of the cube */
-.cubebox .f2lstyle{position:absolute;left:8px;bottom:68px;flex-direction:column;border-radius:12px}
-.cubebox .f2lstyle button{border-radius:9px}
-@media (max-width:760px){.cubebox .f2lstyle{left:4px;bottom:56px}}
+body:not(.sv) .cubebox .f2lstyle{position:absolute;left:8px;bottom:68px;flex-direction:column;border-radius:12px}
+body:not(.sv) .cubebox .f2lstyle button{border-radius:9px}
+@media (max-width:760px){body:not(.sv) .cubebox .f2lstyle{left:4px;bottom:56px}}
 /* where a trainer button sits over Hidden faces (Cross, F2L), the drag hint goes to the middle of
    the bottom row, its arrow alone, so it does not run under the button */
 body:not(.sv)[data-method="cfop"]:is([data-tab="cross"],[data-tab="f2l"]) .cubebox .draghint{left:50%;bottom:12px;transform:translateX(-50%)}
