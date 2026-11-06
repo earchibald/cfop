@@ -84,8 +84,10 @@ A click on a chip picks the style and turns the trainer on.
 
 The owner asked for a choice of the pair: one pair named by its corner, or one the app picks by
 shortest, fastest, or a chance to build the next pair while solving this one, which lights two.
-While F2L-1 is pressed, a second row of chips sits over the style chips (`#f2lPairRow`,
-`js/f2ltrain.js`; the owner asked for options of F2L-1, not a second menu). Kept in `cw:f2lPair`:
+While F2L-1 is pressed, more chips pick the pair (`#f2lPairRow`, `js/f2ltrain.js`; the owner
+asked for options of F2L-1, not a second menu). On the cube box they are a column at the right,
+level with the style column at the left, clear of the cube; in the stage view's action bar, a
+row after the style chips. Kept in `cw:f2lPair`:
 
 - **Guide**: 1.70's pair, the guide's (`f2lTrainPair`). The default.
 - Picked from the cube (`js/f2lpick.js`, pure, `test/f2lpick.js`):
@@ -98,8 +100,9 @@ While F2L-1 is pressed, a second row of chips sits over the style chips (`#f2lPa
     fewest moves wins. Else the shortest pair and the pair one of its solutions sets up
     (`f2lSetup`, as Sets up). Else the shortest pair and the pair shortest after it. The last
     open pair shows alone.
-- One pair: four chips after a thin line, each a swatch of the pair's two colors, as the solve
-  holds the cube: front right, front left, back left, back right (`f2ltPairs`).
+- One pair: four chips, each a swatch of the pair's two colors, as the solve holds the cube:
+  front right, front left, back left, back right (`f2ltPairs`). A 2 by 2 grid under the ways on
+  the cube box; after a thin line in the action bar.
 
 The pressed way shows a swatch of each pair it lights. Its tooltip says what is lit and why
 ("Lit: the green and red pair. It takes 7 moves.").

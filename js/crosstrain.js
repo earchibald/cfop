@@ -37,7 +37,7 @@ function crossTrainSet(on){store.set('crossTrain',!!on);crossTrainDraw();drawMai
 //   cross edges too.
 // The centers keep their colors in each. Every other piece shows at Cross Trainer's level, cw:crossDim.
 const F2L_STYLES=[
-  {n:1,label:'F2L-1',title:'F2L-1: the cross and one pair. The row of chips over it picks the pair: the guide\'s, the shortest, the fastest, two at once, or one you name'},
+  {n:1,label:'F2L-1',title:'F2L-1: the cross and one pair. The chips beside it pick the pair: the guide\'s, the shortest, the fastest, two at once, or one you name'},
   {n:2,label:'F2L-2',title:'F2L-2: the eight F2L pieces alone, with no cross'},
   {n:3,label:'F2L-3',title:'F2L-3: the first two layers, the cross and the four pairs'}];
 function f2lTrainOn(){return !!store.get('f2lTrain',false);}

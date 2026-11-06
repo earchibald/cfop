@@ -1060,8 +1060,14 @@ body:not([data-tab="f2l"]) #f2lTrainBtn,body:not([data-method="cfop"]) #f2lTrain
 .f2lstyle button{font:inherit;font-size:12px;font-weight:500;line-height:1.4;padding:2px 9px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-variant-numeric:tabular-nums}
 .f2lstyle button:hover{color:var(--text)}
 .f2lstyle button[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--panel))}
-.cubebox .f2lstyle{position:absolute;left:8px;bottom:68px}
+/* in the cube box (not the stage view): a column at the left edge, over the button, clear of the cube */
+.cubebox .f2lstyle{position:absolute;left:8px;bottom:68px;flex-direction:column;border-radius:12px}
+.cubebox .f2lstyle button{border-radius:9px}
 @media (max-width:760px){.cubebox .f2lstyle{left:4px;bottom:56px}}
+/* where a trainer button sits over Hidden faces (Cross, F2L), the drag hint goes to the middle of
+   the bottom row, its arrow alone, so it does not run under the button */
+body:not(.sv)[data-method="cfop"]:is([data-tab="cross"],[data-tab="f2l"]) .cubebox .draghint{left:50%;bottom:12px;transform:translateX(-50%)}
+body:not(.sv)[data-method="cfop"]:is([data-tab="cross"],[data-tab="f2l"]) .cubebox .draghint span{display:none}
 /* Find the edges: the row under the cross plans; a miss shakes the cube */
 .crossfind{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .crossfind #crossFindOut{margin-top:6px}
@@ -1069,15 +1075,19 @@ body:not([data-tab="f2l"]) #f2lTrainBtn,body:not([data-method="cfop"]) #f2lTrain
 #cube.cfmiss{animation:cfmiss .28s}
 @keyframes cfmiss{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 @media (prefers-reduced-motion:reduce){#cube.cfmiss{animation:none}}
-/* F2L Trainer: the row of the pair F2L-1 lights, over the style chips while F2L-1 is pressed (js/f2ltrain.js) */
-.cubebox #f2lPairRow{bottom:98px;flex-wrap:nowrap;max-width:calc(100% - 16px)}
-.cubebox #f2lPairRow button{font-size:11px;padding:2px 6px}
-.cubebox #f2lPairRow .f2lt-pair{padding:2px 3px!important}
-.cubebox #f2lPairRow :is(.f2lt-more,.f2lt-sw[data-k]){display:none}
-@media (max-width:760px){.cubebox #f2lPairRow{left:4px;bottom:82px}}
+/* F2L Trainer: the chips of the pair F2L-1 lights, while F2L-1 is pressed (js/f2ltrain.js). A row in
+   the stage view's action bar (#svActs, inside the cube box: hence body:not(.sv)); in the cube box
+   a column at the right, level with the style column at the left (1.71.1), the pairs as a 2 by 2
+   grid under the ways */
 #f2lPairRow[hidden],body:not([data-tab="f2l"]) #f2lPairRow,body:not([data-method="cfop"]) #f2lPairRow{display:none!important}
 #f2lPairRow button{display:inline-flex;align-items:center;gap:4px}
-#f2lPairRow .f2lt-pair{padding:2px 5px!important}
-#f2lPairRow .f2lt-gap{width:1px;align-self:stretch;margin:3px 2px;background:var(--line)}
+#f2lPairRow .f2lt-pairs{display:inline-flex;gap:2px;padding-left:4px;margin-left:2px;border-left:1px solid var(--line)}
+#f2lPairRow .f2lt-pair{padding:2px 5px}
+body:not(.sv) .cubebox #f2lPairRow{left:auto;right:8px;bottom:68px;flex-direction:column;border-radius:12px}
+body:not(.sv) .cubebox #f2lPairRow button{font-size:11px;padding:2px 8px;border-radius:9px;justify-content:center}
+body:not(.sv) .cubebox #f2lPairRow .f2lt-pairs{display:grid;grid-template-columns:1fr 1fr;padding:3px 0 0;margin:1px 0 0;border-left:0;border-top:1px solid var(--line)}
+body:not(.sv) .cubebox #f2lPairRow .f2lt-pair{padding:3px 4px}
+body:not(.sv) .cubebox #f2lPairRow :is(.f2lt-more,.f2lt-sw[data-k]){display:none}
+@media (max-width:760px){body:not(.sv) .cubebox #f2lPairRow{right:4px;bottom:56px}}
 .f2lt-sw{display:inline-flex;border-radius:3px;overflow:hidden;box-shadow:0 0 0 1px var(--line);flex:none}
 .f2lt-sw i{display:block;width:7px;height:11px}

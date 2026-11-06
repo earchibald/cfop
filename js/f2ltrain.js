@@ -78,8 +78,10 @@ function f2ltBuild(){const r=$('#f2lPairRow');if(!r)return;const ci=crossColorIn
     const m=document.createElement('span');m.className='f2lt-more';m.textContent=' '+b.join(' ');return [document.createTextNode(a),m];};
   const ways=F2T_HOWS.map(h=>f2ltChip(h.id,h.title,word(h)));
   const pairs=f2ltPairs(ci).map(k=>{const x=f2ltChip(k,`Light the ${f2ltPairName(k)} pair`,[f2ltSwatch(k)]);x.classList.add('f2lt-pair');x.setAttribute('aria-label',`The ${f2ltPairName(k)} pair`);return x;});
-  const gap=document.createElement('span');gap.className='f2lt-gap';gap.setAttribute('aria-hidden','true');
-  r.replaceChildren(...ways,gap,...pairs);r.dataset.ci=ci;}
+  // The pairs in a group of their own: after a thin line in a row (the stage view), a 2 by 2 grid
+  // under the ways in the cube box's column.
+  const g=document.createElement('span');g.className='f2lt-pairs';g.append(...pairs);
+  r.replaceChildren(...ways,g);r.dataset.ci=ci;}
 function f2ltDraw(){const r=$('#f2lPairRow');if(!r)return;
   r.hidden=!f2lTrainOn()||f2lTrainStyle()!==1;
   if(+r.dataset.ci!==crossColorIndex())f2ltBuild();

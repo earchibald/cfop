@@ -239,3 +239,5 @@ body.sv.svmax[data-cube="none"] #svCol .svsheet:not(.hidden){display:block!impor
 body.sv.svmax[data-cube="none"] #svCol .svghost:not([hidden]){display:flex!important}
 body.sv.svmax[data-cube="none"] .svtabs{display:none}
 @media (prefers-reduced-motion:reduce){body.sv :is(#svTR,#svTabs){transition:none}}
+/* The F2L styles stay a row in the action bar: #svActs sits inside the cube box, where they are a column (1.71.1) */
+#svActs .f2lstyle{flex-direction:row}
