@@ -70,11 +70,11 @@ function hiddenOn(){return !!store.get('hidden',false);}
 function setHidden(on){store.set('hidden',!!on);drawMain();}
 function view3D(){return hiddenOn()?{yaw:view.yaw,pitch:view.pitch,hidden:true,scale:40}:{yaw:view.yaw,pitch:view.pitch};}
 // The hold row under the cube (js/live.js) turns the picture: rot, or a turned cube on the net.
-// Cross Trainer (js/crosstrain.js) dims all but the cross edges of the stickers drawn, to its level; Find the
+// Cross Trainer and F2L Trainer (js/crosstrain.js) dim all but the cross edges, or the F2L pieces, of the stickers drawn, to one level; Find the
 // edges puts a class on each sticker, so a click names it.
 function drawMain(){
   const f=displayedCube.toFacelets();const svg=$('#cube');const H=typeof playerHoldView==='function'?playerHoldView(displayedCube):null,v={...view3D(),...(H?{rot:H.rot}:{})};
-  const ct=g=>typeof crossTrainFade==='function'?crossTrainFade(g):null,cls=typeof crossFindCls==='function'?crossFindCls():null;
+  const ct=g=>typeof trainFade==='function'?trainFade(g):null,cls=typeof crossFindCls==='function'?crossFindCls():null;
   const fd=(g,base=fadeSet)=>{const t=ct(g);return t?{fade:t,dim:crossTrainDim()}:{fade:base};};
   if(view.mode==='net'){svg.setAttribute('viewBox','0 0 400 300');const g=H?applyAlg(displayedCube,H.moves).toFacelets():f;svg.innerHTML=renderNet(g,fd(g,H?null:fadeSet));}
   else if(anim.move&&anim.t<1){svg.setAttribute('viewBox','0 0 400 360');const g=anim.from.toFacelets();svg.innerHTML=renderCube3D(g,{...v,...fd(g),move:anim.move,t:Math.max(anim.t,0.01)});}
@@ -220,8 +220,18 @@ function thumb3D(cube){const f=cube.toFacelets();return `<svg viewBox="40 30 320
 
 // ---------- sequence (scramble) panel ----------
 // drill: a name when the player shows a case drill instead of the current scramble. Tab changes keep a drill.
-var seqState={moves:[],idx:0,shown:-1,label:'scramble',base:new Cube(),drill:null,yours:null}; // var: tests read it from the window. yours: where your moves start (js/cubemenu.js)
-function setSequence(moves,label,base,drill){stopAuto();seqState.shown=-1;seqState.yours=null;seqState.moves=Array.isArray(moves)?moves:parseAlg(moves);seqState.label=label||'';seqState.base=base||puzzleCube();seqState.idx=seqState.moves.length;
+// The home cube (1.71): the cube of the page, one for every tab and every cube source. It is the
+// scramble with its grip turn (showScr), then your moves: the virtual cube's keys, a smart cube's
+// turns, the F2L guide's moves. home: the player shows it. seqHome keeps it, as it is after each step,
+// while something else is in the player (a drill, a plan), so a tab change, Back to scramble or a
+// redraw brings it back as it was. A new scramble (loadScramble) starts it afresh.
+var seqState={moves:[],idx:0,shown:-1,label:'scramble',base:new Cube(),drill:null,yours:null,home:false}; // var: tests read it from the window. yours: where your moves start (js/cubemenu.js)
+var seqHome=null;
+function homeKey(){return scr.seed+'|'+scr.moves.join(' ')+'|'+crossRotation();}
+// Where your moves start on the home cube: after the scramble and its grip turn.
+function homeStart(){return scr.moves.length+(crossRotation()?1:0);}
+function homeKeep(){if(seqState.home&&!seqState.drill)seqHome={key:homeKey(),moves:seqState.moves.slice(),label:seqState.label,base:seqState.base,idx:seqState.idx,yours:seqState.yours};}
+function setSequence(moves,label,base,drill){stopAuto();seqState.shown=-1;seqState.yours=null;seqState.home=false;seqState.moves=Array.isArray(moves)?moves:parseAlg(moves);seqState.label=label||'';seqState.base=base||puzzleCube();seqState.idx=seqState.moves.length;
   if(!drill&&seqState.drill){currentLabel=scrLabel;if(/^(ll|f2l):/.test(timer.scope))setScope(tabScope(curTab));}
   seqState.drill=drill||null;$('#drillNote').classList.toggle('hidden',!drill);$('#drillName').textContent=drill||'';
   renderSequence();applySequence();document.dispatchEvent(new CustomEvent('cw:sequence',{detail:{drill:seqState.drill}}));}
@@ -240,7 +250,7 @@ function seqFaceColors(base,moves){
 }
 // seqState.shown is the index the picture showed last. One step away from it turns the layer.
 // turn: {from, move}, a move made on the cube that the list took in (cubePlayerTurn): the layer turns by it.
-function applySequence(turn){const i=seqState.idx,was=seqState.shown;seqState.shown=i;
+function applySequence(turn){const i=seqState.idx,was=seqState.shown;seqState.shown=i;homeKeep();
   if(turn)showCubeMoved(turn.from,turn.move,cubeAtSeq(i));
   else if(was===i-1&&i>0)showCubeMoved(cubeAtSeq(i-1),seqState.moves[i-1],cubeAtSeq(i));
   else if(was===i+1&&i<seqState.moves.length)showCubeMoved(cubeAtSeq(i+1),invertAlg([seqState.moves[i]]),cubeAtSeq(i));
@@ -258,15 +268,22 @@ $('#scrub').oninput=e=>{stopAuto();seqState.idx=+e.target.value;applySequence();
 // The player sits in the section (js/place.js): bring it into view where it is.
 function focusPlayer(){const p=$('#player');if(p.scrollIntoView)p.scrollIntoView({block:'nearest',behavior:'smooth'});p.classList.remove('flash');void p.offsetWidth;p.classList.add('flash');}
 // In beginner mode the home module shows the cube white up, with no z2 (beghome.js).
-function showScr(){if(isBeg()&&typeof showBegScr==='function'){showBegScr();return;}
-  const r=crossRotation();const end=applyAlg(scr.cube,r?[r]:[]);
-  setSequence([...scr.moves,...(r?[r]:[])],'scramble · seed '+scr.seed+(r?' · last step '+r+' = solving grip: '+holdText(end).replace(/^Hold /,'').replace(/\.$/,''):''));
-  if(r){const el=$$('#scramble .m').pop();el.classList.add('rot');el.title='Rotation only, not a scramble move. '+holdText(end);}}
+// The home cube: as it was, if it is the one of this scramble; else the scramble afresh. fresh: the
+// scramble afresh, your moves dropped (Show scramble, Restore scramble).
+function showScr(fresh){if(isBeg()&&typeof showBegScr==='function'){showBegScr();return;}
+  const k=homeKey(),r=crossRotation(),end=applyAlg(scr.cube,r?[r]:[]);
+  if(fresh||!seqHome||seqHome.key!==k)seqHome=null;
+  else if(seqState.home&&!seqState.drill){homeKeep();return;}
+  const h=seqHome;
+  if(h){setSequence(h.moves,h.label,h.base);seqState.home=true;seqState.yours=h.yours;
+    if(h.idx!==seqState.idx){seqState.idx=h.idx;seqState.shown=-1;applySequence();}else homeKeep();}
+  else{setSequence([...scr.moves,...(r?[r]:[])],'scramble · seed '+scr.seed+(r?' · last step '+r+' = solving grip: '+holdText(end).replace(/^Hold /,'').replace(/\.$/,''):''));seqState.home=true;homeKeep();}
+  if(r){const el=$$('#scramble .m')[scr.moves.length];if(el){el.classList.add('rot');el.title='Rotation only, not a scramble move. '+holdText(end);}}}
 // The current scramble as this tab shows it: F2L live adds the rotation and the solved cross.
 // A beginner tab that shows something else registers it in tabShow[tab].
 const tabShow={};
 function showForTab(){if(tabShow[curTab])tabShow[curTab]();else if(curTab==='f2l'&&f2lState.mode==='live')showF2LState();else showScr();}
-$('#showScramble').onclick=()=>{if(isBeg()&&typeof showBegLetters==='function'&&!tabShow[curTab])showBegLetters();else showForTab();focusPlayer();};
+$('#showScramble').onclick=()=>{if(isBeg()&&typeof showBegLetters==='function'&&!tabShow[curTab])showBegLetters();else{seqHome=null;showForTab();}focusPlayer();};
 $('#drillBack').onclick=()=>showForTab();
 function seqGo(i){stopAuto();seqState.idx=Math.max(0,Math.min(seqState.moves.length,i));applySequence();}
 $('#scrubStart').onclick=()=>seqGo(0);$('#scrubEnd').onclick=()=>seqGo(seqState.moves.length);
@@ -300,7 +317,7 @@ function loadScramble(seed,moves,custom){
   scr.moves=Array.isArray(moves)?moves:parseAlg(moves);scr.cube=applyAlg(puzzleCube(),scr.moves);
   const ent={seed,len:scr.moves.length,t:Date.now()};if(custom)ent.moves=scr.moves.join(' ');
   history=[ent,...history.filter(h=>h.seed!==seed)].slice(0,30);store.set('history',history);renderHistory();
-  showForTab();
+  seqHome=null;seqState.home=false;showForTab(); // a new scramble: the home cube afresh
   planState.plan=null;$('#planOut').innerHTML='<p class="muted">New scramble. Press Plan.</p>';
   crossState.revealed=false;refreshCross();
   document.dispatchEvent(new CustomEvent('cw:scramble'));
@@ -896,8 +913,8 @@ function openSettings(open){if($('#setBg'))return;
     <h3>Pictures</h3>
     <label class="setrow" title="Turn each case algorithm on the cube, over and over: on a hover or focus of a case card, and in the details window"><input type="checkbox" id="setPlayPics"${store.get('playPics',false)?' checked':''}> Play case animations</label>
     <p class="muted">The details window opens on Play. On a computer, a case card plays under the pointer. When this is off, the details window opens on the picture, and Play is one tap away. Off when your device asks for less motion.</p>
-    ${typeof crossDimPct==='function'?`<h3>Cross Trainer</h3>
-    <label class="setrow setrange" title="How bright the pieces that are not cross edges show while Cross Trainer is on. 0% is black"><span>Other pieces</span><input type="range" id="setCrossDim" min="0" max="${CROSS_DIM_MAX}" step="1" value="${crossDimPct()}"><output id="setCrossDimOut">${crossDimPct()}%</output></label>
+    ${typeof crossDimPct==='function'?`<h3>Cross and F2L Trainer</h3>
+    <label class="setrow setrange" title="How bright the other pieces show while Cross Trainer or F2L Trainer is on. 0% is black"><span>Other pieces</span><input type="range" id="setCrossDim" min="0" max="${CROSS_DIM_MAX}" step="1" value="${crossDimPct()}"><output id="setCrossDimOut">${crossDimPct()}%</output></label>
     <p class="muted">The cube shows the change as you move the slider. Make it lower to see only the cross edges and the centers. At 0% the other pieces are black.</p>`:''}
     <h3>Color Blind Assist</h3>
     <label class="setrow" title="Put the letter of its color on each sticker: W white, Y yellow, R red, O orange, G green, B blue"><input type="checkbox" id="setCba"${store.get('cba',false)?' checked':''}> Show a letter on each sticker</label>

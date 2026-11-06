@@ -1052,6 +1052,22 @@ body.onboard .foot{padding-bottom:56px}
 .cubebox .crosstrainbtn{right:auto;left:8px;bottom:38px}
 @media (max-width:760px){.cubebox .crosstrainbtn{left:4px;bottom:30px}}
 body:not([data-tab="cross"]) #crossTrainBtn,body:not([data-method="cfop"]) #crossTrainBtn{display:none!important}
+/* F2L Trainer: the same place on the F2L tab */
+body:not([data-tab="f2l"]) #f2lTrainBtn,body:not([data-method="cfop"]) #f2lTrainBtn{display:none!important}
+/* its three styles, F2L-1 to F2L-3, while it is on: one pill of chips over the button */
+.f2lstyle{display:inline-flex;gap:2px;padding:2px;border-radius:999px;background:var(--panel);border:1px solid var(--line)}
+.f2lstyle[hidden],body:not([data-tab="f2l"]) #f2lStyle,body:not([data-method="cfop"]) #f2lStyle{display:none!important}
+.f2lstyle button{font:inherit;font-size:12px;font-weight:500;line-height:1.4;padding:2px 9px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-variant-numeric:tabular-nums}
+.f2lstyle button:hover{color:var(--text)}
+.f2lstyle button[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--panel))}
+/* in the cube box (not the stage view): a column at the left edge, over the button, clear of the cube */
+body:not(.sv) .cubebox .f2lstyle{position:absolute;left:8px;bottom:68px;flex-direction:column;border-radius:12px}
+body:not(.sv) .cubebox .f2lstyle button{border-radius:9px}
+@media (max-width:760px){body:not(.sv) .cubebox .f2lstyle{left:4px;bottom:56px}}
+/* where a trainer button sits over Hidden faces (Cross, F2L), the drag hint goes to the middle of
+   the bottom row, its arrow alone, so it does not run under the button */
+body:not(.sv)[data-method="cfop"]:is([data-tab="cross"],[data-tab="f2l"]) .cubebox .draghint{left:50%;bottom:12px;transform:translateX(-50%)}
+body:not(.sv)[data-method="cfop"]:is([data-tab="cross"],[data-tab="f2l"]) .cubebox .draghint span{display:none}
 /* Find the edges: the row under the cross plans; a miss shakes the cube */
 .crossfind{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .crossfind #crossFindOut{margin-top:6px}

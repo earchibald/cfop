@@ -49,6 +49,7 @@ function fgInit(){
   $('#fgOrderBtn').onclick=()=>{fg.orderOpen=!fg.orderOpen;fgDraw();};
   $('#f2lGuide').addEventListener('click',fgClick);
   document.addEventListener('cw:scramble',()=>{fg.key=null;if(fgActive())fgShow();});
+  document.addEventListener('cw:step',fgFollow);
   document.addEventListener('cw:smart',e=>{const t=e.detail&&e.detail.type;if(!fgActive())return;
     if(t==='state'||t==='move'||t==='connect'){if(t==='move')fg.nMoves++;fgSmartRead();}else if(t==='disconnect'||t==='gone'){fg.key=null;fgShow();}});
 }
@@ -60,41 +61,54 @@ function fgShow(take){
   if(seqState.drill&&!take){fgDraw();return;}
   const src=fgSource();
   if(src!==fg.src){fg.src=src;fg.key=null;}
-  if(src==='smart'){if(fg.key!=='smart'){fgReset();fg.key='smart';fg.base=null;}fgSmartRead();return;}
+  if(src==='smart'){if(fg.key!=='smart'){fgReset();fg.key='smart';fg.base=null;}showScr();fgSmartRead();return;}
   const key=[scr.moves.join(' '),crossRotation(),scr.seed].join('|');
-  const go=()=>{if(fg.key!==key){fgReset();fgPrepare();fg.key=key;}fgSequence();fgRead(applyAlg(fg.base,fg.made));};
+  const go=()=>{if(fg.key!==key){fgReset();fgPrepare();fg.key=key;}
+    fg.making=true;fgSequence();fg.making=false;
+    const X=fgHomeX();if(!fg.X||fgKey(X)!==fgKey(fg.X)){fg.hist=[];fg.made=fgHomeMade();fgRead(X);}else fgDraw();};
   if(tablesReady)go();else{fg.working=true;fgDraw();ensureTables(go);}
 }
-// The reset point of the virtual cube or a real cube: the scramble in the solving frame, the cross
-// solved for you (the shortest cross), as the Live mode does. fg.extra is the rotation and the
-// cross moves the player shows dashed.
-function fgPrepare(){
-  const r=crossRotation();let c=toFrame(scr.cube);const extra=r?[r]:[];
-  const cs=parseAlg(solveCross(c,0,1).solutions[0]);c=applyAlg(c,cs);extra.push(...cs);
-  fg.base=c;fg.extra=extra;
-}
+// The reset point of the virtual cube or a real cube: the scramble in the solving frame, as it is.
+// The guide works on the cube of the page (the home cube, app.js): no cross is solved for you; the
+// guide's first line is the cross. (Before 1.71 the shortest cross was solved for you, dashed.)
+function fgPrepare(){fg.base=toFrame(scr.cube);fg.extra=[];}
 function fgReset(){clearTimeout(fg.timer);fg.timer=0;fg.seq++;Object.assign(fg,{target:null,done:[],step:null,cross:null,log:[],made:[],hist:[],X:null,held:null,broke:'',working:false,back:null,read:'',nMoves:0});}
 // ----- the player -----
-// The scramble, the dashed moves solved for you, then the moves made so far. Loaded afresh here;
-// one move appended or taken off by fgSeqAppend and fgSeqPop, so the layer turns on the player.
-function fgSequence(){
-  if(fg.src==='smart')return;
-  const n=scr.moves.length,label='scramble · seed '+scr.seed+' · dashed moves are solved for you: '+(crossRotation()?'rotation, ':'')+'cross';
-  setSequence([...scr.moves,...fg.extra,...fg.made],label);fgSeqMark(n);
+// The player shows the home cube: the scramble, its grip turn, then your moves, whatever made them
+// (the guide's tiles and arrows, the virtual cube's keys). fg.made is your moves on it; the guide
+// reads the cube in view (fgHomeX) in the solving frame, the cross color down.
+function fgSequence(){if(fg.src!=='smart')showScr();}
+function fgKey(X){return X.toFacelets().join('');}
+function fgHomeMade(){if(!seqState.home)return fg.made;const s=homeStart();return seqState.moves.slice(s,Math.max(s,seqState.idx));}
+function fgHomeX(){
+  if(!seqState.home)return applyAlg(fg.base,fg.made);
+  const r=crossRotation(),c=cubeAtSeq(Math.max(homeStart(),seqState.idx)),X=r?applyAlg(new Cube(),invertAlg(r)).mul(c):c;
+  return X.center.join()==='0,1,2,3,4,5'?X:reframe(X); // a whole-cube turn among your moves: named again by the centers
 }
-function fgSeqMark(n){$$('#scramble .m').forEach((el,i)=>{if(i>=n&&i<n+fg.extra.length){el.classList.add('rot');el.title='Solved for you, not a scramble move.';}});}
-function fgSeqAppend(m){stopAuto();seqState.moves.push(m);renderSequence();fgSeqMark(scr.moves.length);seqState.idx=seqState.moves.length;applySequence();}
-function fgSeqPop(){stopAuto();seqState.moves.pop();renderSequence();fgSeqMark(scr.moves.length);seqState.idx=seqState.moves.length;applySequence();}
+// A move of the guide on the home cube: after the step in view, joined to your move before it (U then
+// U' is nothing), so the list reads as the cube stands. The layer turns.
+function fgSeqAppend(m){stopAuto();const i=seqState.idx,from=cubeAtSeq(i);
+  if(seqState.yours==null||seqState.yours>i)seqState.yours=i;
+  let moves=seqState.moves.slice(0,i);const j=moves.length-1,y=j>=seqState.yours?seqJoin(moves[j],m):undefined;
+  moves=y===undefined?moves.concat(m):moves.slice(0,j).concat(y?[y]:[]);
+  seqState.moves=moves;seqState.idx=moves.length;
+  if(!/your moves/.test(seqState.label))seqState.label=(seqState.label?seqState.label+' · ':'')+'your moves';
+  renderSequence();applySequence({from,move:m});}
+// The cube changed under the guide (a key of the virtual cube, a click on the player): read it.
+function fgFollow(){
+  if(!fgActive()||fg.src==='smart'||fg.making||seqState.drill||!seqState.home||!fg.base||!tablesReady)return;
+  const X=fgHomeX();if(fg.X&&fgKey(X)===fgKey(fg.X))return;
+  fg.hist=[];fg.made=fgHomeMade();fg.back=null;fg.read='';fgRead(X);
+}
+// The home cube back at the scramble: your moves dropped, the guide starts over.
+function fgToStart(){fgReset();fg.making=true;seqHome=null;showScr(true);fg.making=false;fg.made=fgHomeMade();fgRead(fgHomeX());}
 // ----- the smart cube -----
 function fgSmartRead(){
   if(fg.src!=='smart')return;
   const held=cubeTabHeld(cubeTab.target);if(!held)return;
   fg.held=held;const X=reframe(held);
   if(!fg.base)fg.base=X;
-  // A turn or a few since the last picture turn their layers, as the player does (Animate).
-  if(seqState.label!=='your smart cube, as held')setSequence([],'your smart cube, as held',held);
-  else{const was=displayedCube,same=was&&!was.isFour&&was.center.join()===held.center.join(),path=same?cubeTabPath(was,held):null;
-    if(path&&path.length)showCubeMoved(applyAlg(was,path.slice(0,-1)),path[path.length-1],held);else if(!path)showCube(held);}
+  // The player keeps the home cube; the smart cube's turns go on it (js/live.js) while it is in step.
   fgRead(X);
 }
 // ----- the state machine (the lab's labF2LRead) -----
@@ -206,14 +220,16 @@ function fgNextMove(){const s=fg.step,c=fg.cross;if(s&&s.moves.length&&!s.away&&
 function fgMake(m){
   if(fg.src==='smart'||!fg.X||seqState.drill)return;
   const s=fg.step,c=fg.cross;
-  fg.hist.push({step:s&&{...s,off:s.off&&s.off.slice()},cross:c&&{...c},done:fg.done.slice(),log:fg.log.slice(),target:fg.target,broke:fg.broke,X:fg.X,back:fg.back});
-  fg.made.push(m);fg.back=null;fg.read='';fgSeqAppend(m);fgRead(applyAlg(fg.X,[m]));
+  fg.hist.push({m,step:s&&{...s,off:s.off&&s.off.slice()},cross:c&&{...c},done:fg.done.slice(),log:fg.log.slice(),target:fg.target,broke:fg.broke,X:fg.X,back:fg.back});
+  fg.back=null;fg.read='';fg.making=true;fgSeqAppend(m);fg.making=false;fg.made=fgHomeMade();fgRead(fgHomeX());
 }
 function fgNext(){const m=fgNextMove();if(m)fgMake(m);}
-// The last move covered again: the player steps back, the guide goes back to before it.
+// The last move covered again: the move undone on the home cube, the guide back to before it. Only
+// the guide's own moves: a key of the virtual cube since then starts the guide's memory over.
 function fgBack(){
-  if(fg.src==='smart'||!fg.made.length)return;
-  const h=fg.hist.pop();fg.made.pop();fgSeqPop();clearTimeout(fg.timer);fg.timer=0;fg.seq++;fg.working=false;
+  if(fg.src==='smart'||!fg.hist.length)return;
+  const h=fg.hist.pop();fg.making=true;fgSeqAppend(invertAlg([h.m]));fg.making=false;fg.made=fgHomeMade();
+  clearTimeout(fg.timer);fg.timer=0;fg.seq++;fg.working=false;
   Object.assign(fg,{step:h.step,cross:h.cross,done:h.done,log:h.log,target:h.target,broke:h.broke,X:h.X,back:h.back});
   const s=fg.step;if(s&&s.moves.length){if(s.busy||!s.ways)fgWays(s);if(!s.then)fgThen(fg.seq);} // work the move cut short
   fgDraw();
@@ -249,7 +265,7 @@ function fgReadCube(){
 function fgReadBack(cube,how,info){
   if(how==='return'){
     const X=toFrame(cube),back=resyncReturn(X,fg.base,{timeMs:1500});
-    while(fg.made.length)fgBack();
+    fgToStart();
     fg.back=back?back.join(' '):null;fg.read=info&&info.off!=null?`Your cube was read ${info.off?`${info.off} move${info.off===1?'':'s'} off the hint`:'on the hint'}.`:'Your cube was read.';
     fgDraw();return;
   }
@@ -263,7 +279,7 @@ function fgReturn(){
   if(!fg.X||!fg.base)return;
   if(fg.src==='smart'){const back=resyncReturn(fg.X,fg.base,{timeMs:1500});fg.back=back?back.join(' '):null;fgDraw();return;}
   const back=invertAlg(fg.made);
-  while(fg.made.length)fgBack();
+  fgToStart();
   fg.back=back||'';fg.read='';fgDraw();
 }
 // The cube as it is becomes the scramble. The virtual cube and a real cube go through the scramble
@@ -325,6 +341,7 @@ function fgDraw(){
   const fo=a&&box&&box.contains(a)&&a.dataset?(a.dataset.ord?`[data-ord="${a.dataset.ord}"]`:a.dataset.chip?`[data-chip="${a.dataset.chip}"]`:a.dataset.use?`[data-use="${a.dataset.use}"]`:a.dataset.next?'.gm.next':null):null;
   const dir=a&&a.dataset&&a.dataset.dir;
   fgDrawAll();
+  if(typeof f2lTrainGuide==='function')f2lTrainGuide(); // F2L Trainer's F2L-1 shows the guide's pair
   if(fo&&!box.contains(document.activeElement)){const b=(dir&&$(`#f2lGuide ${fo}[data-dir="${dir}"]:not(:disabled)`))||$(`#f2lGuide ${fo}:not(:disabled)`);if(b)b.focus();}
 }
 function fgDrawAll(){

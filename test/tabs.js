@@ -29,11 +29,17 @@ w.addEventListener('load',async()=>{try{
   assert.strictEqual(fcs(null,['U','z2','U','R','M']),'[0,-1,3,4,-1]','a turn moves the centers on; a slice has no face');
   assert.strictEqual(fcs(null,['x','U','y','R']),'[-1,2,-1,0]','each turn counts');
 
-  // F2L live works on the same scramble, with the solved part dashed.
-  tab('f2l');await until(()=>moves().length>scr.length,'F2L state');
+  // The F2L guide works on the same cube, as it is: no cross solved for you.
+  const home=moves();tab('f2l');await until(()=>w.fg&&w.fg.X,'the guide reads the cube');
   assert.ok(label().includes('seed '+seed),'F2L keeps the seed');
-  assert.deepStrictEqual(moves().slice(0,scr.length),scr,'F2L starts with the scramble moves');
-  assert.ok($$('#scramble .m').slice(scr.length).every(e=>e.classList.contains('rot')),'solved moves are dashed');
+  assert.deepStrictEqual(moves(),home,'F2L shows the same cube, no moves added');
+  // The cube of the page is one cube: a move of the virtual cube stays on every tab.
+  w.eval("cubePlayerTurn('R','screen')");const mine=moves();assert.strictEqual(mine.length,home.length+1,'your move on the player');
+  tab('cross');assert.deepStrictEqual(moves(),mine,'Cross keeps your move');
+  tab('ref');assert.deepStrictEqual(moves(),mine,'Reference keeps it');
+  tab('f2l');await sleep(20);assert.deepStrictEqual(moves(),mine,'F2L keeps it');
+  const idx=w.seqState.idx;w.eval('seqGo(seqState.idx-1)');tab('cross');assert.strictEqual(w.seqState.idx,idx-1,'the step in view stays too');
+  w.eval("seqGo(seqState.moves.length);cubePlayerTurn(\"R'\",'screen')");assert.deepStrictEqual(moves(),home,'R then R\' is nothing');
 
   // Opening OLL/PLL does not start a drill or change the scramble.
   tab('ll');assert.ok(!drill(),'no drill on tab change');assert.deepStrictEqual(moves(),scr,'OLL/PLL shows the same moves');
