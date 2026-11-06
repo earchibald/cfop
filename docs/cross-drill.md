@@ -124,3 +124,32 @@ the guide's pair and the tooltip says to solve the cross first.
 Known limit: each search has a budget of 4 million nodes (`F2L_PICK_NODES`). A rare joint search
 of nine moves or more can run out in one hold and not in another, so Two at once can differ by
 hold on such a cube.
+
+### Overlay (1.73)
+
+The owner asked for an Overlay button in F2L Trainer. It shows only the pair's corner and edge, with
+the cross in place on the screen, so any scramble can be an F2L drill. Moves then turn the cross out
+of place as they would. Off, the real cube shows again.
+
+- The chip: **Overlay**, after the style chips while F2L Trainer is on (`#f2lOverGrp`,
+  `#f2lOverBtn`). In the cube box it sits over the style column at the left; in the stage view's
+  action bar, after the style chips. It is not kept over a reload: it records the cube at one
+  moment. F2L Trainer off turns it off.
+- The cube drawn (`f2ltOverlay`, pure, in `js/f2lpick.js`): the real cube A0 when the chip is
+  pressed, with the cross put in place, the four F2L corners and the F2L edges where A0 has them,
+  and the last-layer pieces made up and drawn gray (`f2ltGray`, color 6). The drawn cube O0 is a
+  relabel of the pieces, `T = O0·A0⁻¹`. `drawMain` draws every cube A after it as `T·A`
+  (`trainLook`), so a move of the real cube, on the keys, a smart cube or the player, moves the
+  drawn cube the same way. The centers stay. With the cross already solved, T is no change.
+- O0 keeps A0's edge parity and flip sum (it swaps or flips gray pieces), so `T·A` is a real
+  cube, and the picks of F2L-1 (Shortest, Fastest, Two at once) read it as they read any cube
+  (`f2ltCube`).
+- An F2L edge in a cross place has no place on the drawn cube. It goes where the cross pushed a
+  piece out, drawn gray and never at its home, and its pair is skipped: never lit, never picked
+  (`skip`, `f2loFit`), and named in the chip's tooltip. On a random scramble that happens to about
+  one pair in three.
+- The style still says what is lit: F2L-1 the cross and the pair, F2L-2 the eight F2L pieces,
+  F2L-3 the first two layers. A gray sticker is never lit.
+- A new scramble or another cross color puts the cross in again. On another tab the real cube
+  shows; back on F2L, the overlay again.
+- The Patterns sheet, the F2L guide and Scramble Info still read the real cube.

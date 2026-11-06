@@ -1091,3 +1091,8 @@ body:not(.sv) .cubebox #f2lPairRow :is(.f2lt-more,.f2lt-sw[data-k]){display:none
 @media (max-width:760px){body:not(.sv) .cubebox #f2lPairRow{right:4px;bottom:56px}}
 .f2lt-sw{display:inline-flex;border-radius:3px;overflow:hidden;box-shadow:0 0 0 1px var(--line);flex:none}
 .f2lt-sw i{display:block;width:7px;height:11px}
+/* F2L Trainer's Overlay (js/f2ltrain.js): one chip after the style chips while F2L Trainer is on. In
+   the stage view's action bar a pill of its own; in the cube box over the style column at the left */
+body:not([data-tab="f2l"]) #f2lOverGrp,body:not([data-method="cfop"]) #f2lOverGrp{display:none!important}
+body:not(.sv) .cubebox #f2lOverGrp{bottom:152px}
+@media (max-width:760px){body:not(.sv) .cubebox #f2lOverGrp{bottom:140px}}
