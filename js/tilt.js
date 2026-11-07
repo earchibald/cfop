@@ -7,7 +7,7 @@
 // - The tilt drives the picture only. The moves and the stage read by the hold (cubeTab.hold, the
 //   player's hold row). 1.6 to 1.9 took the hold from the tilt; it twitched and put turns on the
 //   list that nobody made. Here the hold changes only when the user says so: a tile, a voice
-//   command, or the gesture L L' L.
+//   command, or the gesture L L' L L'.
 // - Never take the heading again on its own with a jump. 1.11.0 did it part way through a y turn,
 //   and the picture swung back the other way, which read as a reversed axis.
 // - The sign of the reading is settled (gan.js): do not negate it.
@@ -30,7 +30,7 @@
 //    `snapDps` degrees a second, and only about the vertical. A cube held square stays square
 //    over a long solve; a cube held at a slant on purpose (past snapDeg) is left as it is.
 // The two gestures (tiltGesture, js/live.js acts on them) are the way back from anything else:
-// R R' R (or R' R R') squares the picture to the hold (`reset`); L L' L (or L' L L') takes the hold
+// R R' R R' (or R' R R' R) squares the picture to the hold (`reset`); L L' L L' (or L' L L' L) takes the hold
 // the picture is nearest as the new hold, and squares the picture to it (`adopt`).
 const TILT_DEFAULTS={stillDps:6,stillMs:400,snapDeg:12,snapDps:3,gapMs:250,squareDeg:45};
 // stillDps: deg/s, under this the cube is still and a turn about the vertical is drift. stillMs: ms
@@ -109,10 +109,11 @@ function tiltTracker(opts){
   }
   return {feed,reset,adopt,clear,pose,state:st,opts:o};
 }
-// The gestures: one face turned, turned back and turned again, X X' X or X' X X', each turn within
+// The gestures: one face turned and turned back, twice over, X X' X X' or X' X X' X, so the cube ends
+// as it began; each turn within
 // `gapMs` of the one before. feed(t, m) takes a move as the cube names it and returns the face
 // (U R F D L B) when a gesture is complete, else null. A half turn, a slice or another face starts over.
-const TILT_GESTURE_DEFAULTS={gapMs:800,count:3};
+const TILT_GESTURE_DEFAULTS={gapMs:800,count:4};
 function tiltGesture(opts){
   const o=Object.assign({},TILT_GESTURE_DEFAULTS,opts),st={moves:[],t:0};
   function reset(){st.moves=[];}

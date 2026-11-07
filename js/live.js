@@ -16,8 +16,8 @@
 // cube, the 3D picture turns as the cube turns in your hands (liveTiltRot, drawn by drawMain in
 // js/app.js), a little closer each frame. The tilt turns the picture only: the moves and the stage
 // still read by the hold (the hold row, PLAYER.hold, cubeTab.hold). Two gestures meet the two:
-// R R' R (or R' R R') says "I hold the cube as the hold says", and the picture squares up to the
-// hold; L L' L (or L' L L') says "the way I hold it now is the hold", and the hold becomes the one
+// R R' R R' (or R' R R' R) says "I hold the cube as the hold says", and the picture squares up to the
+// hold; L L' L L' (or L' L L' L) says "the way I hold it now is the hold", and the hold becomes the one
 // the picture is nearest, squared. A face is named by the picture first (the face it shows on the
 // right or the left), then by the hold, so a gesture still works when the heading has drifted.
 // While the picture sits in another hold than the moves read by, a line in the smart cube sheet says
@@ -125,11 +125,11 @@ function liveTiltView(){
   };
   TILT.raf=requestAnimationFrame(step);
 }
-// Square the picture to the hold the moves read by (R R' R, a tile, a hold said to Listen).
+// Square the picture to the hold the moves read by (R R' R R', a tile, a hold said to Listen).
 function liveTiltSquare(){
   if(!liveTiltHas())return false;const h=liveTiltHold();TILT.tr.reset(h.q);TILT.qTo=TILT.tr.pose();
   liveTiltAwayClear();liveTiltView();return true;}
-// L L' L: the hold the picture is nearest becomes the hold, and the picture squares up to it. No
+// L L' L L': the hold the picture is nearest becomes the hold, and the picture squares up to it. No
 // turn goes on the list now; your next move puts the turn to the new hold before it, as a tile does.
 function liveTiltAdopt(){
   if(!liveTiltHas())return null;const h=TILT.tr.adopt(CUBE_TAB_HOLDS);if(!h)return null;
@@ -140,10 +140,10 @@ function liveTiltAdopt(){
 function liveTiltGesture(f){
   if(!liveTiltLive())return;
   const Q=TILT.tr.pose(),rT=tiltFaceToward(Q,[1,0,0]),lT=tiltFaceToward(Q,[-1,0,0]),c=liveTiltHold().cube.center;
-  if(f===lT||(f!==rT&&f!==c[1]&&f===c[4])){const h=liveTiltAdopt();if(h)liveTiltSay(`L L' L: the moves now read with ${cubeTabHoldWords(h)}, as your cube sits.`);}
+  if(f===lT||(f!==rT&&f!==c[1]&&f===c[4])){const h=liveTiltAdopt();if(h)liveTiltSay(`L L' L L': the moves now read with ${cubeTabHoldWords(h)}, as your cube sits.`);}
   else if(f===rT||f===c[1]){liveTiltSquare();const h=liveTiltHold();
-    liveTiltSay(TILT.tr.state.level?`R R' R: your cube sits with ${cubeTabHoldWords(tiltNearest(TILT.tr.pose(),CUBE_TAB_HOLDS))}, not ${cubeTabHoldWords(h)}. Hold it that way and turn R R' R, or turn L L' L to keep it as it sits.`
-      :`R R' R: the picture is square, ${cubeTabHoldWords(h)}.`);}
+    liveTiltSay(TILT.tr.state.level?`R R' R R': your cube sits with ${cubeTabHoldWords(tiltNearest(TILT.tr.pose(),CUBE_TAB_HOLDS))}, not ${cubeTabHoldWords(h)}. Hold it that way and turn R R' R R', or turn L L' L L' to keep it as it sits.`
+      :`R R' R R': the picture is square, ${cubeTabHoldWords(h)}.`);}
 }
 // Is the picture in another hold than the moves read by? Past awayDeg from it and nearest another
 // hold; back within backDeg, not away. The line shows after awayMs of it.
@@ -165,8 +165,8 @@ function liveTiltSay(t){TILT.said=t;clearTimeout(TILT.saidTimer);TILT.saidTimer=
 function liveTiltLine(){
   const el=document.getElementById('cubeWinTilt');if(!el)return;
   const live=liveTiltLive(),away=live&&TILT.warn&&TILT.away;
-  const t=!live?'':TILT.said?TILT.said:away?`Your cube sits with ${cubeTabHoldWords(TILT.away)}. The moves read with ${cubeTabHoldWords(liveTiltHold())}. Turn L L' L to read them as it sits, or hold it as they read and turn R R' R.`
-    :`The picture turns with your cube. R R' R squares it to the hold. L L' L makes the way you hold the cube the hold.`;
+  const t=!live?'':TILT.said?TILT.said:away?`Your cube sits with ${cubeTabHoldWords(TILT.away)}. The moves read with ${cubeTabHoldWords(liveTiltHold())}. Turn L L' L L' to read them as it sits, or hold it as they read and turn R R' R R'.`
+    :`The picture turns with your cube. R R' R R' squares it to the hold. L L' L L' makes the way you hold the cube the hold.`;
   const cls=!live?'':TILT.said?'done':away?'away':'';
   if(TILT.line===t+'|'+cls)return;TILT.line=t+'|'+cls;
   el.textContent=t;el.classList.toggle('hidden',!t);el.classList.toggle('away',cls==='away');el.classList.toggle('done',cls==='done');
@@ -175,7 +175,7 @@ function liveTiltLine(){
 function liveTiltDraw(){
   const b=document.getElementById('tiltBtn');
   if(b){b.classList.toggle('hidden',!(liveTiltHas()&&view.mode==='3d'));b.setAttribute('aria-pressed',String(TILT.on));
-    const t=TILT.on?"Tilt: the picture turns as you turn your smart cube. R R' R squares it to the hold; L L' L makes the way you hold it the hold. Press to keep the picture on the hold":'The picture stays on the hold. Press to turn it as you turn your smart cube in your hands';
+    const t=TILT.on?"Tilt: the picture turns as you turn your smart cube. R R' R R' squares it to the hold; L L' L L' makes the way you hold it the hold. Press to keep the picture on the hold":'The picture stays on the hold. Press to turn it as you turn your smart cube in your hands';
     if(b.title!==t)b.title=t;}
   liveTiltLine();
 }
