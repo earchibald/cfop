@@ -1103,3 +1103,6 @@ body:not(.sv) .cubebox #f2lPairRow :is(.f2lt-more,.f2lt-sw[data-k]){display:none
 body:not([data-tab="f2l"]) #f2lOverGrp,body:not([data-method="cfop"]) #f2lOverGrp{display:none!important}
 body:not(.sv) .cubebox #f2lOverGrp{bottom:152px}
 @media (max-width:760px){body:not(.sv) .cubebox #f2lOverGrp{bottom:140px}}
+/* Cross Trainer's Virtual scramble (js/crosstrain.js): one chip while Cross Trainer is on. In the
+   stage view's action bar after the button; in the cube box over it, where F2L's style column sits */
+body:not([data-tab="cross"]) #crossOverGrp,body:not([data-method="cfop"]) #crossOverGrp{display:none!important}
