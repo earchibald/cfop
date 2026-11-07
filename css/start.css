@@ -316,6 +316,9 @@ body[data-kind="beg"][data-cube="wide"][data-gd="won"] .gd-part{align-self:cente
 .begcfop-next{border:1px solid var(--accent);border-radius:12px;padding:12px 14px}.begcfop-next p{margin:6px 0}
 .begcfop-parts{margin:0;padding-left:18px;line-height:1.6}.begcfop-parts b{margin-right:6px}
 .crosslesson{display:flex;flex-direction:column;gap:10px}.crosslesson h2{margin:0}.crosslesson p{margin:0;line-height:1.5}.crosslesson>button{align-self:flex-start}
+/* The parts of the lesson (one shows at a time), and a box in a part with its label: Find the edges, Check my plan */
+.crosslesson .cl-part{display:flex;flex-direction:column;gap:10px}.crosslesson .cl-part[hidden]{display:none}.crosslesson .cl-part>button{align-self:flex-start}
+.crosslesson .cl-box{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--rb);background:var(--panel2)}
 .llshow{display:flex;flex-direction:column;gap:8px;margin:6px 0 4px}
 .llplan{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;padding:8px 12px;border-radius:10px;background:var(--panel2)}
 .llplan>span:nth-child(2){flex:1;min-width:200px}

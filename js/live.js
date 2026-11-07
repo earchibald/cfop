@@ -251,9 +251,9 @@ function liveMapSet(M){const t=typeof cubeTab!=='undefined'?cubeTab.target:null,
 // While a smart cube is the cube and connected, Cross, F2L and OLL · PLL make no scramble: you
 // scramble the cube in your hands, and New Cross (New F2L, New OLL · PLL) marks it, as it is now,
 // as the start (liveUse). The New controls of the section take that label and that job
-// (liveFreshDraw): the Cross drill's button, the F2L New scramble buttons, the scramble pill,
+// (liveFreshDraw): the Cross lesson's New cross scramble button, the F2L New scramble buttons, the scramble pill,
 // Scramble Info and the Solved! card. Next case keeps its drill. Next on stop marks nothing, as the
-// cube is not scrambled yet. The Cross drill's Length has no use: you make the scramble.
+// cube is not scrambled yet. The Cross lesson's Length has no use: you make the scramble.
 const LIVE_FRESH={cross:'New Cross',f2l:'New F2L',ll:'New OLL · PLL'};
 const LIVE_FRESH_TIP='Scramble your smart cube first. Then press this: your cube as it is now becomes the start. The page makes no moves';
 // The label of a fresh start on `tab` (the tab in view by default), or '' when New makes a scramble.

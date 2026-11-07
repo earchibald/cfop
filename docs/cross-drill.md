@@ -3,10 +3,16 @@
 The Cross tab of CFOP trains the cross. The owner asked for a way to drill it: scrambles made for
 cross practice, and help to find and pick out the four cross edges faster. Built in 1.66.0.
 
+The Cross tab since 1.82 is the first lesson (`js/start-app.js`, `#crossLesson` in `index.html`), with
+What to look for under it. The Cross drill sheet is gone: New cross scramble and Length sit in the
+lesson's head, Find the edges in its Find part, and Reveal the moves with the plans in its Do it
+part, under Check my plan. The lesson no longer closes: it is the section.
+
 ## Length: scrambles made for the cross
 
-The Cross drill sheet (it was Cross tuning) has a Length menu: any, easy (5 moves or fewer), hard (7
-or more), or an exact length from 2 to 8 moves. Kept in `cw:crossDiff`.
+The Cross lesson's head (the Cross drill sheet until 1.82, Cross tuning before 1.66) has a Length menu
+beside New cross scramble: any, easy (5 moves or fewer), hard (7 or more), or an exact length from 2
+to 8 moves. Kept in `cw:crossDiff`.
 
 Any, easy and hard pick from WCA scrambles until one fits, as before. An exact length cannot work
 that way: in a random state a cross of 2 moves comes 1 time in 1,200, and one of 8 moves 1 time in
@@ -26,8 +32,9 @@ history, Scramble Info and Restore scramble too.
 
 ## Find the edges
 
-Under the cross plans: Find the edges, and a box to start it with each new scramble
-(`cw:crossFindAuto`, off by default).
+In the lesson's Find part, under Light the white edges (under the cross plans of the Cross drill
+sheet until 1.82): Find the edges, and a box to start it with each new scramble (`cw:crossFindAuto`,
+off by default). A find started shows the Find part, and the lesson lights no edge while one runs.
 
 A clock starts. A click on a cross edge, either sticker, lifts it out of the cube with a glow. The
 fourth stops the clock. A click on another piece is a miss, and the cube shakes. Drag the cube to see

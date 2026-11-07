@@ -4,7 +4,7 @@
 //     when every beginner step is Learned (a suggestion, not a lock);
 //   the beginner home: a line that names the cube in use, with Change (the cube menu);
 //   the beginner Progress tab: all nine steps Learned → "You can solve the cube. Next: CFOP";
-//   the Cross tab: the first lesson (Find, Plan, Do it) after the bridge of level 3;
+//   the Cross tab: the first lesson (Find, Plan, Do it), the section itself since 1.82, opened on Find after the bridge of level 3;
 //   the OLL · PLL tab: Show (Still to learn, Learning, Learned, All, cw:llShow), the plan in one
 //     line, Drill Learning, and the full PLL as a group with its statuses (pllf-<name>);
 //   the Scramble tab as home for level 5 (cw:timerHome): a large timer, Weak spots, Today.
@@ -40,34 +40,34 @@ function begCfopCard(){const sec=$('#tab-progress');if(!sec)return;const body=se
     <div class="row"><button class="primary" id="begCfopGo" title="Switch to CFOP">Start CFOP →</button><button class="small ghost" id="begCfopStay" title="Stay on the beginner method">Keep practicing</button><span class="muted">Every method is in the menu.</span></div></div>`;
   $('#begCfopGo').onclick=()=>{setMethod('cfop');goTab('cross');};$('#begCfopStay').onclick=()=>goTab('practice');}
 // ---------- the Cross tab: the first lesson ----------
-const CROSS_LESSON=[
-  {label:'1 · Find',tip:'Find the four white edges',head:'Find the four white edges.',text:'Hold it yellow up. Look at the top and the sides. The lit stickers are white edges. Count them: four.'},
-  {label:'2 · Plan',tip:'Plan the cross in inspection',head:'Plan it before you turn.',text:'You get 15 seconds to look. Pick the first two edges, and see where they go. Turn the cube in your hands, not the faces.'},
-  {label:'3 · Do it',tip:'Make the cross in one go',head:'Make the cross in one go.',text:'Turn it white side down. Make all four edges without a stop. Stuck? Reveal shows the shortest crosses, one move at a time.'}];
-function crossLessonShow(part){const sec=$('#tab-cross');if(!sec)return;const body=sec;let el=$('#crossLesson');
-  if(part==null||method!=='cfop'){if(el)el.remove();return;}
-  if(!el){el=document.createElement('section');el.id='crossLesson';el.className='panel crosslesson';body.prepend(el);}
-  const p=CROSS_LESSON[part];
-  el.innerHTML=`<div class="row" style="justify-content:space-between"><h2>Cross <span class="tag">First lesson</span></h2><button class="small ghost" id="crossLessonEnd" title="Close the lesson. The Cross tab stays as it is">Close the lesson</button></div>
-    <div class="st-seg" role="group" aria-label="The parts of the lesson">${CROSS_LESSON.map((x,i)=>`<button data-part="${i}" aria-pressed="${i===part}" title="${esc(x.tip)}">${esc(x.label)}</button>`).join('')}</div>
-    <p><b>${esc(p.head)}</b> ${esc(p.text)}</p>
-    ${part===0?`<button class="small" id="crossLessonLight" title="Light the white edges on the cube">Light the white edges</button>`:''}${part===2?`<button class="small primary" id="crossLessonReveal" title="Reveal the shortest crosses under the spoiler rule">Reveal the moves</button>`:''}
-    <p class="muted" style="margin:0">The Cross tab's drills (every solution, by length) follow below.</p>`;
-  el.querySelectorAll('[data-part]').forEach(b=>b.onclick=()=>{store.set('crossLesson',+b.dataset.part);crossLessonShow(+b.dataset.part);});
-  $('#crossLessonEnd').onclick=()=>{store.set('crossLesson',null);crossLessonShow(null);};
-  const lt=$('#crossLessonLight');if(lt)lt.onclick=()=>crossLessonLight();
-  const rv=$('#crossLessonReveal');if(rv)rv.onclick=()=>{if(!crossState.revealed)$('#crossReveal').click();focusPlayer();};
-  if(part===0&&curTab==='cross')crossLessonLight();}
+// The lesson is the Cross tab (1.82; from 1.58 to 1.81 a closable panel on top of the drills):
+// #crossLesson in index.html, with New cross scramble and Length in its head (app.js reads them),
+// the three parts as buttons, Find (Light the white edges, and Find the edges from
+// js/crosstrain.js), Plan, and Do it (Check my plan from app.js and js/live.js, Reveal the moves
+// with the plans), then What to look for under it. One part shows at a time (.cl-part);
+// cw:crossLesson keeps it, Find by default. A find started shows Find (crosstrain.js) and Reveal
+// shows Do it (app.js), through crossLessonGo; so do the track of level 3 and the level menu, on Find.
+function crossLessonPart(){const n=+store.get('crossLesson',0);return n===1||n===2?n:0;}
+function crossLessonShow(part){const el=$('#crossLesson');if(!el)return;part=part===1||part===2?part:0;
+  el.querySelectorAll('.st-seg [data-part]').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.part===part)));
+  el.querySelectorAll('.cl-part').forEach(d=>{d.hidden=+d.dataset.part!==part;});}
+// The part picked (a button, the track of level 3, the level menu, a find, Reveal), kept. Find
+// picked lights the white edges; the tab shown again does not.
+function crossLessonGo(part){store.set('crossLesson',part);crossLessonShow(part);
+  if(part===0&&method==='cfop'&&curTab==='cross')crossLessonLight();}
 // The white edges of the cube in view, both stickers of each, lit and lifted out with the button in
 // one short bump (CROSS_LIGHT_T.bump ms); they stay lit for CROSS_LIGHT_T.stay ms, then the cube
-// shows as it was. A step of the player ends it.
+// shows as it was. A step of the player ends it. Not while Find the edges runs: lit, they would be no test.
 const CROSS_LIGHT_T={bump:500,stay:2000};
 let crossLightTimer=0;
-function crossLessonLight(){if(typeof displayedCube==='undefined'||!displayedCube||displayedCube.isFour)return;const cube=displayedCube,f=cube.toFacelets(),lit=new Set();
+function crossLessonLight(){if(typeof CF!=='undefined'&&CF.on)return;if(typeof displayedCube==='undefined'||!displayedCube||displayedCube.isFour)return;const cube=displayedCube,f=cube.toFacelets(),lit=new Set();
   for(let i=0;i<54;i++)if(f[i]===0&&[1,3,5,7].includes(i%9))pieceStickers(i).forEach(j=>lit.add(j));
   clearTimeout(crossLightTimer);showCube(cube,lit);const T=CROSS_LIGHT_T;mainBump(lit,{up:T.bump*0.4,hold:T.bump*0.2,down:T.bump*0.4});
   const b=$('#crossLessonLight');if(b){b.classList.add('bumping');setTimeout(()=>b.classList.remove('bumping'),T.bump);}
   crossLightTimer=setTimeout(()=>{if(displayedCube===cube&&fadeSet===lit)showCube(cube);},T.bump+T.stay);}
+(()=>{const el=$('#crossLesson');if(!el)return;
+  el.querySelectorAll('.st-seg [data-part]').forEach(b=>b.onclick=()=>crossLessonGo(+b.dataset.part));
+  const lt=$('#crossLessonLight');if(lt)lt.onclick=()=>crossLessonLight();})();
 // ---------- OLL · PLL: what to show ----------
 const LL_SHOW=[['left','Still to learn','Cases you are learning or have not started'],['learning','Learning','Cases you are learning'],['learned','Learned','Cases you know'],['all','All','Every case']];
 function llShow(){return store.get('llShow','all');}
@@ -119,9 +119,9 @@ function weakDraw(){const body=$('#everyMore');if(!body)return;let el=$('#weakSp
   $('#weakMenu').onclick=e=>{e.stopPropagation();openMethodPop();};}
 // ---------- events ----------
 document.addEventListener('cw:status',()=>{begCfopCard();if($('#methodLevel'))startLevelRow();});
-document.addEventListener('cw:tab',e=>{if(e.detail==='progress')begCfopCard();if(e.detail==='cross')crossLessonShow(store.get('crossLesson',null));});
-document.addEventListener('cw:method',()=>{begCubeLine();begCfopCard();timerHomeApply();crossLessonShow(store.get('crossLesson',null));});
+document.addEventListener('cw:tab',e=>{if(e.detail==='progress')begCfopCard();if(e.detail==='cross')crossLessonShow(crossLessonPart());});
+document.addEventListener('cw:method',()=>{begCubeLine();begCfopCard();timerHomeApply();crossLessonShow(crossLessonPart());});
 document.addEventListener('cw:cubesrc',begCubeLine);
 document.addEventListener('cw:smart',e=>{const t=e.detail&&e.detail.type;if(t==='connect'||t==='disconnect'||t==='gone')begCubeLine();});
 if(typeof recordTime==='function'){const rec=recordTime;recordTime=function(ms){rec(ms);if(timerHomeOn())weakDraw();};}
-begCubeLine();begCfopCard();timerHomeApply();crossLessonShow(store.get('crossLesson',null));renderLLGroups();
+begCubeLine();begCfopCard();timerHomeApply();crossLessonShow(crossLessonPart());renderLLGroups();

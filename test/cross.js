@@ -54,7 +54,25 @@ w.addEventListener('load',async()=>{try{
   assert.ok(lt.classList.contains('bumping'),'the button bumps');
   await sleep(90);assert.ok(!lt.classList.contains('bumping'),'the bump ends');assert.ok(w.eval('fadeSet'),'still lit');
   await sleep(120);assert.strictEqual(w.eval('fadeSet'),null,'then the cube as it was');
-  w.eval("store.set('crossLesson',null);crossLessonShow(null)");
+  // The Cross tab (1.82): the lesson is the section, then What to look for. One part shows at a time, kept in cw:crossLesson.
+  assert.deepStrictEqual($$('#tab-cross>.panel').map(p=>p.querySelector('h2').textContent.replace(/\s+/g,' ').trim()),['Cross First lesson','What to look for'],'the order of the Cross tab');
+  const part=n=>$(`#crossLesson .cl-part[data-part="${n}"]`),shown=()=>[0,1,2].filter(n=>!part(n).hidden);
+  assert.deepStrictEqual(shown(),[0],'Find shows');assert.ok(part(0).querySelector('#crossFindBtn')&&part(0).querySelector('#crossLessonLight'),'Find: Light the white edges and Find the edges');
+  assert.ok($('#crossLesson>.row #crossNew')&&$('#crossLesson>.row #crossDiff'),'New cross scramble and Length in the head');assert.ok(!$('#crossLessonEnd')&&!$('#crossPlan')&&!$('#crossDrill'),'no Close and no sheet of its own: the lesson is the Cross tab');
+  $('#crossTry').value='D2';
+  click($('#crossLesson .st-seg [data-part="2"]'));assert.deepStrictEqual(shown(),[2],'Do it');
+  assert.strictEqual($('#crossLesson .st-seg [data-part="2"]').getAttribute('aria-pressed'),'true','its button pressed');
+  assert.ok(part(2).querySelector('#crossPlanBox #crossTry')&&part(2).querySelector('#crossReveal')&&part(2).querySelector('#crossSols'),'Do it: Check my plan, Reveal the moves and the plans');
+  assert.strictEqual($('#crossTry').value,'D2','the moves typed stay');$('#crossTry').value='';
+  // Reveal from another part shows Do it; the button says Hide while the plans show.
+  click($('#crossLesson .st-seg [data-part="1"]'));assert.deepStrictEqual(shown(),[1],'Plan');
+  w.eval('crossState.revealed=false;refreshCross()');assert.strictEqual($('#crossReveal').firstChild.textContent,'Reveal the moves');
+  key('h');assert.deepStrictEqual(shown(),[2],'H: Do it shows');assert.ok($$('#crossSols .sol').length>0,'with the plans');assert.strictEqual($('#crossReveal').firstChild.textContent,'Hide the moves');
+  key('h');assert.ok(/Hidden/.test($('#crossSols').textContent),'H again hides them');assert.deepStrictEqual(shown(),[2],'and stays on Do it');assert.strictEqual($('#crossReveal').firstChild.textContent,'Reveal the moves');
+  // A find started shows Find, and lights no edge.
+  w.eval('crossFindStart()');assert.deepStrictEqual(shown(),[0],'Find the edges: the Find part');assert.ok(w.eval('CF.on'),'the find runs');assert.strictEqual(w.eval('fadeSet'),null,'no light on the edges');
+  click($('#crossLessonLight'));assert.strictEqual(w.eval('fadeSet'),null,'the light waits while a find runs');
+  w.eval('crossFindStop()');
   // What to look for: every demo plan makes the cross from its setup; a plan with no parts is
   // optimal; the parts join to the Together plan; the pair plan puts the FR pair in.
   const tips=w.eval('CROSS_TIPS');assert.strictEqual($$('#crossTips .look-row').length,tips.length,'one row per tip');
@@ -77,5 +95,5 @@ w.addEventListener('load',async()=>{try{
   // Show all moves uncovers every line.
   w.eval('setRefAll')(true);assert.ok(d.body.classList.contains('refall'));w.eval('setRefAll')(false);
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('cross: Reveal lists the plans, one per line, under the spoiler rule; Step through puts a plan on the cube ok');process.exit(0);
+  console.log('cross: Reveal lists the plans, one per line, under the spoiler rule; Step through puts a plan on the cube; the lesson is the Cross tab, its parts and Reveal ok');process.exit(0);
 }catch(e){console.error('cross: FAIL',e.message,errs);process.exit(1);}});

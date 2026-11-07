@@ -550,6 +550,8 @@ function renderPlan(){
   $('#planSeq').onclick=()=>{const all=seqFor.flatMap(x=>x[2]);setSequence(all,'solution · '+holdText(p.p0),p.p0);seqState.idx=0;applySequence();focusPlayer();};
 }
 // ---------- CROSS tab ----------
+// The controls sit in the first lesson, the Cross tab's one section (#crossLesson in index.html, js/start-app.js):
+// New cross scramble and Length in its head, Check my plan, Reveal and the plans in its Do it part.
 const crossState={revealed:false,sol:null};
 function refreshCross(){if(!tablesReady){$('#crossOpt').textContent='…';ensureTables(()=>refreshCross());return;}
   const {cube}=orientedScramble();const sol=solveCross(cube,$('#crossPlus1').checked?1:0,60);crossState.sol=sol;$('#crossOpt').textContent=sol.optimal;$('#crossCount').textContent=`${sol.solutions.length} plan${sol.solutions.length>1?'s':''} found · ${holdText(phys(cube))}`;
@@ -558,8 +560,10 @@ function refreshCross(){if(!tablesReady){$('#crossOpt').textContent='…';ensure
   const pcx=phys(cube);
   $('#crossSols').innerHTML=crossState.revealed?`<ol class="sol-list">${sol.solutions.map((s,i)=>`<li class="sol"><code class="alg">${spoilAlg(s,false,pcx)}</code><button type="button" class="small sol-play" data-i="${i}" title="Put this plan in the player and step through it on the cube">Step through on cube</button></li>`).join('')}</ol><p class="muted" style="margin-top:6px">Click a line to reveal its next move. Step through puts the plan on the cube.</p>`:'<p class="muted">Hidden. Plan it yourself first, then reveal.</p>';
   $$('#crossSols .sol-play').forEach(el=>el.onclick=()=>{const {phys:pc}=orientedScramble();setSequence(parseAlg(sol.solutions[+el.dataset.i]),'cross plan · '+holdText(pc),pc);seqState.idx=0;applySequence();focusPlayer();});
+  const rb=$('#crossReveal');if(rb&&rb.firstChild)rb.firstChild.textContent=crossState.revealed?'Hide the moves':'Reveal the moves';
   $('#crossTryOut').innerHTML='';}
-$('#crossReveal').onclick=()=>{crossState.revealed=!crossState.revealed;refreshCross();};
+// Reveal shows the plans in the lesson's Do it part (js/start-app.js), so the part comes into view.
+$('#crossReveal').onclick=()=>{crossState.revealed=!crossState.revealed;refreshCross();if(crossState.revealed&&typeof crossLessonGo==='function')crossLessonGo(2);};
 $('#crossPlus1').onchange=refreshCross;$('#crossColor').onchange=()=>{store.set('crossColor',$('#crossColor').value);if(!seqState.drill)showForTab();refreshCross();planState.plan=null;renderLLGroups();renderF2LGrid();if(mobileMQ.matches)renderMobileRef();$('#planOut').innerHTML='<p class="muted">Cross color changed. Press Plan.</p>';};
 // Length: any, easy, hard pick from WCA scrambles; an exact length makes a drill scramble
 // (js/crossdrill.js), as a random scramble seldom has a cross of 2, 3 or 8 moves.

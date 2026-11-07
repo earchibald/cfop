@@ -49,32 +49,32 @@ assert.strictEqual(w.getComputedStyle($('#svTR')).display,'none','no Undo on Ref
   click(plan.querySelector('.svbar [data-sv="fold"]'));assert.ok(plan.open,'the strip opens it');
   // A tab: its panels become sheets with their titles.
   $('#rail button[data-tab="f2l"]').click();await sleep(20);$('#rail button[data-tab="cross"]').click();await sleep(50);
-  const sheets=$$('#tab-cross .svsheet');assert.strictEqual(sheets.length,3,'three sheets on Cross');
-  assert.deepStrictEqual(sheets.map(p=>p.querySelector('.svname').textContent),['Check my plan','Cross drill','What to look for']);
+  const sheets=$$('#tab-cross .svsheet');assert.strictEqual(sheets.length,2,'two sheets on Cross');// 1.82: the lesson is the section, then What to look for; the keys are the panels' ids
+  assert.deepStrictEqual(sheets.map(p=>p.querySelector('.svname').textContent),['Cross First lesson','What to look for']);
   assert.ok(sheets[0].querySelector('h2').classList.contains('svh'),'the panel heading hides under the strip');
   assert.strictEqual($('#svBadgeSec').textContent,'Cross');
   // Fold. There is no close (1.66): a sheet never goes away, and one closed before comes back.
-  click(sheets[1].querySelector('[data-sv="fold"]'));assert.ok(sheets[1].classList.contains('svfold'),'folded');
+  click(sheets[0].querySelector('[data-sv="fold"]'));assert.ok(sheets[0].classList.contains('svfold'),'folded');
   assert.ok(!$('[data-sv="close"]')&&!$('#svAdd'),'no close and no Add');
-  let st=JSON.parse(w.localStorage.getItem('cw:svSheets'));assert.deepStrictEqual(st['cross:p1'],{fold:true});
-  w.localStorage.setItem('cw:svSheets',JSON.stringify({...st,'cross:p2':{closed:true}}));w.eval('svSheets()');
-  assert.ok(!sheets[2].classList.contains('svclosed'),'a closed sheet comes back');
-  st=JSON.parse(w.localStorage.getItem('cw:svSheets'));assert.ok(!st['cross:p2'],'and the old closed is dropped');
+  let st=JSON.parse(w.localStorage.getItem('cw:svSheets'));assert.deepStrictEqual(st['cross:crossLesson'],{fold:true});
+  w.localStorage.setItem('cw:svSheets',JSON.stringify({...st,'cross:crossLook':{closed:true}}));w.eval('svSheets()');
+  assert.ok(!sheets[1].classList.contains('svclosed'),'a closed sheet comes back');
+  st=JSON.parse(w.localStorage.getItem('cw:svSheets'));assert.ok(!st['cross:crossLook'],'and the old closed is dropped');
   // A float: kept by section, in a layer of its own, and back in its place on dock.
-  w.eval(`svSet('cross:p0',{float:{x:200,y:120,w:340}})`);
-  assert.strictEqual(sheets[0].parentElement.id,'svFloats','a floating sheet leaves the column');
-  assert.strictEqual(sheets[0].style.left,'200px');
-  const ghost=$('#tab-cross .svghost');assert.ok(ghost&&/Check my plan/.test(ghost.textContent),'a stand-in keeps its place');
-  assert.ok(/back in the column/.test(sheets[0].querySelector('[data-sv="dock"]').title),'its x puts it back');
-  click(ghost);assert.strictEqual(sheets[0].parentElement.id,'tab-cross','a click on the stand-in docks it');assert.ok(!$('.svghost'),'and the stand-in goes');
-  w.eval(`svSet('cross:p0',{float:{x:200,y:120,w:340}})`);
+  w.eval(`svSet('cross:crossLook',{float:{x:200,y:120,w:340}})`);
+  assert.strictEqual(sheets[1].parentElement.id,'svFloats','a floating sheet leaves the column');
+  assert.strictEqual(sheets[1].style.left,'200px');
+  const ghost=$('#tab-cross .svghost');assert.ok(ghost&&/What to look for/.test(ghost.textContent),'a stand-in keeps its place');
+  assert.ok(/back in the column/.test(sheets[1].querySelector('[data-sv="dock"]').title),'its x puts it back');
+  click(ghost);assert.strictEqual(sheets[1].parentElement.id,'tab-cross','a click on the stand-in docks it');assert.ok(!$('.svghost'),'and the stand-in goes');
+  w.eval(`svSet('cross:crossLook',{float:{x:200,y:120,w:340}})`);
   $('#rail button[data-tab="f2l"]').click();await sleep(50);
-  assert.strictEqual(sheets[0].parentElement.id,'tab-cross','another section: the float goes back to its section');
+  assert.strictEqual(sheets[1].parentElement.id,'tab-cross','another section: the float goes back to its section');
   $('#rail button[data-tab="cross"]').click();await sleep(50);
-  assert.strictEqual(sheets[0].parentElement.id,'svFloats','and floats again on its own section');
-  click(sheets[0].querySelector('[data-sv="dock"]'));assert.strictEqual(sheets[0].parentElement.id,'tab-cross','dock');assert.strictEqual(sheets[0].style.left,'');
+  assert.strictEqual(sheets[1].parentElement.id,'svFloats','and floats again on its own section');
+  click(sheets[1].querySelector('[data-sv="dock"]'));assert.strictEqual(sheets[1].parentElement.id,'tab-cross','dock');assert.strictEqual(sheets[1].style.left,'');
   assert.strictEqual($('#svReset').textContent,'Restore panes');
-  click($('#svReset'));assert.ok(!sheets[1].classList.contains('svfold'),'Restore panes opens every sheet of the section');
+  click($('#svReset'));assert.ok(!sheets[0].classList.contains('svfold'),'Restore panes opens every sheet of the section');
   // The timer: inspection and the solve set focus; the stop shows Solved!.
   const t=$('#timer');t.className='timer insp';t.textContent='12';await sleep(0);
   assert.strictEqual(d.body.dataset.svfocus,'inspect','inspection: focus');assert.ok(/12/.test($('#svBig').textContent),'the count');
@@ -153,25 +153,25 @@ assert.strictEqual(w.getComputedStyle($('#svTR')).display,'none','no Undo on Ref
   assert.ok(/Maximize Cube/.test(mx.textContent));click(mx);await sleep(5);
   assert.ok(d.body.classList.contains('svmax')&&/Minimize Cube/.test(mx.textContent),'maximized');
   assert.strictEqual($('#rail button[data-tab="cross"]').title,'Cross','a chip names its section on hover');
-  const tabs=$$('#svTabs .svtab');assert.ok(tabs.length>=5,'the sheets are tabs');
-  assert.deepStrictEqual(tabs.slice(0,3).map(t=>t.textContent),['Check my plan','Cross drill','What to look for']);
+  const tabs=$$('#svTabs .svtab');assert.ok(tabs.length>=4,'the sheets are tabs');
+  assert.deepStrictEqual(tabs.slice(0,2).map(t=>t.textContent),['Cross First lesson','What to look for']);
   assert.ok(tabs.every(t=>t.querySelector('.svgrip')),'each with its grip');
-  click(tabs[0]);assert.strictEqual(sheets[0].parentElement.id,'svFloats','a click on a tab tears its sheet off');
-  const out=$$('#svTabs .svtab').find(t=>t.textContent==='Check my plan');assert.ok(out&&out.classList.contains('svout'),'its tab stays, lit');assert.strictEqual($$('#svTabs .svtab')[0],out,'in its place');
-  assert.strictEqual(w.svState()['cross:p0'].float.w,380,'it floats at a sheet\'s width');
+  click(tabs[1]);assert.strictEqual(sheets[1].parentElement.id,'svFloats','a click on a tab tears its sheet off');
+  const out=$$('#svTabs .svtab').find(t=>t.textContent==='What to look for');assert.ok(out&&out.classList.contains('svout'),'its tab stays, lit');assert.strictEqual($$('#svTabs .svtab')[1],out,'in its place');
+  assert.strictEqual(w.svState()['cross:crossLook'].float.w,380,'it floats at a sheet\'s width');
   // A sheet under the pointer stays in the float layer while the page draws again.
-  w.eval(`SV.drag={p:svSheetByKey('cross:p0'),on:true};svFloatSet(SV.drag.p,null)`);
-  assert.strictEqual(sheets[0].parentElement.id,'svFloats','a sheet in a drag stays where it is');w.eval('SV.drag=null');
-  click(out);assert.notStrictEqual(sheets[0].parentElement.id,'svFloats','a click on a lit tab puts its sheet back');
-  click($$('#svTabs .svtab').find(t=>t.textContent==='Check my plan'));
-  click(sheets[0].querySelector('[data-sv="dock"]'));assert.ok($$('#svTabs .svtab').some(t=>t.textContent==='Check my plan'&&!t.classList.contains('svout')),'its x makes it a tab again');
-  w.eval(`svSet('cross:p0',{float:{x:0,y:0,w:0}})`);assert.notStrictEqual(sheets[0].parentElement.id,'svFloats','a float with no width (a drag before 1.63.2) docks');
-  assert.ok($$('#svTabs .svtab').some(t=>t.textContent==='Check my plan'),'and is a tab');w.eval(`svSet('cross:p0',{float:null})`);
+  w.eval(`SV.drag={p:svSheetByKey('cross:crossLook'),on:true};svFloatSet(SV.drag.p,null)`);
+  assert.strictEqual(sheets[1].parentElement.id,'svFloats','a sheet in a drag stays where it is');w.eval('SV.drag=null');
+  click(out);assert.notStrictEqual(sheets[1].parentElement.id,'svFloats','a click on a lit tab puts its sheet back');
+  click($$('#svTabs .svtab').find(t=>t.textContent==='What to look for'));
+  click(sheets[1].querySelector('[data-sv="dock"]'));assert.ok($$('#svTabs .svtab').some(t=>t.textContent==='What to look for'&&!t.classList.contains('svout')),'its x makes it a tab again');
+  w.eval(`svSet('cross:crossLook',{float:{x:0,y:0,w:0}})`);assert.notStrictEqual(sheets[1].parentElement.id,'svFloats','a float with no width (a drag before 1.63.2) docks');
+  assert.ok($$('#svTabs .svtab').some(t=>t.textContent==='What to look for'),'and is a tab');w.eval(`svSet('cross:crossLook',{float:null})`);
   const fb=w.svFloatBox({x:-50,y:-50,w:300});assert.ok(fb.x>=8&&fb.y>=8&&fb.w===300,'a float stays on the screen');
-  sheets[2].classList.add('hidden');w.eval('svSheets()');assert.ok(!$$('#svTabs .svtab').some(t=>t.textContent==='What to look for'),'a hidden panel has no tab');
-  sheets[2].classList.remove('hidden');w.eval('svSheets()');
-  w.eval(`svSet('cross:p1',{float:{x:200,y:120,w:340}})`);assert.ok($$('#svTabs .svtab.svout').some(t=>t.textContent==='Cross drill'),'a floating sheet keeps its tab');
-  assert.strictEqual(sheets[1].parentElement.id,'svFloats','and floats as before');w.eval(`svSet('cross:p1',{float:null})`);
+  sheets[1].classList.add('hidden');w.eval('svSheets()');assert.ok(!$$('#svTabs .svtab').some(t=>t.textContent==='What to look for'),'a hidden panel has no tab');
+  sheets[1].classList.remove('hidden');w.eval('svSheets()');
+  w.eval(`svSet('cross:crossLesson',{float:{x:200,y:120,w:340}})`);assert.ok($$('#svTabs .svtab.svout').some(t=>t.textContent==='Cross First lesson'),'a floating sheet keeps its tab');
+  assert.strictEqual(sheets[0].parentElement.id,'svFloats','and floats as before');w.eval(`svSet('cross:crossLesson',{float:null})`);
   click(mx);assert.ok(!d.body.classList.contains('svmax'),'Minimize Cube');assert.ok(/^Train the cross/.test($('#rail button[data-tab="cross"]').title),'the rail titles come back');
   assert.ok(!$('#svTabs .svtab'),'no tabs');
   // The beginner method: the page goes back as it was.

@@ -48,7 +48,7 @@ function levelDo(b){const k=b.dataset.lv;levelPopClose();if(k!=='resume')START.f
   const t=(LEVEL_TRACK[levelNow()]||[])[+b.dataset.i];if(!t)return;
   if(t.go){Object.assign(START,{level:levelNow(),check:null,sets:null,quiz:null,five:null});startOpen(t.go);return;}
   if(START.on)startClose();setMethod(t.to[0]);goTab(t.to[1]);
-  if(t.lesson){store.set('crossLesson',0);if(typeof crossLessonShow==='function')crossLessonShow(0);}
+  if(t.lesson){if(typeof crossLessonGo==='function')crossLessonGo(0);else store.set('crossLesson',0);}
   if(t.left&&typeof llShowSet==='function')llShowSet('left');}
 // ---------- the landing card ----------
 const LANDING={bsolve:['Solve my cube','The app tells you each move, one part at a time.'],learn:['Learn','Up next is your next step. Each step has a lesson.'],

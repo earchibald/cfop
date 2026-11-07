@@ -5,7 +5,8 @@
 // virtual cube's keys, a smart cube's turns, the player's steps. drawMain (app.js) asks
 // crossTrainFade for the stickers it draws, and crossTrainDim for how bright the other pieces show:
 // Settings > Cross and F2L Trainer, cw:crossDim, 0 (black) to CROSS_DIM_MAX percent, 22 by default.
-// Find the edges, in the Cross drill sheet: a clock starts, and a click on each cross edge on the
+// Find the edges, in the lesson's Find part (the Cross drill sheet until 1.82; a find started shows
+// that part): a clock starts, and a click on each cross edge on the
 // cube lifts it out with a glow. The fourth stops the clock. A click on another piece is a miss. A
 // change of the cube in view (a turn, a step) stops it. Cross Trainer waits while a find runs.
 // cw:crossFinds keeps the last 100 finds: ms, misses, the cross length (n), when (t).
@@ -133,6 +134,7 @@ function crossFindEdge(f,i){const e=edgeFacelet.find(x=>x.includes(i)),ci=crossC
 function crossFindStart(){if(!crossOnCross())return;crossFindStop();clearTimeout(CF.drop);
   if(view.mode!=='3d')setViewNet(false);
   Object.assign(CF,{on:true,t0:performance.now(),found:new Set(),lit:new Set(),miss:0,state:displayedCube.toFacelets().join('')});
+  if(typeof crossLessonGo==='function')crossLessonGo(0); // the lesson's Find part holds the clock; CF.on first, so it lights no edge
   mainBump(null,{quiet:true});drawMain();crossFindDraw();CF.tick=setInterval(crossFindDraw,100);}
 // note: words for why it stopped, in place of the count.
 function crossFindStop(note){if(CF.tick){clearInterval(CF.tick);CF.tick=0;}if(!CF.on)return;CF.on=false;
