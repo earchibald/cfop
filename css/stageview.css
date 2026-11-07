@@ -37,6 +37,9 @@ body.sv .cubebox .viewbtns .ht{width:18px;height:18px;border-radius:4px}
 #svActs .animbtn[aria-pressed="true"] svg{color:inherit}
 #svActs .f2lstyle{position:static;background:transparent;border-color:var(--line);border-radius:10px;margin-left:-2px}
 #svActs .f2lstyle button{font-size:13px;padding:4px 9px;border-radius:8px}
+#svActs #f2lTrainer{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:3px;padding:5px 2px 1px;border-top:1px solid var(--line)}
+#svActs #f2lTrainer[hidden]{display:none}
+#svActs #f2lTrainer .f2lstyle{margin-left:0}
 #svActs .svsrc{color:var(--text)}
 #svActs .svsrc[data-src="screen"] .cdot{background:var(--sticker-B)}
 #svActs .svsrc[data-src="mine"] .cdot{background:var(--sticker-W);box-shadow:inset 0 0 0 1px var(--muted)}

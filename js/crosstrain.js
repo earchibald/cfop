@@ -94,16 +94,21 @@ function f2lTrainPair(f){const G=typeof fg!=='undefined'?fg:null,act=!!G&&typeof
   const held=act&&G.src==='smart'&&G.held?G.held:act&&G.X?phys(G.X):phys(new Cube()),c=held.center,ci=crossColorIndex();
   const cols=n=>[c[F2L_SLOT_FACES[n][0]],c[F2L_SLOT_FACES[n][1]]];
   const order=G&&Array.isArray(G.order)&&G.order.length===4?G.order:F2L_ORDER_DEFAULT;
-  const pin=act?(G.step&&G.step.slot)||G.target:null;if(pin)return cols(pin);
-  const solved=([a,b])=>cornerFacelet.concat(edgeFacelet).filter(p=>{const s=new Set(p.map(i=>f[i]));return s.has(a)&&s.has(b)&&(p.length===2||s.has(ci));}).every(p=>f2lTrainHome(f,p));
-  return cols(order.find(n=>!solved(cols(n)))||order[0]);}
+  const solved=([a,b])=>f2lPairHome(f,ci,a,b);
+  const pin=act?(G.step&&G.step.slot)||G.target:null;if(pin&&!solved(cols(pin)))return cols(pin);
+  // Every pair solved: none to light (before 1.78 the first in the order lit, solved as it was).
+  const n=order.find(x=>!solved(cols(x)));return n?cols(n):null;}
+// Is the pair of side colors a, b (cross color ci) at home in facelets f: its corner and its edge?
+function f2lPairHome(f,ci,a,b){return cornerFacelet.concat(edgeFacelet).filter(p=>{const s=new Set(p.map(i=>f[i]));return s.has(a)&&s.has(b)&&(p.length===2||s.has(ci));}).every(p=>f2lTrainHome(f,p));}
 // F2L-1's pairs: the one the Pair menu picks (js/f2ltrain.js: one pair, Shortest, Fastest or Two at
-// once, two pairs), else the guide's.
-function f2lTrainPairs(f){const p=typeof f2ltChoice==='function'?f2ltChoice(f):null;return p&&p.length?p:[f2lTrainPair(f)];}
+// once, two pairs), else the guide's; none when every pair is solved. While a win shows
+// (js/trainwin.js) the pairs just solved stay lit.
+function f2lTrainPairs(f){if(typeof TW!=='undefined'&&TW.win&&TW.win.pairs)return TW.win.pairs;
+  const p=typeof f2ltChoice==='function'?f2ltChoice(f):null;if(p&&p.length)return p;const g=f2lTrainPair(f);return g?[g]:[];}
 function f2lTrainFade(f){if(!f2lTrainOn()||!f2lOnF2L())return null;const ci=crossColorIndex(),op=(ci+3)%6,style=f2lTrainStyle(),keep=new Set([4,13,22,31,40,49]);
   const add=p=>p.forEach(i=>keep.add(i)),has=(p,x)=>p.some(i=>f[i]===x);
   if(style===3){for(const p of cornerFacelet.concat(edgeFacelet))if(!has(p,op))add(p);return keep;}
-  if(style===1){for(const e of edgeFacelet)if(has(e,ci))add(e);
+  if(style===1){if(typeof f2ltLitSoon==='function')f2ltLitSoon();for(const e of edgeFacelet)if(has(e,ci))add(e);
     for(const [a,b] of f2lTrainPairs(f)){for(const e of edgeFacelet)if(has(e,a)&&has(e,b))add(e);
       for(const c of cornerFacelet)if(has(c,ci)&&has(c,a)&&has(c,b))add(c);}return keep;}
   for(const c of cornerFacelet)if(has(c,ci))add(c);
@@ -117,7 +122,7 @@ function f2lTrainStyleSet(n){store.set('f2lStyle',n);store.set('f2lTrain',true);
 // F2L-1 follows the guide: when its pair changes with no change of the cube, draw the cube again.
 let f2lTrainLast='';
 function f2lTrainGuide(){if(!f2lTrainOn()||f2lTrainStyle()!==1||!f2lOnF2L()||!displayedCube)return;
-  const k=f2lTrainPair(displayedCube.toFacelets()).join();if(k!==f2lTrainLast){f2lTrainLast=k;drawMain();}}
+  const k=String(f2lTrainPair(displayedCube.toFacelets()));if(k!==f2lTrainLast){f2lTrainLast=k;drawMain();}}
 // The stickers drawMain keeps in color: Cross Trainer's on the Cross tab, F2L Trainer's on the F2L tab.
 function trainFade(f){return crossTrainFade(f)||f2lTrainFade(f);}
 // ---- Find the edges ----

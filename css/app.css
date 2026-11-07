@@ -1066,7 +1066,8 @@ body:not([data-tab="f2l"]) #f2lTrainBtn,body:not([data-method="cfop"]) #f2lTrain
 .f2lstyle[hidden],body:not([data-tab="f2l"]) #f2lStyle,body:not([data-method="cfop"]) #f2lStyle{display:none!important}
 .f2lstyle button{font:inherit;font-size:12px;font-weight:500;line-height:1.4;padding:2px 9px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-variant-numeric:tabular-nums}
 .f2lstyle button:hover{color:var(--text)}
-.f2lstyle button[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--panel))}
+/* the chip in use: solid, so what is engaged reads at a glance (1.78; a pale tint before) */
+.f2lstyle button[aria-pressed="true"]{color:var(--accent-ink);border-color:var(--accent);background:var(--accent);font-weight:600}
 /* in the cube box (not the stage view): a column at the left edge, over the button, clear of the cube */
 body:not(.sv) .cubebox .f2lstyle{position:absolute;left:8px;bottom:68px;flex-direction:column;border-radius:12px}
 body:not(.sv) .cubebox .f2lstyle button{border-radius:9px}
@@ -1094,13 +1095,45 @@ body:not(.sv) .cubebox #f2lPairRow{left:auto;right:8px;bottom:68px;flex-directio
 body:not(.sv) .cubebox #f2lPairRow button{font-size:11px;padding:2px 8px;border-radius:9px;justify-content:center}
 body:not(.sv) .cubebox #f2lPairRow .f2lt-pairs{display:grid;grid-template-columns:1fr 1fr;padding:3px 0 0;margin:1px 0 0;border-left:0;border-top:1px solid var(--line)}
 body:not(.sv) .cubebox #f2lPairRow .f2lt-pair{padding:3px 4px}
-body:not(.sv) .cubebox #f2lPairRow :is(.f2lt-more,.f2lt-sw[data-k]){display:none}
+body:not(.sv) .cubebox #f2lPairRow .f2lt-more{display:none}
 @media (max-width:760px){body:not(.sv) .cubebox #f2lPairRow{right:4px;bottom:56px}}
+/* F2L Trainer's box (1.78): Show (the styles), Pair (the ways, the pairs you name, and Lit: what the
+   cube shows now) and Overlay. In the stage view a strip under the action bar's buttons, each part
+   with a small label; in the cube box display:contents, each part in its place, no labels */
+#f2lTrainer[hidden],body:not([data-tab="f2l"]) #f2lTrainer,body:not([data-method="cfop"]) #f2lTrainer{display:none!important}
+body:not(.sv) #f2lTrainer{display:contents}
+.f2lt-lab{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 5px 0 6px;align-self:center;user-select:none}
+body:not(.sv) .cubebox .f2lt-lab{display:none}
+.f2lt-ways{display:inline-flex;gap:2px}
+body:not(.sv) .cubebox .f2lt-ways{flex-direction:column}
+/* the kind of pick not in use (the ways, or the pairs you name) dims; a hover brings a chip up */
+#f2lPairRow [data-idle] button:not(:hover):not(:focus-visible){opacity:.5}
+/* F2L-2 and F2L-3 light no single pair: the Pair part dims, its chip outlined, not solid. A pick
+   turns F2L-1 on. The cube box has no room for it then */
+#f2lPairRow[data-off]{opacity:.5}
+#f2lPairRow[data-off]:hover{opacity:.8}
+#f2lPairRow[data-off] button[aria-pressed="true"]{background:transparent;color:var(--text);border:1px dashed var(--muted);font-weight:500}
+body:not(.sv) .cubebox #f2lPairRow[data-off]{display:none}
+/* Lit: the pairs the cube shows in color now, a ✓ on one solved, and a word */
+.f2lt-lit{display:inline-flex;align-items:center;gap:5px;margin-left:4px;padding:0 8px 0 2px;border-left:1px solid var(--line);font-size:12px;white-space:nowrap}
+.f2lt-lit[hidden]{display:none}
+.f2lt-lit .f2lt-sw i{width:9px;height:14px}
+.f2lt-sw.solved{position:relative}
+.f2lt-sw.solved i{opacity:.45}
+.f2lt-sw.solved::after{content:"\2713";position:absolute;inset:0;display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--text);line-height:1}
+.f2lt-word{color:var(--muted)}
+.f2lt-word.good{color:var(--good);font-weight:600}
+body:not(.sv) .cubebox #f2lLit{margin:1px 0 0;padding:3px 2px 0;border-left:0;border-top:1px solid var(--line);justify-content:center;flex-wrap:wrap;gap:3px;font-size:10px;white-space:normal;max-width:96px;text-align:center}
+#f2lPairRow[data-off] #f2lLit{display:none}
 .f2lt-sw{display:inline-flex;border-radius:3px;overflow:hidden;box-shadow:0 0 0 1px var(--line);flex:none}
 .f2lt-sw i{display:block;width:7px;height:11px}
 /* F2L Trainer's Overlay (js/f2ltrain.js): one chip after the style chips while F2L Trainer is on. In
    the stage view's action bar a pill of its own; in the cube box over the style column at the left */
 body:not([data-tab="f2l"]) #f2lOverGrp,body:not([data-method="cfop"]) #f2lOverGrp{display:none!important}
+/* a switch: a light that is on while Overlay is on */
+#f2lOverBtn{display:inline-flex;align-items:center;gap:6px}
+#f2lOverBtn::before{content:"";width:8px;height:8px;border-radius:50%;background:transparent;box-shadow:inset 0 0 0 1.5px var(--muted);flex:none}
+#f2lOverBtn[aria-pressed="true"]::before{background:var(--good);box-shadow:0 0 0 2px color-mix(in srgb,var(--good) 35%,transparent)}
 body:not(.sv) .cubebox #f2lOverGrp{bottom:152px}
 @media (max-width:760px){body:not(.sv) .cubebox #f2lOverGrp{bottom:140px}}
 /* Cross Trainer's Virtual scramble (js/crosstrain.js): one chip while Cross Trainer is on. In the

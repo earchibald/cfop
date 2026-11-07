@@ -43,26 +43,38 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   const k=run('f2ltPairs(0)[2]');$(`#f2lPairRow [data-pair="${k}"]`).click();
   assert.strictEqual(w.localStorage.getItem('cw:f2lPair'),JSON.stringify(k),'kept');assert.strictEqual(pressed().dataset.pair,k,'pressed');
   assert.ok(lit([k]),'the cross and the pair named');
+  // The box (1.78): Show, Overlay, Pair; the kind of pick not in use is idle; Lit reads the cube.
+  assert.ok($('#f2lTrainer')&&!$('#f2lTrainer').hidden,'the box shows');
+  assert.deepStrictEqual([...$('#f2lTrainer').children].map(x=>x.id),['f2lStyle','f2lOverGrp','f2lPairRow'],'Show, Overlay, Pair');
+  assert.deepStrictEqual($$('#f2lTrainer .f2lt-lab').map(x=>x.textContent),['Show','Pair','Lit'],'the labels');
+  assert.ok($('#f2lPairRow .f2lt-ways').hasAttribute('data-idle')&&!$('#f2lPairRow .f2lt-pairs').hasAttribute('data-idle'),'a pair named: the ways idle');
+  await sleep(10);assert.deepStrictEqual($$('#f2lLit .f2lt-sw').map(x=>x.dataset.k),[k],'Lit: the pair named');
   // Shortest: the pair it picks; the chip shows its colors, the tooltip how far.
   $('#f2lPairRow [data-pair="shortest"]').click();
   assert.ok(await until(`!!f2ltCurrent()`),'a pick comes');const p=run('f2ltCurrent()');
   assert.strictEqual(p.keys.length,1,'one pair');assert.ok(lit(p.keys),'the cross and the pair picked');
-  assert.strictEqual(pressed().querySelectorAll('.f2lt-sw').length,1,'its colors on the chip');
+  await sleep(10);assert.strictEqual(JSON.stringify($$('#f2lLit .f2lt-sw').map(x=>x.dataset.k)),JSON.stringify(p.keys),'Lit: its colors');
+  assert.ok(/^\d+ moves?$/.test($('#f2lLit .f2lt-word').textContent),'Lit: how far: '+$('#f2lLit .f2lt-word').textContent);
+  assert.ok(!$('#f2lPairRow .f2lt-ways').hasAttribute('data-idle')&&$('#f2lPairRow .f2lt-pairs').hasAttribute('data-idle'),'a way: the pairs idle');
   assert.ok(/Lit: the \w+ and \w+ pair\. It takes \d+ moves?\.$/.test(pressed().title),'the tooltip says which and how far: '+pressed().title);
   // Two at once: two pairs lit.
   $('#f2lPairRow [data-pair="two"]').click();
   assert.ok(await until(`!!f2ltCurrent()&&f2ltCurrent().how==='two'`),'a pick of two comes');const q=run('f2ltCurrent()');
   assert.strictEqual(q.keys.length,2,'two pairs');assert.ok(lit(q.keys),'the cross and both pairs');
-  assert.strictEqual(pressed().querySelectorAll('.f2lt-sw').length,2,'both on the chip');
-  assert.strictEqual($$('#f2lPairRow [data-pair="shortest"] .f2lt-sw').length,0,'none on the other ways');
+  await sleep(10);assert.strictEqual($$('#f2lLit .f2lt-sw').length,2,'Lit: both');
+  assert.strictEqual($$('#f2lPairRow button .f2lt-sw').filter(x=>!x.closest('.f2lt-pair')).length,0,'no colors on the ways');
   // Fastest picks one.
   $('#f2lPairRow [data-pair="fastest"]').click();
   assert.ok(await until(`!!f2ltCurrent()&&f2ltCurrent().how==='fastest'`),'a fastest pick comes');assert.ok(lit(run('f2ltCurrent()').keys));
-  // F2L-2 and F2L-3 hide the row; F2L-1 shows it again; off hides it.
-  $$('#f2lStyle button')[1].click();await sleep(0);assert.ok(r.hidden,'hidden with F2L-2');
-  $$('#f2lStyle button')[2].click();await sleep(0);assert.ok(r.hidden,'hidden with F2L-3');
-  $$('#f2lStyle button')[0].click();await sleep(0);assert.ok(!r.hidden,'shown with F2L-1');
-  $('#f2lTrainBtn').click();await sleep(0);assert.ok(r.hidden,'hidden when F2L Trainer is off');
+  // F2L-2 and F2L-3 put the row off (dimmed, shown); F2L-1 engages it again; off hides it. A pick
+  // with the row off turns F2L-1 on.
+  $$('#f2lStyle button')[1].click();await sleep(0);assert.ok(!r.hidden&&r.hasAttribute('data-off'),'off with F2L-2');
+  $$('#f2lStyle button')[2].click();await sleep(0);assert.ok(!r.hidden&&r.hasAttribute('data-off'),'off with F2L-3');
+  assert.ok(/Turns F2L-1 on/.test(chips()[0].title),'its chips say so');
+  $$('#f2lStyle button')[0].click();await sleep(0);assert.ok(!r.hidden&&!r.hasAttribute('data-off'),'engaged with F2L-1');
+  $$('#f2lStyle button')[1].click();await sleep(0);$('#f2lPairRow [data-pair="shortest"]').click();await sleep(0);
+  assert.strictEqual(run('f2lTrainStyle()'),1,'a pick turns F2L-1 on');assert.ok(!r.hasAttribute('data-off'));
+  $('#f2lTrainBtn').click();await sleep(0);assert.ok(r.hidden&&$('#f2lTrainer').hidden,'hidden when F2L Trainer is off');
   $('#f2lTrainBtn').click();await sleep(0);
   // Another cross color: its own four pairs; a pair that color has no slot for reads as Guide.
   $(`#f2lPairRow [data-pair="${k}"]`).click();

@@ -98,9 +98,13 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     const e=edgeFacelet.filter(e=>e.some(i=>k.has(i))&&!e.some(i=>f[i]===0)),c=cornerFacelet.filter(c=>c.some(i=>k.has(i)));
     return e.length===1&&c.length===1&&e[0].map(i=>f[i]).sort().join()===want&&c[0].some(i=>f[i]===0)
       &&c[0].map(i=>f[i]).filter(x=>x!==0).sort().join()===want&&edgeFacelet.filter(e=>e.some(i=>f[i]===0)).every(e=>e.every(i=>k.has(i)));})()`),"F2L-1: the white cross edges, and the corner and edge of the guide's pair");
-  // Off the guide, the first pair in the order that is not solved: on a solved cube, the first.
-  assert.ok(run(`(()=>{const m=f2lState.mode;f2lState.mode='cases';const s=new Cube().toFacelets(),r=f2lTrainPair(s);
-    const c=phys(new Cube()).center,o=fg.order[0];f2lState.mode=m;return r.join()===[c[F2L_SLOT_FACES[o][0]],c[F2L_SLOT_FACES[o][1]]].join();})()`),'off the guide: the first pair in the order');
+  // Off the guide, the first pair in the order that is not solved; on a solved cube none, as a
+  // solved pair is no drill (before 1.78 it lit the first, solved).
+  assert.ok(run(`(()=>{const m=f2lState.mode;f2lState.mode='cases';const r=f2lTrainPair(new Cube().toFacelets()),p=f2lTrainPairs(new Cube().toFacelets());
+    f2lState.mode=m;return r===null&&p.length===0;})()`),'off the guide: no pair on a solved cube');
+  assert.ok(run(`(()=>{const m=f2lState.mode;f2lState.mode='cases';const f=applyAlg(new Cube(),parseAlg("R U R' U'")).toFacelets(),r=f2lTrainPair(f);
+    const c=phys(new Cube()).center,ci=crossColorIndex(),cols=n=>[c[F2L_SLOT_FACES[n][0]],c[F2L_SLOT_FACES[n][1]]],o=fg.order.find(n=>!f2lPairHome(f,ci,...cols(n)));
+    f2lState.mode=m;return !!o&&r.join()===cols(o).join()&&!f2lPairHome(f,ci,...r);})()`),'off the guide: the first pair in the order that is not solved');
   // The pair F2L-1 lights (js/f2ltrain.js; more in test/f2ltrain.js): a row shown with F2L-1, Guide by
   // default; a pair named by its colors is the pair lit, Guide again gives the guide's.
   const pr=$('#f2lPairRow');assert.ok(pr&&!pr.hidden,'the pair row shows with F2L-1');
@@ -109,7 +113,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     assert.ok(run(`(()=>{const p=f2lTrainPairs(displayedCube.toFacelets());return p.length===1&&p[0].join()===f2ltKeyColors(${JSON.stringify(k)}).join();})()`),'a pair named is the pair lit');
     $('#f2lPairRow [data-pair="guide"]').click();
     assert.ok(run(`(()=>{const f=displayedCube.toFacelets();return f2lTrainPairs(f)[0].join()===f2lTrainPair(f).join();})()`),"Guide: the guide's pair again");}
-  $$('#f2lStyle button')[1].click();assert.ok(pr.hidden,'the pair row hides with F2L-2');$$('#f2lStyle button')[0].click();
+  $$('#f2lStyle button')[1].click();assert.ok(pr.hasAttribute('data-off'),'the pair row is off with F2L-2');$$('#f2lStyle button')[0].click();
   ft.click();assert.ok(sg.hidden,'the chips hide when it is off');assert.ok(pr.hidden,'the pair row too');
   $$('#f2lStyle button')[2].click();assert.strictEqual(ft.getAttribute('aria-pressed'),'true','a style turns it on');
   ft.click();assert.strictEqual(run(`trainFade(displayedCube.toFacelets())`),null,'off again');

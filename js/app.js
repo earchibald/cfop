@@ -47,14 +47,21 @@ function showCube(cube,fade){stopAnim();mainBump(null,{quiet:true});displayedCub
 // Lift the pieces with a sticker in `set` out of the player cube, with a glow, and put them back, as
 // the virtual cube's bump does (js/screencube.js). o: up, hold, down (ms), done(). null stops it; a
 // step of the player stops it too.
+// o.bounce (a trainer's win, js/trainwin.js): a short hop and a smaller one, o.ms long (TRAIN_WIN.ms),
+// the pieces out by TRAIN_WIN.d, the glow at TRAIN_WIN.glow at most, the other stickers dimmed little.
 let mainLift=null;
+const TRAIN_WIN={ms:750,d:0.3,glow:0.5,dim:0.15,hop:0.55,hop2:0.3};
+function bounceAt(x){const W=TRAIN_WIN;return x<W.hop?Math.sin(Math.PI*x/W.hop):W.hop2*Math.sin(Math.PI*(x-W.hop)/(1-W.hop));}
 function mainBump(set,o={}){const L0=mainLift;if(L0){cancelAnimationFrame(L0.raf);clearTimeout(L0.timer);mainLift=null;if(!set&&!o.quiet)drawMain();}
   if(!set)return;const up=o.up??420,hold=o.hold??1300,down=o.down??480,L={set,t:0,raf:0,timer:0};mainLift=L;
+  const W=TRAIN_WIN,ms=o.bounce?o.ms??W.ms:up+hold+down;if(o.bounce)Object.assign(L,{d:W.d,dim:W.dim,g:0,bounce:true});
   const end=()=>{if(mainLift!==L)return;mainLift=null;drawMain();if(o.done)o.done();};
-  if(typeof requestAnimationFrame!=='function'||reducedMotion()||view.mode!=='3d'){L.t=1;drawMain();L.timer=setTimeout(end,up+hold);return;}
+  if(typeof requestAnimationFrame!=='function'||reducedMotion()||view.mode!=='3d'){L.t=o.bounce?0.6:1;if(o.bounce)L.g=W.glow;drawMain();L.timer=setTimeout(end,o.bounce?ms:up+hold);return;}
   const t0=performance.now();
-  const step=()=>{if(mainLift!==L)return;const e=performance.now()-t0;if(e>=up+hold+down){end();return;}
-    const x=e<up?e/up:e<up+hold?1:1-(e-up-hold)/down;L.t=0.5-0.5*Math.cos(Math.PI*x);drawMain();L.raf=requestAnimationFrame(step);};
+  const step=()=>{if(mainLift!==L)return;const e=performance.now()-t0;if(e>=ms){end();return;}
+    if(o.bounce){const x=e/ms;L.t=Math.max(0.001,bounceAt(x));L.g=W.glow*Math.sin(Math.PI*x);}
+    else{const x=e<up?e/up:e<up+hold?1:1-(e-up-hold)/down;L.t=0.5-0.5*Math.cos(Math.PI*x);}
+    drawMain();L.raf=requestAnimationFrame(step);};
   L.raf=requestAnimationFrame(step);}
 // Show `cube` by turning `move` on `from` first. The picture ends on `cube`, as showCube would.
 function showCubeMoved(from,move,cube,fade){

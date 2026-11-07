@@ -206,3 +206,31 @@ they differ.
   cross put in too (`f2loScramble`, asked first by `loadScramble`); another cross color puts that
   cross in. On another tab the overlay scramble is the cube, as any scramble is; a new scramble
   there ends Overlay, and so does Undo.
+
+### One box, and a win between drills (1.78)
+
+The owner found F2L-1 "stuck" on the orange and green pair, solved, with a smart cube and Overlay.
+Two causes. A pair chip was pressed, and nothing on the screen said that the pair named was solved.
+And with Shortest on a solved cube, the pick found no open pair and fell back to the guide's pair,
+whose fallback was the first pair in the order, solved or not.
+
+- **No solved pair lit.** With every pair solved, F2L-1 lights none (`f2lTrainPair` is null).
+  Overlay on a cube with no pair to solve (a smart cube solved in your hands, or the F2L just
+  solved) loads a fresh drill in its place: a random state with the cross put in (`f2loDone`,
+  `f2loFresh`). The screen's cube is not the cube in your hands, so it can be any cube.
+- **One box** (`#f2lTrainer`), so what is engaged reads at a glance. In the stage view it is a strip
+  of its own under the action bar's buttons, each part with a small label; in the cube box each part
+  keeps its place (`display:contents`).
+  - **Show**: F2L-1, F2L-2, F2L-3. **Overlay**: a light, on while it is on.
+  - **Pair**: the ways (Guide, Shortest, Fastest, Two at once), then the pairs you name. One chip
+    is pressed across both, solid; the kind not in use dims (`data-idle`). With F2L-2 or F2L-3 the
+    Pair part dims and its chip is outlined, not solid (`data-off`); a pick turns F2L-1 on.
+  - **Lit** (`#f2lLit`): the pairs the cube shows in color now, a ✓ on a solved one, and a word
+    (moves, solved, finding, every pair solved). It reads what the cube draws.
+- **A win** (`js/trainwin.js`): your turn that solves what the trainer asks for (Cross Trainer: the
+  cross; F2L-1: a pair it lit; F2L-2 and F2L-3: the F2L) lifts the pieces just solved a little, with
+  a glow at half strength and a second, smaller hop (`TRAIN_WIN`, 750 ms). Then the next drill:
+  F2L-1 lights its next pair; the F2L solved with Overlay on gives a fresh drill, and the cross with
+  Virtual scramble on the next virtual cross, a smart cube too;
+  else the tab's next scramble on the virtual cube. A smart cube with neither only glows: the
+  page cannot mix the cube in your hands. A running timer waits for its stop.

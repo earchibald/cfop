@@ -109,7 +109,10 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&methodPopOpen()){cl
 // boot: the first visit asks the cube level (js/start.js); with no level picker, the popover opens once
 const begFirstVisit=store.get('method',null)==null;
 setMethod(method,{force:true});
-if(begFirstVisit)setTimeout(()=>{if(typeof startIsOpen==='function'&&startIsOpen())return;if(typeof startOpen==='function'&&store.get('level',null)==null){START.first=true;startOpen('level');}else openMethodPop();},300);
+// js/start.js loads later than this file: on a slow load it may not be there yet after 300 ms, and
+// the method menu must not open in place of the level page. Then it waits for the page to load.
+if(begFirstVisit){const go=()=>{if(typeof startIsOpen==='function'&&startIsOpen())return;if(typeof startOpen==='function'&&store.get('level',null)==null){START.first=true;startOpen('level');}else openMethodPop();};
+  setTimeout(()=>{if(typeof startOpen!=='function'&&document.readyState!=='complete')window.addEventListener('load',go,{once:true});else go();},300);}
 // The first visit also offers the data from another browser or the Mac app (js/transfer.js).
 if(begFirstVisit)$('#methodData').classList.remove('hidden');
 $('#methodPaste').onclick=()=>{closeMethodPop();openSettings('data');};
