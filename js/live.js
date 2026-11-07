@@ -257,7 +257,7 @@ function liveMapSet(M){const t=typeof cubeTab!=='undefined'?cubeTab.target:null,
 const LIVE_FRESH={cross:'New Cross',f2l:'New F2L',ll:'New OLL · PLL'};
 const LIVE_FRESH_TIP='Scramble your smart cube first. Then press this: your cube as it is now becomes the start. The page makes no moves';
 // The label of a fresh start on `tab` (the tab in view by default), or '' when New makes a scramble.
-// Cross Trainer's Virtual scramble (js/crosstrain.js) makes the scramble on the Cross tab: no fresh start there.
+// Cross Trainer's Overlay (js/crosstrain.js) makes the scramble on the Cross tab: no fresh start there.
 function liveFresh(tab){tab=tab||curTab;if(tab==='cross'&&typeof CXO!=='undefined'&&CXO.on)return '';
   return liveOn()&&!!cubeTab.target&&(typeof cubeSrc!=='function'||cubeSrc()==='smart')&&LIVE_FRESH[tab]||'';}
 // A New control was pressed: mark the cube as the start, if this is a fresh start. True if it was.

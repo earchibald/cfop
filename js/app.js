@@ -351,7 +351,7 @@ let history=store.get('history',[]);
 // always gives the same scramble.
 function newScramble(seed){seed=seed||randomSeedName();loadScramble(seed,wcaScramble(seed),false);}
 // F2L Trainer's Overlay (js/f2ltrain.js) can take a new scramble and load its own in its place.
-// Cross Trainer's Virtual scramble (js/crosstrain.js) sets the smart cube's map for it first.
+// Cross Trainer's Overlay (js/crosstrain.js) sets the smart cube's map for it first.
 function loadScramble(seed,moves,custom){
   if(typeof f2loScramble==='function'&&f2loScramble(seed,moves,custom))return;
   if(typeof cxoScramble==='function')cxoScramble(seed,moves);
@@ -565,7 +565,7 @@ $('#crossPlus1').onchange=refreshCross;$('#crossColor').onchange=()=>{store.set(
 // (js/crossdrill.js), as a random scramble seldom has a cross of 2, 3 or 8 moves.
 $('#crossDiff').value=store.get('crossDiff','any');if(!$('#crossDiff').value)$('#crossDiff').value='any';
 $('#crossDiff').onchange=()=>store.set('crossDiff',$('#crossDiff').value);
-// A new cross scramble of the Length picked (Cross Trainer's Virtual scramble, js/crosstrain.js, makes one too).
+// A new cross scramble of the Length picked (Cross Trainer's Overlay, js/crosstrain.js, makes one too).
 function crossNewScramble(){ensureTables(()=>{const diff=$('#crossDiff').value;
   if(/^\d$/.test(diff)){newScramble(crossDrillSeed(+diff,$('#crossColor').value));return;}
   for(let k=0;k<200;k++){const seed=randomSeedName();const c=toFrame(wcaState(seed));const d=buildCrossTable()[crossIndex(c)];if(diff==='any'||(diff==='easy'&&d<=5)||(diff==='hard'&&d>=7)){newScramble(seed);return;}}newScramble();});}

@@ -26,10 +26,10 @@ function crossTrainDim(){return crossDimPct()/100;}
 function crossTrainDraw(){const b=$('#crossTrainBtn');if(!b)return;const on=crossTrainOn();b.setAttribute('aria-pressed',String(on));
   b.title=on?'Cross Trainer is on: only the cross edges and the centers show their colors. Press to show every color':'Cross Trainer: gray every piece but the four cross edges and the centers, as you turn the cube';}
 function crossTrainSet(on){store.set('crossTrain',!!on);crossTrainDraw();drawMain();}
-// ---- Cross Trainer's Virtual scramble (1.77) ----
+// ---- Cross Trainer's Overlay (1.77 as Virtual scramble; Overlay since 1.80) ----
 // The Cross tab's twin of F2L Trainer's Overlay (js/f2ltrain.js): a chip beside the button while
-// Cross Trainer is on (#crossOverBtn, not kept over a reload). On, a new cross scramble of the
-// Length picked (crossNewScramble in app.js) loads on the screen. You do not scramble your cube:
+// Cross Trainer is on (#crossOverBtn, not kept over a reload), a light on while it is on. On, a new
+// cross scramble of the Length picked (crossNewScramble in app.js) loads on the screen. You do not scramble your cube:
 // with a smart cube, the cube in your hands turns the screen's scramble as the lab's drill does
 // (js/live.js, liveMapSet: M = S · P⁻¹, S the scramble, P the cube in your hands). You look at the
 // screen, as its colors are not your cube's. While it is on, every new scramble on the Cross tab is
@@ -54,7 +54,7 @@ function cxoOff(){const r=CXO.real,mine=CXO.on&&!!CXO.seed&&scr.seed===CXO.seed,
   if(r&&mine){loadScramble(r.seed,r.moves,r.custom);homeAppend([...r.yours,...since]);}}
 function cxoSet(on){if(on)cxoOn();else cxoOff();drawMain();cxoDraw();}
 // loadScramble asks this first. On the Cross tab the scramble is virtual: a smart cube gets the map
-// that makes the screen show it. Elsewhere, or by Undo, the Virtual scramble ends.
+// that makes the screen show it. Elsewhere, or by Undo, the Overlay ends.
 function cxoScramble(seed,moves){if(!CXO.on)return;
   if(!crossTrainOn()||!crossOnCross()||typeof UNDO!=='undefined'&&UNDO.busy){cxoEnd();return;}
   // Your moves on the virtual scramble it replaces count for Off: your cube took them too.
@@ -64,8 +64,8 @@ function cxoScramble(seed,moves){if(!CXO.on)return;
   CXO.map=cxoSmart()?S.mul(liveReal(cubeTab.target).inverse()):null;
   if(CXO.map||old&&LIVE.map===old)liveMapSet(CXO.map);}
 function cxoTitle(){
-  if(!cxoOv())return 'Virtual scramble: a new cross scramble on the screen, of the Length you picked. You do not scramble your cube. With a smart cube, your turns turn the screen\'s cube: look at the screen, as its colors are not your cube\'s';
-  return 'Virtual scramble is on: the screen shows a scramble of its own. With a smart cube, look at the screen, not your cube. New cross scramble makes another. Press to go back to your scramble';}
+  if(!cxoOv())return 'Overlay: a new cross scramble on the screen, of the Length you picked. Your moves turn it. Each cross you solve brings the next. You do not scramble your cube. With a smart cube, look at the screen: its colors are not your cube\'s';
+  return 'Overlay is on: the screen shows a cross scramble of its own. Each cross you solve brings the next. With a smart cube, look at the screen, not your cube. Press to go back to your scramble';}
 function cxoDraw(){const b=$('#crossOverBtn'),g=$('#crossOverGrp');if(!b||!g)return;g.hidden=!crossTrainOn();
   b.setAttribute('aria-pressed',String(!!cxoOv()));const t=cxoTitle();if(b.title!==t)b.title=t;
   if(typeof liveFreshDraw==='function')liveFreshDraw();}
@@ -160,11 +160,11 @@ function crossFindDraw(){const o=$('#crossFindOut');if(!o)return;const name=cros
   const b=$('#crossFindBtn');if(b){const t=CF.on?'Stop':'Find the edges';if(b.textContent!==t)b.textContent=t;}}
 // ---- wiring ----
 (()=>{const cube=$('#cube'),tb=$('#crossTrainBtn'),fb=$('#crossFindBtn'),auto=$('#crossFindAuto');
-  // Cross Trainer off turns the Virtual scramble off: the scramble from before.
+  // Cross Trainer off turns the Overlay off: the scramble from before.
   if(tb)tb.onclick=()=>{crossTrainSet(!crossTrainOn());if(!crossTrainOn()&&CXO.on)cxoSet(false);cxoDraw();};crossTrainDraw();
-  // The Virtual scramble: one chip in a group of its own, after the button.
+  // The Overlay: one chip in a group of its own, after the button.
   if(tb){const og=document.createElement('span');og.id='crossOverGrp';og.className='f2lstyle cxo-grp';og.hidden=true;
-    const ob=document.createElement('button');ob.type='button';ob.id='crossOverBtn';ob.textContent='Virtual scramble';ob.setAttribute('aria-pressed','false');
+    const ob=document.createElement('button');ob.type='button';ob.id='crossOverBtn';ob.textContent='Overlay';ob.setAttribute('aria-pressed','false');
     ob.onclick=()=>cxoSet(!CXO.on);og.append(ob);tb.after(og);cxoDraw();
     // A scramble it did not load ends it.
     document.addEventListener('cw:sequence',()=>{if(CXO.on&&CXO.seed&&scr.seed!==CXO.seed){cxoEnd();cxoDraw();}});
