@@ -109,9 +109,24 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.ok(await until(`scr.seed!==${JSON.stringify(vs)}&&!TW.win`,3000),'then the next virtual cross, a smart cube too');
   assert.ok(run('cxoOv()'),'still Virtual scramble');
   $('#crossOverBtn').click();await sleep(0);
+  // The whole cube's pulse (1.78.1): it starts with the winning turn, and the turns after it do not
+  // stop it, as they stop the pieces' hop. A smart cube turned on at once still ends the win in time.
+  run(`loadScramble('t-f3',['F'],true)`);await sleep(50);
+  assert.ok(!$('#cube').classList.contains('twwin'),'no pulse before a win');
+  run(`cubePlayerTurn(${JSON.stringify(solver('twCross(n,ci)'))},'smart')`);
+  assert.ok(run('!!TW.win')&&$('#cube').classList.contains('twwin'),'the cube pulses at the winning turn');
+  assert.ok(await until('!!mainLift&&mainLift.bounce',1000),'the pieces hop once the turn ends');
+  const t0=Date.now();run(`cubePlayerTurn('U','smart')`);
+  assert.ok(!run('mainLift'),'a turn ends the pieces\' hop');
+  assert.ok($('#cube').classList.contains('twwin'),'the cube pulses on through the turn');
+  const keep=w.setInterval(()=>run(`cubePlayerTurn('U','smart')`),120);
+  assert.ok(await until('!TW.win',1500),'turn after turn: the win still ends');keep&&w.clearInterval(keep);
+  assert.ok(Date.now()-t0<800,'about 750 ms from the win: '+(Date.now()-t0));
+  assert.ok(!$('#cube').classList.contains('twwin'),'the pulse ends with it');
   // A tab change stops a glow.
   run(`loadScramble('t-f2',['F'],true)`);await sleep(50);run(`cubePlayerTurn(${JSON.stringify(solver('twCross(n,ci)'))},'smart')`);
   assert.ok(run('!!TW.win'));$('nav.rail button[data-tab="f2l"]').click();assert.ok(run('!TW.win'),'another tab stops it');
+  assert.ok(!$('#cube').classList.contains('twwin'),'and its pulse');
   assert.deepStrictEqual(errs,[],'no script errors');
   console.log('trainwin: no solved pair lit, Overlay on a solved cube makes a drill, the soft glow and bounce, the next drill, a smart cube, the timer, Cross Trainer ok');
   process.exit(0);

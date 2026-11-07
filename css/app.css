@@ -1083,6 +1083,17 @@ body:not(.sv)[data-method="cfop"]:is([data-tab="cross"],[data-tab="f2l"]) .cubeb
 #cube.cfmiss{animation:cfmiss .28s}
 @keyframes cfmiss{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 @media (prefers-reduced-motion:reduce){#cube.cfmiss{animation:none}}
+/* A trainer's win (js/trainwin.js, twPulse): the whole cube, a soft halo and a small double hop, as
+   TRAIN_WIN times the pieces' hop. On the element, so the turns that redraw the cube do not stop it. */
+#cube.twwin{animation:twwin var(--twwin-ms,.75s) ease-out}
+@keyframes twwin{
+  0%{transform:scale(1);filter:drop-shadow(0 0 0 transparent)}
+  27.5%{transform:scale(1.035)}
+  50%{filter:drop-shadow(0 0 16px color-mix(in srgb,var(--accent) 55%,transparent))}
+  55%{transform:scale(1)}
+  77.5%{transform:scale(1.012)}
+  100%{transform:scale(1);filter:drop-shadow(0 0 0 transparent)}}
+@media (prefers-reduced-motion:reduce){#cube.twwin{animation:none}}
 /* F2L Trainer: the chips of the pair F2L-1 lights, while F2L-1 is pressed (js/f2ltrain.js). A row in
    the stage view's action bar (#svActs, inside the cube box: hence body:not(.sv)); in the cube box
    a column at the right, level with the style column at the left (1.71.1), the pairs as a 2 by 2
