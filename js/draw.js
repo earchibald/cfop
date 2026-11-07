@@ -46,7 +46,8 @@ function moveGeom(move,size){
 // The polygons of the cube picture, far to near. Each is {pts,fill} and a sticker also
 // has {stroke,faded}. Options: yaw, pitch, scale, cx, cy (the center on the page),
 // fade (a Set of facelet indices that keep full color), color(ci,idx) for the sticker
-// fill, dim (0..1): how bright a sticker out of fade shows, over black (without it, 0.22 see-through),
+// fill, dim (0..1): how bright a sticker out of fade shows, over black (without it, 0.22 see-through;
+// with it the plastic is --sticker-line-dim, lighter in dark mode, so the dimmed pieces read as a grid),
 // body for the plastic between stickers, cls(idx) for a class on each sticker,
 // move with t (0..1) for a part turn, and rot, a 3×3 matrix (three rows) that turns the
 // whole cube before the camera: how a smart cube is held. Turning the body +90° about y
@@ -57,11 +58,14 @@ function moveGeom(move,size){
 // slabs are separated by planes across the axis, so they draw far to near along it.
 // The cube is a 3×3. Options fade, cls and color always get the 54-sticker index of a sticker.
 let DRAW_N=3;function setDrawN(n){DRAW_N=3;}function drawN(){return DRAW_N;}
+// The plastic between stickers: --sticker-line, or while a trainer dims the stickers (dim set)
+// --sticker-line-dim, a lighter gray in dark mode: black stickers over black plastic would be one block.
+function stickerLine(dim){return dim!=null?'var(--sticker-line-dim,var(--sticker-line))':'var(--sticker-line)';}
 function cubePolys(facelets,opts={}){
   const n=opts.n||DRAW_N;
   const to54=i=>i;
   const yaw=opts.yaw??-32,pitch=opts.pitch??28;const S=opts.scale||52;const cx=opts.cx??200,cy=opts.cy??185;
-  const color=opts.color||((ci)=>stickerColor(ci));const body=opts.body||'var(--sticker-line)';
+  const color=opts.color||((ci)=>stickerColor(ci));const body=opts.body||stickerLine(opts.dim);
   const M=opts.rot,cam=M?p=>rot3([0,1,2].map(i=>M[i][0]*p[0]+M[i][1]*p[1]+M[i][2]*p[2]),yaw,pitch):p=>rot3(p,yaw,pitch);
   const proj=p=>{const q=cam(p);return [cx+q[0]*S,cy-q[1]*S];};
   const hs=1.5/n,layerAt=k=>-1.5+hs+2*hs*k; // half a cubie; the center of layer k, counted from the negative side
@@ -256,11 +260,11 @@ function renderNet(facelets,opts={}){
   const n=opts.n||DRAW_N;
   const to54=i=>i;
   const s=opts.size||30;let out='';
-  const op=opts.dim??0.22;
+  const op=opts.dim??0.22,ln=stickerLine(opts.dim);
   for(const c of netCells(n,{tile:s-2,gap:2,pad:1,ox:19,oy:19})){const faded=opts.fade&&!opts.fade.has(to54(c.idx));
-    if(faded&&opts.dim!=null)out+=`<rect x="${c.x}" y="${c.y}" width="${c.s}" height="${c.s}" rx="3" fill="#000" stroke="var(--sticker-line)" stroke-width="1"/>`;
+    if(faded&&opts.dim!=null)out+=`<rect x="${c.x}" y="${c.y}" width="${c.s}" height="${c.s}" rx="3" fill="#000" stroke="${ln}" stroke-width="1"/>`;
     if(faded&&op===0)continue;
-    out+=netRect(facelets[c.idx],c.x,c.y,c.s,c.s,`rx="3"${faded?` opacity="${op}"`:''} stroke="var(--sticker-line)" stroke-width="1"`).replace(/<text /,faded?`<text opacity="${op}" `:'<text ');}
+    out+=netRect(facelets[c.idx],c.x,c.y,c.s,c.s,`rx="3"${faded?` opacity="${op}"`:''} stroke="${ln}" stroke-width="1"`).replace(/<text /,faded?`<text opacity="${op}" `:'<text ');}
   return out;
 }
 // Every sticker of the piece that sticker idx (0..53) sits on: one for a center, two for an edge,
