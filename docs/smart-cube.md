@@ -440,6 +440,38 @@ Web Bluetooth works in Chrome and Edge on a computer and on Android. Safari and
 Firefox do not have it. On iOS, the Bluefy browser has it. It needs a secure
 page: GitHub Pages or `localhost`.
 
+### Chrome: connect with no chooser
+
+Out of the box, Chrome forgets a Web Bluetooth grant when the page goes. Every
+visit then needs the chooser: pick Smart cube, and choose the cube in the list
+Chrome shows. `navigator.bluetooth.getDevices()` exists in Chrome (seen in
+Chrome 157), but without the setting below it returns only the devices granted
+in the current session, so on a fresh page it returns none, and the look with no
+click (`smartPickKnown` in `js/smart-ui.js`) finds nothing. The Connect card
+says so and names the setting (`smartForgotHint`).
+
+One setting makes the grant last, so the cube connects by itself:
+
+1. Open `chrome://flags/#enable-web-bluetooth-new-permissions-backend`
+   (in Edge, `edge://flags` with the same name).
+2. Set it to **Enabled** and relaunch the browser.
+3. Connect the cube once more through the chooser. Chrome keeps the grant from
+   then on.
+
+After that, picking Smart cube (or opening the page with Smart cube picked,
+or a drop of the link) connects the cube with no click, as the lab does:
+`getDevices()` returns it, and the page takes it. With
+`chrome://flags/#enable-experimental-web-platform-features` on as well (the
+setting the MAC address needs, above), the page has `watchAdvertisements()` and
+waits until the cube advertises, so it says "Turn a face to wake the cube up"
+and connects as soon as it hears it; without it, the page takes the first known
+cube at once and tries the link. Chrome lists the grants under Site settings ›
+Bluetooth devices; removing one there puts the chooser back.
+
+Nothing in this needs a change to the site: the look with no click has been
+there since 1.39.0 (`smartAuto`), and 1.83.0 added the chooser on the pick
+where the look finds nothing, and the note that names the setting.
+
 Safari blocks a WebSocket to `localhost` from an `https://` page, with no
 exemption for loopback (tested in Safari 27.2). Chrome and Edge allow it. So a
 bridge for Safari cannot sit beside `twistwright.com`: the app has to serve the
