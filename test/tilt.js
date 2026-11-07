@@ -1,9 +1,9 @@
 // The tilt of a smart cube (js/tilt.js, js/live.js): the arithmetic first (a reset squares the
 // picture to the hold; drift while still is taken out; a cube at rest near square eases to square,
-// a slant on purpose stays; a real turn shows; adopt takes the nearest hold; the gestures X X' X and
-// X' X X' within the gap), then the page with a fake GAN cube: the Tilt chip once a reading comes,
-// the picture follows the reading, the line in the smart cube sheet, L L' L makes the way the cube
-// sits the hold, R R' R squares the picture to the hold even with the heading drifted, Tilt off, the
+// a slant on purpose stays; a real turn shows; adopt takes the nearest hold; the gestures X X' X X' and
+// X' X X' X within the gap), then the page with a fake GAN cube: the Tilt chip once a reading comes,
+// the picture follows the reading, the line in the smart cube sheet, L L' L L' makes the way the cube
+// sits the hold, R R' R R' squares the picture to the hold even with the heading drifted, Tilt off, the
 // View chip (Isometric view, Player view, the V key, cw:cubeView) and a disconnect.
 const assert=require('assert');
 const run=require('./vm-load')('js/engine.js','js/cubetab.js','js/tilt.js');
@@ -47,14 +47,15 @@ assert.deepStrictEqual(J(`[tiltFaceToward([0,0,0,1],[1,0,0]),tiltFaceToward([0,0
   'white up, green front: R right, L left; after y: B on the right, F on the left');
 // the gestures
 const gest=(seq,gap=300)=>J(`(()=>{const g=tiltGesture();let t=0,out=[];for(const m of ${JSON.stringify(seq)}){t+=${gap};out.push(g.feed(t,m));}return out.filter(Boolean);})()`);
-assert.deepStrictEqual(gest(['R',"R'",'R']),['R'],"R R' R");
-assert.deepStrictEqual(gest(["L'",'L',"L'"]),['L'],"L' L L'");
-assert.deepStrictEqual(gest(['U','R',"R'",'R']),['R'],'a move before it does not count');
-assert.deepStrictEqual(gest(['R',"R'",'U','R']),[],'another face starts over');
-assert.deepStrictEqual(gest(['R','R','R']),[],'R R R is no gesture');
-assert.deepStrictEqual(gest(['R',"R'",'R2']),[],'a half turn starts over');
-assert.deepStrictEqual(gest(['R',"R'",'R'],900),[],'too slow: no gesture');
-assert.deepStrictEqual(gest(['R',"R'",'R',"R'",'R',"R'"]),['R','R'],'six turns: two gestures');
+assert.deepStrictEqual(gest(['R',"R'",'R',"R'"]),['R'],"R R' R R'");
+assert.deepStrictEqual(gest(['R',"R'",'R']),[],"R R' R: three turns are not enough");
+assert.deepStrictEqual(gest(["L'",'L',"L'",'L']),['L'],"L' L L' L");
+assert.deepStrictEqual(gest(['U','R',"R'",'R',"R'"]),['R'],'a move before it does not count');
+assert.deepStrictEqual(gest(['R',"R'",'R','U',"R'"]),[],'another face starts over');
+assert.deepStrictEqual(gest(['R','R','R','R']),[],'R R R R is no gesture');
+assert.deepStrictEqual(gest(['R',"R'",'R','R2']),[],'a half turn starts over');
+assert.deepStrictEqual(gest(['R',"R'",'R',"R'"],900),[],'too slow: no gesture');
+assert.deepStrictEqual(gest(['R',"R'",'R',"R'",'R',"R'",'R',"R'"]),['R','R'],'eight turns: two gestures');
 console.log('tilt: arithmetic ok');
 
 // ----- the page -----
@@ -111,7 +112,7 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   send(rest);assert.ok(await until(()=>ev('liveTiltLive()')),'a reading: the picture follows the tilt');
   assert.ok(shown($('#tiltBtn'))&&$('#tiltBtn').getAttribute('aria-pressed')==='true','the Tilt chip shows, on');
   assert.ok(ev('tiltAngle(TILT.q,[0,0,0,1])')<0.01,'the first reading squares the picture to the hold');
-  assert.ok(/R R' R squares it/.test($('#cubeWinTilt').textContent)&&shown($('#cubeWinTilt')),'the sheet names the gestures: '+$('#cubeWinTilt').textContent);
+  assert.ok(/R R' R R' squares it/.test($('#cubeWinTilt').textContent)&&shown($('#cubeWinTilt')),'the sheet names the gestures: '+$('#cubeWinTilt').textContent);
   const HOLDS=ev('CUBE_TAB_HOLDS'),holdOf=ms=>HOLDS.find(h=>h.moves.join(' ')===ms);
   for(let i=0;i<4;i++){send(turnedY);await sleep(40);}
   assert.ok(await until(()=>ev(`tiltAngle(TILT.q,CUBE_TAB_HOLDS.find(h=>h.moves.join(' ')==='y').q)`)<1),'a y turn in the hands: the picture turns with it');
@@ -119,21 +120,23 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   assert.ok(await until(()=>$('#cubeWinTilt').classList.contains('away')),'the sheet says the cube sits another way');
   assert.ok(/sits with white up, red in front\. The moves read with white up, green in front/.test($('#cubeWinTilt').textContent),$('#cubeWinTilt').textContent);
   assert.strictEqual(ev('cubeTab.hold'),null,'the tilt never moves the hold by itself');
-  // L L' L: the face on your left is the cube's F now
+  // L L' L L': the face on your left is the cube's F now
   const mv=new Uint8Array(20);mv[0]=0x01;
   let c=c1;const turn=async m=>{c=w.applyAlg(c,[m]);set(c);dev.notify(mv);assert.ok(await until(()=>ev('cubeTab.target').equals(c),800),'the turn '+m);};
   await turn('F');await turn("F'");await turn('F');
-  assert.ok(await until(()=>ev('cubeTab.hold')===holdOf('y')),"L L' L: the hold is the way the cube sits");
+  assert.strictEqual(ev('cubeTab.hold'),null,'three turns: no gesture yet');await turn("F'");
+  assert.ok(ev('cubeTab.target').equals(c1),'the four turns cancel: the cube is as it was');
+  assert.ok(await until(()=>ev('cubeTab.hold')===holdOf('y')),"L L' L L': the hold is the way the cube sits");
   assert.deepStrictEqual({...ev('PLAYER.hold')},{top:0,front:1},'the picture: white up, red in front');
-  assert.ok(/^L L' L: the moves now read with white up, red in front/.test($('#cubeWinTilt').textContent),$('#cubeWinTilt').textContent);
+  assert.ok(/^L L' L L': the moves now read with white up, red in front/.test($('#cubeWinTilt').textContent),$('#cubeWinTilt').textContent);
   assert.ok($('#cubeWinTilt').classList.contains('done'));
   assert.ok(ev(`tiltAngle(TILT.tr.pose(),CUBE_TAB_HOLDS.find(h=>h.moves.join(' ')==='y').q)`)<0.01,'squared to it');
-  // R R' R with the heading drifted 100 degrees: the hold's right face (the cube's B) still counts
+  // R R' R R' with the heading drifted 100 degrees: the hold's right face (the cube's B) still counts
   new w.Function('TILT.tr.state.psi+=100;')();send(turnedY);await sleep(30);
   assert.ok(ev(`tiltAngle(TILT.tr.pose(),CUBE_TAB_HOLDS.find(h=>h.moves.join(' ')==='y').q)`)>90,'drifted');
-  await turn('B');await turn("B'");await turn('B');
-  assert.ok(await until(()=>/^R R' R: the picture is square, white up, red in front/.test($('#cubeWinTilt').textContent)),$('#cubeWinTilt').textContent);
-  assert.ok(ev(`tiltAngle(TILT.tr.pose(),CUBE_TAB_HOLDS.find(h=>h.moves.join(' ')==='y').q)`)<0.01,"R R' R: square to the hold again");
+  await turn('B');await turn("B'");await turn('B');await turn("B'");
+  assert.ok(await until(()=>/^R R' R R': the picture is square, white up, red in front/.test($('#cubeWinTilt').textContent)),$('#cubeWinTilt').textContent);
+  assert.ok(ev(`tiltAngle(TILT.tr.pose(),CUBE_TAB_HOLDS.find(h=>h.moves.join(' ')==='y').q)`)<0.01,"R R' R R': square to the hold again");
   assert.strictEqual(ev('cubeTab.hold'),holdOf('y'),'the hold stays');
   // a tile squares the picture to the new hold
   click(tile('front','G'));assert.ok(ev('tiltAngle(TILT.tr.pose(),[0,0,0,1])')<0.01,'a tile: the picture squares to white up, green in front');
@@ -142,12 +145,12 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   // Tilt off
   click($('#tiltBtn'));assert.ok(!ev('liveTiltLive()')&&!ev('liveTiltRot(displayedCube)'),'Tilt off: the picture stays on the hold');
   assert.strictEqual(w.localStorage.getItem('cw:smartTilt'),'false','kept');assert.ok(!shown($('#cubeWinTilt')),'no tilt line');
-  send(turnedY);await sleep(30);await turn('F');await turn("F'");await turn('F');
+  send(turnedY);await sleep(30);await turn('F');await turn("F'");await turn('F');await turn("F'");
   assert.deepStrictEqual({...ev('PLAYER.hold')},{top:0,front:2},'Tilt off: no gesture');
   click($('#tiltBtn'));assert.ok(ev('liveTiltLive()'),'Tilt on again');
   // a disconnect forgets the heading
   w.smartNotify({type:'disconnect'});assert.ok(!ev('TILT.q')&&!shown($('#tiltBtn')),'disconnected: no tilt, no chip');
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('tilt: the chip, the picture, the line, L L\' L, R R\' R with drift, a tile, Tilt off, the View chip, disconnect ok');
+  console.log('tilt: the chip, the picture, the line, L L\' L L\', R R\' R R\' with drift, a tile, Tilt off, the View chip, disconnect ok');
   process.exit(0);
 }catch(e){console.error('tilt: FAIL',e);process.exit(1);}})();
