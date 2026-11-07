@@ -50,7 +50,10 @@ whole-cube turn and a middle slice (`M`, `E`, `S`) carry no color.
 ## Tokens
 
 Sticker colors are `--sticker-W Y R O G B`, with `--sticker-X` for a sticker
-that does not matter and `--sticker-line` for the gap between stickers. The
+that does not matter and `--sticker-line` for the gap between stickers;
+`--sticker-line-dim` is that gap while a trainer dims the pieces, lighter in
+dark mode so the dimmed pieces read as a grid, and `--sticker-line` in light
+mode. The
 dark values are the classic sticker colors lifted for contrast on black;
 the blue moved most. The light values follow GAN stickerless plastic as
 sampled from matte product photos: a lemon yellow, a grass green with a

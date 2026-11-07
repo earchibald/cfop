@@ -44,6 +44,15 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.strictEqual(fade.size,6+8,'the six centers and the four cross edges keep their colors');
   const f=run(`displayedCube.toFacelets()`);assert.ok([...fade].every(i=>i%9===4||f[i]===0||run(`edgeFacelet.some(e=>e.includes(${i})&&e.some(j=>displayedCube.toFacelets()[j]===0))`)),'only centers and white edges');
   assert.ok($$('#cube [opacity]').length>0,'the picture grays the rest');
+  // The plastic between the stickers: --sticker-line-dim while the pieces dim, lighter in dark mode than
+  // --sticker-line, so the dimmed pieces read as a grid and not as one black block (1.78.2).
+  const lineDim=()=>$$('#cube polygon[fill^="var(--sticker-line-dim"]').length,linePlain=()=>$$('#cube polygon[fill="var(--sticker-line)"]').length;
+  assert.ok(lineDim()>0&&linePlain()===0,'the plastic takes the dim line while the pieces dim');
+  {const css=fs.readFileSync(path.join(__dirname,'..','css','app.css'),'utf8');const lum=h=>parseInt(h.slice(0,2),16)+parseInt(h.slice(2,4),16)+parseInt(h.slice(4,6),16);
+    const dark=[...css.matchAll(/--sticker-line:#([0-9a-f]{6});--sticker-line-dim:#([0-9a-f]{6});/g)];
+    assert.strictEqual(dark.length,2,'dark mode defines the dim line in both of its blocks');
+    for(const m of dark)assert.ok(lum(m[2])>lum(m[1]),'the dim line is lighter than the line');
+    assert.ok(/--sticker-line:#dfe1e6;--sticker-line-dim:var\(--sticker-line\);/.test(css),'light mode: the same line');}
   $('#rail button[data-tab="f2l"]').click();await sleep(20);
   assert.strictEqual(run(`crossTrainFade(displayedCube.toFacelets())`),null,'no fade on another tab');
   $('#rail button[data-tab="cross"]').click();await sleep(20);
@@ -61,8 +70,11 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   w.localStorage.setItem('cw:crossDim','0');run('drawMain()');
   assert.strictEqual($$('#cube polygon[opacity="0"]').length,0,'at 0% the other stickers are not drawn: black shows');
   run(`(view.mode='net',drawMain())`);assert.strictEqual($$('#cube rect[fill="#000"]').length,54-14,'the net: 40 stickers black');
-  assert.strictEqual($$('#cube rect').length,54,'the net: no color drawn over a black one');run(`(view.mode='3d',drawMain())`);w.localStorage.setItem('cw:crossDim','22');
+  assert.strictEqual($$('#cube rect').length,54,'the net: no color drawn over a black one');
+  assert.strictEqual($$('#cube rect[stroke^="var(--sticker-line-dim"]').length,54,'the net: every sticker outlined by the dim line');
+  run(`(view.mode='3d',drawMain())`);w.localStorage.setItem('cw:crossDim','22');
   ct.click();assert.strictEqual(w.localStorage.getItem('cw:crossTrain'),'false','off, and kept');
+  assert.ok(linePlain()>0&&lineDim()===0,'off: the plastic is --sticker-line again');
   // F2L Trainer: on the F2L tab only; the eight F2L pieces and the centers keep their colors, the rest at the same level.
   const ft=$('#f2lTrainBtn');assert.ok(ft,'the F2L Trainer button');
   assert.strictEqual(run(`f2lTrainFade(displayedCube.toFacelets())`),null,'off: no fade');
