@@ -3,7 +3,10 @@
 // or type it), Smart cube (GAN over Bluetooth) or Virtual cube (the keyboard or the numeric keypad
 // turns the cube in the section, js/screencube.js; its id stays 'screen'). A click opens the cube menu over the page, on every page, in every method.
 // The menu takes over the seed bar's Scan, Paint and Smart cube and the connect of the Smart cube
-// dialog (which stays as Options). cw:cubeSrc keeps the choice; a change fires cw:cubesrc.
+// dialog (which stays as Options). A pick of Smart cube connects at once (smartConnectNow,
+// js/smart-ui.js): a known cube by itself where the browser keeps it, else the browser's chooser
+// on that click; no dialog. Connect opens the chooser (the list over the bridge) for another cube.
+// cw:cubeSrc keeps the choice; a change fires cw:cubesrc.
 const CUBE_SRCS=[
   {id:'mine',name:'Regular cube',tip:'A cube you turn by hand'},
   {id:'screen',name:'Virtual cube',tip:'A cube on the screen, turned by keys'},
@@ -65,7 +68,7 @@ function cubePopActions(id){
     text:live?'Connected. The page sees every turn: the cube in each section follows it. The Smart cube sheet names the stage of your solve.':'Connect a GAN smart cube. '+smartHowWords(),
     acts:live?[cubeAct('Use my cube','Make it the scramble','Make the cube in your hands the scramble','use',{main:true}),cubeAct('My cube is solved','Reset what the page reads','Tell the page the cube is solved','smartSolved'),
       cubeAct('Fix the colors','Scan or paint it','Correct the state the cube reports','smartFix'),cubeAct('Disconnect','Back to Regular cube','Disconnect the smart cube','disconnect')]
-      :[cubeAct('Connect','Look for a cube','Look for a GAN smart cube','connect',{main:true}),cubeAct('Options','The Smart cube window','Open the Smart cube window','options')],
+      :[cubeAct('Connect','Choose your cube','Look for a GAN smart cube and choose it in the list','connect',{main:true}),cubeAct('Options','The Smart cube window','Open the Smart cube window','options')],
     foot:typeof smartInApp==='function'&&smartInApp()?'No smart cube yet? Connect looks for a GAN cube near this Mac.':'No smart cube yet? Connect opens the browser’s chooser. Safari connects through the Mac app.'};}
   return {head:'Following scramble '+(scr.seed||''),text:'The page thinks your cube looks like this. Not so? Show it to the page.',
     acts:[cubeAct('Scan my cube','With the camera','Read the cube with the camera','scan',{main:true}),cubeAct('Paint my cube','Click each color','Paint the colors by hand','paint'),
@@ -80,7 +83,7 @@ function cubePopDraw(){const p=$('#cubePop');if(!p)return;const id=cubeSrc(),a=c
       <div><b>${esc(a.head)}</b><span class="muted">${esc(a.text)}</span></div></div>
     <div class="cacts">${a.acts.map(x=>`<button class="cact${x.main?' main':''}" data-act="${x.act}" title="${esc(x.tip)}"><b>${esc(x.name)}${x.key?`<span class="hk" aria-hidden="true">${x.key}</span>`:''}</b><span>${esc(x.note)}</span></button>`).join('')}</div>
     <span class="muted cfoot">${esc(a.foot)}</span>`;
-  p.querySelectorAll('.csrc').forEach(b=>b.onclick=()=>{setCubeSrc(b.dataset.src);if(b.dataset.src==='smart'&&!smartLive())cubeDo('options');});
+  p.querySelectorAll('.csrc').forEach(b=>b.onclick=()=>{setCubeSrc(b.dataset.src);if(b.dataset.src==='smart'&&!smartLive())cubeDo('connectNow');});
   p.querySelectorAll('.cact').forEach(b=>b.onclick=()=>cubeDo(b.dataset.act));
 }
 function cubeDo(act){
@@ -92,7 +95,8 @@ function cubeDo(act){
     case 'scan':close();$('#camBtn').click();break;
     case 'type':close();openEnter();break;
     case 'use':close();if(typeof liveUse==='function')liveUse();break;
-    case 'connect':close();openSmart();break;
+    case 'connectNow':close();if(typeof smartConnectNow==='function')smartConnectNow();else openSmart();break;
+    case 'connect':close();if(typeof cubeTabConnect==='function')cubeTabConnect();else openSmart();break;
     case 'options':case 'smartSolved':case 'smartFix':close();openSmart();break;
     case 'disconnect':close();if(typeof smartDisconnect==='function')smartDisconnect();setCubeSrc('mine');break;
   }

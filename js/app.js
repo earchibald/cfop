@@ -952,7 +952,7 @@ function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHi
 // (setHidden, cw:hidden), the same settings as the chips on the cube. Timer: 15 s inspection (cw:insp), the
 // same as the box by the timer. Pictures: Play case animations (cw:playPics, js/loop.js). Color Blind Assist: a
 // letter on each sticker (cw:cba, body.cba). Phone: the Reference section goes on to the next stage
-// when a case's details close (cw:refNext). Smart cube: the move trail right to left or left to right (cw:trailDir, js/trail.js), and the ask at connect (cw:smartAsk, js/live.js). Your data: Copy my data and Paste my data (js/transfer.js); openSettings('data') opens on it and pastes. With a Listen log, a button copies it for a report. It shows the version, under the buttons, so a report
+// when a case's details close (cw:refNext). Smart cube: the move trail right to left or left to right (cw:trailDir, js/trail.js). Your data: Copy my data and Paste my data (js/transfer.js); openSettings('data') opens on it and pastes. With a Listen log, a button copies it for a report. It shows the version, under the buttons, so a report
 // can name it. While it is open, keys go to the window only: Esc cancels and Enter saves.
 function openSettings(open){if($('#setBg'))return;
   const bg=document.createElement('div');bg.className='modal-bg ask-bg';bg.id='setBg';
@@ -981,8 +981,6 @@ function openSettings(open){if($('#setBg'))return;
     <h3>Smart cube</h3>
     <label class="setrow" title="The last move on the left, the older moves to its right. Off: the last move on the right, so the moves read as an algorithm"><input type="checkbox" id="setTrailRtl"${typeof trailDir!=='function'||trailDir()==='rtl'?' checked':''}> Last move on the left</label>
     <p class="muted">The moves beside the live cube, and in the lab. Off, the moves read left to right, as an algorithm does.</p>
-    <label class="setrow" title="When a smart cube connects and it is not at the cube on the page, ask to make it the scramble. Off: keep the scramble"><input type="checkbox" id="setSmartAsk"${store.get('smartAsk',true)?' checked':''}> Ask to use my cube as the scramble</label>
-    <p class="muted">Off, the page keeps its scramble when a cube connects. Use my cube, under the player, makes it the scramble at any time.</p>
     <h3>Scrambles</h3>
     <p class="muted" id="setScr">WCA scrambles: a random state, as in a competition. A seed name always gives the same one.</p>
     <h3>Phone</h3>
@@ -997,7 +995,7 @@ function openSettings(open){if($('#setBg'))return;
   const dim0=typeof crossDimPct==='function'?crossDimPct():null;
   const close=()=>{if(dim0!=null&&crossDimPct()!==dim0){store.set('crossDim',dim0);drawMain();}document.removeEventListener('keydown',keys,true);document.removeEventListener('keyup',keys,true);bg.remove();$('#settingsBtn').focus();};
   const save=()=>{setAnim($('#setAnim').checked);if($('#setHidden').checked!==hiddenOn())setHidden($('#setHidden').checked);store.set('insp',$('#setInsp').checked);$('#inspChk').checked=$('#setInsp').checked;store.set('refNext',$('#setRefNext').checked);store.set('playPics',$('#setPlayPics').checked);setCba($('#setCba').checked);
-    store.set('trailDir',$('#setTrailRtl').checked?'rtl':'ltr');store.set('smartAsk',$('#setSmartAsk').checked);if(typeof cubeTabMovesDraw==='function')cubeTabMovesDraw();if(dim0!=null&&$('#setCrossDim')){const d=+$('#setCrossDim').value;close();store.set('crossDim',d);drawMain();return;}close();};
+    store.set('trailDir',$('#setTrailRtl').checked?'rtl':'ltr');if(typeof cubeTabMovesDraw==='function')cubeTabMovesDraw();if(dim0!=null&&$('#setCrossDim')){const d=+$('#setCrossDim').value;close();store.set('crossDim',d);drawMain();return;}close();};
   const keys=e=>{if(e.key==='Tab')return;e.stopPropagation();if(e.type!=='keydown')return;
     // Enter in Your data belongs to its box and its buttons.
     if(e.key==='Escape'){e.preventDefault();close();}else if(e.key==='Enter'&&!(e.target.closest&&e.target.closest('#setData'))){e.preventDefault();save();}};

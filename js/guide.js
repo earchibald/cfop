@@ -171,7 +171,7 @@ function gdEntryCards(){
   if(src==='screen')return card('virtual cube','A mixed-up virtual cube','The app mixes up the virtual cube, then tells you every move. The keyboard or the numeric keypad turns it.','<button class="primary" data-beg="screen" title="Mix up the virtual cube and solve it with the app">Mix it up and solve it →</button>')
     +card('a cube in your hands','Have a regular cube?','Change the cube in the top bar. The app then asks how to learn your cube.','<button data-gd="cube" title="Choose the cube: regular, virtual or smart">Change the cube</button>');
   if(src==='smart'){const live=typeof smartLive==='function'&&smartLive();
-    return card('smart cube',live?'Your smart cube is connected':'Connect your smart cube',live?'The app reads the cube. Use this cube starts the solve on it.':typeof smartHowWords==='function'?smartHowWords():'','<button class="primary" data-gd="smart" title="Open the smart cube window">'+(live?'Use this cube →':'Connect my cube →')+'</button>');}
+    return card('smart cube',live?'Your smart cube is connected':'Connect your smart cube',live?'The app has your cube. Turned it since? Use this cube reads it again.':typeof smartHowWords==='function'?smartHowWords():'','<button class="primary" data-gd="smart" title="'+(live?'Start the solve on your cube as it is now':'Look for your cube and connect it')+'">'+(live?'Use this cube →':'Connect my cube →')+'</button>');}
   const scanOk=pk.scan&&typeof openScan==='function',paintOk=typeof openPaint==='function';
   return card('new, or solved','It is solved','Mix it up with me. I say each turn, one at a time.','<button class="primary" data-beg="mix" title="The app says each turn of a mix-up, one at a time">Mix it up with me →</button>')
     +card('mixed up','It is mixed up',scanOk?'Show it to the app. The camera reads each face, or you paint the colors on a map.':`Show it to the app: paint the ${6*n*n} stickers on a map.`,
@@ -237,7 +237,7 @@ function gdRender(){
   on('#gdPrev',()=>gdGo(g.i-1));
   on('#gdShow',gdShowMe);
   on('[data-gd="cube"]',e=>{if(e)e.stopPropagation();if(typeof cubePopOpenNow==='function')cubePopOpenNow();});
-  on('[data-gd="smart"]',()=>{if(typeof smartLive==='function'&&smartLive()){if(typeof openSmart==='function')openSmart();}else if(typeof smartConnectNow==='function')smartConnectNow();});
+  on('[data-gd="smart"]',()=>{if(typeof smartLive==='function'&&smartLive()){const st=typeof cubeTab!=='undefined'&&cubeTab.target;if(st)scrambleFromCube(st,customName('smart'));else if(typeof openSmart==='function')openSmart();}else if(typeof smartConnectNow==='function')smartConnectNow();});
   on('#gdLesson',()=>{const e=g.parts[g.i];if(e&&typeof openLesson==='function')openLesson(e.stage.n);});
   root.querySelectorAll('#gdBar .stage').forEach(b=>b.onclick=()=>{
     if(!b.classList.contains('done'))return;const n=+b.dataset.n;const i=g.parts.findIndex(e=>e.stage.n===n);if(i>=0)gdGo(i);});

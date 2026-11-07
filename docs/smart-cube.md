@@ -242,6 +242,22 @@ the zoom are kept in `cw:smartCard`. Esc closes the card; a modal takes Esc
 first. `test/cubetab.js`, `test/smart-listen.js`, `test/smart-card.js`.
 
 
+Version 1.83.0 makes the connect one step. Before, a pick of Smart cube opened the dialog, Connect
+in the dialog opened the chooser, and after the connect the user pressed Use this cube or closed
+the dialog. Now a pick of Smart cube in the cube menu, Smart cube in the stage's cube question and
+the Connect my cube buttons call `smartConnectNow`, which looks as the lab opens: a cube connected
+before is taken with no click where the browser keeps it (`getDevices`), else the browser's chooser
+opens at once, on that click (`press` in `smartConnect` and `smartPick`), or the list over the
+bridge with a known cube taken as soon as it is heard. No dialog comes up. Once connected, the
+first state is the scramble (`liveConnected` in `js/live.js`; in the beginner method once, for the
+guided solve, `liveBegConnected`): the question "Use your cube as the scramble?" and its Settings
+box (`cw:smartAsk`) are gone. Connect in the menu and on the Connect card opens the chooser for
+another cube. The dialog is Options: the net, Read again, My cube is solved, Scan and Paint my
+cube, Use this cube by hand, Disconnect. Chrome keeps a cube across visits only with
+`chrome://flags/#enable-web-bluetooth-new-permissions-backend` on: where it has `getDevices` but
+kept none of the page's cubes, the Connect card says so and names the flag (`smartForgotHint`).
+`test/smart-auto.js`, `test/live.js`.
+
 Version 1.64.0 takes the tab away. A smart cube is one of the cubes of the page, as the virtual
 cube is: the cube on the stage in every CFOP section follows it (`js/live.js`), so the tab's large
 picture showed the same cube twice. What the tab added is one sheet in `#everyMore`, an Everywhere

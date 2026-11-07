@@ -12,6 +12,14 @@
 // Without Web Bluetooth, the page can reach a cube through the Twistwright app for macOS
 // (bridge.js): the app serves the page and the chooser is a list in this dialog. A Mac with
 // neither gets the download dialog instead.
+// The connect is one step (1.83.0): a pick of Smart cube in the cube menu, the stage's cube question
+// or a Connect my cube button calls smartConnectNow, which opens no dialog where the page can
+// connect. It looks as the lab does: a cube connected before (cw:labCubes) is taken with no click
+// where the browser keeps it (getDevices); else the browser's chooser opens at once, on that click,
+// or the list over the bridge. The Connect card of the smart cube sheet (cubetab.js) shows the look.
+// Once connected, the cube in your hands is the cube on the page (liveConnected, js/live.js):
+// nothing to press. This dialog is Options: the net, Read again, My cube is solved, Scan and Paint
+// my cube, Use this cube (the cube as the scramble again, by hand) and Disconnect.
 // Every change of the link goes out as a cw:smart event on document, for the smart cube sheet
 // (cubetab.js): {type:'connect',conn}, 'disconnect', 'gone', and each 'move', 'state', 'gyro'
 // and 'battery' message.
@@ -150,14 +158,16 @@ function openSmart(note){
   else if(smartMode()==='bridge')smartStatus('Press Connect, then choose your cube in the list.');
   else smartStatus('Press Connect, then choose your cube in the list that the browser shows.');
 }
-// Connect now, for a button that says so ("Connect my cube"): the dialog with the look already
-// begun, as a press of its Connect. Where the page cannot connect, the dialog (or the download).
+// Connect now, for a pick of Smart cube or a button that says so ("Connect my cube"): no dialog.
+// A cube connected before is taken with no click where the browser keeps it; else the chooser
+// opens at once, on this click (the browser needs one). Over the bridge, the list, with a known
+// cube taken as soon as it is heard. The look shows on the Connect card. Where the page cannot
+// connect, the dialog (or the download) says why.
 function smartConnectNow(){
-  openSmart();
+  if(smartConn)return;
   const m=smartMode();
-  if(smartConn||(m!=='bt'&&m!=='bridge')||!$('#smartBg'))return;
-  smartStatus(m==='bridge'?'Choose your cube in the list. Turn a face to wake it up.':'Choose your cube in the list that the browser shows.');
-  smartConnect();
+  if(m!=='bt'&&m!=='bridge'){openSmart();return;}
+  smartConnect({where:'tab',auto:true,press:true,why:'show'});
 }
 // A Mac that cannot connect: offer the Twistwright app for macOS, which opens this page itself.
 // Never in the app's own window: there the page connects.
@@ -275,20 +285,28 @@ function smartRemember(name,d){const m=smartKnown();m[name]=Object.assign(m[name
 function smartIsKnown(d,known){return !!(known[d.name]||Object.values(known).some(k=>k.id&&k.id===d.id));}
 // The look for a cube, as the lab does it: the chooser (the browser's own with Web Bluetooth, a
 // list over the bridge), or, with `known`, the look with no click, where a known cube is taken as
-// soon as it is heard. `where` is the place that shows the look: 'dialog' (this dialog) or 'tab'
+// soon as it is heard. `press`: a click backs the look (a pick of Smart cube, Connect), so where
+// the browser keeps no known cube the chooser opens at once, and the app may make macOS ask for
+// Bluetooth. `where` is the place that shows the look: 'dialog' (this dialog) or 'tab'
 // (the smart cube sheet, cubetab.js). One look at a time: smartLook {where, why, end}. `why` is
 // 'show' for the look the sheet starts while Smart cube is the cube (it ends when another is picked) and
 // 'drop' for the one after the link drops (it goes on wherever the user is).
 let smartLook=null,smartPickSeq=0;
-async function smartPick(known,where,why,seq){
-  if(navigator.bluetooth)return known?smartPickKnown(known,where,why,seq):ganPick();
+async function smartPick(known,where,why,seq,press){
+  if(navigator.bluetooth){
+    if(!known||!Object.keys(known).length)return ganPick();
+    const dev=await smartPickKnown(known,where,why,seq);
+    if(dev||!press)return dev;
+    if(seq!==smartPickSeq)throw Object.assign(new Error('cancelled'),{name:'NotFoundError'});
+    return ganPick(); // the click still backs the chooser
+  }
   const link=BRIDGE||await bridgeStart();
   if(!link)throw new Error('The Twistwright app is not running. Open it, then press Connect again.');
   if(link.bluetooth==='unauthorized')throw new Error('macOS did not allow Bluetooth for Twistwright. Allow it in System Settings › Privacy & Security › Bluetooth, then press Connect again.');
   if(link.bluetooth==='poweredOff')throw new Error('Bluetooth is off on this Mac. Turn it on, then press Connect again.');
   // The look with no click (known is set) does not make macOS ask for Bluetooth. A press does.
-  if(known&&link.bluetooth==='notAsked')throw Object.assign(new Error('not asked'),{name:'NotAsked'});
-  return smartList(link,known,where,why,seq,!!known);
+  if(known&&!press&&link.bluetooth==='notAsked')throw Object.assign(new Error('not asked'),{name:'NotAsked'});
+  return smartList(link,known,where,why,seq,!!known&&!press);
 }
 // The row of the look: a note, the cubes found as buttons (over the bridge) and Cancel, in the
 // dialog (#smartList) or the tab (#smartTabList). start(end, p) begins the look and returns what
@@ -338,10 +356,17 @@ function smartList(link,known,where,why,seq,auto){
 // browser has it), the known ones; the first heard advertising is taken. Where the browser cannot
 // listen, the first known one is taken at once and the link tried. null where the browser has no
 // getDevices or none of its cubes is known: then only Connect, a click, can open the chooser.
+// smartForgot: the browser has getDevices but kept none of the cubes this page connected. Chrome
+// keeps a cube across visits only with its persistent permissions on; the hint says how.
+let smartForgot=false;
+const SMART_FORGOT_HINT=' The browser did not keep your cube, so it asks each time. In Chrome, turn on chrome://flags/#enable-web-bluetooth-new-permissions-backend and connect once more: then the cube connects with no click.';
+function smartForgotHint(){return smartForgot&&smartMode()==='bt'?SMART_FORGOT_HINT:'';}
 async function smartPickKnown(known,where,why,seq){
   const bt=navigator.bluetooth;
-  if(typeof bt.getDevices!=='function')return null;
+  smartForgot=false;
+  if(typeof bt.getDevices!=='function'||!Object.keys(known).length)return null;
   const devs=(await bt.getDevices()).filter(d=>smartIsKnown(d,known));
+  smartForgot=!devs.length;
   if(!devs.length)return null;
   if(devs.some(d=>typeof d.watchAdvertisements!=='function'))return devs[0];
   return smartRow(smartLookNote(devs.map(d=>d.name)),where,why,seq,end=>{
@@ -362,10 +387,12 @@ function smartCanLook(){
 function smartAuto(why){if(smartCanLook())smartConnect({auto:true,where:'tab',why:why||'show'});}
 // What a look says: in the dialog, its status line; in the sheet, a cw:smart 'look' event.
 function smartSay(where,t){if(where==='dialog')smartStatus(t);else smartNotify({type:'look',text:t});}
-// o.where: the place that shows the look ('dialog' by default, or 'tab'). o.auto: the look with no
-// click (smartAuto). A press of Connect while a look runs ends that look and starts the chooser.
+// o.where: the place that shows the look ('dialog' by default, or 'tab'). o.auto: a known cube is
+// taken with no click (smartAuto). o.press: a click backs the look (smartConnectNow: a known cube
+// by itself, else the chooser). With neither, a press of Connect: the chooser. A press while a look
+// runs ends that look.
 async function smartConnect(o){
-  o=o||{};const auto=!!o.auto;let where=o.where||'dialog';
+  o=o||{};const auto=!!o.auto,press=!!o.press||!auto;let where=o.where||'dialog';
   if(smartBusy||smartConn||!ganAvailable())return;
   smartLookStop();
   const seq=++smartPickSeq,why=o.why||'show';
@@ -374,11 +401,11 @@ async function smartConnect(o){
   // this look.
   const hold={where,why,end:()=>{if(smartLook===hold)smartLook=null;smartPickSeq++;}};smartLook=hold;
   let device;
-  try{device=await smartPick(auto?smartKnown():null,where,why,seq);}
-  catch(e){if(smartLook===hold)smartLook=null;if(seq===smartPickSeq)smartSay(where,e.name==='NotAsked'?'Press Connect to look for your cube.':e.name==='NotFoundError'?(auto?'Press Connect to look for your cube again.':'No cube was chosen. Turn the cube to wake it up, then press Connect again.'):'Bluetooth did not start: '+e.message);return;}
+  try{device=await smartPick(auto?smartKnown():null,where,why,seq,press);}
+  catch(e){if(smartLook===hold)smartLook=null;if(seq===smartPickSeq)smartSay(where,e.name==='NotAsked'?'Press Connect to look for your cube.':e.name==='NotFoundError'?(press?'No cube was chosen. Turn the cube to wake it up, then press Connect again.':'Press Connect to look for your cube again.'):'Bluetooth did not start: '+e.message);return;}
   if(smartLook===hold)smartLook=null;
   if(seq!==smartPickSeq||smartConn||smartBusy)return;
-  if(!device){smartSay(where,'Press Connect, then choose your cube in the list that the browser shows.');return;}
+  if(!device){smartSay(where,'Press Connect, then choose your cube in the list that the browser shows.'+smartForgotHint());return;}
   const name=device.name||'GAN cube';
   smartBusy=true;smartButtons();
   // The app reads the address from the advertisement (device.mac); a saved one is the next best.
@@ -388,7 +415,7 @@ async function smartConnect(o){
     if(!mac){
       smartBusy=false;smartButtons();
       // The address is typed in the dialog. The look with no click does not open it.
-      if(auto){smartSay(where,`Press Connect to connect ${smartNiceName(name)}.`);return;}
+      if(!press){smartSay(where,`Press Connect to connect ${smartNiceName(name)}.`);return;}
       if(where==='tab'){where='dialog';openSmart();}
       if(!$('#smartBg'))return;
       mac=await smartAskMac(name);typed=true;
@@ -407,7 +434,7 @@ async function smartConnect(o){
       conn.close();
       if(e.code!=='badmac'&&e.code!=='timeout'){smartBusy=false;smartButtons();smartSay(where,'The cube did not answer: '+e.message);return;}
       smartSaveMac(name,null);smartRemember(name,{mac:null});
-      if(auto){smartBusy=false;smartButtons();smartSay(where,`${smartNiceName(name)} did not answer. Press Connect to try again.`);return;}
+      if(!press){smartBusy=false;smartButtons();smartSay(where,`${smartNiceName(name)} did not answer. Press Connect to try again.`);return;}
       smartSay(where,typed?'The cube did not answer. Check the MAC address, then try again.':`The cube did not answer. Type the MAC address of ${name}.`);
       mac=null; // ask for it
     }
@@ -432,8 +459,8 @@ async function smartRead(quiet){
 }
 function smartGot(cube){
   smartCube=cube;smartDraw();smartButtons();
-  smartStatus(cube.isSolved()?'The cube is solved. Press Use this cube to start from here, or mix it up first: the net follows each turn.'
-    :'Check the net against your cube: white up, green front. If it matches, press Use this cube.');
+  smartStatus(cube.isSolved()?'The cube is solved. The page has it. Mix it up: the net follows each turn.'
+    :'The page has your cube. Check the net against it, white up, green front. If it does not match, press My cube is solved, or scan or paint your cube.');
 }
 async function smartSolved(){
   if(!smartConn||smartBusy)return;

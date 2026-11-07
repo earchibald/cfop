@@ -193,7 +193,7 @@ async function pageNative(){
   assert.deepStrictEqual(errs,[],'no script errors');
   // The app answers hello late, as at launch (boot waits 400 ms; hello takes 1500). The page is
   // in the app all the same: no download, the plain dialog with Connect on, and Connect my cube
-  // (smartConnectNow) lists the cube once the app answers.
+  // (smartConnectNow) lists the cube on the Connect card once the app answers, with no dialog (1.83.0).
   const dev2=fakeDevice(4,MAC,cube,{name:'GAN-7F3C'});
   const late=fakeNative([{id:'p1',gen:4,dev:dev2,mac:MAC}],{helloDelay:1500});
   const b=await boot({native:late,platform:'MacIntel'});
@@ -207,11 +207,11 @@ async function pageNative(){
   assert.ok(!/cannot use Bluetooth/.test($b('#smartStatus').textContent),$b('#smartStatus').textContent);
   b.w.closeSmart();
   b.w.smartConnectNow();
-  assert.ok($b('#smartBg')&&/Choose your cube in the list\./.test($b('#smartStatus').textContent),'Connect my cube: the dialog says to choose: '+$b('#smartStatus').textContent);
-  assert.ok(await until(()=>!$b('#smartList').classList.contains('hidden'),3000),'the list comes up when the app answers');
-  assert.ok(await until(()=>!!$b('#smartListItems button')&&$b('#smartListItems button').dataset.mac===MAC,3000),'the cube is listed once the app answers');
-  $b('#smartListItems button').dispatchEvent(new b.w.MouseEvent('click',{bubbles:true}));
-  assert.ok(await until(()=>!$b('#smartUse').disabled,3000),'connected: '+$b('#smartStatus').textContent);
+  assert.ok(!$b('#smartBg'),'Connect my cube: no dialog; the look shows on the Connect card');
+  assert.ok(await until(()=>!$b('#smartTabList').classList.contains('hidden'),3000),'the list comes up on the card when the app answers');
+  assert.ok(await until(()=>!!$b('#smartTabListItems button')&&$b('#smartTabListItems button').dataset.mac===MAC,3000),'the cube is listed once the app answers');
+  $b('#smartTabListItems button').dispatchEvent(new b.w.MouseEvent('click',{bubbles:true}));
+  assert.ok(await until(()=>!!b.w.eval('smartConn'),3000),'connected');assert.ok(!$b('#smartBg'),'with no dialog');
   assert.deepStrictEqual(b.errs,[],'no script errors');
   console.log('bridge window ok');
 }
