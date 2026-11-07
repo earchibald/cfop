@@ -242,3 +242,11 @@ body.sv.svmax[data-cube="none"] #svCol .svsheet:not(.hidden){display:block!impor
 body.sv.svmax[data-cube="none"] #svCol .svghost:not([hidden]){display:flex!important}
 body.sv.svmax[data-cube="none"] .svtabs{display:none}
 @media (prefers-reduced-motion:reduce){body.sv :is(#svTR,#svTabs){transition:none}}
+
+/* ---- Fullscreen (js/app.js, #fullBtn, F): the cube alone on the screen ---- */
+#svActs .fullbtn .hk{display:inline-block}
+body.sv.fullcube :is(.top,.foot){display:none!important}
+body.sv.fullcube:not([data-cube="none"]) :is(nav#rail,#svBadge,#svTR,#svCol,#svTabs){display:none!important}
+body.sv.fullcube .wrap,body.sv.svmax.fullcube .wrap{--svcol:0px;--svleft:16px}
+body.sv.fullcube #player .cubebox svg#cube,body.sv.fullcube[data-svfocus] #player .cubebox svg#cube{top:24px;left:16px;width:calc(100% - 32px);height:calc(100% - 100px)}
+body.sv.fullcube .cubebox .viewbtns{right:16px;top:16px}

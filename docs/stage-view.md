@@ -27,7 +27,7 @@ was. `?classic` in the address turns it off for one visit. Settings > Layout tur
 | Top left | The rail: each section with its color and its key |
 | Beside the rail | The step badge: the section, and Scramble Info (a dot while the player shows a drill) |
 | Top right of the cube | Scan or paint (a regular cube only) and Undo; the hold (Top, Front, Net) under them. None on Reference |
-| Bottom left | The action bar: the cube source (a click opens the cube menu), Animate, Hidden faces, Virtual cube, Cross Trainer (the Cross section only, `docs/cross-drill.md`), Save image |
+| Bottom left | The action bar: the cube source (a click opens the cube menu), Animate, Hidden faces, Virtual cube, Cross Trainer (the Cross section only, `docs/cross-drill.md`), Save image, Fullscreen (F: the browser's fullscreen with `body.fullcube`, the cube alone on the screen; the top bar, the rail, the badge and the column go, a floating sheet, the timer's clock and a window stay) |
 | Right third | The column: Current Moves when there are some, the sheets of the section, then Everywhere (Your moves, Timer, Smart cube while a smart cube is the cube, CFOP plan, Weak spots for level 5) |
 | Top bar, after the cube chip | Maximize Cube (Minimize Cube while on) |
 | Center | The big moment: the inspection count, the clock, Solved! |
