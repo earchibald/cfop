@@ -533,7 +533,7 @@ function startQuizTimer(){const Q=START.quiz;if(!Q||Q.mode!=='do')return;
 // Where each track lands.
 function startEnd(where){
   if(where==='beg'){START.level=START.level||1;startMark(['beg-0'],'finished');startFinish('beginner','learn');return;}
-  if(where==='cross'){startFinish('cfop','cross',()=>{store.set('crossLesson',0);if(typeof crossLessonShow==='function')crossLessonShow(0);});return;}
+  if(where==='cross'){startFinish('cfop','cross',()=>{if(typeof crossLessonGo==='function')crossLessonGo(0);else store.set('crossLesson',0);});return;}
   if(where==='menu'){startFinish('cfop','cross',()=>setTimeout(openMethodPop,50));return;}
   if(where==='ll'){startFinish('cfop','ll',()=>{if(typeof llShowSet==='function')llShowSet('left');});return;}
   if(where==='timer'){startSaveFive();startFinish('cfop','cross',()=>{if(START.src==='smart')smartConnectNow();if(typeof timerHomeApply==='function')timerHomeApply();});return;}

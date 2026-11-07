@@ -226,12 +226,10 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   $('#start [data-check="cfop"]').click();assert.strictEqual($('#start').dataset.screen,'t3-bridge');
   assert.strictEqual(st()['beg-1'],'finished');assert.strictEqual(st()['beg-7'],'learning');assert.ok(!st()['beg-8'],'Not yet stays not started');
   $('#start [data-finish="cross"]').click();
-  assert.strictEqual(d.body.dataset.tab,'cross');assert.ok($('#crossLesson'),'the Cross tab opens on its first lesson');
+  assert.strictEqual(d.body.dataset.tab,'cross');assert.ok($('#crossLesson')&&!$('#crossLesson .cl-part[data-part="0"]').hidden,'the Cross tab opens on its first lesson, Find');
   assert.strictEqual(d.body.dataset.cube,'side','the cube is beside the Cross tab');
-  $('#crossLesson [data-part="2"]').click();assert.ok($('#crossLessonReveal'),'Do it offers the moves');
-  assert.ok($('#crossLesson #crossTry'),'and holds Check my plan');assert.ok($('#crossPlan').classList.contains('hidden'),'its sheet hides meanwhile');
-  $('#crossLessonEnd').click();assert.ok(!$('#crossLesson'),'the lesson closes');
-  assert.ok($('#crossPlan #crossTry')&&!$('#crossPlan').classList.contains('hidden'),'Check my plan is back in its sheet');
+  $('#crossLesson [data-part="2"]').click();const doit=$('#crossLesson .cl-part[data-part="2"]');assert.ok(!doit.hidden&&doit.querySelector('#crossReveal')&&doit.querySelector('#crossTry'),'Do it: Check my plan and Reveal the moves');
+  assert.strictEqual(w.eval("store.get('crossLesson',0)"),2,'the part is kept');assert.ok(!$('#crossLessonEnd'),'no Close: the lesson is the Cross tab');
   w.goTab('ref');assert.strictEqual(d.body.dataset.cube,'none','no cube on Reference');
   assert.ok(!$('#rail button[data-tab="solve"]')&&!$('#tab-solve'),'no Scramble tab');
   assert.strictEqual($('#rail button[data-tab="cross"] .k').textContent,'1','Cross is section 1');

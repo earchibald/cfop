@@ -1077,7 +1077,6 @@ body:not(.sv) .cubebox .f2lstyle button{border-radius:9px}
 body:not(.sv)[data-method="cfop"]:is([data-tab="cross"],[data-tab="f2l"]) .cubebox .draghint{left:50%;bottom:12px;transform:translateX(-50%)}
 body:not(.sv)[data-method="cfop"]:is([data-tab="cross"],[data-tab="f2l"]) .cubebox .draghint span{display:none}
 /* Find the edges: the row under the cross plans; a miss shakes the cube */
-.crossfind{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .crossfind #crossFindOut{margin-top:6px}
 .crossfind #crossFindOut b{color:var(--text)}
 #cube.cfmiss{animation:cfmiss .28s}

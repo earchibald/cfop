@@ -171,35 +171,44 @@
     <button data-tab="cheat" data-sec="cheat" title="Every algorithm of the method on one page"><span class="k">5</span><i class="sec-sq"></i>Cheat sheet</button>
   </nav>
   <main class="main">
-    <!-- CROSS: the first lesson (js/start-app.js, crossLessonShow) goes in front of these while it is open, and its Do it part takes the Check my plan box -->
+    <!-- CROSS: the first lesson is the section (js/start-app.js: crossLessonShow shows one part, cw:crossLesson keeps it), then What to look for (js/crosslook.js) -->
     <section class="tab on" id="tab-cross" data-sec="cross">
-      <div class="panel" id="crossLook">
-        <h2>What to look for</h2>
-        <div id="crossTips"></div>
-      </div>
-      <div class="panel" id="crossPlan">
-        <h2>Check my plan</h2>
-        <div id="crossPlanBox">
-          <p class="muted">Type the moves you would use, or make them on the cube. The check says if the cross is solved, how many moves you used, and the gap to optimal.</p>
-          <div class="row"><input id="crossTry" class="mono" style="flex:1;min-width:220px" placeholder="e.g. F2 D' R L' F" title="Type your own cross moves to check them"><button id="crossCheck" title="Does this make the cross? How does it compare with the best?">Check</button></div>
-          <div id="crossTryOut" style="margin-top:8px"></div>
-        </div>
-      </div>
-      <div class="panel" id="crossDrill">
-        <h2>Cross drill</h2>
-        <p class="muted">Each scramble is made for the cross. Pick a length: the best cross takes exactly that many moves. Find the four cross edges, plan the cross in your head, then solve it and check against every optimal solution.</p>
+      <div class="panel crosslesson" id="crossLesson">
+        <h2>Cross <span class="tag">First lesson</span></h2>
         <div class="row">
           <button class="primary" id="crossNew" title="A new scramble to train the cross on">New cross scramble<span class="hk" aria-hidden="true">N</span></button>
           <label title="How many moves the best cross takes">Length <select id="crossDiff"><option value="any">any</option><option value="easy">easy (≤5)</option><option value="hard">hard (≥7)</option><option value="2">2 moves</option><option value="3">3 moves</option><option value="4">4 moves</option><option value="5">5 moves</option><option value="6">6 moves</option><option value="7">7 moves</option><option value="8">8 moves</option></select></label>
-          <button id="crossReveal" title="Show the best cross plans, one move at a time">Reveal<span class="hk" aria-hidden="true">H</span></button>
-          <label style="font-size:14px" title="Also list the plans one move longer than the best"><input type="checkbox" id="crossPlus1"> include 1-move-longer plans</label>
         </div>
-        <div class="row" style="margin-top:10px"><span>Optimal length: <b class="big" id="crossOpt">—</b></span><span class="muted" id="crossCount"></span></div>
-        <div id="crossSols" style="margin-top:8px"></div>
-        <div class="crossfind">
-          <div class="row"><button id="crossFindBtn" title="Click the four cross edges on the cube as fast as you can. A clock times you">Find the edges</button><label style="font-size:14px" title="Start Find the edges with each new cross scramble"><input type="checkbox" id="crossFindAuto"> with each scramble</label></div>
-          <div id="crossFindOut" class="muted" aria-live="polite">Find the four cross edges on the cube: a click on each. Drag the cube to see its back.</div>
+        <div class="st-seg" role="group" aria-label="The parts of the lesson"><button type="button" data-part="0" aria-pressed="true" title="Find the four white edges">1 · Find</button><button type="button" data-part="1" aria-pressed="false" title="Plan the cross in inspection">2 · Plan</button><button type="button" data-part="2" aria-pressed="false" title="Make the cross in one go">3 · Do it</button></div>
+        <div class="cl-part" data-part="0">
+          <p><b>Find the four white edges.</b> Hold it yellow up. Look at the top and the sides. The lit stickers are white edges. Count them: four.</p>
+          <button class="small" id="crossLessonLight" title="Light the white edges on the cube">Light the white edges</button>
+          <div class="cl-box crossfind">
+            <span class="st-lbl">Find the edges</span>
+            <div class="row"><button id="crossFindBtn" title="Click the four cross edges on the cube as fast as you can. A clock times you">Find the edges</button><label style="font-size:14px" title="Start Find the edges with each new cross scramble"><input type="checkbox" id="crossFindAuto"> with each scramble</label></div>
+            <div id="crossFindOut" class="muted" aria-live="polite">Find the four cross edges on the cube: a click on each. Drag the cube to see its back.</div>
+          </div>
         </div>
+        <div class="cl-part" data-part="1" hidden>
+          <p><b>Plan it before you turn.</b> You get 15 seconds to look. Pick the first two edges, and see where they go. Turn the cube in your hands, not the faces.</p>
+        </div>
+        <div class="cl-part" data-part="2" hidden>
+          <p><b>Make the cross in one go.</b> Turn it white side down. Make all four edges without a stop. Check my plan says how it went.</p>
+          <div class="cl-box" id="crossPlanBox">
+            <span class="st-lbl">Check my plan</span>
+            <p class="muted">Type the moves you would use, or make them on the cube. The check says if the cross is solved, how many moves you used, and the gap to optimal.</p>
+            <div class="row"><input id="crossTry" class="mono" style="flex:1;min-width:220px" placeholder="e.g. F2 D' R L' F" title="Type your own cross moves to check them"><button id="crossCheck" title="Does this make the cross? How does it compare with the best?">Check</button></div>
+            <div id="crossTryOut"></div>
+          </div>
+          <p>Stuck? Reveal shows the shortest crosses, one move at a time.</p>
+          <div class="row"><button class="small primary" id="crossReveal" title="Show the best cross plans, one move at a time. A second press hides them">Reveal the moves<span class="hk" aria-hidden="true">H</span></button><label style="font-size:14px" title="Also list the plans one move longer than the best"><input type="checkbox" id="crossPlus1"> include 1-move-longer plans</label></div>
+          <div class="row"><span>Optimal length: <b class="big" id="crossOpt">—</b></span><span class="muted" id="crossCount"></span></div>
+          <div id="crossSols"></div>
+        </div>
+      </div>
+      <div class="panel" id="crossLook">
+        <h2>What to look for</h2>
+        <div id="crossTips"></div>
       </div>
     </section>
     <!-- F2L -->
