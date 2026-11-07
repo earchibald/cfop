@@ -3,6 +3,9 @@
 The Cross tab of CFOP trains the cross. The owner asked for a way to drill it: scrambles made for
 cross practice, and help to find and pick out the four cross edges faster. Built in 1.66.0.
 
+The Cross tab since 1.81: the first lesson on top while it is open (`js/start-app.js`; its Do it
+part holds Check my plan), then What to look for, Check my plan and the Cross drill sheet.
+
 ## Length: scrambles made for the cross
 
 The Cross drill sheet (it was Cross tuning) has a Length menu: any, easy (5 moves or fewer), hard (7

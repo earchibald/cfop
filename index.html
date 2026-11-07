@@ -171,15 +171,21 @@
     <button data-tab="cheat" data-sec="cheat" title="Every algorithm of the method on one page"><span class="k">5</span><i class="sec-sq"></i>Cheat sheet</button>
   </nav>
   <main class="main">
-    <!-- CROSS -->
+    <!-- CROSS: the first lesson (js/start-app.js, crossLessonShow) goes in front of these while it is open, and its Do it part takes the Check my plan box -->
     <section class="tab on" id="tab-cross" data-sec="cross">
-      <div class="panel">
-        <h2>Check my plan</h2>
-        <p class="muted">Type the moves you would use. The checker applies them to the scramble and tells you if the cross is solved, how many moves you used, and the gap to optimal.</p>
-        <div class="row"><input id="crossTry" class="mono" style="flex:1;min-width:220px" placeholder="e.g. F2 D' R L' F" title="Type your own cross moves to check them"><button id="crossCheck" title="Does this make the cross? How does it compare with the best?">Check</button></div>
-        <div id="crossTryOut" style="margin-top:8px"></div>
+      <div class="panel" id="crossLook">
+        <h2>What to look for</h2>
+        <div id="crossTips"></div>
       </div>
-      <div class="panel">
+      <div class="panel" id="crossPlan">
+        <h2>Check my plan</h2>
+        <div id="crossPlanBox">
+          <p class="muted">Type the moves you would use, or make them on the cube. The check says if the cross is solved, how many moves you used, and the gap to optimal.</p>
+          <div class="row"><input id="crossTry" class="mono" style="flex:1;min-width:220px" placeholder="e.g. F2 D' R L' F" title="Type your own cross moves to check them"><button id="crossCheck" title="Does this make the cross? How does it compare with the best?">Check</button></div>
+          <div id="crossTryOut" style="margin-top:8px"></div>
+        </div>
+      </div>
+      <div class="panel" id="crossDrill">
         <h2>Cross drill</h2>
         <p class="muted">Each scramble is made for the cross. Pick a length: the best cross takes exactly that many moves. Find the four cross edges, plan the cross in your head, then solve it and check against every optimal solution.</p>
         <div class="row">
@@ -194,10 +200,6 @@
           <div class="row"><button id="crossFindBtn" title="Click the four cross edges on the cube as fast as you can. A clock times you">Find the edges</button><label style="font-size:14px" title="Start Find the edges with each new cross scramble"><input type="checkbox" id="crossFindAuto"> with each scramble</label></div>
           <div id="crossFindOut" class="muted" aria-live="polite">Find the four cross edges on the cube: a click on each. Drag the cube to see its back.</div>
         </div>
-      </div>
-      <div class="panel">
-        <h3>What to look for</h3>
-        <div id="crossTips"></div>
       </div>
     </section>
     <!-- F2L -->

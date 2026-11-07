@@ -44,7 +44,7 @@ frames, read 2026-10-27). This branch builds it into the site as a first pass. E
 | 3.1 How do you solve it now? | `t3-start` | Some CFOP goes to 4.1. |
 | 3.2 Check off what you know | `t3-check` | Can do it → finished, Shaky → learning, on `beg-0`…`beg-8`. "From memory" starts all on Can do it. |
 | 3.3 Beginner steps, in CFOP | `t3-bridge` | |
-| 3.4 First CFOP lesson: the cross | `crossLessonShow` | A panel on top of the Cross tab: Find (lights the white edges on the cube), Plan, Do it (Reveal). `cw:crossLesson` keeps the part; Close the lesson ends it. |
+| 3.4 First CFOP lesson: the cross | `crossLessonShow` | A panel on top of the Cross tab: Find (lights the white edges on the cube), Plan, Do it (Check my plan, its box moved in from its own sheet, then Reveal). `cw:crossLesson` keeps the part; Close the lesson ends it, and Check my plan goes back to its sheet. Under the lesson (1.81): What to look for, Check my plan, the Cross drill. |
 | 4.1 Which sets do you know? | `t4-sets`, `START_SETS` | By-feel sets and the full OLL (not in the site) go to `cw:known`. |
 | 4.2 Pick the cases | `t4-cases` | Real top-view pictures. F2L, two-look OLL, two-look PLL and the full PLL. |
 | 4.3 Quiz | `t4-quiz` | Up to ten Learned last-layer cases, real pictures. Name it: four choices. Do it: the setup moves and a timer. A miss sets the case to learning. |

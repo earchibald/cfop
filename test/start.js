@@ -229,7 +229,9 @@ const key=(w,d,code,shift)=>d.querySelector('#start h1')?d.querySelector('#start
   assert.strictEqual(d.body.dataset.tab,'cross');assert.ok($('#crossLesson'),'the Cross tab opens on its first lesson');
   assert.strictEqual(d.body.dataset.cube,'side','the cube is beside the Cross tab');
   $('#crossLesson [data-part="2"]').click();assert.ok($('#crossLessonReveal'),'Do it offers the moves');
+  assert.ok($('#crossLesson #crossTry'),'and holds Check my plan');assert.ok($('#crossPlan').classList.contains('hidden'),'its sheet hides meanwhile');
   $('#crossLessonEnd').click();assert.ok(!$('#crossLesson'),'the lesson closes');
+  assert.ok($('#crossPlan #crossTry')&&!$('#crossPlan').classList.contains('hidden'),'Check my plan is back in its sheet');
   w.goTab('ref');assert.strictEqual(d.body.dataset.cube,'none','no cube on Reference');
   assert.ok(!$('#rail button[data-tab="solve"]')&&!$('#tab-solve'),'no Scramble tab');
   assert.strictEqual($('#rail button[data-tab="cross"] .k').textContent,'1','Cross is section 1');

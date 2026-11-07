@@ -43,20 +43,33 @@ function begCfopCard(){const sec=$('#tab-progress');if(!sec)return;const body=se
 const CROSS_LESSON=[
   {label:'1 · Find',tip:'Find the four white edges',head:'Find the four white edges.',text:'Hold it yellow up. Look at the top and the sides. The lit stickers are white edges. Count them: four.'},
   {label:'2 · Plan',tip:'Plan the cross in inspection',head:'Plan it before you turn.',text:'You get 15 seconds to look. Pick the first two edges, and see where they go. Turn the cube in your hands, not the faces.'},
-  {label:'3 · Do it',tip:'Make the cross in one go',head:'Make the cross in one go.',text:'Turn it white side down. Make all four edges without a stop. Stuck? Reveal shows the shortest crosses, one move at a time.'}];
+  {label:'3 · Do it',tip:'Make the cross in one go',head:'Make the cross in one go.',text:'Turn it white side down. Make all four edges without a stop. Check my plan says how it went.'}];
+// The Cross tab under the lesson: What to look for, then Check my plan, then the Cross drill
+// (index.html). Check my plan's box (#crossPlanBox: the moves, Check and the answer; app.js checks
+// it, live.js fills it from the cube) is one element, bound by id, so it moves: into the Do it part
+// while the lesson shows that part, and back to its own sheet (#crossPlan, hidden meanwhile) on
+// another part, Close the lesson or the beginner method.
+function crossPlanHome(){const box=$('#crossPlanBox'),panel=$('#crossPlan');if(!box||!panel)return;
+  if(box.parentElement!==panel)panel.append(box);panel.classList.remove('hidden');}
+function crossPlanToLesson(){const box=$('#crossPlanBox'),panel=$('#crossPlan'),slot=$('#crossLessonPlan');if(!box||!panel||!slot)return;
+  slot.append(box);panel.classList.add('hidden');}
 function crossLessonShow(part){const sec=$('#tab-cross');if(!sec)return;const body=sec;let el=$('#crossLesson');
+  crossPlanHome(); // never inside the lesson while it is written or removed
   if(part==null||method!=='cfop'){if(el)el.remove();return;}
   if(!el){el=document.createElement('section');el.id='crossLesson';el.className='panel crosslesson';body.prepend(el);}
   const p=CROSS_LESSON[part];
   el.innerHTML=`<div class="row" style="justify-content:space-between"><h2>Cross <span class="tag">First lesson</span></h2><button class="small ghost" id="crossLessonEnd" title="Close the lesson. The Cross tab stays as it is">Close the lesson</button></div>
     <div class="st-seg" role="group" aria-label="The parts of the lesson">${CROSS_LESSON.map((x,i)=>`<button data-part="${i}" aria-pressed="${i===part}" title="${esc(x.tip)}">${esc(x.label)}</button>`).join('')}</div>
     <p><b>${esc(p.head)}</b> ${esc(p.text)}</p>
-    ${part===0?`<button class="small" id="crossLessonLight" title="Light the white edges on the cube">Light the white edges</button>`:''}${part===2?`<button class="small primary" id="crossLessonReveal" title="Reveal the shortest crosses under the spoiler rule">Reveal the moves</button>`:''}
-    <p class="muted" style="margin:0">The Cross tab's drills (every solution, by length) follow below.</p>`;
+    ${part===0?`<button class="small" id="crossLessonLight" title="Light the white edges on the cube">Light the white edges</button>`:''}${part===2?`<div class="cl-check"><span class="st-lbl">Check my plan</span><div id="crossLessonPlan"></div></div>
+    <p>Stuck? Reveal shows the shortest crosses, one move at a time, in the Cross drill below.</p><button class="small primary" id="crossLessonReveal" title="Reveal the shortest crosses under the spoiler rule">Reveal the moves</button>`:''}
+    <p class="muted" style="margin:0">What to look for is below: the patterns a short cross comes from. Then the Cross drill.</p>`;
+  if(part===2)crossPlanToLesson();
   el.querySelectorAll('[data-part]').forEach(b=>b.onclick=()=>{store.set('crossLesson',+b.dataset.part);crossLessonShow(+b.dataset.part);});
   $('#crossLessonEnd').onclick=()=>{store.set('crossLesson',null);crossLessonShow(null);};
   const lt=$('#crossLessonLight');if(lt)lt.onclick=()=>crossLessonLight();
-  const rv=$('#crossLessonReveal');if(rv)rv.onclick=()=>{if(!crossState.revealed)$('#crossReveal').click();focusPlayer();};
+  // The plans show in the Cross drill sheet, below: they come into view.
+  const rv=$('#crossLessonReveal');if(rv)rv.onclick=()=>{if(!crossState.revealed)$('#crossReveal').click();focusPlayer();const sl=$('#crossSols');if(sl&&sl.scrollIntoView)sl.scrollIntoView({block:'nearest',behavior:'smooth'});};
   if(part===0&&curTab==='cross')crossLessonLight();}
 // The white edges of the cube in view, both stickers of each, lit and lifted out with the button in
 // one short bump (CROSS_LIGHT_T.bump ms); they stay lit for CROSS_LIGHT_T.stay ms, then the cube

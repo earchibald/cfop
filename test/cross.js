@@ -54,6 +54,18 @@ w.addEventListener('load',async()=>{try{
   assert.ok(lt.classList.contains('bumping'),'the button bumps');
   await sleep(90);assert.ok(!lt.classList.contains('bumping'),'the bump ends');assert.ok(w.eval('fadeSet'),'still lit');
   await sleep(120);assert.strictEqual(w.eval('fadeSet'),null,'then the cube as it was');
+  // The Cross tab (1.81): the lesson first while it shows, then What to look for, Check my plan, the Cross drill.
+  assert.deepStrictEqual($$('#tab-cross>.panel').map(p=>p.querySelector('h2').textContent.replace(/\s+/g,' ').trim()),['Cross First lesson','What to look for','Check my plan','Cross drill'],'the order of the Cross tab');
+  // Do it takes the Check my plan box, one element; another part, or Close the lesson, puts it back in its sheet.
+  $('#crossTry').value='D2';
+  w.eval('crossLessonShow(2)');assert.ok($('#crossLesson .cl-check #crossPlanBox')&&$('#crossLesson #crossTry'),'Do it holds Check my plan');
+  assert.ok($('#crossPlan').classList.contains('hidden'),'its sheet hides meanwhile');assert.ok(/Check my plan/.test($('#crossLesson .cl-check').textContent),'with its label');
+  assert.strictEqual($('#crossTry').value,'D2','the same box: the moves typed stay');
+  w.eval('crossState.revealed=false;refreshCross()');click($('#crossLessonReveal'));assert.ok($$('#crossSols .sol').length>0,'Reveal the moves in Do it reveals the plans in the Cross drill');
+  w.eval('crossLessonShow(1)');assert.ok($('#crossPlan>#crossPlanBox')&&!$('#crossPlan').classList.contains('hidden'),'Plan: the box is back in its sheet');
+  w.eval('crossLessonShow(2)');click($('#crossLessonEnd'));assert.ok(!$('#crossLesson'),'Close the lesson');
+  assert.ok($('#crossPlan>#crossPlanBox')&&!$('#crossPlan').classList.contains('hidden'),'and the box is back in its sheet');$('#crossTry').value='';
+  assert.deepStrictEqual($$('#tab-cross>.panel').map(p=>p.querySelector('h2').textContent),['What to look for','Check my plan','Cross drill'],'the order with no lesson');
   w.eval("store.set('crossLesson',null);crossLessonShow(null)");
   // What to look for: every demo plan makes the cross from its setup; a plan with no parts is
   // optimal; the parts join to the Together plan; the pair plan puts the FR pair in.
@@ -77,5 +89,5 @@ w.addEventListener('load',async()=>{try{
   // Show all moves uncovers every line.
   w.eval('setRefAll')(true);assert.ok(d.body.classList.contains('refall'));w.eval('setRefAll')(false);
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('cross: Reveal lists the plans, one per line, under the spoiler rule; Step through puts a plan on the cube ok');process.exit(0);
+  console.log('cross: Reveal lists the plans, one per line, under the spoiler rule; Step through puts a plan on the cube; the lesson\'s Do it holds Check my plan ok');process.exit(0);
 }catch(e){console.error('cross: FAIL',e.message,errs);process.exit(1);}});
