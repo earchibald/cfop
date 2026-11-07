@@ -75,9 +75,10 @@ function cubePolys(facelets,opts={}){
     // are still counted from the negative end.
     if(cam(nv.map(Math.abs))[2]<0)slabs.reverse();}
   const k=nv.findIndex(v=>v!==0);const polys=[];
-  // lift: {set, t, d, dir}: each piece with a sticker in set (54 indices) moves out from the cube by d·t
+  // lift: {set, t, d, dir, g, dim}: each piece with a sticker in set (54 indices) moves out from the cube by d·t
   // cubie widths (0.55 by default; along dir, a unit vector, when given: a layer moves as one), drawn over it as a box of its own with a glow behind it. Its
-  // place shows the plastic, and the other stickers dim as t grows. 3×3 only, not in a part turn.
+  // place shows the plastic, and the other stickers dim as t grows (by dim·t, 0.45 by default). The
+  // glow shows at g (t by default): a soft glow keeps g low. 3×3 only, not in a part turn.
   const lift=opts.lift&&opts.lift.t>0&&n===3&&!(opts.move&&opts.t)?opts.lift:null;
   const cubieOf=idx=>{const g=FACE_GEOM[Math.floor(idx/9)],p=idx%9;return [0,1,2].map(t=>g.n[t]+g.r[t]*(p%3-1)+g.d[t]*(Math.floor(p/3)-1));};
   const lifted=new Map();if(lift)for(const i of lift.set)lifted.set(cubieOf(i).join(),[]);
@@ -101,7 +102,7 @@ function cubePolys(facelets,opts={}){
         const poly={pts,fill:color(facelets[idx],i54),stroke:body,faded:!!(opts.fade&&!opts.fade.has(i54)),idx:i54};
         if(!opts.color||opts.labels)poly.ci=facelets[idx]; // the color the Color Blind Assist letter names
         if(opts.cls){const c=opts.cls(i54);if(c)poly.cls=c;}
-        if(lift)poly.op=1-0.45*lift.t;
+        if(lift)poly.op=1-(lift.dim??0.45)*lift.t;
         polys.push(poly);
       }
     }
@@ -138,7 +139,7 @@ function liftPolys(facelets,lifted,lift,{cam,proj,color,body,cls,labels}){
       if(cls){const k=cls(i54);if(k)poly.cls=k;}out.push(poly);
     }
   }
-  return [...glow.map(p=>({...p,fill:'var(--lift-glow,#ffe27a)',glow:Math.max(0.001,+lift.t.toFixed(3))})),...out];
+  return [...glow.map(p=>({...p,fill:'var(--lift-glow,#ffe27a)',glow:Math.max(0.001,+(lift.g??lift.t).toFixed(3))})),...out];
 }
 // Twice the signed area of a polygon on the screen.
 function area2(P){let a=0;for(let i=0;i<P.length;i++){const q=P[i],r=P[(i+1)%P.length];a+=q[0]*r[1]-r[0]*q[1];}return a;}
@@ -192,7 +193,7 @@ function hiddenFacePolys(facelets,{n,cam,proj,color,body,fade,to54,dist,flat,lab
       const pts=s.corners.map(c=>onMirror(mv(c),m)),p=poly(pts,n*n*f+n*i+j,L?+(up?0.6+0.4*L.t:0.6*(1-0.45*L.t)).toFixed(3):0.6);
       if(up){const g=s.g,c=s.cubie.map((v,x)=>v+g.n[x]*hs);
         glow.push({pts:[[-hs,-hs],[hs,-hs],[hs,hs],[-hs,hs]].map(([u,v])=>proj(onMirror(mv([0,1,2].map(x=>c[x]+g.r[x]*u+g.d[x]*v)),m))),
-          fill:'var(--lift-glow,#ffe27a)',glow:Math.max(0.001,+L.t.toFixed(3))});}
+          fill:'var(--lift-glow,#ffe27a)',glow:Math.max(0.001,+(L.g??L.t).toFixed(3))});}
       if(turn)p.z=cam(onMirror(s.cubie,m))[2];out.push(p);}}
   out.unshift(...glow);
   if(turn){const R=p=>rotAxis(p,turn.nv,turn.deg);
