@@ -12,6 +12,18 @@
 // again turns the ask off, and Settings turns it on again (cw:smartAsk). The smart cube sheet reads
 // its moves and its stage with the hold the picture shows (liveHoldSync), and a hold said to its
 // Listen turns the picture (liveHoldFromTab).
+// The tilt (1.76.0, js/tilt.js does the arithmetic): while a smart cube with a tilt sensor is the
+// cube, the 3D picture turns as the cube turns in your hands (liveTiltRot, drawn by drawMain in
+// js/app.js), a little closer each frame. The tilt turns the picture only: the moves and the stage
+// still read by the hold (the hold row, PLAYER.hold, cubeTab.hold). Two gestures meet the two:
+// R R' R (or R' R R') says "I hold the cube as the hold says", and the picture squares up to the
+// hold; L L' L (or L' L L') says "the way I hold it now is the hold", and the hold becomes the one
+// the picture is nearest, squared. A face is named by the picture first (the face it shows on the
+// right or the left), then by the hold, so a gesture still works when the heading has drifted.
+// While the picture sits in another hold than the moves read by, a line in the smart cube sheet says
+// so (#cubeWinTilt). A tile of the hold row, or a hold said to Listen, squares the picture to the new
+// hold. The Tilt chip on the cube turns it off and on (cw:smartTilt, on by default); it shows once
+// a reading has come. A gen 3 cube has no tilt sensor: no chip, and nothing changes for it.
 // The Cross tab's Check my plan follows the moves made on the player (a step back, then a move, backs
 // out the moves after it), and moves typed there show on the player (crossFollow, crossTyped).
 const PLAYER={hold:null}; // {top, front}: color indices, or null for the player's own hold
@@ -41,6 +53,7 @@ function playerHoldPick(place,c){
   if(PLAYER.hold&&PLAYER.hold[place==='up'?'top':'front']===c)PLAYER.hold=null;
   else if(place==='up'){const front=cur.front!==c&&cur.front!==(c+3)%6?cur.front:CUBE_TAB_FRONTS.find(f=>f!==c&&f!==(c+3)%6);PLAYER.hold={top:c,front};}
   else{const top=cur.top!==c&&cur.top!==(c+3)%6?cur.top:0;PLAYER.hold={top,front:c};}
+  if(liveTiltLive())liveTiltSquare(); // you hold the cube as the tile says
   if(view.mode==='net')setViewNet(false);else drawMain();playerHoldDraw();
 }
 // A tile is on when the picture shows that color there.
@@ -58,6 +71,7 @@ function liveHoldSync(){
 // A hold said to the sheet's Listen ("top yellow, front green", "x prime"): the picture turns to it.
 function liveHoldFromTab(){
   const c=(cubeTab.hold||CUBE_TAB_HOLDS[0]).cube.center;PLAYER.hold={top:c[0],front:c[2]};
+  if(liveTiltLive())liveTiltSquare();
   if(view.mode==='net')setViewNet(false);else drawMain();playerHoldDraw();
 }
 function playerHoldMount(){
@@ -68,6 +82,120 @@ function playerHoldMount(){
       b.style.setProperty('--c',stickerColor(c));b.onclick=()=>playerHoldPick(place,c);g.appendChild(b);}
   }
   playerHoldDraw();
+}
+// ----- the tilt: the picture turns with the smart cube in your hands -----
+const TILT={on:store.get('smartTilt',true)!==false,tr:null,gest:null,q:null,qTo:null,raf:0,at:0,
+  away:null,awayTimer:0,awayMs:800,awayDeg:55,backDeg:40,warn:false,said:'',saidTimer:0,saidMs:3500,line:null};
+function liveTiltTracker(){if(!TILT.tr)TILT.tr=tiltTracker({holds:CUBE_TAB_HOLDS});if(!TILT.gest)TILT.gest=tiltGesture();return TILT.tr;}
+// A reading has come since the cube connected: the cube has a tilt sensor.
+function liveTiltHas(){return !!TILT.tr&&!!TILT.tr.state.basis&&liveOn()&&(typeof cubeSrc!=='function'||cubeSrc()==='smart');}
+// Does the picture follow the tilt? The cube has one, Tilt is on, and the player shows the cube.
+function liveTiltLive(){return TILT.on&&!!TILT.q&&liveTiltHas()&&view.mode==='3d';}
+// The hold the picture shows when it does not follow the tilt: the one the moves read by.
+function liveTiltHold(){const D=playerHeldCube();return (D&&liveHoldOf(D))||CUBE_TAB_HOLDS[0];}
+// The picture's turn for the cube `P` on the player: the cube's pose (TILT.q, white up, green front
+// turned as it sits in your hands), less the turn P's centers already have. Null when off.
+function liveTiltRot(P){
+  if(!liveTiltLive()||!P||!P.center)return null;const hp=liveHoldOf(P);if(!hp)return null;
+  return quatMat(tiltMul(TILT.q,tiltConj(hp.q)));}
+// A reading from the cube. The first one squares the picture to the hold.
+function liveTiltGyro(q){
+  const tr=liveTiltTracker(),first=!tr.state.basis;
+  tr.feed(typeof performance!=='undefined'?performance.now():Date.now(),q);
+  if(!tr.state.basis)tr.reset(liveTiltHold().q);
+  TILT.qTo=tr.pose();
+  if(first||!TILT.q){TILT.q=TILT.qTo;liveTiltDraw();if(liveTiltLive())drawMain();return;}
+  liveTiltAwayCheck();
+  if(liveTiltLive())liveTiltView();
+}
+// Turn the picture toward qTo, most of the way within a tenth of a second, drawn once a frame. A
+// running layer turn or lift draws every frame already. Reduced motion: straight there.
+function liveTiltView(){
+  if(!TILT.qTo)return;
+  const raf=typeof requestAnimationFrame==='function';
+  if(!raf||reducedMotion()){TILT.q=TILT.qTo;if(!raf){drawMain();return;}}
+  if(TILT.raf)return;
+  TILT.at=performance.now();
+  const step=()=>{
+    const now=performance.now(),k=1-Math.exp(-(now-TILT.at)/70);TILT.at=now;
+    TILT.q=tiltSlerp(TILT.q,TILT.qTo,k);
+    const done=tiltAngle(TILT.q,TILT.qTo)<0.05;if(done)TILT.q=TILT.qTo;
+    if(!anim.raf&&!mainLift)drawMain();
+    TILT.raf=done?0:requestAnimationFrame(step);
+  };
+  TILT.raf=requestAnimationFrame(step);
+}
+// Square the picture to the hold the moves read by (R R' R, a tile, a hold said to Listen).
+function liveTiltSquare(){
+  if(!liveTiltHas())return false;const h=liveTiltHold();TILT.tr.reset(h.q);TILT.qTo=TILT.tr.pose();
+  liveTiltAwayClear();liveTiltView();return true;}
+// L L' L: the hold the picture is nearest becomes the hold, and the picture squares up to it. No
+// turn goes on the list now; your next move puts the turn to the new hold before it, as a tile does.
+function liveTiltAdopt(){
+  if(!liveTiltHas())return null;const h=TILT.tr.adopt(CUBE_TAB_HOLDS);if(!h)return null;
+  PLAYER.hold={top:h.cube.center[0],front:h.cube.center[2]};TILT.qTo=TILT.tr.pose();
+  liveTiltAwayClear();if(view.mode==='net')setViewNet(false);else drawMain();playerHoldDraw();liveTiltView();return h;}
+// A gesture on the cube's own face `f` (0 to 5, U R F D L B). The picture names the face first: the
+// face it shows on your left is L, on your right R. Then the hold: a drifted heading still works.
+function liveTiltGesture(f){
+  if(!liveTiltLive())return;
+  const Q=TILT.tr.pose(),rT=tiltFaceToward(Q,[1,0,0]),lT=tiltFaceToward(Q,[-1,0,0]),c=liveTiltHold().cube.center;
+  if(f===lT||(f!==rT&&f!==c[1]&&f===c[4])){const h=liveTiltAdopt();if(h)liveTiltSay(`L L' L: the moves now read with ${cubeTabHoldWords(h)}, as your cube sits.`);}
+  else if(f===rT||f===c[1]){liveTiltSquare();const h=liveTiltHold();
+    liveTiltSay(TILT.tr.state.level?`R R' R: your cube sits with ${cubeTabHoldWords(tiltNearest(TILT.tr.pose(),CUBE_TAB_HOLDS))}, not ${cubeTabHoldWords(h)}. Hold it that way and turn R R' R, or turn L L' L to keep it as it sits.`
+      :`R R' R: the picture is square, ${cubeTabHoldWords(h)}.`);}
+}
+// Is the picture in another hold than the moves read by? Past awayDeg from it and nearest another
+// hold; back within backDeg, not away. The line shows after awayMs of it.
+function liveTiltAwayCheck(){
+  if(!liveTiltLive()){if(TILT.away)liveTiltAwayClear();return;}
+  const hold=liveTiltHold(),deg=tiltAngle(TILT.qTo,hold.q);let away=TILT.away;
+  if(deg>TILT.awayDeg){const n=tiltNearest(TILT.qTo,CUBE_TAB_HOLDS);away=n===hold?null:n;}
+  else if(deg<TILT.backDeg||!away)away=null;
+  if(away===TILT.away)return;
+  TILT.away=away;clearTimeout(TILT.awayTimer);TILT.awayTimer=0;
+  if(away)TILT.awayTimer=setTimeout(()=>{TILT.awayTimer=0;TILT.warn=true;liveTiltLine();},TILT.awayMs);
+  else{TILT.warn=false;liveTiltLine();}
+}
+function liveTiltAwayClear(){clearTimeout(TILT.awayTimer);TILT.awayTimer=0;TILT.away=null;if(TILT.warn){TILT.warn=false;liveTiltLine();}}
+// What a gesture did, on the line for a few seconds.
+function liveTiltSay(t){TILT.said=t;clearTimeout(TILT.saidTimer);TILT.saidTimer=setTimeout(()=>{TILT.said='';liveTiltLine();},TILT.saidMs);liveTiltLine();}
+// The line in the smart cube sheet: what a gesture did; else how the cube sits against the hold; else
+// the two gestures. Written only when it changes: the sheet redraws often.
+function liveTiltLine(){
+  const el=document.getElementById('cubeWinTilt');if(!el)return;
+  const live=liveTiltLive(),away=live&&TILT.warn&&TILT.away;
+  const t=!live?'':TILT.said?TILT.said:away?`Your cube sits with ${cubeTabHoldWords(TILT.away)}. The moves read with ${cubeTabHoldWords(liveTiltHold())}. Turn L L' L to read them as it sits, or hold it as they read and turn R R' R.`
+    :`The picture turns with your cube. R R' R squares it to the hold. L L' L makes the way you hold the cube the hold.`;
+  const cls=!live?'':TILT.said?'done':away?'away':'';
+  if(TILT.line===t+'|'+cls)return;TILT.line=t+'|'+cls;
+  el.textContent=t;el.classList.toggle('hidden',!t);el.classList.toggle('away',cls==='away');el.classList.toggle('done',cls==='done');
+}
+// The Tilt chip: shown once the cube has sent a reading; pressed while the picture follows it.
+function liveTiltDraw(){
+  const b=document.getElementById('tiltBtn');
+  if(b){b.classList.toggle('hidden',!(liveTiltHas()&&view.mode==='3d'));b.setAttribute('aria-pressed',String(TILT.on));
+    const t=TILT.on?"Tilt: the picture turns as you turn your smart cube. R R' R squares it to the hold; L L' L makes the way you hold it the hold. Press to keep the picture on the hold":'The picture stays on the hold. Press to turn it as you turn your smart cube in your hands';
+    if(b.title!==t)b.title=t;}
+  liveTiltLine();
+}
+function liveTiltSet(on){
+  TILT.on=!!on;store.set('smartTilt',TILT.on);
+  if(TILT.on&&liveTiltHas()){TILT.tr.reset(liveTiltHold().q);TILT.q=TILT.qTo=TILT.tr.pose();}
+  else{liveTiltAwayClear();if(TILT.raf){cancelAnimationFrame(TILT.raf);TILT.raf=0;}}
+  liveTiltDraw();drawMain();
+}
+// A new link, or none: the cube's sensor starts its own frame again, so the heading goes.
+function liveTiltForget(){
+  if(TILT.tr)TILT.tr.clear();if(TILT.gest)TILT.gest.reset();
+  if(TILT.raf&&typeof cancelAnimationFrame==='function')cancelAnimationFrame(TILT.raf);
+  TILT.raf=0;TILT.q=TILT.qTo=null;liveTiltAwayClear();TILT.said='';clearTimeout(TILT.saidTimer);liveTiltDraw();
+}
+// The moves of a smart cube, as the cube names them, for the gestures. Null: the moves are not known.
+function liveTiltMoves(moves){
+  if(!TILT.gest)return;if(!moves){TILT.gest.reset();return;}
+  const now=typeof performance!=='undefined'?performance.now():Date.now();
+  for(const m of moves){const f=TILT.gest.feed(now,m);if(f)liveTiltGesture(FACE_NAMES.indexOf(f));}
 }
 // ----- the smart cube on the player -----
 function liveOn(){return typeof cubeTab!=='undefined'&&!!cubeTab.conn&&puzzleN()===3&&!isBeg();}
@@ -82,6 +210,7 @@ function liveInStep(state){return !!state&&liveSame(livePlayerCube(),state);}
 // while a drill or a plan is in the player, so the cube of the page stays the cube in your hands on
 // every tab. The F2L guide reads the cube too, and shows the same home cube.
 function liveSmartMoves(d){
+  if(d.from)liveTiltMoves(d.moves);
   if(!liveOn())return liveNoteDraw();
   if(!d.from){liveConnected(d.to);return liveNoteDraw();}
   if(d.moves&&liveInStep(d.from)){
@@ -198,7 +327,11 @@ function crossTyped(){clearTimeout(crossTypeTimer);crossTypeTimer=setTimeout(()=
 if(typeof document!=='undefined'){
   playerHoldMount();
   document.addEventListener('cw:smartmoves',e=>liveSmartMoves(e.detail||{}));
-  document.addEventListener('cw:smart',e=>{const t=e.detail&&e.detail.type;if(t==='connect'){LIVE.asked=false;liveHoldSync();}if(t==='disconnect'||t==='gone'||t==='connect')liveNoteDraw();});
+  document.addEventListener('cw:smart',e=>{const d=e.detail||{},t=d.type;
+    if(t==='gyro'){if(typeof cubeTab!=='undefined'&&d.conn===cubeTab.conn&&d.q)liveTiltGyro(d.q);return;}
+    if(t==='connect'){LIVE.asked=false;liveHoldSync();}if(t==='disconnect'||t==='gone'||t==='connect'){liveTiltForget();liveNoteDraw();}});
+  const tb=$('#tiltBtn');if(tb)tb.onclick=()=>liveTiltSet(!TILT.on);
+  for(const ev of ['cw:tab','cw:method','cw:cubesrc'])document.addEventListener(ev,()=>{liveTiltDraw();if(TILT.q)drawMain();});
   for(const ev of ['cw:sequence','cw:scramble','cw:tab','cw:method'])document.addEventListener(ev,()=>{liveNoteDraw();playerHoldDraw();});
   for(const ev of ['cw:smart','cw:tab','cw:method','cw:cubesrc'])document.addEventListener(ev,liveFreshDraw);
   document.addEventListener('cw:step',playerHoldDraw);

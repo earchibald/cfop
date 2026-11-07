@@ -1,7 +1,7 @@
 // ===== Undo =====
 // One queue of the things a user did on the page: a new scramble, a change of section, of method or
 // of cube, a move on the virtual cube (or a drill or plan loaded on the player), the Animate, Hidden
-// faces and Net buttons, the hold, the sheets of the stage view (fold, close, float) and Maximize
+// faces, View and Net buttons, the hold, the sheets of the stage view (fold, close, float) and Maximize
 // cube. Undo (the button at the top right of the stage, or Cmd+Z, Ctrl+Z) takes the last one back.
 // How: a snapshot of that state before each input of the user (a key, a click, a drag, a change)
 // and after it. When they differ, the keys that changed go on the queue with their old values. A
@@ -10,10 +10,10 @@
 // queue, nor are steps through the player (the arrows, the slider). A smart cube's turns are not
 // either: the cube in the hands cannot turn back.
 var UNDO={list:[],last:null,pending:0,armUntil:0,busy:false,ignore:false,max:200}; // var: tests read it
-const UNDO_KEYS=['method','tab','src','scr','seq','anim','hidden','net','hold','sheets','max'];
+const UNDO_KEYS=['method','tab','src','scr','seq','anim','hidden','net','cam','hold','sheets','max'];
 function undoSnap(){const g=(f,d)=>{try{return f();}catch(e){return d;}};
   const s={method:g(()=>method,''),tab:g(()=>curTab,''),src:g(()=>cubeSrc(),''),
-    anim:g(()=>animOn(),false),hidden:g(()=>hiddenOn(),false),net:g(()=>view.mode,'3d'),
+    anim:g(()=>animOn(),false),hidden:g(()=>hiddenOn(),false),net:g(()=>view.mode,'3d'),cam:g(()=>view.cam,'iso'),
     hold:g(()=>JSON.stringify(PLAYER.hold||null),'null'),sheets:g(()=>JSON.stringify(store.get('svSheets',{})||{}),'{}'),
     max:g(()=>!!store.get('svMax',false),false),scr:'',seq:''};
   if(typeof scr!=='undefined'){s.scr=scr.seed+'|'+scr.moves.join(' ');const inp=$('#seed');
@@ -33,7 +33,7 @@ function undoName(e){const k=e.keys,a=e.before,b=e.after;
     if(y.length===x.length+1&&y.slice(0,-1).join()===x.join())return 'the move '+y[y.length-1];
     if(b._seq.drill&&b._seq.drill!==a._seq.drill)return b._seq.drill;return 'the moves on the player';}
   if(k.includes('max'))return b.max?'Maximize cube':'Minimize cube';
-  return ({anim:'Animate',hidden:'Hidden faces',net:'Net',hold:'the hold',sheets:'the change to the sheets'})[k[0]]||'the last change';}
+  return ({anim:'Animate',hidden:'Hidden faces',net:'Net',cam:'the view',hold:'the hold',sheets:'the change to the sheets'})[k[0]]||'the last change';}
 // Before an input: the state as it stands is the start (a change made with no input is taken in).
 function undoPre(e){if(UNDO.busy)return;
   UNDO.ignore=!!(e&&e.target&&e.target.closest&&e.target.closest('#setBg'));
@@ -60,6 +60,7 @@ function undoRun(){const e=UNDO.list.pop();if(!e){undoDraw();return false;}
     if(k.has('anim'))setAnim(b.anim);
     if(k.has('hidden'))setHidden(b.hidden);
     if(k.has('net'))setViewNet(b.net==='net');
+    if(k.has('cam'))setViewCam(b.cam);
     if(k.has('hold')&&typeof PLAYER!=='undefined'){PLAYER.hold=JSON.parse(b.hold);drawMain();if(typeof playerHoldDraw==='function')playerHoldDraw();}
     if(k.has('sheets')){store.set('svSheets',JSON.parse(b.sheets));if(typeof svSheets==='function')svSheets();}
     if(k.has('max')&&typeof svMaxSet==='function')svMaxSet(b.max);

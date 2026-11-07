@@ -49,6 +49,8 @@
       <div class="viewbtns" id="viewHold"><span class="lbl" title="The color on top as you hold the cube">Top</span><span class="grp" data-place="up"></span><span class="lbl" title="The color toward you as you hold the cube">Front</span><span class="grp" data-place="front"></span><button id="viewNet" aria-pressed="false" title="The six faces unfolded flat. Press again for the cube">Net</button></div>
       <button class="animbtn" id="animBtn" aria-pressed="false" title="Turn the layer on the cube for each move (A)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 13.7-5.6"/><path d="M18 3v4h-4"/><path d="M20 12a8 8 0 0 1-13.7 5.6"/><path d="M6 21v-4h4"/></svg>Animate<span class="hk" aria-hidden="true">A</span></button>
       <button class="animbtn hidbtn" id="hiddenBtn" aria-pressed="false" title="Show the hidden faces: the back, left and bottom, as in a mirror behind the cube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8l8-4 8 4-8 4z"/><path d="M4 8v8l8 4v-8"/><path d="M20 8v8l-8 4" stroke-dasharray="2 2.4"/></svg>Hidden faces</button>
+      <button class="animbtn viewbtn" id="viewBtn" aria-pressed="false" title="Isometric view: the cube from above and to the right, three faces in view. Press for Player view, straight on (V)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z"/></svg>Isometric view<span class="hk" aria-hidden="true">V</span></button>
+      <button class="animbtn tiltbtn hidden" id="tiltBtn" aria-pressed="true" title="Tilt: the picture turns as you turn your smart cube in your hands"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/><path d="M19 2.5a5 5 0 0 1 2.5 3.5" /></svg>Tilt</button>
       <button class="animbtn vcubebtn" id="vcubeBtn" aria-pressed="false" title="Turn the cube here with the keys or the buttons of a small window, as a virtual cube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M7 11h1M11 11h2M16 11h1M8 14h8"/></svg>Virtual cube</button>
       <button class="animbtn crosstrainbtn" id="crossTrainBtn" aria-pressed="false" title="Cross Trainer: gray every piece but the four cross edges and the centers, as you turn the cube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>Cross Trainer</button>
       <button class="animbtn crosstrainbtn f2ltrainbtn" id="f2lTrainBtn" aria-pressed="false" title="F2L Trainer: gray every piece but the four F2L corners, the four middle edges and the centers, as you turn the cube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="12" width="16" height="8" rx="1"/><path d="M4 16h16M9.3 12v8M14.7 12v8"/><rect x="14.7" y="4" width="5.3" height="5.3" rx="1"/></svg>F2L Trainer</button>
@@ -101,6 +103,7 @@
           <div class="cw-listen hidden" id="cubeWinListenRow" role="status"><span class="listen-dot" aria-hidden="true"></span><span class="txt"></span><span class="heard"></span><span class="ask listen-ask"></span></div>
           <div class="cw-hints hidden" id="cubeWinHints" aria-label="What you can say"></div>
           <p class="muted cw-note" id="cubeWinNote"></p>
+          <p class="cw-tilt hidden" id="cubeWinTilt" role="status"></p>
           <div class="scan-row hidden" id="cubeWinAgain"><button class="small" id="cubeWinConnect" title="Look for your cube and connect it again">Connect again</button></div>
         </div>
       </div>
@@ -355,6 +358,7 @@
 <script src="js/guide.js"></script>
 <script src="js/practice.js"></script>
 <script src="js/cubemenu.js"></script>
+<script src="js/tilt.js"></script>
 <script src="js/live.js"></script>
 <script src="js/vcube.js"></script>
 <script src="js/crosslook.js"></script>
