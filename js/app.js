@@ -604,6 +604,9 @@ function renderF2LPlan(){const p=f2lState.plan;if(!p)return '<p>No plan found.</
   setTimeout(()=>wireSteps($('#f2lPlan'),key=>{const e=seqFor.find(x=>x[0]===key);return {cube:phys(e[1]),moves:e[2]};}),0);const total=p.steps.reduce((a,b)=>a+b.moves.length,0);return `<div class="muted" style="font-size:14px">${total} moves for ${p.steps.length} pair${p.steps.length>1?'s':''}, shortest-first order.</div>`+html;}
 $('#f2lNew').onclick=()=>{if(!(typeof liveFreshGo==='function'&&liveFreshGo()))newScramble();};$('#f2lReveal').onclick=()=>ensureF2L(()=>{f2lState.revealed=!f2lState.revealed;showF2LState();});
 // cases grid. The cards work like the OLL/PLL cards: a status button, click for details, shift-click to select.
+// A Shift+click picks a case here, or makes the prime move in the Keys window. The browser would stretch its
+// text selection from the last click to this one: stop that before it starts (the click still comes).
+document.addEventListener('mousedown',e=>{if(e.shiftKey&&e.target.closest&&e.target.closest('button,.case,.vcubewin'))e.preventDefault();},true);
 const groups=[...new Set(F2L_CASES.map(c=>c.grp))];groups.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;$('#f2lGroup').appendChild(o);});
 const f2lId=n=>'f2l-'+n;
 f2lState.caseSel=new Set(store.get('f2lSel',F2L_CASES.map(c=>c.n)));

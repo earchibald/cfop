@@ -62,6 +62,9 @@ w.addEventListener('load',async()=>{try{
   click(mb());assert.strictEqual(mb().textContent,'Learned','window button cycles');assert.strictEqual(st().textContent,'Learned','card follows the window');
   $('#modalClose').click();assert.ok(!$('#modalBg'));
   const sel=()=>$(`#llGroups .case[data-id="${id}"]`).classList.contains('sel');const was=sel();
+  const down=(el,opts)=>el.dispatchEvent(new w.MouseEvent('mousedown',{bubbles:true,cancelable:true,...opts}));
+  assert.ok(!down($(`#llGroups .case[data-id="${id}"] svg`),{shiftKey:true}),'a Shift+click on a card selects no text: its mousedown is stopped');
+  assert.ok(down($(`#llGroups .case[data-id="${id}"] svg`)),'a plain click is left alone');
   click($(`#llGroups .case[data-id="${id}"] svg`),{shiftKey:true});assert.strictEqual(sel(),!was,'shift-click toggles selection');assert.ok(!$('#modalBg'));
 
   // F2L cases work like the OLL/PLL cards: status button, click opens the window, shift-click selects,
@@ -77,6 +80,7 @@ w.addEventListener('load',async()=>{try{
   assert.ok(/Why it works/.test($('#modalBg').textContent),'F2L window explains the case');
   $('#modalClose').click();
   const fsel=()=>$(`#f2lCaseGrid .case[data-n="${fn}"]`).classList.contains('sel');const fwas=fsel();
+  assert.ok(!down($(`#f2lCaseGrid .case[data-n="${fn}"] svg`),{shiftKey:true}),'a Shift+click on an F2L card selects no text');
   click($(`#f2lCaseGrid .case[data-n="${fn}"] svg`),{shiftKey:true});assert.strictEqual(fsel(),!fwas,'F2L shift-click toggles selection');
   $('#f2lSelNone').click();assert.ok(!$('#f2lCaseGrid .case.sel'),'None clears the selection');
   $('#f2lRandomCase').click();assert.ok(/Select at least one/.test($('#f2lCaseOut').textContent),'no drill with nothing selected');
