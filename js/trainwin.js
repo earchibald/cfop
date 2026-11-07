@@ -9,6 +9,11 @@
 //                              the cross edges in F2L-3).
 //   The F2L solved: with Overlay on, a fresh drill (f2loNext): the screen's cube is not the cube
 //   in your hands, so a smart cube gets one too. Else the F2L tab's next scramble.
+//   F2L-1 with Overlay on (1.79): each pair solved (the pairs lit, with Two at once) brings the
+//   fresh drill, the next of the 41 cases from the deck (f2lDeckDraw). A pair named in the Pair row
+//   solved brings the next drill too.
+//   The 41 cases (the F2L tab's third mode), with a trainer on or not (1.79): the case solved, the
+//   next case from the deck (Next case).
 // The next drill comes only where the page owns the cube: Overlay, Virtual scramble, or the virtual
 // cube's keys. A smart cube with neither is the cube in your hands, so it glows and you mix it again. A running
 // timer waits for its stop (Next on stop). A turn that undoes the win before the glow ends keeps
@@ -35,13 +40,24 @@ function twJudge(before,now){
   if(typeof crossTrainOn==='function'&&crossTrainOn()&&crossOnCross()&&!CF.on){
     if(twCross(fb,ci)||!twCross(fn,ci))return null;
     return {set:twCrossStickers(fn,ci),done:true,goal:f=>twCross(f,ci)};}
-  if(typeof f2lTrainOn!=='function'||!f2lTrainOn()||!f2lOnF2L())return null;
-  const done=f=>twCross(f,ci)&&twAllPairs(f,ci),style=f2lTrainStyle();
+  if(typeof f2lOnF2L!=='function'||!f2lOnF2L())return null;
+  const done=f=>twCross(f,ci)&&twAllPairs(f,ci),home=(f,ps)=>ps.every(([a,b])=>f2lPairHome(f,ci,a,b));
+  // The 41 cases: the case's pair solved, the F2L with it, with a trainer on or not.
+  if(twCaseDrill()){if(done(fb)||!done(fn))return null;
+    const pairs=f2ltPairs(ci).map(f2ltKeyColors).filter(p=>!home(fb,[p]));
+    return {set:twPairStickers(fn,ci,pairs),pairs,done:true,goal:done};}
+  if(typeof f2lTrainOn!=='function'||!f2lTrainOn())return null;
+  const style=f2lTrainStyle();
   if(style===1){
     // The pairs lit before the turn and after it: the guide moves on to the next pair at once.
-    const seen=new Map();for(const p of [...f2lTrainPairs(fb),...f2lTrainPairs(fn)])seen.set(f2ltKey(...p),p);
-    const pairs=[...seen.values()].filter(([a,b])=>!f2lPairHome(fb,ci,a,b)&&f2lPairHome(fn,ci,a,b));
+    const lit=f2lTrainPairs(fb),seen=new Map();for(const p of [...lit,...f2lTrainPairs(fn)])seen.set(f2ltKey(...p),p);
+    const pairs=[...seen.values()].filter(p=>!home(fb,[p])&&home(fn,[p]));
     if(!pairs.length||!twCross(fn,ci))return null;
+    // A drill per pair (1.79): with Overlay on, the pairs lit before the turn all solved bring the
+    // next case; a pair named in the Pair row solved brings the next drill. Else the F2L solved.
+    const id=typeof f2ltChoiceId==='function'?f2ltChoiceId():'guide',named=id!=='guide'&&!f2ltAuto(id);
+    const each=named||typeof f2loOv==='function'&&f2loOv()&&home(fn,lit);
+    if(each)return {set:twPairStickers(fn,ci,pairs),pairs,done:true,goal:f=>twCross(f,ci)&&home(f,pairs)};
     return {set:twPairStickers(fn,ci,pairs),pairs,done:done(fn),goal:done};}
   if(done(fb)||!done(fn))return null;
   const set=twPairStickers(fn,ci,f2ltPairs(ci).map(f2ltKeyColors));if(style===3)for(const i of twCrossStickers(fn,ci))set.add(i);
@@ -51,6 +67,8 @@ function twStop(){clearTimeout(TW.timer);clearTimeout(TW.lift);TW.timer=TW.lift=
 // The whole cube's halo and hop, from the start again on each win.
 function twPulse(on){const c=$('#cube');if(!c)return;c.classList.remove('twwin');if(!on)return;
   void c.getBoundingClientRect();c.style.setProperty('--twwin-ms',TRAIN_WIN.ms+'ms');c.classList.add('twwin');}
+// A case of the 41 in the player (the F2L tab's third mode, Next case).
+function twCaseDrill(){return typeof f2lState!=='undefined'&&f2lState.mode==='cases'&&typeof seqState!=='undefined'&&seqState.drill==='F2L case';}
 function twTiming(){return typeof timer!=='undefined'&&(timer.state==='running'||timer.state==='inspecting');}
 function twTurn(e){
   if(TW.win){twCut();return;}
