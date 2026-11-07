@@ -26,6 +26,49 @@ function crossTrainDim(){return crossDimPct()/100;}
 function crossTrainDraw(){const b=$('#crossTrainBtn');if(!b)return;const on=crossTrainOn();b.setAttribute('aria-pressed',String(on));
   b.title=on?'Cross Trainer is on: only the cross edges and the centers show their colors. Press to show every color':'Cross Trainer: gray every piece but the four cross edges and the centers, as you turn the cube';}
 function crossTrainSet(on){store.set('crossTrain',!!on);crossTrainDraw();drawMain();}
+// ---- Cross Trainer's Virtual scramble (1.77) ----
+// The Cross tab's twin of F2L Trainer's Overlay (js/f2ltrain.js): a chip beside the button while
+// Cross Trainer is on (#crossOverBtn, not kept over a reload). On, a new cross scramble of the
+// Length picked (crossNewScramble in app.js) loads on the screen. You do not scramble your cube:
+// with a smart cube, the cube in your hands turns the screen's scramble as the lab's drill does
+// (js/live.js, liveMapSet: M = S · P⁻¹, S the scramble, P the cube in your hands). You look at the
+// screen, as its colors are not your cube's. While it is on, every new scramble on the Cross tab is
+// virtual too (New cross scramble, the Length menu, the history), and New Cross on a smart cube
+// makes one in place of a fresh start (liveFresh). Off, or Cross Trainer off: the scramble from
+// before, with your moves before and since. Undo, Use my cube or a new scramble on another tab ends
+// it, and that scramble stays.
+// CXO.real: {seed, moves, custom, yours}, the scramble before and your moves on it and on each
+// virtual scramble since but the one in view. CXO.seed: the
+// virtual scramble now. CXO.map: the map it set, so it clears no map of F2L Overlay's.
+const CXO={on:false,real:null,seed:'',map:null};
+function cxoSmart(){return typeof cubeTab!=='undefined'&&!!cubeTab.conn&&!!cubeTab.target&&(typeof cubeSrc!=='function'||cubeSrc()==='smart');}
+function cxoOv(){return CXO.on&&!!CXO.seed&&scr.seed===CXO.seed&&crossTrainOn()&&crossOnCross();}
+// It ends: its map goes, the scramble on the page stays.
+function cxoEnd(){const m=CXO.map;CXO.on=false;CXO.real=null;CXO.seed='';CXO.map=null;
+  if(m&&typeof liveMapSet==='function'&&LIVE.map===m)liveMapSet(null);}
+function cxoOn(){const h=homeNow(),e=history.find(x=>x.seed===scr.seed);
+  CXO.real={seed:scr.seed,moves:scr.moves.slice(),custom:!!(e&&e.moves),yours:h.yours.slice()};
+  CXO.on=true;CXO.seed='';crossNewScramble();}
+// Off: the scramble from before, with your moves before and since, on every virtual scramble.
+function cxoOff(){const r=CXO.real,mine=CXO.on&&!!CXO.seed&&scr.seed===CXO.seed,since=mine?homeNow().yours:[];cxoEnd();
+  if(r&&mine){loadScramble(r.seed,r.moves,r.custom);homeAppend([...r.yours,...since]);}}
+function cxoSet(on){if(on)cxoOn();else cxoOff();drawMain();cxoDraw();}
+// loadScramble asks this first. On the Cross tab the scramble is virtual: a smart cube gets the map
+// that makes the screen show it. Elsewhere, or by Undo, the Virtual scramble ends.
+function cxoScramble(seed,moves){if(!CXO.on)return;
+  if(!crossTrainOn()||!crossOnCross()||typeof UNDO!=='undefined'&&UNDO.busy){cxoEnd();return;}
+  // Your moves on the virtual scramble it replaces count for Off: your cube took them too.
+  if(CXO.real&&CXO.seed&&scr.seed===CXO.seed)CXO.real.yours.push(...homeNow().yours);
+  CXO.seed=seed;if(typeof liveMapSet!=='function')return;
+  const S=applyAlg(puzzleCube(),Array.isArray(moves)?moves:parseAlg(moves)),old=CXO.map;
+  CXO.map=cxoSmart()?S.mul(liveReal(cubeTab.target).inverse()):null;
+  if(CXO.map||old&&LIVE.map===old)liveMapSet(CXO.map);}
+function cxoTitle(){
+  if(!cxoOv())return 'Virtual scramble: a new cross scramble on the screen, of the Length you picked. You do not scramble your cube. With a smart cube, your turns turn the screen\'s cube: look at the screen, as its colors are not your cube\'s';
+  return 'Virtual scramble is on: the screen shows a scramble of its own. With a smart cube, look at the screen, not your cube. New cross scramble makes another. Press to go back to your scramble';}
+function cxoDraw(){const b=$('#crossOverBtn'),g=$('#crossOverGrp');if(!b||!g)return;g.hidden=!crossTrainOn();
+  b.setAttribute('aria-pressed',String(!!cxoOv()));const t=cxoTitle();if(b.title!==t)b.title=t;
+  if(typeof liveFreshDraw==='function')liveFreshDraw();}
 // ---- F2L Trainer ----
 // The F2L tab's twin of Cross Trainer, the button on the cube there (cw:f2lTrain, off by default).
 // Three styles, the chips beside the button while it is on (#f2lStyle, cw:f2lStyle, 3 by default):
@@ -112,7 +155,15 @@ function crossFindDraw(){const o=$('#crossFindOut');if(!o)return;const name=cros
   const b=$('#crossFindBtn');if(b){const t=CF.on?'Stop':'Find the edges';if(b.textContent!==t)b.textContent=t;}}
 // ---- wiring ----
 (()=>{const cube=$('#cube'),tb=$('#crossTrainBtn'),fb=$('#crossFindBtn'),auto=$('#crossFindAuto');
-  if(tb)tb.onclick=()=>crossTrainSet(!crossTrainOn());crossTrainDraw();
+  // Cross Trainer off turns the Virtual scramble off: the scramble from before.
+  if(tb)tb.onclick=()=>{crossTrainSet(!crossTrainOn());if(!crossTrainOn()&&CXO.on)cxoSet(false);cxoDraw();};crossTrainDraw();
+  // The Virtual scramble: one chip in a group of its own, after the button.
+  if(tb){const og=document.createElement('span');og.id='crossOverGrp';og.className='f2lstyle cxo-grp';og.hidden=true;
+    const ob=document.createElement('button');ob.type='button';ob.id='crossOverBtn';ob.textContent='Virtual scramble';ob.setAttribute('aria-pressed','false');
+    ob.onclick=()=>cxoSet(!CXO.on);og.append(ob);tb.after(og);cxoDraw();
+    // A scramble it did not load ends it.
+    document.addEventListener('cw:sequence',()=>{if(CXO.on&&CXO.seed&&scr.seed!==CXO.seed){cxoEnd();cxoDraw();}});
+    document.addEventListener('cw:scramble',cxoDraw);document.addEventListener('cw:tab',cxoDraw);}
   const ft=$('#f2lTrainBtn'),fs=$('#f2lStyle');if(ft)ft.onclick=()=>f2lTrainSet(!f2lTrainOn());
   if(fs)fs.replaceChildren(...F2L_STYLES.map(x=>{const b=document.createElement('button');b.type='button';b.dataset.style=x.n;b.textContent=x.label;b.title=x.title;b.onclick=()=>f2lTrainStyleSet(x.n);return b;}));
   f2lTrainDraw();
