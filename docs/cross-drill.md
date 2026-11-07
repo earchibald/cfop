@@ -48,7 +48,10 @@ slider from 40% down to 0%, black. 22% by default, the level of 1.66. `cw:crossD
 percent. The cube shows each move of the slider; Cancel puts the old level back. At 0% only the
 cross edges and the centers have color: no cue from the other pieces. `drawMain` passes the level
 as `dim` to `renderCube3D` and `renderNet`: a faded sticker goes over black at that opacity, so the
-net and the hidden faces go black too, not the page color under them. It waits while a find runs, as
+net and the hidden faces go black too, not the page color under them. While the pieces dim, the
+plastic between the stickers is `--sticker-line-dim` (1.78.2): in dark mode a lighter gray than
+`--sticker-line`, so the dimmed pieces read as a grid and not as one black block; in light mode the
+same as `--sticker-line`. It waits while a find runs, as
 the find would be no test with the edges lit.
 
 `drawMain` in `app.js` asks `crossTrainFade` for the stickers it draws (the turning cube too, and the
