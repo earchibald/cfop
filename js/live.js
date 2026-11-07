@@ -232,7 +232,7 @@ function liveConnected(state){
   LIVE.asked=true;liveAsk();
 }
 // Use my cube: the cube in your hands becomes the scramble, on the tab in view.
-function liveUse(){const st=typeof cubeTab!=='undefined'&&cubeTab.target;if(!st)return;
+function liveUse(){if(typeof cxoEnd==='function'&&CXO.on){cxoEnd();if(typeof cxoDraw==='function')cxoDraw();}const st=typeof cubeTab!=='undefined'&&cubeTab.target;if(!st)return;
   scrambleFromCube(liveReal(st),customName('smart'),true);liveNoteDraw();}
 // ----- a screen cube that is not the cube in your hands: the map -----
 // F2L Trainer's Overlay (js/f2ltrain.js) loads a scramble of its own while a smart cube is the cube.
@@ -257,7 +257,8 @@ function liveMapSet(M){const t=typeof cubeTab!=='undefined'?cubeTab.target:null,
 const LIVE_FRESH={cross:'New Cross',f2l:'New F2L',ll:'New OLL · PLL'};
 const LIVE_FRESH_TIP='Scramble your smart cube first. Then press this: your cube as it is now becomes the start. The page makes no moves';
 // The label of a fresh start on `tab` (the tab in view by default), or '' when New makes a scramble.
-function liveFresh(tab){tab=tab||curTab;
+// Cross Trainer's Virtual scramble (js/crosstrain.js) makes the scramble on the Cross tab: no fresh start there.
+function liveFresh(tab){tab=tab||curTab;if(tab==='cross'&&typeof CXO!=='undefined'&&CXO.on)return '';
   return liveOn()&&!!cubeTab.target&&(typeof cubeSrc!=='function'||cubeSrc()==='smart')&&LIVE_FRESH[tab]||'';}
 // A New control was pressed: mark the cube as the start, if this is a fresh start. True if it was.
 function liveFreshGo(){if(!liveFresh())return false;liveUse();return true;}

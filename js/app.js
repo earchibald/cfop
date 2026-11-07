@@ -344,8 +344,10 @@ let history=store.get('history',[]);
 // always gives the same scramble.
 function newScramble(seed){seed=seed||randomSeedName();loadScramble(seed,wcaScramble(seed),false);}
 // F2L Trainer's Overlay (js/f2ltrain.js) can take a new scramble and load its own in its place.
+// Cross Trainer's Virtual scramble (js/crosstrain.js) sets the smart cube's map for it first.
 function loadScramble(seed,moves,custom){
   if(typeof f2loScramble==='function'&&f2loScramble(seed,moves,custom))return;
+  if(typeof cxoScramble==='function')cxoScramble(seed,moves);
   scr.seed=seed;$('#seed').value=custom?'':seed;$('#seed').placeholder=custom?seed:'seed name';
   scr.moves=Array.isArray(moves)?moves:parseAlg(moves);scr.cube=applyAlg(puzzleCube(),scr.moves);
   const ent={seed,len:scr.moves.length,t:Date.now()};if(custom)ent.moves=scr.moves.join(' ');
@@ -556,9 +558,11 @@ $('#crossPlus1').onchange=refreshCross;$('#crossColor').onchange=()=>{store.set(
 // (js/crossdrill.js), as a random scramble seldom has a cross of 2, 3 or 8 moves.
 $('#crossDiff').value=store.get('crossDiff','any');if(!$('#crossDiff').value)$('#crossDiff').value='any';
 $('#crossDiff').onchange=()=>store.set('crossDiff',$('#crossDiff').value);
-$('#crossNew').onclick=()=>{if(typeof liveFreshGo==='function'&&liveFreshGo())return;ensureTables(()=>{const diff=$('#crossDiff').value;
+// A new cross scramble of the Length picked (Cross Trainer's Virtual scramble, js/crosstrain.js, makes one too).
+function crossNewScramble(){ensureTables(()=>{const diff=$('#crossDiff').value;
   if(/^\d$/.test(diff)){newScramble(crossDrillSeed(+diff,$('#crossColor').value));return;}
-  for(let k=0;k<200;k++){const seed=randomSeedName();const c=toFrame(wcaState(seed));const d=buildCrossTable()[crossIndex(c)];if(diff==='any'||(diff==='easy'&&d<=5)||(diff==='hard'&&d>=7)){newScramble(seed);return;}}newScramble();});};
+  for(let k=0;k<200;k++){const seed=randomSeedName();const c=toFrame(wcaState(seed));const d=buildCrossTable()[crossIndex(c)];if(diff==='any'||(diff==='easy'&&d<=5)||(diff==='hard'&&d>=7)){newScramble(seed);return;}}newScramble();});}
+$('#crossNew').onclick=()=>{if(typeof liveFreshGo==='function'&&liveFreshGo())return;crossNewScramble();};
 // Check my plan. quiet: the moves are on the player already (js/live.js: made on the cube, or typed),
 // so the player stays as it is.
 $('#crossCheck').onclick=()=>crossCheckNow(false);

@@ -54,6 +54,30 @@ the find would be no test with the edges lit.
 `drawMain` in `app.js` asks `crossTrainFade` for the stickers it draws (the turning cube too, and the
 net), and `crossFindCls` for a class on each sticker while a find runs.
 
+## Virtual scramble (1.77)
+
+The owner asked for an overlay "virtual scramble" in Cross Trainer: the Cross twin of F2L Trainer's
+Overlay (below). With a smart cube, a cross drill needed a scramble made by hand first (the fresh
+start of 1.68). Now the screen makes it, and the cube in the hands turns it.
+
+- The chip: **Virtual scramble**, beside Cross Trainer while it is on (`#crossOverGrp`,
+  `#crossOverBtn`, `js/crosstrain.js`). In the cube box it sits over the button, where F2L's style
+  column sits; in the stage view's action bar, after the button. It is not kept over a reload.
+- On: a new cross scramble of the Length picked loads (`crossNewScramble` in `app.js`, the job of
+  New cross scramble), a scramble like any other, in the history too.
+- A smart cube, while it is the cube: `M = S · P⁻¹` (`LIVE.map`, as F2L's Overlay), with S the
+  scramble and P the cube in the hands. Each turn goes on the player and turns the screen's cube.
+  The colors on the screen are not the cube's: look at the screen. Cross Trainer helps here, as
+  only the cross edges show their colors.
+- While it is on, a new scramble on the Cross tab is virtual too (`cxoScramble`, asked by
+  `loadScramble`, sets the map for it). New Cross on a smart cube makes one, not a fresh start
+  (`liveFresh`), so the Length menu works again.
+- Off, or Cross Trainer off: the scramble from before, with your moves before and since, on every
+  virtual scramble (`cxoOff`). Your cube took those turns, so a smart cube is in step again.
+- Undo, Use my cube, or a new scramble on another tab ends it; that scramble stays. Its map is
+  cleared only if it is still its own (`CXO.map`), so it never clears F2L Overlay's map.
+- `test/crossoverlay.js`.
+
 ## Not built yet
 
 - Find the edges by a smart cube: a tap on a face to name an edge.
