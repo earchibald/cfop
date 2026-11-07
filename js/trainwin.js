@@ -2,7 +2,7 @@
 // When your turn solves what a trainer asks for, the pieces just solved hop out with a soft glow and
 // back (mainBump with bounce: TRAIN_WIN in app.js, 750 ms), and then the next drill comes:
 //   Cross Trainer (Cross tab)  the four cross edges at home: the cross drill's next scramble; with
-//                              Virtual scramble on, the next virtual one (a smart cube too).
+//                              Overlay on, the next cross on the screen (a smart cube too).
 //   F2L Trainer, F2L-1         a pair it lit at home (the cross too): that pair glows, and the next
 //                              pair lights after it. The last pair is the F2L solved.
 //   F2L Trainer, F2L-2, F2L-3  the cross and the four pairs at home: the eight F2L pieces glow (and
@@ -14,7 +14,7 @@
 //   solved brings the next drill too.
 //   The 41 cases (the F2L tab's third mode), with a trainer on or not (1.79): the case solved, the
 //   next case from the deck (Next case).
-// The next drill comes only where the page owns the cube: Overlay, Virtual scramble, or the virtual
+// The next drill comes only where the page owns the cube: F2L's or Cross's Overlay, or the virtual
 // cube's keys. A smart cube with neither is the cube in your hands, so it glows and you mix it again. A running
 // timer waits for its stop (Next on stop). A turn that undoes the win before the glow ends keeps
 // the drill. "Your turn" is cw:yourmove (the virtual cube's keys, a smart cube's turns), not a step

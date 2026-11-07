@@ -97,17 +97,17 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.ok(await until('!!mainLift&&mainLift.bounce',1000),'the cross edges bounce');
   assert.strictEqual(run('mainLift.set.size'),8,'the four cross edges, both stickers');
   assert.ok(await until(`scr.seed!==${JSON.stringify(cs)}`,2500),'then the next cross');
-  // Virtual scramble (1.77): the page owns the cross, so a smart cube's win gives the next virtual cross.
+  // Cross's Overlay (1.77, Virtual scramble until 1.80): the page owns the cross, so a smart cube's win gives the next virtual cross.
   const dsel=$('#crossDiff');dsel.value='2';dsel.dispatchEvent(new w.Event('change'));
-  $('#crossOverBtn').click();assert.ok(await until('cxoOv()',3000),'Virtual scramble on');
+  $('#crossOverBtn').click();assert.ok(await until('cxoOv()',3000),'Overlay on');
   const vs=run('scr.seed');
   const two=run(`(()=>{const c=displayedCube,ms=[];for(const f of 'URFDLB')for(const s of ['',"'",'2'])ms.push(f+s);
     for(const a of ms)for(const b of ms)if(twCross(applyAlg(c,[a,b]).toFacelets(),crossColorIndex()))return [a,b];return null;})()`);
   assert.ok(two,'two moves make the cross');
   for(const m of two)run(`cubePlayerTurn(${JSON.stringify(m)},'smart')`);
-  assert.ok(run('!!TW.win'),'Virtual scramble: a win');
+  assert.ok(run('!!TW.win'),'Cross Overlay: a win');
   assert.ok(await until(`scr.seed!==${JSON.stringify(vs)}&&!TW.win`,3000),'then the next virtual cross, a smart cube too');
-  assert.ok(run('cxoOv()'),'still Virtual scramble');
+  assert.ok(run('cxoOv()'),'still Overlay');
   $('#crossOverBtn').click();await sleep(0);
   // The whole cube's pulse (1.78.1): it starts with the winning turn, and the turns after it do not
   // stop it, as they stop the pieces' hop. A smart cube turned on at once still ends the win in time.

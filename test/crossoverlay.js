@@ -1,4 +1,4 @@
-// Cross Trainer's Virtual scramble (js/crosstrain.js) on the Cross tab: the chip shows while Cross
+// Cross Trainer's Overlay (js/crosstrain.js) on the Cross tab: the chip shows while Cross
 // Trainer is on and is off at the start; on, a new cross scramble of the Length picked loads; your
 // moves turn it; a new cross scramble while on is virtual too; off, or Cross Trainer off, the
 // scramble from before with your moves before and since; Undo or a new scramble on another tab ends
@@ -25,13 +25,13 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   run(`newScramble('t-cxo')`);await sleep(50);
   const g=$('#crossOverGrp'),b=$('#crossOverBtn');
   assert.ok(g&&b,'the chip');assert.ok(!g.hidden,'shown while Cross Trainer is on');
-  assert.strictEqual(b.textContent,'Virtual scramble');assert.strictEqual(b.getAttribute('aria-pressed'),'false','off at the start');assert.ok(b.title,'titled');
+  assert.strictEqual(b.textContent,'Overlay');assert.strictEqual(b.getAttribute('aria-pressed'),'false','off at the start');assert.ok(b.title,'titled');
   assert.strictEqual(g.previousElementSibling&&g.previousElementSibling.id,'crossTrainBtn','after the Cross Trainer button');
   // Your moves first: they are kept for Off.
   run(`cubePlayerTurn('R','screen')`);run(`cubePlayerTurn('U','screen')`);await sleep(0);
   const before=key('displayedCube');
   b.click();assert.ok(await until(`scr.seed!=='t-cxo'`),'a new scramble loads');await sleep(0);
-  assert.strictEqual(b.getAttribute('aria-pressed'),'true','on');assert.ok(b.title.startsWith('Virtual scramble is on'),'the tooltip: '+b.title);
+  assert.strictEqual(b.getAttribute('aria-pressed'),'true','on');assert.ok(b.title.startsWith('Overlay is on'),'the tooltip: '+b.title);
   assert.ok(/^x4w-/.test(run('scr.seed')),'a cross scramble of the Length picked: '+run('scr.seed'));
   assert.strictEqual(run('crossState.sol&&crossState.sol.optimal'),4,'its cross takes 4 moves');
   assert.ok(run(`applyAlg(applyAlg(new Cube(),scr.moves),crossRotation()?[crossRotation()]:[]).toFacelets().join()===displayedCube.toFacelets().join()`),'the player: the scramble and its grip');
@@ -46,7 +46,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   assert.strictEqual(run('scr.seed'),'t-cxo','the scramble from before');
   assert.strictEqual(key('displayedCube'),run(`cubeTabKey(applyAlg(applyAlg(applyAlg(new Cube(),scr.moves),crossRotation()?[crossRotation()]:[]),['R','U','F','D']))`),'with your moves before and since');
   run(`cubePlayerTurn('D\\'','screen')`);run(`cubePlayerTurn('F\\'','screen')`);await sleep(0);assert.strictEqual(key('displayedCube'),before,'the cube from before');
-  // Cross Trainer off: the chip hides, and the Virtual scramble goes off to the scramble from before.
+  // Cross Trainer off: the chip hides, and the Overlay goes off to the scramble from before.
   b.click();assert.ok(await until(`CXO.seed&&scr.seed===CXO.seed`));
   $('#crossTrainBtn').click();await sleep(0);assert.ok(g.hidden,'hidden with Cross Trainer off');assert.strictEqual(run('scr.seed'),'t-cxo','the scramble from before');
   assert.ok(!run('CXO.on'));$('#crossTrainBtn').click();await sleep(0);assert.ok(!g.hidden,'shown again');assert.strictEqual(b.getAttribute('aria-pressed'),'false','and off');

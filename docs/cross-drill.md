@@ -57,14 +57,16 @@ the find would be no test with the edges lit.
 `drawMain` in `app.js` asks `crossTrainFade` for the stickers it draws (the turning cube too, and the
 net), and `crossFindCls` for a class on each sticker while a find runs.
 
-## Virtual scramble (1.77)
+## Overlay (1.77; named Virtual scramble until 1.80)
 
 The owner asked for an overlay "virtual scramble" in Cross Trainer: the Cross twin of F2L Trainer's
 Overlay (below). With a smart cube, a cross drill needed a scramble made by hand first (the fresh
 start of 1.68). Now the screen makes it, and the cube in the hands turns it.
 
-- The chip: **Virtual scramble**, beside Cross Trainer while it is on (`#crossOverGrp`,
-  `#crossOverBtn`, `js/crosstrain.js`). In the cube box it sits over the button, where F2L's style
+- The chip: **Overlay**, beside Cross Trainer while it is on (`#crossOverGrp`,
+  `#crossOverBtn`, `js/crosstrain.js`), with the light of F2L's Overlay: on while it is on. The
+  owner asked for it by that name in 1.80, so both tabs name the loop one way: a scramble on the
+  screen, solve it with the light, the next one, until Overlay goes off. In the cube box it sits over the button, where F2L's style
   column sits; in the stage view's action bar, after the button. It is not kept over a reload.
 - On: a new cross scramble of the Length picked loads (`crossNewScramble` in `app.js`, the job of
   New cross scramble), a scramble like any other, in the history too.
@@ -234,6 +236,6 @@ whose fallback was the first pair in the order, solved or not.
   cross; F2L-1: a pair it lit; F2L-2 and F2L-3: the F2L) lifts the pieces just solved a little, with
   a glow at half strength and a second, smaller hop (`TRAIN_WIN`, 750 ms). Then the next drill:
   F2L-1 lights its next pair; the F2L solved with Overlay on gives a fresh drill, and the cross with
-  Virtual scramble on the next virtual cross, a smart cube too;
+  Overlay on the next cross on the screen, a smart cube too;
   else the tab's next scramble on the virtual cube. A smart cube with neither only glows: the
   page cannot mix the cube in your hands. A running timer waits for its stop.
