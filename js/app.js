@@ -618,12 +618,22 @@ function setF2LCase(n){const f=F2L_CASES.find(c=>c.n===n);f2lState.curCase=n;con
   view.mode='3d';viewHome();const r=crossRotation();setSequence([...(r?[r]:[]),...setup],'setup for case (from solved, white up: rotate, then turn)',undefined,'F2L case');renderF2LCaseOut();}
 function f2lSolution(){const f=F2L_CASES.find(c=>c.n===f2lState.curCase);return removeRotations([...(f2lState.caseAUF?[f2lState.caseAUF]:[]),...parseAlg(f.alg)]);}
 function renderF2LCaseOut(){const n=f2lState.curCase;if(!n)return;const f=F2L_CASES.find(c=>c.n===n);const arr=times['f2l:'+n]||[];const rev=f2lState.caseRevealed;
-  $('#f2lCaseOut').innerHTML=`<div class="row" style="justify-content:space-between"><div><span class="tag">${esc(f.grp)}</span><b ${rev?'id="f2lNameBtn" style="cursor:pointer;text-decoration:underline dotted" title="Open the details of this case"':''}>${rev?'F2L case #'+n:'?'}</b> <span class="muted" style="font-size:14px">${arr.length?`mean ${fmt(arr.reduce((x,y)=>x+y.ms,0)/arr.length)} over ${arr.length}`:'no times yet'}</span></div><div style="width:90px">${thumb3D(f2lSetupCube())}</div></div>
+  $('#f2lCaseOut').innerHTML=`<div class="row" style="justify-content:space-between"><div><span class="tag">${esc(f.grp)}</span><b ${rev?'id="f2lNameBtn" style="cursor:pointer;text-decoration:underline dotted" title="Open the details of this case"':''}>${rev?'F2L case #'+n:'?'}</b> <span class="muted" style="font-size:14px">${arr.length?`mean ${fmt(arr.reduce((x,y)=>x+y.ms,0)/arr.length)} over ${arr.length}`:'no times yet'}</span><div class="muted" style="font-size:13px">${f2lDeckNote()}</div></div><div style="width:90px">${thumb3D(f2lSetupCube())}</div></div>
   <div style="margin-top:8px">${rev?`<div class="big">${esc(f2lSolution().join(' '))}</div><div class="muted">${f2lState.caseAUF?'Turn the top '+f2lState.caseAUF+' first, then the case algorithm '+esc(f.alg)+'. ':''}${esc(F2L_WHY[f.grp]||'')}</div><div class="row" style="margin-top:6px"><button class="small" id="f2lCaseLab" title="Open this algorithm in the Lab to see what each move does">Why does it work? (Lab)</button><button class="small" id="f2lCasePlay" title="Put the solution in the player and step through it on the cube">Step through on cube</button></div>`:'<span class="muted">Answer hidden. Press H or Reveal.</span>'}</div>`;
   const nb=$('#f2lNameBtn');if(nb)nb.onclick=()=>openCaseModal(modalForF2L(f));
   const b=$('#f2lCaseLab');if(b)b.onclick=()=>loadLab(f.alg,'F2L case #'+n);
   const p=$('#f2lCasePlay');if(p)p.onclick=()=>{setSequence(f2lSolution(),'solution for this case — press ▶ to step',f2lSetupCube(),'F2L case');seqState.idx=0;applySequence();focusPlayer();};}
-$('#f2lRandomCase').onclick=()=>{const pool=F2L_CASES.filter(c=>f2lState.caseSel.has(c.n));if(!pool.length){$('#f2lCaseOut').innerHTML='<p>Select at least one case.</p>';return;}setF2LCase(pool[Math.floor(Math.random()*pool.length)].n);};
+// The cases as a deck (1.79): each selected case once, in a shuffled order, before any comes again
+// (none selected: all 41). Next case and Overlay's next drill (js/f2ltrain.js) deal from it;
+// cw:f2lDeck keeps the cases left in the round, so a reload goes on with it.
+function f2lDeckPool(){const sel=F2L_CASES.map(c=>c.n).filter(n=>f2lState.caseSel.has(n));return sel.length?sel:F2L_CASES.map(c=>c.n);}
+function f2lDeckLeft(){const pool=f2lDeckPool(),d=store.get('f2lDeck',[]);return Array.isArray(d)?d.filter(n=>pool.includes(n)):[];}
+function f2lDeckDraw(){const pool=f2lDeckPool();let deck=f2lDeckLeft();
+  if(!deck.length){deck=pool.slice();for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}
+    if(deck.length>1&&deck[0]===f2lState.lastDeal)deck.push(deck.shift());}
+  const n=deck.shift();store.set('f2lDeck',deck);f2lState.lastDeal=n;return n;}
+function f2lDeckNote(){const all=f2lDeckPool().length,left=f2lDeckLeft().length;return `Case ${all-left} of ${all} in this round. Each case comes once before any comes again.`;}
+$('#f2lRandomCase').onclick=()=>{if(!F2L_CASES.some(c=>f2lState.caseSel.has(c.n))){$('#f2lCaseOut').innerHTML='<p>Select at least one case.</p>';return;}setF2LCase(f2lDeckDraw());};
 $('#f2lCaseReveal').onclick=()=>{if(!f2lState.curCase)return;f2lState.caseRevealed=!f2lState.caseRevealed;renderF2LCaseOut();};
 
 // ---------- LL trainer ----------

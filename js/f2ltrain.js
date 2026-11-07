@@ -25,7 +25,7 @@ const F2T={pick:null,state:'',busy:false,seq:0,timer:0,obs:null};
 // scramble on another tab ends it and stays as it is.
 // F2O.real: {seed, moves, custom, yours}, the scramble before and your moves on it. F2O.seed: the
 // name of the scramble Overlay loaded; any other scramble ends it.
-const F2O={on:false,real:null,seed:'',busy:false,n:0};
+const F2O={on:false,real:null,seed:'',busy:false,n:0,cas:null};
 const F2T_WAIT=150;
 const F2T_HOWS=[
   {id:'guide',label:'Guide',title:"The pair the guide is on, else the next one in the guide's order"},
@@ -45,8 +45,20 @@ function f2loSmart(){return typeof cubeTab!=='undefined'&&!!cubeTab.conn&&!!cube
 // Every pair of cross color ci at home in cube c (the cross too): no drill left in it.
 function f2loDone(c,ci){const f=c.toFacelets();
   return f2ltPairs(ci).every(k=>f2lPairHome(f,ci,...f2ltKeyColors(k)))&&edgeFacelet.filter(e=>e.some(i=>f[i]===ci)).every(e=>f2lTrainHome(f,e));}
-// A fresh drill (1.78): a random state, as a WCA scramble picks one, held with the cross color down.
-function f2loFresh(){const r=crossRotation();return applyAlg(wcaState(randomSeedName()),r?[r]:[]);}
+// A fresh drill (1.79; a random state in 1.78): the next of the 41 cases from the deck (f2lDeckDraw
+// in app.js), so every case comes once a round, as the case list draws them. The cross and the
+// other three pairs solved, the last layer mixed by two last-layer algorithms, a top turn, and the
+// case's pair in the slot of the pair named in the Pair row (else front right, as the list holds
+// it). Held with the cross color down. F2O.cas: the case dealt, {n, solve} (the moves as held).
+function f2loFresh(){const n=f2lDeckDraw(),c=f2loCaseCube(n);F2O.cas={n,solve:c.solve};return c.cube;}
+function f2loCaseCube(n,o={}){const any=a=>a[Math.floor(Math.random()*a.length)],r=crossRotation(),hold=r?[r]:[];
+  const f=F2L_CASES.find(c=>c.n===n)||F2L_CASES[0],auf=o.auf!=null?o.auf:any(AUFS),ll=[];
+  if(!o.plain)for(let i=0;i<2;i++){const u=any(AUFS);if(u)ll.push(u);ll.push(...parseAlg(invertAlg(any(LL_ALL).alg)));}
+  const k=o.pair||(f2ltAuto(f2ltChoiceId())||f2ltChoiceId()==='guide'?null:f2ltChoiceId());
+  let y=[];if(k)for(const t of [[],['y'],['y2'],["y'"]]){const c=applyAlg(new Cube(),[...hold,...t]);if(f2ltKey(c.center[2],c.center[1])===k){y=t;break;}}
+  const back=y.length?parseAlg(invertAlg(y.join(' '))):[];
+  return {cube:applyAlg(new Cube(),[...hold,...y,...ll,...caseSetupMoves(f.alg,auf?[auf]:[]),...back]),
+    solve:removeRotations([...y,...(auf?[auf]:[]),...parseAlg(f.alg),...back])};}
 // Load the overlay of cube A as the scramble. False if there is none (no solution in time). When
 // it leaves no pair to solve (a solved cube in your hands, or the F2L just solved), a fresh drill
 // in its place: the screen's cube is not the cube in your hands, so it can be any cube.
@@ -60,8 +72,8 @@ function f2loLoad(A){const ci=crossColorIndex();let o=f2ltOverlayScramble(A,ci);
   F2O.on=true;F2O.seed=seed;F2O.busy=true;
   try{loadScramble(F2O.seed,o.moves,true);}finally{F2O.busy=false;}
   return true;}
-// The next drill after a win (js/trainwin.js): the cube as it is, solved, gives a fresh one.
-function f2loNext(){const r=F2O.real;if(!f2loOv())return false;const ok=f2loLoad(homeNow().cube);F2O.real=r;f2loDraw();return ok;}
+// The next drill after a win (js/trainwin.js): a fresh one, the next case of the deck.
+function f2loNext(){const r=F2O.real;if(!f2loOv())return false;const ok=f2loLoad(f2loFresh());F2O.real=r;f2loDraw();return ok;}
 // Overlay ends: no map, the scramble on the page stays.
 function f2loEnd(){F2O.on=false;F2O.real=null;F2O.seed='';if(typeof liveMapSet==='function'&&LIVE.map)liveMapSet(null);}
 function f2loOn(){const h=homeNow(),e=history.find(x=>x.seed===scr.seed);
@@ -81,8 +93,8 @@ function f2loScramble(seed,moves,custom){
   if(!f2loLoad(A)){f2loEnd();return false;}
   F2O.real=real;return true;}
 function f2loTitle(){
-  if(!f2loOv())return "Overlay: a new scramble from your cube as it is, with the cross solved. The F2L pieces stay where they are. Your moves turn it. With a smart cube, look at the screen: its colors are not your cube's";
-  return 'Overlay is on: the scramble has the cross solved. With a smart cube, look at the screen, not your cube. Press to go back to your scramble';}
+  if(!f2loOv())return "Overlay: a new scramble from your cube as it is, with the cross solved. The F2L pieces stay where they are. Your moves turn it. Each pair you solve brings the next of the 41 F2L cases. With a smart cube, look at the screen: its colors are not your cube's";
+  return 'Overlay is on: the scramble has the cross solved. Each pair you solve brings the next of the 41 F2L cases. With a smart cube, look at the screen, not your cube. Press to go back to your scramble';}
 function f2loDraw(){const b=$('#f2lOverBtn'),g=$('#f2lOverGrp'),x=$('#f2lTrainer');if(x)x.hidden=!f2lTrainOn();if(!b||!g)return;g.hidden=!f2lTrainOn();
   b.setAttribute('aria-pressed',String(!!f2loOv()));const t=f2loTitle();if(b.title!==t)b.title=t;}
 function f2ltOn(){return typeof f2lTrainOn==='function'&&f2lTrainOn()&&f2lTrainStyle()===1&&f2lOnF2L();}
@@ -111,7 +123,10 @@ function f2ltRun(){
   step();}
 // A pick under F2L-2 or F2L-3 (the Pair part shows dimmed there) turns F2L-1 on: a pair lights only in F2L-1.
 function f2ltSet(id){store.set('f2lPair',id);F2T.state='';if(!f2ltAuto(id))F2T.busy=false;
-  if(typeof f2lTrainStyleSet==='function'&&(f2lTrainStyle()!==1||!f2lTrainOn()))f2lTrainStyleSet(1);drawMain();f2ltDraw();}
+  if(typeof f2lTrainStyleSet==='function'&&(f2lTrainStyle()!==1||!f2lTrainOn()))f2lTrainStyleSet(1);
+  // With Overlay on, a pair named that is solved has no drill: the next case comes in its slot (1.79).
+  const ci=crossColorIndex();if(!f2ltAuto(id)&&id!=='guide'&&f2loOv()&&displayedCube&&f2lPairHome(displayedCube.toFacelets(),ci,...f2ltKeyColors(id)))f2loNext();
+  drawMain();f2ltDraw();}
 // ---- the row of chips ----
 function f2ltSwatch(k){const s=document.createElement('span');s.className='f2lt-sw';s.setAttribute('aria-hidden','true');
   for(const c of f2ltKeyColors(k)){const i=document.createElement('i');i.style.background=stickerColor(c);s.append(i);}return s;}
