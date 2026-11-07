@@ -3,7 +3,9 @@
 // again when the link drops, on any tab, without moving the page; Disconnect stops it; another cube
 // picked ends the look the sheet began. Over the bridge (test/fake-bridge.js) the list comes up in
 // the sheet at once, a press connects with no dialog, and the next page takes the cube by itself.
-// No other cube picked: no Connect card, and no look.
+// No other cube picked: no Connect card, and no look. The pick of Smart cube in the cube menu is the
+// click (1.83.0): the chooser opens at once where the browser keeps no known cube, with no dialog;
+// a browser that kept none of its cubes (getDevices empty) is told how Chrome keeps them.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
 const {fakeDevice,mfDataFor}=require('./fake-gan');
 const {fakeBridge,bridgeInfo}=require('./fake-bridge');
@@ -33,13 +35,18 @@ async function chrome(){
   let p=await boot({store,bt});
   assert.ok(!p.$('#rail button[data-tab="smart"]')&&!p.$('#tab-smart'),'no Smart cube tab');
   assert.ok(p.$('#smartHome').classList.contains('hidden')&&p.$('#cubeWin').classList.contains('hidden'),'no smart cube sheet');
-  // Nothing known: Smart cube picked, the sheet does not look by itself; the chooser needs a click.
+  // Nothing known: Smart cube set by code, the sheet does not look by itself; the chooser needs a click.
   p.w.setCubeSrc('smart');await sleep(60);
   assert.strictEqual(p.ev('curTab'),'cross');assert.ok(p.$('#smartHome').closest('#everyMore')&&!p.$('#smartHome').classList.contains('hidden'),'the Connect card is a sheet for every section');
   assert.ok(!p.ev('smartConn')&&!picks,'nothing known: no connect, no chooser');
-  p.click(p.$('#smartTabConnect'));assert.strictEqual(picks,1,'Connect opens the chooser');
-  assert.ok(await until(()=>!!p.ev('smartConn')),'and connects');assert.ok(!p.$('#smartBg'),'with no dialog');
+  // The pick in the cube menu is the click: the chooser opens at once, no dialog, and the cube
+  // connects. Nothing more to press.
+  p.w.setCubeSrc('mine');p.click(p.$('#cubeChip'));p.click(p.$('#cubePop .csrc[data-src="smart"]'));
+  assert.strictEqual(picks,1,'Smart cube picked in the menu: the chooser at once');assert.ok(!p.$('#smartBg'),'no dialog');
+  assert.ok(p.$('#cubePop').classList.contains('hidden'),'the menu closes');
+  assert.ok(await until(()=>!!p.ev('smartConn')),'and connects');assert.ok(!p.$('#smartBg'),'still no dialog');
   assert.ok(JSON.parse(store.get('cw:labCubes'))[NAME].mac===MAC,'the cube is remembered, in the lab\'s map');
+  assert.ok(await until(()=>/^smart-/.test(p.ev('scr.seed'))),'the cube in your hands is the scramble, with nothing pressed');
   assert.deepStrictEqual(p.errs,[]);
   // A known cube: the page opens and connects with no click.
   p=await boot({store,bt});picks=0;
@@ -63,6 +70,18 @@ async function chrome(){
   // Smart cube picked again looks again.
   p.w.setCubeSrc('smart');
   assert.ok(await until(()=>!!p.ev('smartConn')),'Smart cube picked again: the cube connects by itself');
+  assert.deepStrictEqual(p.errs,[]);
+  // The browser kept no cube (Chrome with its persistent permissions off: getDevices is empty). The
+  // look by itself finds nothing, and the card says why and how Chrome keeps a cube. The pick in the
+  // menu still opens the chooser at once.
+  const bt2={getDevices:async()=>[],requestDevice:async()=>{picks++;return dev;}};
+  p=await boot({store,bt:bt2});picks=0;
+  assert.ok(await until(()=>/Press Connect, then choose your cube/.test(p.$('#smartTabStatus').textContent)),'nothing kept: a press is needed: '+p.$('#smartTabStatus').textContent);
+  assert.ok(/did not keep your cube/.test(p.$('#smartTabStatus').textContent)&&/chrome:\/\/flags/.test(p.$('#smartTabStatus').textContent),'and the card says how Chrome keeps it');
+  assert.strictEqual(picks,0,'no chooser with no click');
+  p.click(p.$('#cubeChip'));p.click(p.$('#cubePop .csrc[data-src="smart"]'));
+  assert.ok(await until(()=>picks===1),'the pick opens the chooser');
+  assert.ok(await until(()=>!!p.ev('smartConn')),'and connects');assert.ok(!p.$('#smartBg'),'no dialog');
   assert.deepStrictEqual(p.errs,[]);
   console.log('smart-auto chrome ok');
 }

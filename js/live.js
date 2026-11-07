@@ -8,8 +8,9 @@
 // A smart cube's turns go on the player as your moves, as the virtual cube's keys do (cw:smartmoves
 // from js/cubetab.js, cubePlayerTurn), while the cube on the page is the cube in your hands
 // (liveInStep). When it is not, a note under the moves says so, with Use my cube. When a cube
-// connects and is not in step, the page asks once whether to make it the scramble; Don't ask
-// again turns the ask off, and Settings turns it on again (cw:smartAsk). The smart cube sheet reads
+// connects and is not in step, the cube in your hands becomes the scramble at once (liveConnected;
+// 1.83.0: before, a question came up): nothing to press. In the beginner method the same, once,
+// so the guided solve starts on the cube in your hands (liveBegConnected). The smart cube sheet reads
 // its moves and its stage with the hold the picture shows (liveHoldSync), and a hold said to its
 // Listen turns the picture (liveHoldFromTab).
 // The tilt (1.76.0, js/tilt.js does the arithmetic): while a smart cube with a tilt sensor is the
@@ -211,6 +212,7 @@ function liveInStep(state){return !!state&&liveSame(livePlayerCube(),state);}
 // every tab. The F2L guide reads the cube too, and shows the same home cube.
 function liveSmartMoves(d){
   if(d.from)liveTiltMoves(d.moves);
+  if(!d.from&&!liveOn())liveBegConnected(d.to);
   if(!liveOn())return liveNoteDraw();
   if(!d.from){liveConnected(d.to);return liveNoteDraw();}
   if(d.moves&&liveInStep(d.from)){
@@ -225,14 +227,26 @@ function liveHomeTurns(d){const h=seqHome;if(!h||seqState.home||h.key!==homeKey(
   for(const m of d.moves){const P=playerHeldCube(c),x=FACE_NAMES[P.center.indexOf(FACE_NAMES.indexOf(m[0]))]+m.slice(1);
     const j=moves.length-1,y=j>=h.yours?seqJoin(moves[j],x):undefined;moves=y===undefined?moves.concat(x):moves.slice(0,j).concat(y?[y]:[]);c=applyAlg(c,[x]);}
   h.moves=moves;h.idx=moves.length;if(!/your moves/.test(h.label))h.label+=' · your moves';return true;}
-// The first state after a connect: in step, nothing to ask. Else ask, once per connect, unless the
-// ask is off.
+// The first state after a connect: in step, nothing to do. Else the cube in your hands becomes the
+// scramble, once per connect, with no question: the page follows the cube from here. The state
+// comes in by hand: the sheet fires the event before it keeps the state (cubeTabShow).
 function liveConnected(state){
-  if(!state||liveInStep(state)||LIVE.asked||!store.get('smartAsk',true))return;
-  LIVE.asked=true;liveAsk();
+  if(!state||LIVE.asked)return;
+  LIVE.asked=true;
+  if(!liveInStep(state))liveUse(state);
 }
-// Use my cube: the cube in your hands becomes the scramble, on the tab in view.
-function liveUse(){if(typeof cxoEnd==='function'&&CXO.on){cxoEnd();if(typeof cxoDraw==='function')cxoDraw();}const st=typeof cubeTab!=='undefined'&&cubeTab.target;if(!st)return;
+// The beginner method: the first state after a connect becomes the scramble, once, so the guided
+// solve starts on the cube in your hands. The beginner pages do not follow the turns live.
+function liveBegConnected(state){
+  if(!state||LIVE.asked||!isBeg()||puzzleN()!==3||typeof cubeTab==='undefined'||!cubeTab.conn)return;
+  LIVE.asked=true;
+  if(scr.cube&&scr.cube.equals(state))return;
+  scrambleFromCube(state,customName('smart'),true);
+}
+// Use my cube: the cube in your hands (`st`, or the state the sheet keeps) becomes the scramble, on
+// the tab in view. A button passes its event: that is no cube.
+function liveUse(st){if(typeof cxoEnd==='function'&&CXO.on){cxoEnd();if(typeof cxoDraw==='function')cxoDraw();}
+  if(!st||!Array.isArray(st.cp))st=typeof cubeTab!=='undefined'&&cubeTab.target;if(!st)return;
   scrambleFromCube(liveReal(st),customName('smart'),true);liveNoteDraw();}
 // ----- a screen cube that is not the cube in your hands: the map -----
 // F2L Trainer's Overlay (js/f2ltrain.js) loads a scramble of its own while a smart cube is the cube.
@@ -271,27 +285,6 @@ function liveFreshDraw(){
     if(b.firstChild.textContent!==t)b.firstChild.textContent=t;if(b.title!==tip)b.title=tip;}
   const d=$('#crossDiff');if(!d)return;if(d.dataset.tip==null)d.dataset.tip=d.parentNode.title||'';
   const off=!!liveFresh('cross');d.disabled=off;d.parentNode.title=off?'Not with a smart cube: you scramble the cube yourself':d.dataset.tip;
-}
-// The ask: Use my cube or Skip, with Don't ask again. Enter uses it, Esc skips.
-function liveAsk(){
-  if($('#liveAskBg'))return;
-  const hk=k=>liveEl('span',{class:'hk'},k);
-  const no=liveEl('input',{type:'checkbox',id:'liveAskNo'});
-  const skip=liveEl('button',{id:'liveAskSkip',title:'Keep the scramble on the page'},'Skip',hk('Esc'));
-  const use=liveEl('button',{id:'liveAskUse',class:'primary',title:'Make the cube in your hands the scramble'},'Use my cube',hk('Enter'));
-  const box=liveEl('div',{class:'modal ask',role:'dialog','aria-modal':'true','aria-labelledby':'liveAskTitle'},
-    liveEl('h2',{id:'liveAskTitle'},'Use your cube as the scramble?'),
-    liveEl('p',{},'Your smart cube is not at the scramble on the page. Use my cube makes the cube in your hands the scramble. Every section then follows your turns.'),
-    liveEl('label',{class:'setrow',title:'Keep the scramble when a cube connects, with no question'},no,' Don’t ask again. You can turn the question on again in Settings.'),
-    liveEl('div',{class:'row',style:'justify-content:flex-end;margin-top:14px'},skip,use));
-  const bg=liveEl('div',{class:'modal-bg ask-bg',id:'liveAskBg'},box);
-  document.body.appendChild(bg);
-  const close=yes=>{document.removeEventListener('keydown',keys,true);if(no.checked)store.set('smartAsk',false);bg.remove();if(yes)liveUse();};
-  const keys=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close(false);}else if(e.key==='Enter'&&e.target.tagName!=='BUTTON'){e.preventDefault();e.stopPropagation();close(true);}};
-  document.addEventListener('keydown',keys,true);
-  skip.onclick=()=>close(false);use.onclick=()=>close(true);
-  bg.addEventListener('click',e=>{if(e.target===bg)close(false);});
-  setTimeout(()=>{if(use.isConnected)use.focus();},20);
 }
 // The note under the moves, while a smart cube is connected and the player shows another cube.
 function liveNoteDraw(){

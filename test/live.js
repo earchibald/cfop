@@ -1,6 +1,6 @@
 // Your moves (js/live.js): the hold row turns the player's picture and renames the virtual cube's
-// keys; a smart cube that connects away from the page's cube brings the ask (Use my cube, Skip,
-// Don't ask again); in step, its turns go on the player; the Cross tab's Check my plan follows
+// keys; a smart cube that connects away from the page's cube becomes the scramble at once (1.83.0:
+// no question); in step, its turns go on the player; the Cross tab's Check my plan follows
 // the moves made, and moves typed there go on the player. With a smart cube, New Cross (New F2L,
 // New OLL · PLL) marks the cube as it is as the start, and makes no scramble.
 const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=require('path');const assert=require('assert');
@@ -39,23 +39,23 @@ w.addEventListener('load',async()=>{try{
   // Net toggles.
   click($('#viewNet'));assert.strictEqual(E('view.mode'),'net');click($('#viewNet'));assert.strictEqual(E('view.mode'),'3d');
 
-  // A smart cube connects at a cube that is not the scramble: the ask.
+  // A smart cube connects at a cube that is not the scramble: the cube in your hands becomes the
+  // scramble at once (1.83.0), with no question and nothing to press. The page stays where it is.
   E("cubeTab.conn={send:()=>Promise.resolve()}");
   const real=E("applyAlg(new Cube(),parseAlg(\"R U F' D2 L B R2 U'\"))");
   w.__real=real;E('cubeTab.target=window.__real');
   ev('cw:smartmoves',{moves:null,from:null,to:real});
-  assert.ok($('#liveAskBg'),'the ask shows');
-  assert.ok($('#liveNote')&&!$('#liveNote').hidden,'the note under the moves');
-  // Skip with Don't ask again: no ask next time; the setting is off.
-  $('#liveAskNo').checked=true;click($('#liveAskSkip'));assert.ok(!$('#liveAskBg'),'closed');
-  assert.strictEqual(E("store.get('smartAsk',true)"),false,"Don't ask again turns the ask off");
-  E("LIVE.asked=false");ev('cw:smartmoves',{moves:null,from:null,to:real});assert.ok(!$('#liveAskBg'),'no ask while it is off');
-  E("store.set('smartAsk',true);LIVE.asked=false");ev('cw:smartmoves',{moves:null,from:null,to:real});assert.ok($('#liveAskBg'),'the ask again once on');
-  // Use my cube: the scramble is the cube; the note goes.
-  click($('#liveAskUse'));
+  assert.ok(!$('#liveAskBg'),'no question');
   await until(()=>/^smart-/.test(E('scr.seed')),'the scramble from the cube');
   assert.ok(E('liveInStep(cubeTab.target)'),'the player shows the cube in your hands');
-  assert.ok($('#liveNote').hidden,'no note in step');
+  assert.ok(!$('#liveNote')||$('#liveNote').hidden,'no note in step');
+  assert.strictEqual(E('curTab'),'cross','the page stays on its section');
+  // Once per connect: the first state again changes nothing. Another scramble: the note under the
+  // moves, and Use my cube makes the cube the scramble again.
+  const seed1=E('scr.seed');ev('cw:smartmoves',{moves:null,from:null,to:real});await sleep(50);assert.strictEqual(E('scr.seed'),seed1,'the first state counts once');
+  E("newScramble('live-2')");assert.ok($('#liveNote')&&!$('#liveNote').hidden,'another scramble: the note under the moves');
+  click($('#liveNoteUse'));await until(()=>/^smart-/.test(E('scr.seed'))&&E('scr.seed')!==seed1,'Use my cube: the scramble from the cube again');
+  assert.ok(E('liveInStep(cubeTab.target)'),'in step again');assert.ok($('#liveNote').hidden,'no note in step');
 
   // In step, a turn of the cube goes on the player, named as the player holds the cube.
   E("goTab('cross')");await until(()=>E('crossState.sol'),'the cross solver');
@@ -208,6 +208,17 @@ w.addEventListener('load',async()=>{try{
   // Regular cube from the menu closes it too.
   click($('#vcubeBtn'));assert.ok(!$('#vcubeWin').hidden);E("setCubeSrc('mine')");assert.ok($('#vcubeWin').hidden,'a regular cube: no window');
 
+  // The beginner method: a smart cube that connects becomes the scramble once, for the guided
+  // solve, with no question; the page stays where it is; the first state again changes nothing.
+  E("setMethod('beginner');goTab('learn')");
+  E("cubeTab.conn={send:()=>Promise.resolve()};LIVE.asked=false");
+  const real2=E("applyAlg(new Cube(),parseAlg(\"L2 D F' U R\"))");w.__real2=real2;
+  ev('cw:smartmoves',{moves:null,from:null,to:real2});
+  await until(()=>E('scr.cube.equals(window.__real2)'),'the beginner scramble from the cube');
+  assert.strictEqual(E('curTab'),'learn','the page stays');assert.ok(!$('#liveAskBg'),'no question');
+  const seed2=E('scr.seed');ev('cw:smartmoves',{moves:null,from:null,to:real2});await sleep(50);assert.strictEqual(E('scr.seed'),seed2,'once per connect');
+  E("cubeTab.conn=null;setMethod('cfop')");
+
   assert.deepStrictEqual(errs,[],'no script errors');
-  console.log('live: the hold row, the ask, Use my cube, smart turns on the player, Check my plan follows the cube, the keys and the typing ok');process.exit(0);
+  console.log('live: the hold row, the cube taken at connect, Use my cube, smart turns on the player, Check my plan follows the cube, the keys and the typing ok');process.exit(0);
 }catch(e){console.error('live: FAIL',e.stack||e.message,errs);process.exit(1);}});
