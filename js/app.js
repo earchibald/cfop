@@ -87,6 +87,25 @@ function viewBtnDraw(){const b=$('#viewBtn');if(!b)return;b.classList.toggle('hi
   b.setAttribute('aria-pressed',String(!iso));
   const t=iso?'Isometric view: the cube from above and to the right, three faces in view. Press for Player view, straight on (V)':'Player view: the cube straight on, as you hold it. Press for Isometric view, from above and to the right (V)';if(b.title!==t)b.title=t;}
 function setViewCam(cam){view.cam=cam==='player'?'player':'iso';store.set('cubeView',view.cam);viewHome();drawMain();}
+// Fullscreen (the chip on the cube, F): the browser's fullscreen on the page, with body.fullcube
+// while it is on: the cube alone on the screen, the top bar, the rail, the badge and the sheets
+// gone (a floating sheet stays), so the timer's clock, the Solved! card, a window and a tooltip
+// still show. The chip again, F or Esc leaves it. The chip hides where the browser has no
+// fullscreen (an iPhone, a frame). Safari before 16.4 has the webkit names.
+const FULL={want:false};
+const FULL_ICON={in:'<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>',out:'<path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/>'};
+function fullEl(){return document.fullscreenElement||document.webkitFullscreenElement||null;}
+function fullOn(){return FULL.want&&!!fullEl();}
+function fullCan(){const d=document,r=d.documentElement,en=d.fullscreenEnabled!=null?d.fullscreenEnabled:d.webkitFullscreenEnabled;
+  return !!en&&!!(r.requestFullscreen||r.webkitRequestFullscreen);}
+function fullSet(on){const d=document,r=d.documentElement;if(!fullCan())return;
+  if(on&&!fullEl()){FULL.want=true;const p=(r.requestFullscreen||r.webkitRequestFullscreen).call(r);if(p&&p.catch)p.catch(()=>{FULL.want=false;fullDraw();});}
+  else if(!on&&fullEl()){const x=d.exitFullscreen||d.webkitExitFullscreen;if(!x)return;const p=x.call(d);if(p&&p.catch)p.catch(()=>{});}}
+function fullDraw(){if(!fullEl())FULL.want=false;const on=fullOn();document.body.classList.toggle('fullcube',on);
+  const b=$('#fullBtn');if(!b)return;b.classList.toggle('hidden',!fullCan());b.setAttribute('aria-pressed',String(on));
+  const svg=b.querySelector('svg'),ic=FULL_ICON[on?'out':'in'];if(svg&&svg.innerHTML!==ic)svg.innerHTML=ic;
+  const l=on?'Exit fullscreen':'Fullscreen',tn=svg&&svg.nextSibling;if(tn&&tn.nodeType===3&&tn.textContent!==l)tn.textContent=l;
+  const t=on?'Leave fullscreen: the page comes back (F, or Esc)':'Fill the screen with the cube. Press again, or Esc, to leave (F)';if(b.title!==t)b.title=t;}
 // Hidden faces (cw:hidden, off by default): the back, left and bottom drawn as in a mirror behind the
 // cube (hiddenFacePolys in js/draw.js). The cube draws smaller so the faces fit the box.
 function hiddenOn(){return !!store.get('hidden',false);}
@@ -375,6 +394,8 @@ $('#histBtn').onclick=()=>$('#history').classList.toggle('hidden');
 function setViewNet(on){view.mode=on?'net':'3d';if(!on)viewHome();$('#viewNet').setAttribute('aria-pressed',String(on));drawMain();}
 $('#viewNet').onclick=()=>setViewNet(view.mode!=='net');
 $('#viewBtn').onclick=()=>setViewCam(view.cam==='iso'?'player':'iso');
+$('#fullBtn').onclick=()=>fullSet(!fullOn());
+['fullscreenchange','webkitfullscreenchange'].forEach(ev=>document.addEventListener(ev,fullDraw));fullDraw();
 // Drag to rotate. preventDefault and body.cube-drag keep the drag from selecting page text.
 (()=>{let drag=null;const svg=$('#cube');const stop=()=>{drag=null;document.body.classList.remove('cube-drag');};
 svg.addEventListener('pointerdown',e=>{if(view.mode!=='3d')return;e.preventDefault();drag={x:e.clientX,y:e.clientY,yaw:view.yaw,pitch:view.pitch};document.body.classList.add('cube-drag');if(svg.setPointerCapture)svg.setPointerCapture(e.pointerId);});
@@ -425,6 +446,7 @@ document.addEventListener('keydown',e=>{const el=document.activeElement,tag=el?e
   if(e.key==='ArrowLeft'){e.preventDefault();seqGo(seqState.idx-jump);}if(e.key==='ArrowRight'){e.preventDefault();seqGo(seqState.idx+jump);}
   if(e.key==='Home'){e.preventDefault();seqGo(0);}if(e.key==='End'){e.preventDefault();seqGo(seqState.moves.length);}
   if(e.key==='p'||e.key==='P'){toggleAuto();}if(e.key==='a'||e.key==='A'){setAnim(!animOn());}if((e.key==='v'||e.key==='V')&&view.mode==='3d')setViewCam(view.cam==='iso'?'player':'iso');
+  if(e.key==='f'||e.key==='F'){fullSet(!fullOn());}
   if(e.key==='n'||e.key==='N'){nextForTab();}if(e.key==='h'||e.key==='H'){hintForTab();}
   if(e.key==='?'){e.preventDefault();$('#helpBtn').click();}
   if(!timerHidden()){if(e.key==='d'||e.key==='D')deleteLast();if(e.key==='c'||e.key==='C')clearTimes();}
@@ -942,7 +964,7 @@ $('#themeBtn').onclick=toggleTheme;;
 // The keys card. Beginner mode has no timer, so Space plays there and the timer row is left out.
 function helpHTML(){const k=t=>`<span class="kbd">${t}</span>`;const beg=timerHidden();
   const rows=[[k('←')+' '+k('→'),'one move back or forward'],[k('⇧')+' + arrows','five moves at a time'],[k('Home')+' '+k('End'),'the start, the end'],
-    [k('space'),beg?'play, pause':'timer: hold, release to start · press to stop'],[k('P'),'play, pause'],[k('A'),'animation on or off'],[k('V'),'Isometric view or Player view'],...(beg?[]:[[k('D'),'delete the last time'],[k('C'),'clear all times']]),
+    [k('space'),beg?'play, pause':'timer: hold, release to start · press to stop'],[k('P'),'play, pause'],[k('A'),'animation on or off'],[k('V'),'Isometric view or Player view'],[k('F'),'fullscreen on or off'],...(beg?[]:[[k('D'),'delete the last time'],[k('C'),'clear all times']]),
     [k('1')+'–'+k(String(railButtons().length)),'switch tab'],...(beg?[]:[[k('N'),'next scramble / case'],[k('H'),'reveal the answer']]),[k('?'),'this card'],['drag cube','orbit the view']];
   // The virtual cube's keys, in the layout of its Keys window: they come before the keys above.
   let vc='';if(typeof cubeSrc==='function'&&cubeSrc()==='screen'&&typeof vcubeLayout==='function'){const v=screenKeys(vcubeLayout()),ks=fs=>fs.map(f=>k(esc(v[f]))).join(' ');

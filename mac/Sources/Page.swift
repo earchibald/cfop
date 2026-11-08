@@ -48,6 +48,8 @@ final class PageWindow: NSObject, NSWindowDelegate, WKNavigationDelegate, WKUIDe
         // The page can tell it runs in the app.
         config.applicationNameForUserAgent = "Twistwright/\(appVersion)"
         config.mediaTypesRequiringUserActionForPlayback = []
+        // The site's Fullscreen chip: the page may fill the screen (document.fullscreenEnabled).
+        config.preferences.isElementFullscreenEnabled = true
         web = WKWebView(frame: .zero, configuration: config)
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1280, height: 860),
                           styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)

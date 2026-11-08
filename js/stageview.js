@@ -6,7 +6,7 @@
 // slim stand-in where it was, and while the cube is maximized it keeps its tab. Your moves and the timer are sheets for every
 // section, under them, with the CFOP plan. On the stage: a step badge with Scramble Info
 // (js/scrinfo.js), Scan or paint and Undo (js/undo.js) over the hold at the top right, an action
-// bar, and the cube question when no cube is picked yet. Maximize cube (a button in the top bar,
+// bar (its Fullscreen chip, js/app.js, puts body.fullcube on: the cube alone on the screen), and the cube question when no cube is picked yet. Maximize cube (a button in the top bar,
 // cw:svMax) gives the cube the page: the rail is a column of color chips, the sheets are vertical
 // tabs at the right edge, and a click on a tab or a drag off it floats its sheet. A timed solve fades the rest (focus) and ends on a Solved! card.
 // The module writes no section. It moves the cube slot, the sections and a few player parts with a
@@ -102,7 +102,7 @@ function svApply(){const want=svWanted();
   svPut(slot,wrap,$('#svCol'));
   svPut($('main.main'),$('#svMain'));
   svPut($('#player .seqpanel'),$('#svEvery'));svPut($('#player .timerpanel'),$('#svEvery'));svPut($('#everyMore'),$('#svEvery'));
-  svPut(SV.acts,box);['animBtn','hiddenBtn','viewBtn','tiltBtn','vcubeBtn','crossTrainBtn','crossOverGrp','f2lTrainBtn','saveImgBtn','f2lTrainer'].forEach(id=>svPut($('#'+id),SV.acts));
+  svPut(SV.acts,box);['animBtn','hiddenBtn','viewBtn','tiltBtn','vcubeBtn','crossTrainBtn','crossOverGrp','f2lTrainBtn','saveImgBtn','fullBtn','f2lTrainer'].forEach(id=>svPut($('#'+id),SV.acts));
   svRefresh();}
 function svRefresh(){if(!SV.on)return;svMaxDraw();svSheets();svBadge();svSrc();svAskDraw();if(typeof siCurDraw==='function')siCurDraw();}
 // ---- sheets ----
