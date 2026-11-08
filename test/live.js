@@ -165,6 +165,7 @@ w.addEventListener('load',async()=>{try{
   assert.ok($$('#vcubeWin button').every(b=>b.title),'every button has a title');
   E("newScramble('live-3')");E("goTab('cross')");await sleep(50);
   click($('#vcubeWin .vk-face[data-f="F"]'));assert.strictEqual($('#crossTry').value,'F','a press turns the face');
+  assert.ok(!$('#vcubeWin .vk-face[data-f="F"]').dispatchEvent(new w.MouseEvent('mousedown',{bubbles:true,cancelable:true,shiftKey:true})),'a Shift+click for the prime move selects no text: its mousedown is stopped');
   // Prime is sticky: it stays on for every click until a second click.
   const prime=$('#vcubeWin [data-mod="prime"]');click(prime);assert.strictEqual(prime.getAttribute('aria-pressed'),'true');
   click($('#vcubeWin .vk-face[data-f="F"]'));assert.strictEqual($('#crossTry').value,'','prime undoes it');
