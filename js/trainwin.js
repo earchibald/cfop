@@ -14,7 +14,11 @@
 //   solved brings the next drill too.
 //   The 41 cases (the F2L tab's third mode), with a trainer on or not (1.79): the case solved, the
 //   next case from the deck (Next case).
-// The next drill comes only where the page owns the cube: F2L's or Cross's Overlay, or the virtual
+//   OLL · PLL Trainer (1.85, js/lltrain.js, llJudge): the look the case dealt asks for done (the
+//   edges oriented, the top one color, the corners placed, the cube solved up to a top turn): the
+//   pieces of that look glow, and with Overlay on the next case comes (lloNext). With no case
+//   dealt, each look of the set done glows, and the set's last look lets a next drill come.
+// The next drill comes only where the page owns the cube: F2L's, Cross's or OLL · PLL's Overlay, or the virtual
 // cube's keys. A smart cube with neither is the cube in your hands, so it glows and you mix it again. A running
 // timer waits for its stop (Next on stop). A turn that undoes the win before the glow ends keeps
 // the drill. "Your turn" is cw:yourmove (the virtual cube's keys, a smart cube's turns), not a step
@@ -40,6 +44,8 @@ function twJudge(before,now){
   if(typeof crossTrainOn==='function'&&crossTrainOn()&&crossOnCross()&&!CF.on){
     if(twCross(fb,ci)||!twCross(fn,ci))return null;
     return {set:twCrossStickers(fn,ci),done:true,goal:f=>twCross(f,ci)};}
+  // The OLL · PLL tab: its trainer judges (js/lltrain.js); undefined when it is not on there.
+  if(typeof llJudge==='function'){const w=llJudge(before,now);if(w!==undefined)return w;}
   if(typeof f2lOnF2L!=='function'||!f2lOnF2L())return null;
   const done=f=>twCross(f,ci)&&twAllPairs(f,ci),home=(f,ps)=>ps.every(([a,b])=>f2lPairHome(f,ci,a,b));
   // The 41 cases: the case's pair solved, the F2L with it, with a trainer on or not.
@@ -78,9 +84,10 @@ function twTurn(e){
   const src=d.src||'screen',tab=curTab;
   TW.win={pairs:w.pairs||null,t0:performance.now(),end:null};
   // The next drill: Overlay's fresh one, the next virtual cross, or the tab's next scramble for the virtual cube.
-  const next=()=>{if(!w.done||curTab!==tab||twTiming()||!w.goal(displayedCube.toFacelets()))return;
+  const next=()=>{if(!w.done||curTab!==tab||twTiming()||!w.goal(displayedCube.toFacelets(),displayedCube))return;
     if(tab==='f2l'&&typeof f2loOv==='function'&&f2loOv()){f2loNext();return;}
     if(tab==='cross'&&typeof cxoOv==='function'&&cxoOv()){crossNewScramble();return;}
+    if(tab==='ll'&&typeof lloOv==='function'&&lloOv()){lloNext();return;}
     if(src==='screen')nextForTab();};
   const end=()=>{clearTimeout(TW.lift);TW.timer=TW.lift=0;TW.win=null;twPulse(false);drawMain();next();};
   // The cube's pulse now; the pieces' glow once the turn on the picture ends, if no other turn came.

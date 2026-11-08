@@ -106,7 +106,7 @@ function startFinish(m,tab,after){if(START.level)store.set('level',START.level);
 // Statuses: '' (not started), 'learning', 'finished' in the one map, llState.status.
 function startMark(ids,v){for(const id of ids){if(v)llState.status[id]=v;else delete llState.status[id];}
   store.set('llStatus',llState.status);if(typeof saveLL==='function')saveLL();
-  try{renderLLGroups();renderF2LGrid();renderCaseStats();}catch(e){}
+  try{renderLLGroups();renderF2LGrid();}catch(e){}
   document.dispatchEvent(new CustomEvent('cw:status',{detail:ids[0]||''}));}
 function startKnown(){return store.get('known',{});}
 function startSetKnown(id,v){const k=startKnown();k[id]=v;store.set('known',k);}

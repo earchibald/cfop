@@ -15,7 +15,7 @@
 // and sheet; a closed from before 1.66 is dropped) keep the choices. Every text put in markup here goes through svEsc.
 const SV={on:false,marks:new Map(),fmarks:new Map(),phase:'',obs:null,raf:0,drag:null,ate:false};
 const SV_TITLES={planFold:'CFOP plan',f2lGuide:'Guide',f2lLive:'Live pairs',f2lCases:'Train cases',f2lCaseOut:'This case',
-  f2lCaseList:'Cases',f2lStatsPanel:'Per-case times',llCurrent:'This case',labOut:'What it moves',labWhy:'Why it works',weakSpots:'Weak spots',cubeWin:'Smart cube'};
+  f2lCaseList:'Cases',labOut:'What it moves',labWhy:'Why it works',weakSpots:'Weak spots',cubeWin:'Smart cube'};
 const SV_ICON={
   grip:'<svg viewBox="0 0 12 16" aria-hidden="true"><circle cx="4" cy="4" r="1.2"/><circle cx="8" cy="4" r="1.2"/><circle cx="4" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="4" cy="12" r="1.2"/><circle cx="8" cy="12" r="1.2"/></svg>',
   fold:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>',
@@ -102,7 +102,7 @@ function svApply(){const want=svWanted();
   svPut(slot,wrap,$('#svCol'));
   svPut($('main.main'),$('#svMain'));
   svPut($('#player .seqpanel'),$('#svEvery'));svPut($('#player .timerpanel'),$('#svEvery'));svPut($('#everyMore'),$('#svEvery'));
-  svPut(SV.acts,box);['animBtn','hiddenBtn','viewBtn','tiltBtn','vcubeBtn','crossTrainBtn','crossOverGrp','f2lTrainBtn','saveImgBtn','f2lTrainer'].forEach(id=>svPut($('#'+id),SV.acts));
+  svPut(SV.acts,box);['animBtn','hiddenBtn','viewBtn','tiltBtn','vcubeBtn','crossTrainBtn','crossOverGrp','f2lTrainBtn','llTrainBtn','saveImgBtn','f2lTrainer','llTrainer'].forEach(id=>svPut($('#'+id),SV.acts));
   svRefresh();}
 function svRefresh(){if(!SV.on)return;svMaxDraw();svSheets();svBadge();svSrc();svAskDraw();if(typeof siCurDraw==='function')siCurDraw();}
 // ---- sheets ----

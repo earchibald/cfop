@@ -1061,9 +1061,14 @@ body.onboard .foot{padding-bottom:56px}
 body:not([data-tab="cross"]) #crossTrainBtn,body:not([data-method="cfop"]) #crossTrainBtn{display:none!important}
 /* F2L Trainer: the same place on the F2L tab */
 body:not([data-tab="f2l"]) #f2lTrainBtn,body:not([data-method="cfop"]) #f2lTrainBtn{display:none!important}
+/* OLL · PLL Trainer (js/lltrain.js): the same place on the OLL · PLL tab; its chips (#llStyle) and its
+   Overlay (#llOverGrp) share the F2L rules below */
+body:not([data-tab="ll"]) #llTrainBtn,body:not([data-method="cfop"]) #llTrainBtn{display:none!important}
 /* its three styles, F2L-1 to F2L-3, while it is on: one pill of chips over the button */
 .f2lstyle{display:inline-flex;gap:2px;padding:2px;border-radius:999px;background:var(--panel);border:1px solid var(--line)}
 .f2lstyle[hidden],body:not([data-tab="f2l"]) #f2lStyle,body:not([data-method="cfop"]) #f2lStyle{display:none!important}
+body:not([data-tab="ll"]) #llStyle,body:not([data-method="cfop"]) #llStyle{display:none!important}
+body:not(.sv) .cubebox #llStyle .f2lt-more{display:none}
 .f2lstyle button{font:inherit;font-size:12px;font-weight:500;line-height:1.4;padding:2px 9px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-variant-numeric:tabular-nums}
 .f2lstyle button:hover{color:var(--text)}
 /* the chip in use: solid, so what is engaged reads at a glance (1.78; a pale tint before) */
@@ -1074,8 +1079,8 @@ body:not(.sv) .cubebox .f2lstyle button{border-radius:9px}
 @media (max-width:760px){body:not(.sv) .cubebox .f2lstyle{left:4px;bottom:56px}}
 /* where a trainer button sits over Hidden faces (Cross, F2L), the drag hint goes to the middle of
    the bottom row, its arrow alone, so it does not run under the button */
-body:not(.sv)[data-method="cfop"]:is([data-tab="cross"],[data-tab="f2l"]) .cubebox .draghint{left:50%;bottom:12px;transform:translateX(-50%)}
-body:not(.sv)[data-method="cfop"]:is([data-tab="cross"],[data-tab="f2l"]) .cubebox .draghint span{display:none}
+body:not(.sv)[data-method="cfop"]:is([data-tab="cross"],[data-tab="f2l"],[data-tab="ll"]) .cubebox .draghint{left:50%;bottom:12px;transform:translateX(-50%)}
+body:not(.sv)[data-method="cfop"]:is([data-tab="cross"],[data-tab="f2l"],[data-tab="ll"]) .cubebox .draghint span{display:none}
 /* Find the edges: the row under the cross plans; a miss shakes the cube */
 .crossfind #crossFindOut{margin-top:6px}
 .crossfind #crossFindOut b{color:var(--text)}
@@ -1111,7 +1116,8 @@ body:not(.sv) .cubebox #f2lPairRow .f2lt-more{display:none}
    cube shows now) and Overlay. In the stage view a strip under the action bar's buttons, each part
    with a small label; in the cube box display:contents, each part in its place, no labels */
 #f2lTrainer[hidden],body:not([data-tab="f2l"]) #f2lTrainer,body:not([data-method="cfop"]) #f2lTrainer{display:none!important}
-body:not(.sv) #f2lTrainer{display:contents}
+#llTrainer[hidden],body:not([data-tab="ll"]) #llTrainer,body:not([data-method="cfop"]) #llTrainer{display:none!important}
+body:not(.sv) :is(#f2lTrainer,#llTrainer){display:contents}
 .f2lt-lab{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 5px 0 6px;align-self:center;user-select:none}
 body:not(.sv) .cubebox .f2lt-lab{display:none}
 .f2lt-ways{display:inline-flex;gap:2px}
@@ -1140,12 +1146,13 @@ body:not(.sv) .cubebox #f2lLit{margin:1px 0 0;padding:3px 2px 0;border-left:0;bo
 /* F2L Trainer's Overlay (js/f2ltrain.js): one chip after the style chips while F2L Trainer is on. In
    the stage view's action bar a pill of its own; in the cube box over the style column at the left */
 body:not([data-tab="f2l"]) #f2lOverGrp,body:not([data-method="cfop"]) #f2lOverGrp{display:none!important}
+body:not([data-tab="ll"]) #llOverGrp,body:not([data-method="cfop"]) #llOverGrp{display:none!important}
 /* a switch: a light that is on while Overlay is on */
-#f2lOverBtn,#crossOverBtn{display:inline-flex;align-items:center;gap:6px}
-#f2lOverBtn::before,#crossOverBtn::before{content:"";width:8px;height:8px;border-radius:50%;background:transparent;box-shadow:inset 0 0 0 1.5px var(--muted);flex:none}
-#f2lOverBtn[aria-pressed="true"]::before,#crossOverBtn[aria-pressed="true"]::before{background:var(--good);box-shadow:0 0 0 2px color-mix(in srgb,var(--good) 35%,transparent)}
-body:not(.sv) .cubebox #f2lOverGrp{bottom:152px}
-@media (max-width:760px){body:not(.sv) .cubebox #f2lOverGrp{bottom:140px}}
+#f2lOverBtn,#crossOverBtn,#llOverBtn{display:inline-flex;align-items:center;gap:6px}
+#f2lOverBtn::before,#crossOverBtn::before,#llOverBtn::before{content:"";width:8px;height:8px;border-radius:50%;background:transparent;box-shadow:inset 0 0 0 1.5px var(--muted);flex:none}
+#f2lOverBtn[aria-pressed="true"]::before,#crossOverBtn[aria-pressed="true"]::before,#llOverBtn[aria-pressed="true"]::before{background:var(--good);box-shadow:0 0 0 2px color-mix(in srgb,var(--good) 35%,transparent)}
+body:not(.sv) .cubebox :is(#f2lOverGrp,#llOverGrp){bottom:152px}
+@media (max-width:760px){body:not(.sv) .cubebox :is(#f2lOverGrp,#llOverGrp){bottom:140px}}
 /* Cross Trainer's Overlay (js/crosstrain.js): one chip while Cross Trainer is on, the same light. In the
    stage view's action bar after the button; in the cube box over it, where F2L's style column sits */
 body:not([data-tab="cross"]) #crossOverGrp,body:not([data-method="cfop"]) #crossOverGrp{display:none!important}

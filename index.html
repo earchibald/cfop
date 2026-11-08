@@ -55,6 +55,8 @@
       <button class="animbtn crosstrainbtn" id="crossTrainBtn" aria-pressed="false" title="Cross Trainer: gray every piece but the four cross edges and the centers, as you turn the cube"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>Cross Trainer</button>
       <button class="animbtn crosstrainbtn f2ltrainbtn" id="f2lTrainBtn" aria-pressed="false" title="F2L Trainer: gray every piece but the four F2L corners, the four middle edges and the centers, as you turn the cube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="12" width="16" height="8" rx="1"/><path d="M4 16h16M9.3 12v8M14.7 12v8"/><rect x="14.7" y="4" width="5.3" height="5.3" rx="1"/></svg>F2L Trainer</button>
       <span class="f2lstyle" id="f2lStyle" role="group" aria-label="F2L Trainer style" hidden></span>
+      <button class="animbtn crosstrainbtn lltrainbtn" id="llTrainBtn" aria-pressed="false" title="OLL · PLL Trainer: gray every piece but the last layer's, as you turn the cube. Its chips pick the set to drill: two-look OLL, two-look PLL or the full PLL"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="6" rx="1"/><path d="M9.3 4v6M14.7 4v6"/><path d="M4 14h16M4 18h16" stroke-dasharray="2 2.4"/></svg>OLL · PLL Trainer</button>
+      <span class="f2lstyle" id="llStyle" role="group" aria-label="OLL · PLL Trainer set" hidden></span>
       <button class="savebtn" id="saveImgBtn" title="Save the cube picture as an image file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>Save image</button>
       <div class="draghint" id="dragHint" aria-hidden="true"><svg viewBox="0 0 24 16"><path d="M3 12a9 9 0 0 1 18 0"/><path d="M3 12l-1.6-3.2M3 12l3.3-1.3"/><path d="M21 12l1.6-3.2M21 12l-3.3-1.3"/></svg><span>Drag to rotate</span></div>
     </div>
@@ -247,26 +249,18 @@
         <div class="row" style="justify-content:space-between"><h3>Cases</h3><span class="legend"><span><i class="unlearned"></i>Not started</span><span><i style="background:var(--sticker-Y)"></i>Learning</span><span><i style="background:var(--sticker-G)"></i>Learned</span></span><span><button class="small ghost" id="f2lSelAll" title="Train every case">Select all</button><button class="small ghost" id="f2lSelNone" title="Train no case">None</button><button class="small ghost" id="f2lSelUnlearned" title="Train the cases not yet Learned">Not learned</button></span></div>
         <div class="cases" id="f2lCaseGrid"></div>
       </div>
-      <div class="panel hidden" id="f2lStatsPanel"><h3>Per-case times</h3><div class="wide"><table id="f2lStats"></table></div></div>
     </section>
-    <!-- LL -->
+    <!-- LL: one pane (1.85): Next case and Reveal with the case dealt (js/lltrain.js), Show and the plan (js/start-app.js), the cases -->
     <section class="tab" id="tab-ll" data-sec="ll">
-      <div class="panel">
+      <div class="panel" id="llPane">
         <div class="row" style="justify-content:space-between">
-          <div><h2>Two-look OLL and PLL</h2><p class="muted" style="margin:0">Select cases, then train. The button under each case changes its status: Not started → Learning → Learned. Click a case to open its details. Shift-click a case to add it to training or remove it.</p></div>
-          <div class="row">
-            <select id="llProb" title="Balanced: every case as often. Realistic: as often as it comes up in a solve"><option value="balanced">Balanced</option><option value="realistic">Realistic probability</option></select>
-            <label style="font-size:14px" title="Mix the rest of the last layer as a real solve would, not only the pieces of the case"><input type="checkbox" id="llRealState" checked> Realistic rest-of-layer</label>
-            <button class="primary" id="llNext" title="Put a case from the selected ones on the cube">Next case<span class="hk" aria-hidden="true">N</span></button><button id="llHint" title="Show the algorithm for this case, one move at a time">Reveal<span class="hk" aria-hidden="true">H</span></button>
-          </div>
+          <div><h2>OLL · PLL</h2><p class="muted" style="margin:0">Next case puts a case on the cube: two-look OLL, two-look PLL or the full PLL, as OLL · PLL Trainer's chips say. Solve it, and the next case comes. Shift-click a case to add it to training or take it out.</p></div>
+          <div class="row"><button class="primary" id="llNext" title="Put the next case of the set on the cube. It turns OLL · PLL Trainer and its Overlay on">Next case<span class="hk" aria-hidden="true">N</span></button><button id="llHint" title="Show the algorithm for this case. A second press hides it">Reveal<span class="hk" aria-hidden="true">H</span></button></div>
         </div>
-      </div>
-      <div class="panel" id="llCurrent"><p class="muted">Press Next case to start a drill. The cube shows the case, and the setup moves show in the player for a real cube. Your scramble is kept. Press Back to scramble to return to it.</p></div>
-      <div class="panel">
-        <div class="row" style="justify-content:space-between"><h3>Cases</h3><span class="legend"><span><i class="unlearned"></i>Not started</span><span><i style="background:var(--sticker-Y)"></i>Learning</span><span><i style="background:var(--sticker-G)"></i>Learned</span></span><span><button class="small ghost" id="llSelAll" title="Train every case">Select all</button><button class="small ghost" id="llSelNone" title="Train no case">None</button><button class="small ghost" id="llSelUnlearned" title="Train the cases not yet Learned">Not learned</button></span></div>
+        <div id="llCurrent" class="llcase"><p class="muted">Press Next case to start. The cube shows the case. Your scramble is kept: Overlay off brings it back.</p></div>
+        <div class="row" style="justify-content:space-between;margin-top:12px"><h3>Cases</h3><span class="legend"><span><i class="unlearned"></i>Not started</span><span><i style="background:var(--sticker-Y)"></i>Learning</span><span><i style="background:var(--sticker-G)"></i>Learned</span></span><span><button class="small ghost" id="llSelAll" title="Train every case">Select all</button><button class="small ghost" id="llSelNone" title="Train no case">None</button><button class="small ghost" id="llSelUnlearned" title="Train the cases not yet Learned">Not learned</button></span></div>
         <div id="llGroups"></div>
       </div>
-      <div class="panel"><h3>Per-case times</h3><div class="wide"><table id="llStats"></table></div></div>
     </section>
     <!-- LAB -->
     <section class="tab" id="tab-lab" data-sec="lab">
@@ -376,6 +370,7 @@
 <script src="js/patterns-ui.js"></script>
 <script src="js/crosstrain.js"></script>
 <script src="js/f2ltrain.js"></script>
+<script src="js/lltrain.js"></script>
 <script src="js/trainwin.js"></script>
 <script src="js/start.js"></script>
 <script src="js/start-app.js"></script>
