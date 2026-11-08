@@ -246,6 +246,7 @@ function liveBegConnected(state){
 // Use my cube: the cube in your hands (`st`, or the state the sheet keeps) becomes the scramble, on
 // the tab in view. A button passes its event: that is no cube.
 function liveUse(st){if(typeof cxoEnd==='function'&&CXO.on){cxoEnd();if(typeof cxoDraw==='function')cxoDraw();}
+  if(typeof lloEnd==='function'&&LLO.on){lloEnd();if(typeof lloDraw==='function')lloDraw();}
   if(!st||!Array.isArray(st.cp))st=typeof cubeTab!=='undefined'&&cubeTab.target;if(!st)return;
   scrambleFromCube(liveReal(st),customName('smart'),true);liveNoteDraw();}
 // ----- a screen cube that is not the cube in your hands: the map -----
@@ -271,8 +272,10 @@ function liveMapSet(M){const t=typeof cubeTab!=='undefined'?cubeTab.target:null,
 const LIVE_FRESH={cross:'New Cross',f2l:'New F2L',ll:'New OLL · PLL'};
 const LIVE_FRESH_TIP='Scramble your smart cube first. Then press this: your cube as it is now becomes the start. The page makes no moves';
 // The label of a fresh start on `tab` (the tab in view by default), or '' when New makes a scramble.
-// Cross Trainer's Overlay (js/crosstrain.js) makes the scramble on the Cross tab: no fresh start there.
+// Cross Trainer's Overlay (js/crosstrain.js) makes the scramble on the Cross tab, and OLL · PLL
+// Trainer's (js/lltrain.js) deals the cases on the OLL · PLL tab: no fresh start there.
 function liveFresh(tab){tab=tab||curTab;if(tab==='cross'&&typeof CXO!=='undefined'&&CXO.on)return '';
+  if(tab==='ll'&&typeof LLO!=='undefined'&&LLO.on)return '';
   return liveOn()&&!!cubeTab.target&&(typeof cubeSrc!=='function'||cubeSrc()==='smart')&&LIVE_FRESH[tab]||'';}
 // A New control was pressed: mark the cube as the start, if this is a fresh start. True if it was.
 function liveFreshGo(){if(!liveFresh())return false;liveUse();return true;}

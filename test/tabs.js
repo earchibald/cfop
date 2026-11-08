@@ -4,7 +4,9 @@ const {JSDOM,VirtualConsole}=require('jsdom');const fs=require('fs');const path=
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8').replace(/<link[^>]*fonts[^>]*>/g,'');
 const vc=new VirtualConsole();const errs=[];vc.on('jsdomError',e=>{if(!/CSS|Not implemented/.test(e.message))errs.push(e.message);});
 const dom=new JSDOM(html,{runScripts:'dangerously',resources:'usable',pretendToBeVisual:true,url:'file://'+path.join(__dirname,'..','index.html'),virtualConsole:vc,
-  beforeParse(w){w.confirm=()=>{w.confirm.called=true;return true;};w.matchMedia=()=>({matches:false,addEventListener(){},addListener(){}});w.scrollTo=()=>{};}});
+  beforeParse(w){w.confirm=()=>{w.confirm.called=true;return true;};w.matchMedia=()=>({matches:false,addEventListener(){},addListener(){}});w.scrollTo=()=>{};
+    // A storage that works (jsdom has none for a file: page), so a setting kept in cw: keys (the trainers) reads back.
+    const m=new Map();Object.defineProperty(w,'localStorage',{value:{getItem:k=>m.has(k)?m.get(k):null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k),clear:()=>m.clear()}});}});
 const w=dom.window;const d=w.document;w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=function(){};
 const $=s=>d.querySelector(s),$$=s=>[...d.querySelectorAll(s)];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -45,11 +47,18 @@ w.addEventListener('load',async()=>{try{
   tab('ll');assert.ok(!drill(),'no drill on tab change');assert.deepStrictEqual(moves(),scr,'OLL/PLL shows the same moves');
   assert.ok(label().includes('seed '+seed),'OLL/PLL shows the scramble');
 
-  // Next case starts a drill. Another tab keeps it. Back to scramble ends it.
-  $('#llNext').click();assert.ok(drill(),'Next case starts a drill');assert.ok(/setup for case/.test(label()));
-  tab('lab');assert.ok(drill(),'tab change keeps the drill');assert.ok(/setup for case/.test(label()));
-  $('#drillBack').click();assert.ok(!drill(),'Back to scramble ends the drill');
+  // Next case (1.85, js/lltrain.js): OLL · PLL Trainer and its Overlay come on, and a case of the
+  // set is the scramble, one of its own with the first two layers solved. Another tab keeps that
+  // cube. Overlay off brings the scramble from before back.
+  const run=s=>w.Function('return ('+s+')')();
+  $('#llNext').click();assert.ok(!drill(),'Next case is no drill in the player');
+  assert.strictEqual($('#llTrainBtn').getAttribute('aria-pressed'),'true','the trainer on');assert.strictEqual($('#llOverBtn').getAttribute('aria-pressed'),'true','Overlay on');
+  const caseSeed=run('scr.seed');assert.ok(/^case-/.test(caseSeed),'a scramble of its own: '+caseSeed);assert.ok(label().includes('seed '+caseSeed));
+  assert.ok(run(`(()=>{const f=displayedCube.toFacelets(),op=llColor();return cornerFacelet.concat(edgeFacelet).filter(p=>!p.some(i=>f[i]===op)).every(p=>p.every(i=>f[i]===f[i-i%9+4]));})()`),'the first two layers solved');
+  tab('lab');assert.strictEqual(run('scr.seed'),caseSeed,'tab change keeps the case');assert.ok(label().includes('seed '+caseSeed));
+  tab('ll');$('#llOverBtn').click();assert.strictEqual(run('scr.seed'),seed,'Overlay off: the scramble from before');
   assert.deepStrictEqual(moves().slice(0,scr.length),scr,'the scramble is back');assert.ok(label().includes('seed '+seed));
+  $('#llTrainBtn').click();assert.strictEqual($('#llTrainBtn').getAttribute('aria-pressed'),'false','the trainer off again');
 
   // Case cards: no algorithm on the card, an explicit status button, a click opens the case window.
   tab('ll');const card=$('#llGroups .case');const id=card.dataset.id;
@@ -86,10 +95,10 @@ w.addEventListener('load',async()=>{try{
   $('#f2lRandomCase').click();assert.ok(/Select at least one/.test($('#f2lCaseOut').textContent),'no drill with nothing selected');
   $('#f2lSelAll').click();assert.strictEqual($$('#f2lCaseGrid .case.sel').length,41,'Select all');
   $('#f2lRandomCase').click();assert.ok(drill(),'Next case starts an F2L drill');assert.ok(/setup for case/.test(label()));
-  assert.ok(/^Times: F2L case #\d+$/.test($('#timesScope').textContent),'timer scope is the case');
+  assert.ok(/^Times: F2L$/.test($('#timesScope').textContent),'the timer scope stays the tab: no per-case times (1.85)');
   assert.ok(/Answer hidden/.test($('#f2lCaseOut').textContent),'answer hidden before reveal');
   $('#f2lCaseReveal').click();assert.ok(/F2L case #\d+/.test($('#f2lCaseOut').textContent),'reveal names the case');assert.ok($('#f2lCasePlay'),'reveal offers to step through');
-  $('#drillBack').click();assert.ok(!drill());assert.ok(/^Times: F2L$/.test($('#timesScope').textContent),'scope returns to the tab');
+  $('#drillBack').click();assert.ok(!drill());assert.ok(/^Times: F2L$/.test($('#timesScope').textContent),'the scope is the tab');
 
   assert.deepStrictEqual(errs,[],'no script errors');
   // The Clear button opens a themed dialog. Escape cancels, Enter confirms. Space does not reach the timer.

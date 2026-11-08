@@ -83,14 +83,15 @@ function llPlanText(){const two=LL_ALL.map(a=>llState.status[a.id]||''),full=PLL
 function llShowPanel(){const groups=$('#llGroups');if(!groups)return;let el=$('#llShowBar');
   if(!el){el=document.createElement('div');el.id='llShowBar';el.className='llshow';groups.before(el);}
   el.innerHTML=`<div class="st-seg" role="group" aria-label="Show">${LL_SHOW.map(([v,l,t])=>`<button data-show="${v}" aria-pressed="${v===llShow()}" title="${esc(t)}">${esc(l)}</button>`).join('')}</div>
-    <div class="llplan"><span class="st-lbl">Your plan</span><span>${esc(llPlanText())}</span><button class="small" id="llDrillLearning" title="Drill the cases you are learning">Drill Learning</button></div>`;
-  el.querySelectorAll('[data-show]').forEach(b=>b.onclick=()=>llShowSet(b.dataset.show));
-  $('#llDrillLearning').onclick=()=>{let ids=LL_ALL.filter(a=>llState.status[a.id]==='learning').map(a=>a.id);if(!ids.length)ids=LL_ALL.filter(a=>llState.status[a.id]!=='finished').map(a=>a.id);if(!ids.length)return;
-    llState.sel=new Set(ids);saveLL();renderLLGroups();$('#llNext').click();};}
-// The full PLL group under the two-look ones, then the filter on every case.
+    <div class="llplan"><span class="st-lbl">Your plan</span><span>${esc(llPlanText())}</span></div>`;
+  el.querySelectorAll('[data-show]').forEach(b=>b.onclick=()=>llShowSet(b.dataset.show));}
+// The full PLL group under the two-look ones, then the filter on every case. Its cards work like
+// the two-look ones: selected for training (llState.sel, the id pllf-<name>), shift-click toggles.
 function llFullGroup(){const g=$('#llGroups');if(!g)return;
-  g.insertAdjacentHTML('beforeend',`<h3 class="llfull" style="margin:10px 0 6px;font-size:14px;color:var(--muted)">Full PLL</h3><div class="cases llfull">${PLL_FULL.map(p=>`<div class="case" data-pll="${esc(p.name)}" tabindex="0" title="Open details">${thumbTop(phys(derotate(applyAlg(new Cube(),invertAlg(p.alg)))),'pll')}<div>${esc(p.name)} perm</div>${stBtn('pllf-'+p.name)}</div>`).join('')}</div>`);
-  g.querySelectorAll('.case[data-pll]').forEach(el=>{el.onclick=e=>{if(e.target.closest('.stbtn'))return;openCaseModal(modalForPLL(PLL_FULL.find(p=>p.name===el.dataset.pll)));};
+  g.insertAdjacentHTML('beforeend',`<h3 class="llfull" style="margin:10px 0 6px;font-size:14px;color:var(--muted)">Full PLL</h3><div class="cases llfull">${PLL_FULL.map(p=>`<div class="case ${llState.sel.has('pllf-'+p.name)?'sel':''}" data-pll="${esc(p.name)}" tabindex="0" title="Open details. Shift-click to add or remove from training.">${thumbTop(phys(derotate(applyAlg(new Cube(),invertAlg(p.alg)))),'pll')}<div>${esc(p.name)} perm</div>${stBtn('pllf-'+p.name)}</div>`).join('')}</div>`);
+  g.querySelectorAll('.case[data-pll]').forEach(el=>{el.onclick=e=>{if(e.target.closest('.stbtn'))return;const id='pllf-'+el.dataset.pll;
+      if(e.shiftKey){if(llState.sel.has(id))llState.sel.delete(id);else llState.sel.add(id);saveLL();renderLLGroups();return;}
+      openCaseModal(modalForPLL(PLL_FULL.find(p=>p.name===el.dataset.pll)));};
     el.onkeydown=e=>{if(e.key==='Enter'&&e.target===el)el.click();};});}
 function llShowApply(){const g=$('#llGroups');if(!g)return;
   g.querySelectorAll('.case').forEach(el=>{const id=el.dataset.id?el.dataset.id:'pllf-'+el.dataset.pll;el.classList.toggle('llhide',!llShowKeep(llState.status[id]||''));});

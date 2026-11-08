@@ -124,8 +124,9 @@ function f2lTrainStyleSet(n){store.set('f2lStyle',n);store.set('f2lTrain',true);
 let f2lTrainLast='';
 function f2lTrainGuide(){if(!f2lTrainOn()||f2lTrainStyle()!==1||!f2lOnF2L()||!displayedCube)return;
   const k=String(f2lTrainPair(displayedCube.toFacelets()));if(k!==f2lTrainLast){f2lTrainLast=k;drawMain();}}
-// The stickers drawMain keeps in color: Cross Trainer's on the Cross tab, F2L Trainer's on the F2L tab.
-function trainFade(f){return crossTrainFade(f)||f2lTrainFade(f);}
+// The stickers drawMain keeps in color: Cross Trainer's on the Cross tab, F2L Trainer's on the F2L
+// tab, OLL · PLL Trainer's on the OLL · PLL tab (js/lltrain.js).
+function trainFade(f){return crossTrainFade(f)||f2lTrainFade(f)||(typeof llTrainFade==='function'?llTrainFade(f):null);}
 // ---- Find the edges ----
 function crossFindCls(){return CF.on?i=>'pk'+i:null;}
 // The cross edge with a sticker at i in facelets f, by the color of its other sticker; null for another piece.

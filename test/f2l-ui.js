@@ -138,8 +138,9 @@ w.addEventListener('load',async()=>{try{
   // N starts a new scramble; the guide follows it.
   key('n');await until(()=>$('#seed').value&&$('#seed').value!==seed,'a new seed');
   await until(()=>w.fg.X&&w.fg.key&&w.fg.key.endsWith($('#seed').value),'the guide reads the new scramble');
-  // A drill from the OLL tab pauses the guide; Back to scramble resumes it.
-  tab('ll');$('#llNext').click();tab('f2l');
+  // A drill in the player (the 41 cases' Next case) pauses the guide; Back to scramble resumes it.
+  // (The OLL · PLL tab's Next case is no drill in the player since 1.85: it deals a scramble.)
+  $('#f2lMode button[data-m="cases"]').click();$('#f2lRandomCase').click();$('#f2lMode button[data-m="guide"]').click();
   assert.ok(!$('#fgDrill').hidden&&/A drill is in the player/.test($('#fgCross').textContent)&&$('#fgMain').hidden,'the guide pauses for a drill');
   key('ArrowRight');assert.strictEqual(w.fg.made.length,0,'no move while a drill is in');
   $('#drillBack').click();await until(()=>$('#fgDrill').hidden&&w.fg.X&&!/A drill/.test($('#fgCross').textContent),'the guide resumes');
