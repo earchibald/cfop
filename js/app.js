@@ -312,7 +312,7 @@ function renderSequence(){$('#seqLabel').textContent=seqState.label||'';const ca
   $$('#scramble .m').forEach(el=>el.onclick=()=>{stopAuto();seqState.idx=+el.dataset.i+1;applySequence();});}
 $('#scrub').oninput=e=>{stopAuto();seqState.idx=+e.target.value;applySequence();};
 // The player sits in the section (js/place.js): bring it into view where it is.
-function focusPlayer(){const p=$('#player');if(p.scrollIntoView)p.scrollIntoView({block:'nearest',behavior:'smooth'});p.classList.remove('flash');void p.offsetWidth;p.classList.add('flash');}
+function focusPlayer(){const p=$('#player');if(typeof phShowPlayer==='function')phShowPlayer();if(p.scrollIntoView)p.scrollIntoView({block:'nearest',behavior:'smooth'});p.classList.remove('flash');void p.offsetWidth;p.classList.add('flash');}
 // In beginner mode the home module shows the cube white up, with no z2 (beghome.js).
 // The home cube: as it was, if it is the one of this scramble; else the scramble afresh. fresh: the
 // scramble afresh, your moves dropped (Show scramble, Restore scramble).

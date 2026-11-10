@@ -1,0 +1,108 @@
+/* The phone layout's twin of the stage view (js/phone.js). Loads last.
+   1. The sections as a bar at the foot of the screen, for both methods: the rail itself.
+   2. The phone stage, for CFOP (body.mst): the cube stays under the top bar, a switch under it
+      picks one of three sheets (body[data-msheet]), and the cube's chips sit in a row under the
+      picture. */
+
+.phseg,.phopts{display:none}
+
+@media (max-width:760px){
+  /* ===== 1. The section bar ===== */
+  nav.rail{display:flex;position:fixed;left:0;right:0;top:auto;bottom:0;z-index:13;flex-direction:row;align-items:stretch;gap:2px;overflow:visible;
+    padding:4px 6px calc(4px + env(safe-area-inset-bottom,0px));background:var(--panel);border-top:1px solid var(--line)}
+  nav.rail button{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;
+    padding:6px 2px 5px;font-size:11px;line-height:1.15;font-weight:500;white-space:normal;text-align:center;border-radius:10px;-webkit-tap-highlight-color:transparent}
+  nav.rail button .k{display:none}
+  nav.rail button .sec-sq{width:16px;height:16px;border-radius:5px}
+  nav.rail button.on{font-weight:600}
+  body.onboard nav.rail{padding-bottom:calc(52px + env(safe-area-inset-bottom,0px))}
+  .page{padding-bottom:calc(74px + env(safe-area-inset-bottom,0px))}
+  body.onboard .page{padding-bottom:calc(122px + env(safe-area-inset-bottom,0px))}
+  body.onboard .foot{padding-bottom:0}
+  /* The bar has the sections, so the menu button goes and Theme comes back to the top bar. */
+  .top #menuBtn{display:none!important}
+  .top #themeBtn{display:inline-flex!important;padding:9px 8px}
+  /* The bar names the section, so the top bar names the cube in its place. */
+  .top #mtitle{display:none!important}
+  .top #cubeChip{padding:6px 10px 6px 8px;gap:7px;min-width:0;flex:0 1 auto}
+  .top #cubeChipName{display:inline!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* ===== 2. The phone stage ===== */
+  body.mst{--phsvg:clamp(150px,26svh,220px)}
+  body.mst[data-cube="side"] :is(#cubeSlot,#player){display:contents}
+  body.mst[data-cube="side"] .main{display:flex;flex-direction:column;align-items:stretch}
+  body.mst[data-cube="side"] #scrPill{order:1}
+  body.mst[data-cube="side"] .cubebox{order:2}
+  body.mst[data-cube="side"] #phSeg{order:3}
+  body.mst[data-cube="side"] .main>.tab{order:4}
+  body.mst[data-cube="side"] .seqpanel{order:5}
+  body.mst[data-cube="side"] .timerpanel{order:6}
+  body.mst[data-cube="side"] #everyMore{order:7}
+  /* One sheet in view */
+  body.mst[data-cube="side"][data-msheet="sec"] :is(.seqpanel,.timerpanel,#everyMore){display:none!important}
+  body.mst[data-cube="side"][data-msheet="play"] :is(.main>.tab,#everyMore){display:none!important}
+  body.mst[data-cube="side"][data-msheet="more"] :is(.main>.tab,.seqpanel,.timerpanel){display:none!important}
+  /* The switch */
+  body.mst[data-cube="side"] .phseg{display:flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+  .phseg button{flex:1 1 0;min-width:0;padding:8px 4px;font-size:14px;font-weight:500;line-height:1.2;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--muted);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-tap-highlight-color:transparent}
+  .phseg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+
+  /* The cube box: the picture, then the chips in rows under it. */
+  body.mst .cubebox{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 8px 8px}
+  body.mst .cubebox>svg#cube{flex:0 0 100%;width:100%;height:var(--phsvg);max-height:none}
+  body.mst:not(.sv) .cubebox :is(.animbtn,.savebtn,.f2lstyle,#f2lPairRow,#f2lOverGrp,#llOverGrp,#crossOverGrp){position:static;inset:auto;order:2}
+  body.mst:not(.sv) .cubebox .animbtn,body.mst:not(.sv) .cubebox .savebtn{font-size:13px;gap:6px;padding:6px 11px 6px 9px;border-radius:999px;min-height:34px}
+  body.mst:not(.sv) .cubebox :is(.animbtn,.savebtn) svg{width:15px;height:15px}
+  body.mst:not(.sv) .cubebox .crosstrainbtn{order:1;color:var(--text);font-weight:600}
+  /* The trainer's chips: rows, not columns */
+  body.mst:not(.sv) .cubebox .f2lstyle{flex-direction:row;border-radius:999px;min-height:34px;align-items:center}
+  body.mst:not(.sv) .cubebox .f2lstyle button{border-radius:999px;font-size:13px;padding:5px 10px}
+  /* The Pair row gives its parts to the rows of the box: the ways beside Overlay, then the pairs and what is lit. */
+  body.mst:not(.sv) .cubebox #f2lPairRow:not([data-off]):not([hidden]){display:contents}
+  body.mst:not(.sv) .cubebox #f2lPairRow :is(.f2lt-ways,.f2lt-pairs){order:3;display:inline-flex;flex-direction:row;align-items:center;gap:2px;padding:2px;margin:0;min-height:34px;border-radius:999px;background:var(--panel);border:1px solid var(--line)}
+  body.mst:not(.sv) .cubebox #f2lPairRow button{font-size:13px;padding:5px 8px;border-radius:999px}
+  body.mst:not(.sv) .cubebox #f2lPairRow .f2lt-pairs{order:4}
+  body.mst:not(.sv) .cubebox #f2lPairRow .f2lt-pair{padding:7px 9px}
+  body.mst:not(.sv) .cubebox #f2lLit{order:4;margin:0;padding:0 4px;border-top:0;border-left:0;flex-wrap:nowrap;gap:5px;font-size:12px;white-space:nowrap;max-width:none}
+  /* The rest of the chips wait behind the "..." button */
+  body.mst .cubebox:not(.phopen) :is(#animBtn,#hiddenBtn,#viewBtn,#tiltBtn,#vcubeBtn,#saveImgBtn,#fullBtn){display:none}
+  body.mst:not(.sv) .cubebox.phopen :is(#animBtn,#hiddenBtn,#viewBtn,#tiltBtn,#vcubeBtn,#saveImgBtn,#fullBtn){order:5}
+  body.mst .cubebox .phopts{display:inline-flex;align-items:center;justify-content:center;position:absolute;left:6px;top:6px;width:36px;height:30px;padding:0;font-size:20px;line-height:1;
+    border-radius:var(--rb);background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+  body.mst .cubebox .phopts[aria-expanded="true"]{color:var(--text);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 22%,var(--panel))}
+  body.mst .cubebox .viewbtns{top:6px;right:6px;padding:4px 5px 4px 8px;gap:5px}
+  body.mst .cubebox .viewbtns .ht{width:20px;height:20px;border-radius:4px}
+  body.mst .cubebox .viewbtns #viewNet{padding:3px 9px}
+  body.mst:not(.sv)[data-method="cfop"][data-tab] .cubebox .draghint{left:auto;right:10px;top:calc(var(--phsvg) - 14px);bottom:auto;transform:none}
+  body.mst:not(.sv) .cubebox .draghint span{display:none}
+
+  /* Moves · Timer: the timer at its full width */
+  body.mst .timer{font-size:52px;padding:8px 0 4px}
+  body.mst .timerhint{font-size:13px}
+  body.mst .timerpanel .row{font-size:13px!important;gap:6px 12px}
+  body.mst .stats{font-size:11px;grid-template-columns:repeat(5,1fr)}
+  body.mst .stats div:nth-child(n+4){display:block}
+  body.mst .times{max-height:64px;font-size:12px}
+  body.mst .player .timerpanel{padding:12px}
+}
+
+@media (max-width:359px){.top #cubeChipName{display:none!important}.top #cubeChip{padding:7px 8px;gap:0}}
+
+/* The cube stays in view on a screen tall enough for it. */
+@media (max-width:760px) and (min-height:640px){
+  body.mst[data-cube="side"] .cubebox{position:sticky;top:var(--toph,58px);z-index:6;box-shadow:0 -12px 0 var(--bg),0 8px 12px -8px rgba(0,0,0,.28)}
+  body.mst[data-cube="side"] .phseg{position:sticky;top:calc(var(--toph,58px) + var(--phcube,320px) + 10px);z-index:5;box-shadow:0 -30px 0 var(--bg),0 0 0 4px var(--bg)}
+}
+
+/* A small phone: the hold row and the switch fit a 320px screen; a short screen has no sticky
+   cube, so the picture takes more room. */
+@media (max-width:760px){.look-row>b{white-space:normal;min-width:0}}
+@media (max-width:359px){
+  body.mst .cubebox .viewbtns{padding:3px 4px 3px 6px;gap:3px}
+  body.mst .cubebox .viewbtns .ht{width:16px;height:16px;border-radius:3px}
+  body.mst .cubebox .viewbtns #viewNet{padding:2px 7px}
+  body.mst .cubebox .phopts{width:32px}
+  .phseg button{font-size:13px;padding:8px 2px}
+}
+@media (max-width:760px) and (max-height:639px){body.mst{--phsvg:200px}}
