@@ -332,7 +332,7 @@ details.fold>summary:hover h3{color:var(--text)}
 .menu .menu-theme{margin-top:4px;border-top:1px solid var(--line);border-radius:0;color:var(--muted)}
 .menu .menu-ic{width:12px;text-align:center}
 @media (max-width:760px){
-  nav.rail,#helpBtn,#refDesktop,.desktop-only{display:none!important}
+  #helpBtn,#refDesktop,.desktop-only{display:none!important}
   .mobile-only{display:inline}
   body[data-tab="ref"] .player,body[data-tab="ref"] .seedbar{display:none!important}
   .page{padding:10px}

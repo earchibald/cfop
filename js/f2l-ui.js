@@ -344,13 +344,15 @@ function fgDraw(){
   if(typeof f2lTrainGuide==='function')f2lTrainGuide(); // F2L Trainer's F2L-1 shows the guide's pair
   if(fo&&!box.contains(document.activeElement)){const b=(dir&&$(`#f2lGuide ${fo}[data-dir="${dir}"]:not(:disabled)`))||$(`#f2lGuide ${fo}:not(:disabled)`);if(b)b.focus();}
 }
+// A phone has no arrow keys: the hint's line says tap.
+function fgTouch(){return typeof mobileMQ!=='undefined'&&mobileMQ.matches;}
 function fgDrawAll(){
   const f=fg,el=fgEl,X=f.X,s=f.step,st=X?f2lStatus(X,f.done):null,color=fgColor(),click=f.src!=='smart';
   // the cube line
   const cl=$('#fgCube');cl.textContent='';
   const who=f.src==='smart'?(typeof smartNiceName==='function'?smartNiceName(cubeTab.name):'your smart cube'):f.src==='real'?`your cube, ${/^scan/.test(scr.seed)?'scanned':/^paint/.test(scr.seed)?'painted':'read'} ${(scr.seed.match(/-(\d\d)(\d\d)(\d\d)$/)||[]).slice(1,3).join(':')||'earlier'}`:'the virtual cube';
   cl.appendChild(el('b',null,`Your cube: ${who}.`));
-  cl.appendChild(el('span','muted',f.src==='smart'?' Make each move on the cube: it uncovers as you turn.':f.src==='real'?' Make each move on your cube too: click the next move, or press the Right arrow. Left covers it again.':' Click the next move, or press the Right arrow. Left covers it again.'));
+  cl.appendChild(el('span','muted',f.src==='smart'?' Make each move on the cube: it uncovers as you turn.':f.src==='real'?(fgTouch()?' Make each move on your cube too, then tap the next move here.':' Make each move on your cube too: click the next move, or press the Right arrow. Left covers it again.'):fgTouch()?' Tap the next move to make it.':' Click the next move, or press the Right arrow. Left covers it again.'));
   if(f.back!=null){const p=el('p','fg-back');if(f.read)p.appendChild(el('span',null,f.read+' '));p.appendChild(el('b',null,f.back?'Back to the scramble: ':'The cube is at the scramble.'));if(f.back)p.appendChild(el('code',null,f.back));cl.appendChild(p);}
   $('#fgReturn').disabled=!(X&&f.base&&(f.src==='smart'?!X.equals(f.base):f.made.length>0));
   $('#fgSetup').disabled=!X||!!seqState.drill;
