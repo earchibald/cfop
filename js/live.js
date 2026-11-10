@@ -193,10 +193,15 @@ function liveTiltForget(){
   TILT.raf=0;TILT.q=TILT.qTo=null;liveTiltAwayClear();TILT.said='';clearTimeout(TILT.saidTimer);liveTiltDraw();
 }
 // The moves of a smart cube, as the cube names them, for the gestures. Null: the moves are not known.
+// Each move also nudges the heading toward square (js/tilt.js, nudge): a face is turned with the
+// cube held toward you, so a drill with no rest does not drift away.
 function liveTiltMoves(moves){
   if(!TILT.gest)return;if(!moves){TILT.gest.reset();return;}
   const now=typeof performance!=='undefined'?performance.now():Date.now();
-  for(const m of moves){const f=TILT.gest.feed(now,m);if(f)liveTiltGesture(FACE_NAMES.indexOf(f));}
+  for(const m of moves){
+    if(TILT.tr&&liveTiltLive()&&TILT.tr.nudge())TILT.qTo=TILT.tr.pose();
+    const f=TILT.gest.feed(now,m);if(f)liveTiltGesture(FACE_NAMES.indexOf(f));}
+  if(liveTiltLive())liveTiltView();
 }
 // ----- the smart cube on the player -----
 function liveOn(){return typeof cubeTab!=='undefined'&&!!cubeTab.conn&&puzzleN()===3&&!isBeg();}

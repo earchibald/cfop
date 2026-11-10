@@ -10,6 +10,7 @@ import CoreBluetooth
 //   page → app   {op:"scan",auto?} {op:"stop"} {op:"connect",id} {op:"disconnect",id}
 //                {op:"notify",id,char} {op:"write",id,char,data,seq}
 //                {op:"migrate",data:{key:value},seq}  Safari only: its saved history, for the window
+//                {op:"awake",seconds}  a cube turned: keep the display awake that long (Awake.swift; 0 lets go)
 //   app → page   {ev:"hello",version,bluetooth} {ev:"bluetooth",state}
 //                {ev:"device",id,name,mac} while a scan runs
 //                {ev:"connected",id,services:[{uuid,chars:[uuid]}]} {ev:"gone",id}
@@ -222,6 +223,9 @@ final class Bridge: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
                 p.writeValue(data, for: ch, type: .withoutResponse)
                 c.send(["ev": "written", "seq": seq ?? 0])
             }
+        case "awake":
+            // A smart cube turned: the user is at the Mac (Awake.swift). No answer.
+            Awake.shared.kick(seconds: (msg["seconds"] as? NSNumber)?.doubleValue ?? 300)
         case "migrate":
             let data = (msg["data"] as? [String: Any] ?? [:]).compactMapValues { $0 as? String }
             if let f = onMigrate { f(data, c, seq ?? 0) }
