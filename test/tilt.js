@@ -112,6 +112,12 @@ const until=async(f,ms=2000)=>{const t=Date.now();while(!f()){if(Date.now()-t>ms
   send(rest);assert.ok(await until(()=>ev('liveTiltLive()')),'a reading: the picture follows the tilt');
   assert.ok(shown($('#tiltBtn'))&&$('#tiltBtn').getAttribute('aria-pressed')==='true','the Tilt chip shows, on');
   assert.ok(ev('tiltAngle(TILT.q,[0,0,0,1])')<0.01,'the first reading squares the picture to the hold');
+  // a cube at rest keeps sending readings: none of them draws a frame (idle CPU)
+  await sleep(50);new w.Function('window.__draws=0;const f=drawMain;window.__drawMain=f;window.drawMain=function(){window.__draws++;return f.apply(this,arguments);};')();
+  for(let i=0;i<5;i++){send(rest);await sleep(15);}
+  assert.strictEqual(ev('window.__draws'),0,'readings of a cube at rest draw nothing');
+  assert.ok(!ev('TILT.raf'),'and start no frame loop');
+  new w.Function('window.drawMain=window.__drawMain;')();
   assert.ok(/R R' R R' squares it/.test($('#cubeWinTilt').textContent)&&shown($('#cubeWinTilt')),'the sheet names the gestures: '+$('#cubeWinTilt').textContent);
   const HOLDS=ev('CUBE_TAB_HOLDS'),holdOf=ms=>HOLDS.find(h=>h.moves.join(' ')===ms);
   for(let i=0;i<4;i++){send(turnedY);await sleep(40);}
