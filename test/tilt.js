@@ -35,10 +35,37 @@ assert.ok(deg(`(()=>{const tr=tiltTracker({holds:CUBE_TAB_HOLDS});tr.feed(0,[0,0
   const a0=tiltAngle(tr.pose(),[0,0,0,1]);s=drive(tr,s.t,50,()=>[0,0,0,1],s.q);const a1=tiltAngle(tr.pose(),[0,0,0,1]);drive(tr,s.t,250,()=>[0,0,0,1],s.q);
   return [a0,a1,tiltAngle(tr.pose(),[0,0,0,1])];})()`);
   assert.ok(Math.abs(r[0]-8)<0.1,'a quick turn of 8 degrees shows: '+r[0]);
-  assert.ok(r[1]>8-3*1.0-0.1,'it eases no faster than 3 degrees a second: '+r[1]);
+  assert.ok(r[1]>8-6*0.6-0.1,'it eases no faster than 6 degrees a second: '+r[1]);
   assert.ok(r[2]<0.1,'after a few seconds at rest the picture is square again: '+r[2]);}
 // a slant on purpose stays: tipped 30 degrees toward you, at rest for 5 s
 assert.ok(Math.abs(deg(`(()=>{const tr=tiltTracker({holds:CUBE_TAB_HOLDS});tr.feed(0,[0,0,0,1]);tr.reset([0,0,0,1]);const s=drive(tr,0,6,()=>Rx(5),[0,0,0,1]);drive(tr,s.t,250,()=>[0,0,0,1],s.q);return tiltAngle(tr.pose(),[0,0,0,1]);})()`)-30)<0.1,'a cube held at a slant stays at its slant');
+// ...and a slant about the vertical past snapDeg (30) stays too: turned 40 at rest for 5 s
+assert.ok(Math.abs(deg(`(()=>{const tr=tiltTracker({holds:CUBE_TAB_HOLDS});tr.feed(0,[0,0,0,1]);tr.reset([0,0,0,1]);const s=drive(tr,0,8,()=>Ry(5),[0,0,0,1]);drive(tr,s.t,250,()=>[0,0,0,1],s.q);return tiltAngle(tr.pose(),[0,0,0,1]);})()`)-40)<0.1,'a cube turned 40 about the vertical stays turned');
+// tipped 15 toward you and 10 off square about the vertical, at rest: the heading squares, the tip stays
+// (before 1.87 the window was 12 degrees in all, so a tipped cube never squared)
+{const r=J(`(()=>{const tr=tiltTracker({holds:CUBE_TAB_HOLDS});tr.feed(0,[0,0,0,1]);tr.reset([0,0,0,1]);let s=drive(tr,0,3,()=>Rx(5),[0,0,0,1]);s=drive(tr,s.t,2,()=>Ry(5),s.q);
+  drive(tr,s.t,400,()=>[0,0,0,1],s.q);const Q=tr.pose();return [tiltTwist(Q,[0,1,0]),tiltAngle(Q,[0,0,0,1])];})()`);
+  assert.ok(Math.abs(r[0])<0.3&&Math.abs(r[1]-15)<0.5,'tipped toward you: square about the vertical, still tipped 15: '+r);}
+// the drift rate: learned while still, taken back while a hand turns the cube. 10 s on the table at
+// 3 degrees a second, then 10 s of wobble in the hands (25 degrees a second about your left-right
+// axis) with the same drift: the heading stays near square, where a tracker with no rate drifts 30
+{const run2=o=>J(`(()=>{const tr=tiltTracker(Object.assign({holds:CUBE_TAB_HOLDS},${JSON.stringify(o)}));tr.feed(0,[0,0,0,1]);tr.reset([0,0,0,1]);
+  let s=drive(tr,0,500,()=>Ry(0.06),[0,0,0,1]);const bias=tr.state.bias;s=drive(tr,s.t,500,i=>tiltMul(Ry(0.06),Rx(i%10<5?0.5:-0.5)),s.q);
+  return [bias,Math.abs(tiltTwist(tr.pose(),[0,1,0]))];})()`);
+  const on=run2({}),off=run2({biasMaxDps:0});
+  assert.ok(Math.abs(on[0]-3)<0.5,'the rate learned on the table: '+on[0]);
+  assert.ok(on[1]<5,'the wobble in the hands: the heading stays within 5 of square: '+on[1]);
+  assert.ok(off[1]>25,'with no rate taken, the same wobble drifts: '+off[1]);}
+// readings in a bunch, 1 ms apart, a little noise: still, so the drift is taken out
+assert.ok(deg(`(()=>{const tr=tiltTracker({holds:CUBE_TAB_HOLDS});tr.feed(0,[0,0,0,1]);tr.reset([0,0,0,1]);let q=[0,0,0,1];
+  for(let i=1;i<=2000;i++){q=tiltMul(Ry(0.003),q);tr.feed(i,tiltMul(Rx(i%2?0.02:-0.02),q));}return Math.abs(tiltTwist(tr.pose(),[0,1,0]));})()`)<0.5,'bunched readings with noise read as still');
+// a move nudges the heading toward square: a fifth of the error, at most 3 degrees, within 30 of square
+{const r=J(`(()=>{const tr=tiltTracker({holds:CUBE_TAB_HOLDS});tr.feed(0,[0,0,0,1]);tr.reset([0,0,0,1]);tr.state.psi+=20;
+  const first=tr.nudge();for(let i=0;i<14;i++)tr.nudge();const a=Math.abs(tiltTwist(tr.pose(),[0,1,0]));
+  tr.state.psi+=40;const far=tr.nudge();return [first,a,far];})()`);
+  assert.ok(Math.abs(r[0]-3)<0.01,'20 off: the first move takes 3 (the cap): '+r[0]);
+  assert.ok(r[1]<2,'15 moves later: within 2 of square: '+r[1]);
+  assert.strictEqual(r[2],0,'past 30 off square: a move changes nothing');}
 // adopt: the nearest hold becomes the pose, squared
 {const r=J(`(()=>{const tr=tiltTracker({holds:CUBE_TAB_HOLDS});tr.feed(0,[0,0,0,1]);tr.reset([0,0,0,1]);drive(tr,0,10,()=>tiltMul(Ry(-8),Rx(1.5)),[0,0,0,1]);const h=tr.adopt();return [h.moves.join(' '),tiltAngle(tr.pose(),h.q)];})()`);
   assert.strictEqual(r[0],'y','turned 80 degrees and tipped 15: the nearest hold is y');assert.ok(r[1]<0.01,'and the picture squares to it');}

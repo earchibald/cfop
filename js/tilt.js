@@ -12,7 +12,7 @@
 //   and the picture swung back the other way, which read as a reversed axis.
 // - The sign of the reading is settled (gan.js): do not negate it.
 // The heading drifts: the cube has a gyro and gravity but no compass, so a turn about the vertical
-// is never checked against anything. Three things hold the drift down here:
+// is never checked against anything. Five things hold the drift down here:
 // 1. The basis. Q, the turn the picture shows, is T · Ry(psi) · raw. Ry(psi) is the heading: a turn
 //    about the vertical (y in the reading's world; gravity tells the cube which way is up) that
 //    lines the reading up with the way you face. T is a small tilt, at most `squareDeg`, so a cube
@@ -24,20 +24,36 @@
 //    as it is. Nothing but a reset sets T; psi takes the corrections below.
 // 2. Zero speed. While the cube turns slower than `stillDps`, a hand is not turning it: what turn
 //    about the vertical the reading shows then is drift, and psi takes it back. A tilt (pitch,
-//    roll) is left alone: gravity keeps it true.
-// 3. Square at rest. Once the cube has been still for `stillMs` and the picture sits within
-//    `snapDeg` of one of the 24 square holds, the heading eases toward it, no faster than
-//    `snapDps` degrees a second, and only about the vertical. A cube held square stays square
-//    over a long solve; a cube held at a slant on purpose (past snapDeg) is left as it is.
+//    roll) is left alone: gravity keeps it true. The speed is measured over at least `speedMs`, so
+//    readings that come in a bunch (a busy link) do not read as fast.
+// 3. The drift rate (1.87). A gyro drifts at a near steady rate. While the cube is still, that rate
+//    is learned (`bias`, an average over `biasMs`, at most `biasMaxDps`); while it moves, psi takes
+//    the same rate back, so the drift does not build up through a long drill with no rest.
+// 4. Square at rest. Once the cube has been still for `stillMs` and the heading sits within
+//    `snapDeg` of square about the vertical (and the picture within `snapTiltDeg` of the hold in
+//    every other way, so the face on top is clear), the heading eases toward square: faster the
+//    farther off it is (about `snapMs` to take the error away), no faster than `snapDps` degrees a
+//    second, and only about the vertical. A cube held square stays square over a long solve; a cube
+//    held at a slant on purpose (past snapDeg) is left as it is. (Before 1.87 the window was 12
+//    degrees off a hold in all, so a cube tipped toward you was never squared.)
+// 5. A turn of a face (1.87, `nudge`; js/live.js calls it on each move). You turn a face with the
+//    cube held toward you, so a move says the heading is near square: it takes `moveFrac` of the
+//    heading's error away, at most `moveMaxDeg`, within the same window as 4. A drill with no rest
+//    still comes back to square.
 // The two gestures (tiltGesture, js/live.js acts on them) are the way back from anything else:
 // R R' R R' (or R' R R' R) squares the picture to the hold (`reset`); L L' L L' (or L' L L' L) takes the hold
 // the picture is nearest as the new hold, and squares the picture to it (`adopt`).
-const TILT_DEFAULTS={stillDps:6,stillMs:400,snapDeg:12,snapDps:3,gapMs:250,squareDeg:45};
+const TILT_DEFAULTS={stillDps:6,stillMs:400,speedMs:60,biasMs:4000,biasMaxDps:3,snapDeg:30,snapTiltDeg:20,snapMs:1500,snapDps:6,
+  moveFrac:0.2,moveMaxDeg:3,gapMs:250,squareDeg:45};
 // stillDps: deg/s, under this the cube is still and a turn about the vertical is drift. stillMs: ms
-// still before the square pull starts. snapDeg: deg, the farthest from a square hold the pull acts.
-// snapDps: deg/s, the fastest the pull turns the picture. gapMs: ms, a longer gap between two
-// readings (a slow link) says nothing about speed, so neither correction acts on it. squareDeg: deg,
-// the most tilt a reset squares away; past it the cube is held another way than the hold.
+// still before the square pull starts. speedMs: ms, the shortest span the speed is measured over.
+// biasMs: ms, the span the drift rate is averaged over. biasMaxDps: deg/s, the most drift rate taken.
+// snapDeg: deg, the farthest the heading may be from square for the pull and the nudge. snapTiltDeg:
+// deg, the most the picture may be off the hold in any other way. snapMs: ms, the pull's time
+// constant. snapDps: deg/s, the fastest the pull turns the picture. moveFrac: the part of the
+// heading's error a move takes away. moveMaxDeg: deg, the most one move takes. gapMs: ms, a longer
+// gap between two readings (a slow link) says nothing about speed, so no correction acts on it.
+// squareDeg: deg, the most tilt a reset squares away; past it the cube is held another way than the hold.
 const TILT_RAD=Math.PI/180;
 function tiltMul(a,b){const [ax,ay,az,aw]=a,[bx,by,bz,bw]=b;
   return [aw*bx+ax*bw+ay*bz-az*by,aw*by-ax*bz+ay*bw+az*bx,aw*bz+ax*by-ay*bx+az*bw,aw*bw-ax*bx-ay*by-az*bz];}
@@ -75,9 +91,10 @@ function tiltFaceToward(q,dir){let best=0,bd=-2;TILT_NORMALS.forEach((n,f)=>{con
 // `holds` for the square pull: the 24 holds (CUBE_TAB_HOLDS), each with `q`.
 function tiltTracker(opts){
   const o=Object.assign({},TILT_DEFAULTS,opts),holds=o.holds||[];
-  const st={basis:null,psi:0,raw:null,t:0,speed:0,stillAt:null,drift:0,squared:0,level:false};
+  const st={basis:null,psi:0,raw:null,t:0,speed:0,stillAt:null,ref:null,bias:0,drift:0,squared:0,nudged:0,level:false};
   const up=[0,1,0];
   // basis: T, the small tilt. level: the last reset could not square the cube (gravity won).
+  // ref: the reading the speed is measured from. bias: the drift rate learned, deg/s about the vertical.
   const pose=()=>st.basis&&st.raw?tiltNorm(tiltMul(st.basis,tiltMul(tiltAbout(up,st.psi),st.raw))):null;
   function reset(holdQ){
     if(!st.raw)return null;holdQ=holdQ||[0,0,0,1];
@@ -86,28 +103,45 @@ function tiltTracker(opts){
     else{st.basis=[0,0,0,1];st.psi=tiltYawFor(st.raw,holdQ);st.level=true;}
     return pose();}
   function adopt(list){const Q=pose();if(!Q)return null;const h=tiltNearest(Q,list||holds);if(h)reset(h.q);return h;}
-  function clear(){st.basis=null;st.psi=0;st.raw=null;st.t=0;st.speed=0;st.stillAt=null;}
+  function clear(){st.basis=null;st.psi=0;st.raw=null;st.t=0;st.speed=0;st.stillAt=null;st.ref=null;st.bias=0;}
+  // The heading's error from square, in degrees about the picture's vertical; null when the picture
+  // is too far from every hold to say (past snapDeg about the vertical, or past snapTiltDeg in any
+  // other way: a cube on its side, tipped well toward you).
+  function offSquare(){
+    const Q=pose();if(!Q||!holds.length)return null;
+    const h=tiltNearest(Q,holds),E=tiltMul(Q,tiltConj(h.q)),a=tiltApply(st.basis,up),th=tiltTwist(E,a);
+    if(Math.abs(th)>=o.snapDeg||tiltAngle(E,tiltAbout(a,th))>=o.snapTiltDeg)return null;
+    return th;}
+  // A move: the heading takes part of its error from square away. Returns the step, in degrees.
+  function nudge(frac){
+    const th=offSquare();if(th==null)return 0;
+    const step=Math.max(-o.moveMaxDeg,Math.min(o.moveMaxDeg,th*(frac==null?o.moveFrac:frac)));
+    st.psi-=step;st.nudged+=Math.abs(step);return step;}
   function feed(t,raw){
     raw=tiltNorm(raw);const prev=st.raw,dt=t-st.t;
     if(prev&&raw[0]*prev[0]+raw[1]*prev[1]+raw[2]*prev[2]+raw[3]*prev[3]<0)raw=raw.map(v=>-v); // the same turn, kept on one side
     st.raw=raw;st.t=t;
-    if(!prev||dt<=0||dt>o.gapMs){st.stillAt=null;return pose();}
-    const d=tiltMul(raw,tiltConj(prev)); // the turn since the last reading, in the reading's world
-    st.speed=tiltAngle(d,[0,0,0,1])/(dt/1000);
-    if(st.speed>=o.stillDps){st.stillAt=null;return pose();}
+    if(!prev||dt<0||dt>o.gapMs){st.stillAt=null;st.ref={raw,t};return pose();}
+    // The speed since ref, over speedMs at the least; ref moves on once speedMs has gone by.
+    if(!st.ref)st.ref={raw:prev,t:t-dt};
+    const span=t-st.ref.t;
+    st.speed=tiltAngle(raw,st.ref.raw)/(Math.max(span,o.speedMs)/1000);
+    if(span>=o.speedMs)st.ref={raw,t};
+    const d=tiltMul(raw,tiltConj(prev)),yaw=tiltTwist(d,up),s=dt/1000; // the turn since the last reading, in the reading's world
+    if(st.speed>=o.stillDps){ // a hand turns it: the drift rate learned is taken back
+      st.stillAt=null;st.psi-=st.bias*s;st.drift+=Math.abs(st.bias*s);return pose();}
     if(st.stillAt==null)st.stillAt=t;
-    const yaw=tiltTwist(d,up);st.psi-=yaw;st.drift+=Math.abs(yaw); // a turn about the vertical while still is drift
-    const Q=pose();
-    if(Q&&holds.length&&t-st.stillAt>=o.stillMs){
-      const h=tiltNearest(Q,holds),E=tiltMul(Q,tiltConj(h.q));
-      if(tiltAngle(Q,h.q)<o.snapDeg){
-        const a=tiltApply(st.basis,up),th=tiltTwist(E,a),cap=o.snapDps*dt/1000,step=Math.max(-cap,Math.min(cap,th));
-        st.psi-=step;st.squared+=Math.abs(step);
-      }
+    st.psi-=yaw;st.drift+=Math.abs(yaw); // a turn about the vertical while still is drift
+    if(s>0)st.bias=Math.max(-o.biasMaxDps,Math.min(o.biasMaxDps,st.bias+(yaw-st.bias*s)/(Math.max(o.biasMs,dt)/1000)));
+    if(s>0&&t-st.stillAt>=o.stillMs){
+      const th=offSquare();
+      if(th!=null){ // proportional, at least a degree a second so it ends, at most snapDps
+        const mag=Math.min(Math.abs(th),o.snapDps*s,Math.max(Math.abs(th)*dt/o.snapMs,s)),step=Math.sign(th)*mag;
+        st.psi-=step;st.squared+=mag;}
     }
     return pose();
   }
-  return {feed,reset,adopt,clear,pose,state:st,opts:o};
+  return {feed,reset,adopt,clear,pose,nudge,offSquare,state:st,opts:o};
 }
 // The gestures: one face turned and turned back, twice over, X X' X X' or X' X X' X, so the cube ends
 // as it began; each turn within

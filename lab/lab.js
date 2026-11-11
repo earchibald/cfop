@@ -1466,15 +1466,15 @@ async function labConnect(auto){
 }
 function labLink(ev,conn){
   if(!conn||conn!==lab.conn)return;
-  if(ev.type==='gone'){labFatFlush();lab.conn=null;lab.asked=false;lab.want=false;labStopView();labButtons();labStatus('The cube is no longer connected. Turn a face to wake it up.');labLog('link','The link dropped.');labConnect(true);return;}
+  if(ev.type==='gone'){awakeRelease();labFatFlush();lab.conn=null;lab.asked=false;lab.want=false;labStopView();labButtons();labStatus('The cube is no longer connected. Turn a face to wake it up.');labLog('link','The link dropped.');labConnect(true);return;}
   if(ev.type==='off'){conn.close();return;}
-  if(ev.type==='move'){lab.fatAts.push(performance.now());if(lab.fatAts.length>32)lab.fatAts.shift();labAsk();} // the time of each move, for the fat move detector
+  if(ev.type==='move'){awakeKick();lab.fatAts.push(performance.now());if(lab.fatAts.length>32)lab.fatAts.shift();labAsk();} // the time of each move, for the fat move detector
   if(ev.type==='gyro')labGyro(ev.q);
   if(ev.type==='battery'){labBatteryDraw($('#batt'),ev.level);if(ev.level!==lab.battLogged){lab.battLogged=ev.level;labLog('link',`Charge ${ev.level}%.`);}}
   if(ev.type==='state'){const askedAt=lab.askAt;lab.asked=false;if(lab.want){lab.want=false;labAsk();}if(!lab.reading)labShow(ev.cube,askedAt);} // a read for a correction shows nothing: labReadColors jumps to the corrected state
 }
 function labDisconnect(){
-  labFatFlush();
+  awakeRelease();labFatFlush();
   if(lab.conn){const c=lab.conn;lab.conn=null;c.close();labLog('link','Disconnected.');}
   labStopAnim();labStopView();lab.busy=false;labButtons();labStatus('Disconnected. Press Connect to connect again.');
 }
