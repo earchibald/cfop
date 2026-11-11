@@ -94,8 +94,10 @@ body.cube-drag,body.cube-drag *{user-select:none!important;-webkit-user-select:n
 .cubebox .animbtn[aria-pressed="true"] svg{color:var(--accent-ink)}
 /* a gentle "drag to rotate" hint; app.js hides it after the first drag of the session */
 .cubebox .draghint{position:absolute;left:10px;bottom:8px;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);pointer-events:none;opacity:.85;transition:opacity .4s}
-.cubebox .draghint svg{width:22px;height:15px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;animation:draghint 3s ease-in-out infinite}
+.cubebox .draghint svg{width:22px;height:15px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;animation:draghint 3s ease-in-out 4}
+/* A few wiggles, then still: an endless loop under the glass repaints every frame (38% of a core when idle). */
 .cubebox .draghint.hidden{display:flex!important;opacity:0}
+.cubebox .draghint.hidden svg{animation:none}
 @keyframes draghint{0%,100%{transform:translateX(-3px)}50%{transform:translateX(3px)}}
 @media (prefers-reduced-motion:reduce){.cubebox .draghint svg{animation:none}}
 /* The hold row (js/live.js): small color tiles, Top then Front, and Net. */
@@ -809,7 +811,7 @@ body[data-kind="beg"][data-key] #progressPanel,body[data-kind="beg"][data-key] .
 .cubewin .cw-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 .cubewin .cw-head h2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cubewin .cw-head .grow{flex:1}
-.cubewin .dot{width:9px;height:9px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 50%,transparent);animation:livedot 1.6s ease-out infinite;flex:none}
+.cubewin .dot{width:9px;height:9px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 50%,transparent);animation:livedot 1.6s ease-out 3;flex:none}
 .cubewin.off .dot{background:var(--muted);animation:none;box-shadow:none}
 .cubewin.off .cw-head h2{color:var(--muted)}
 .cubewin .cw-aside{display:flex;flex-direction:column;gap:10px;min-width:0}

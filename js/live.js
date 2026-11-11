@@ -107,8 +107,11 @@ function liveTiltGyro(q){
   TILT.qTo=tr.pose();
   if(first||!TILT.q){TILT.q=TILT.qTo;liveTiltDraw();if(liveTiltLive())drawMain();return;}
   liveTiltAwayCheck();
-  if(liveTiltLive())liveTiltView();
+  // A cube at rest still sends readings: under LIVE_TILT_STILL degrees from the pose drawn, no frame.
+  if(liveTiltLive()&&(TILT.raf||tiltAngle(TILT.q,TILT.qTo)>=LIVE_TILT_STILL))liveTiltView();
 }
+// Degrees: a reading closer than this to the pose on the screen moves the picture under a pixel.
+const LIVE_TILT_STILL=0.2;
 // Turn the picture toward qTo, most of the way within a tenth of a second, drawn once a frame. A
 // running layer turn or lift draws every frame already. Reduced motion: straight there.
 function liveTiltView(){
