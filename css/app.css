@@ -909,6 +909,9 @@ body:not(.can-listen) #cubeWinListen,body:not(.can-listen) #cubeWinListenRow,bod
 .fg-tile small{font-size:11px;line-height:1.15;color:var(--muted);text-align:center}
 .fg-tile.fg-lead small{color:var(--text)}
 .fg-tile .gm.f2l-did{color:var(--faint,var(--muted));opacity:.7}
+.fg-tile .gm.sp-m{cursor:pointer}
+@media (hover:hover){.fg-tile .gm.sp-m:not(.next):hover{background:var(--text);box-shadow:0 0 0 2px var(--text)}}
+.fg-hint .fg-reveal{align-self:center;font-family:var(--sans);font-size:12.5px;padding:1px 8px;color:var(--muted)}.fg-hint .fg-reveal:hover{color:var(--text)}
 .fg-tile .gm.next{cursor:pointer;box-shadow:0 0 0 2px var(--accent)}
 .fg-tile .gm.next:hover,.fg-tile .gm.next:focus{background:var(--accent);box-shadow:0 0 0 2px var(--accent);outline:none}
 .fg-tree{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13.5px;color:var(--muted)}

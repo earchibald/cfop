@@ -19,8 +19,9 @@
 // f2ltPieces(f, ci, key)         the stickers of the pair `key` in facelets f: its corner and its edge
 // f2ltSteps(cube, ci, how, o)    a generator: one search per step; its return value is the pick
 // f2ltPick(cube, ci, how, o)     the same, run to the end
-// f2ltStill(cube, ci, pick, o)   true while the pick still holds: its pairs not solved, and no
-//                                farther from solved (with the cross) than when it was picked
+// f2ltStill(cube, ci, pick)      true while the pick still holds: the pair it tracks not solved,
+//                                however far the user wanders on the way (1.87.1: the pick no
+//                                longer lets go when its pair gets farther, so the drill stays on it)
 // f2ltOverlay(cube, ci)          Overlay (1.73): the cube with the cross put in place, as a fixed
 //                                relabel of the pieces: {T, ci, skip}; T.mul(cube) is that cube
 // f2ltOverlayScramble(cube, ci)  Overlay (1.74): that cube as a scramble from solved: {moves, O},
@@ -59,7 +60,8 @@ function f2ltPieces(f,ci,key){
 // keys: the pairs to light, the current one first. kind (two): 'both', 'setup', 'then' or 'last'.
 // n: the moves of the current pair (fastest: of its quickest solution; both: of the two together);
 // n2: the moves of the next pair after it (setup, then). cost (fastest): its F2L_SPEED cost.
-// track: the pairs f2ltStill follows and how many moves they took when picked.
+// track: the pairs f2ltStill follows (the current one, or both with Two at once) and how many
+// moves they took when picked.
 // o.prefer: keys of the pick before; a tie goes to them, so the light does not hop between equals.
 // o.skip: keys not to pick (the pairs Overlay can not show).
 function* f2ltSteps(cube,ci,how,o={}){
@@ -110,12 +112,10 @@ function* f2ltSteps(cube,ci,how,o={}){
   return {how,keys:[K(t),K(next)],kind:'then',n:s[t],n2:p&&p.slot===next?p.n:s[next],track:{keys:[K(t)],len:s[t]}};
 }
 function f2ltPick(cube,ci,how,o={}){const it=f2ltSteps(cube,ci,how,o);let r;do r=it.next();while(!r.done);return r.value;}
-function f2ltStill(cube,ci,pick,o={}){
-  if(!pick||!pick.track)return false;
+function f2ltStill(cube,ci,pick){
+  if(!pick||!pick.track||!pick.track.keys.length)return false;
   const fr=f2ltFrame(cube,ci);if(!fr)return false;
-  const goal=pick.keys.map(k=>fr.slot[k]);if(goal.some(n=>!n||slotSolved(fr.X,f2lSlot(n))))return false;
-  const tg=pick.track.keys.map(k=>fr.slot[k]);
-  return f2lLen(fr.X,[...tg,...f2lKeep(fr.X)],{left:o.nodeLimit||F2L_PICK_NODES},pick.track.len)!=null;
+  return !pick.track.keys.map(k=>fr.slot[k]).some(n=>!n||slotSolved(fr.X,f2lSlot(n)));
 }
 // ---- Overlay ----
 // The user's cube A0 can have the cross anywhere. Overlay makes a cube O0 from it: the cross

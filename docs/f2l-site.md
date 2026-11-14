@@ -67,14 +67,19 @@ changes only how the moves are uncovered.
 
 | Cube | Where the state comes from | How a move uncovers |
 |---|---|---|
-| The screen cube | The player: the cube of the page as it is (1.71: the scramble, its grip turn and your moves, from any tab; no cross solved for you, so the cross line comes first), and the moves uncovered so far. A key of the virtual cube is read too (`fgFollow`). | The user makes the move on the screen cube: a click on the next covered move, or the Right arrow. The layer turns in the player. |
+| The screen cube | The player: the cube of the page as it is (1.71: the scramble, its grip turn and your moves, from any tab; no cross solved for you, so the cross line comes first), and the moves uncovered so far. A key of the virtual cube is read too (`fgFollow`). | The user makes the move on the screen cube: a click on the next move once it is in clear, or the Right arrow. The layer turns in the player. |
 | A regular cube (scanned, painted, typed) | The last reset point, plus the moves uncovered so far. The site trusts the user to make each move as it uncovers. | The same click or key. The user turns the real cube at the same time. |
-| A smart cube | The cube itself, through `cw:smart` events and the cube tab's hold. | The cube uncovers the move when the user makes it. No click. A wrong move shows the way back, as in the lab. |
+| A smart cube | The cube itself, through `cw:smart` events and the cube tab's hold. | The cube uncovers the move when the user makes it. A click only reveals (below). A wrong move shows the way back, as in the lab. |
 
 "Progressive disclosure from obfuscation": the hint is a drill. The first
 move is in clear. Every other move is covered. A move comes out of its cover
-only when it is made, on the screen or on the cube. No Reveal button opens
-the whole line. This is the lab's `labHintLine`, kept as it is.
+when it is made, on the screen or on the cube, or when the user asks for it
+(1.87.1, the owner's call: with a smart cube there was no way to see the next
+move at all). The Reference's spoiler rule: a click on a covered move
+uncovers the next one, and "Reveal N more moves" uncovers the rest; then
+"Hide the moves" covers them again (`fgUncover`, `fgHide`, `h.shown`). The
+Left arrow covers the move it takes back. The lab's `labHintLine` stays a
+pure drill.
 
 ### The reset point
 

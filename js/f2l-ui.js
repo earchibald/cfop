@@ -4,8 +4,10 @@
 // with the lab); the step logic follows the lab's window (lab/lab.js, labF2L*). See docs/f2l-site.md.
 //
 // The hint is a drill (fgHintTiles): the first move in clear, every other move covered until it is
-// made. On the virtual cube and a real cube the user makes a move by a click on the next covered
-// tile or the Right arrow: the move goes on the player (the layer turns) and on fg.made, the list
+// made or uncovered. A covered move comes out under the spoiler rule of the Reference, on every cube:
+// a click on a covered tile uncovers the next one, Reveal uncovers the rest (fgUncover; h.shown, the
+// count of moves in clear from the start of the hint). On the virtual cube and a real cube the user
+// makes a move by a click on the next tile once it is in clear, or the Right arrow at any time: the move goes on the player (the layer turns) and on fg.made, the list
 // of moves since the reset point. The Left arrow covers the last move again (fgBack: the player
 // steps back and the guide goes back to the snapshot it took before the move, fg.hist). On a smart
 // cube the cube itself uncovers a move when the user makes it (fgSmartRead, from the smart cube sheet's
@@ -47,7 +49,7 @@ function fgInit(){
   $('#fgReturn').onclick=fgReturn;$('#fgSetup').onclick=fgSetup;
   $('#fgShortest').onclick=()=>fgMode('shortest');$('#fgCorner').onclick=()=>fgMode('corner');
   $('#fgOrderBtn').onclick=()=>{fg.orderOpen=!fg.orderOpen;fgDraw();};
-  $('#f2lGuide').addEventListener('click',fgClick);
+  $('#f2lGuide').addEventListener('click',fgClick);$('#f2lGuide').addEventListener('keydown',fgTileKey);
   document.addEventListener('cw:scramble',()=>{fg.key=null;if(fgActive())fgShow();});
   document.addEventListener('cw:step',fgFollow);
   document.addEventListener('cw:smart',e=>{const t=e.detail&&e.detail.type;if(!fgActive())return;
@@ -119,7 +121,7 @@ function fgRead(X){
     n=f2lDone(s.base,s.moves,X);const half=n<0?f2lPart(s.base,s.moves,X):-1;
     if((n>=0&&n<s.moves.length)||half>=0){s.n=n>=0?n:half;fgOn(s,n>0||half>=0);fgDraw();return;}
     if(n<0){const a=f2lAlong(s.base,s.moves,s.sols,X);
-      if(a){const plain=s.moves.join(' ')===s.plain.join(' ');s.moves=a.moves;if(plain)s.plain=a.moves;s.n=a.n;s.then=null;fgOn(s,true);
+      if(a){const plain=s.moves.join(' ')===s.plain.join(' ');s.moves=a.moves;s.shown=0;if(plain)s.plain=a.moves;s.n=a.n;s.then=null;fgOn(s,true);
         if(a.n<a.moves.length){fgDraw();fgThen(f.seq);return;}}}
   }
   const st=f2lStatus(X,f.done);
@@ -144,7 +146,7 @@ function fgCrossRead(X,X0){
     const n=f2lDone(c.base,c.moves,X),half=n<0?f2lPart(c.base,c.moves,X):-1;
     if(n>=0||half>=0){c.n=n>=0?n:half;fgOn(c,n>0||half>=0);return;}
     const a=f2lAlong(c.base,c.moves,c.sols,X);
-    if(a){c.moves=a.moves;c.n=a.n;fgOn(c,true);return;}
+    if(a){c.moves=a.moves;c.shown=0;c.n=a.n;fgOn(c,true);return;}
     if(c.begun){fgAway(c,X0,X);return;}
   }
   const d0=buildCrossTable()[crossIndex(X)],sols=f2lSort(crossSolutions(X,d0).byLen[d0]||[]);
@@ -212,7 +214,7 @@ function fgThen(seq){
 function fgUse(key){
   const s=fg.step;if(!s||s.n||s.begun||!s.ways)return;
   const w=s.ways.find(x=>x.key===key);if(!w)return;
-  s.moves=w.moves;s.way=key;s.sols=key==='short'?s.sols:[];s.then=null;fgDraw();fgThen(fg.seq);
+  s.moves=w.moves;s.shown=0;s.way=key;s.sols=key==='short'?s.sols:[];s.then=null;fgDraw();fgThen(fg.seq);
 }
 // ----- the moves on the virtual cube and a real cube -----
 // The next covered move, made: on the player, on the list, and read by the guide.
@@ -231,6 +233,7 @@ function fgBack(){
   const h=fg.hist.pop();fg.making=true;fgSeqAppend(invertAlg([h.m]));fg.making=false;fg.made=fgHomeMade();
   clearTimeout(fg.timer);fg.timer=0;fg.seq++;fg.working=false;
   Object.assign(fg,{step:h.step,cross:h.cross,done:h.done,log:h.log,target:h.target,broke:h.broke,X:h.X,back:h.back});
+  for(const o of [fg.step,fg.cross])if(o&&o.shown)o.shown=Math.min(o.shown,o.n); // the move undone is covered again
   const s=fg.step;if(s&&s.moves.length){if(s.busy||!s.ways)fgWays(s);if(!s.then)fgThen(fg.seq);} // work the move cut short
   fgDraw();
 }
@@ -310,21 +313,44 @@ function fgClick(e){
   if(t.dataset.use){fgUse(t.dataset.use);return;}
   if(t.dataset.renew){fgRenew();return;}
   if(t.dataset.case){const f=F2L_CASES.find(c=>c.n===+t.dataset.case);if(f)openCaseModal(modalForF2L(f));return;}
+  if(t.dataset.show){fgUncover(t.dataset.show,t.dataset.all==='1');return;}
+  if(t.dataset.hide){fgHide(t.dataset.hide);return;}
   if(t.classList.contains('gm')&&t.dataset.next){fgNext();return;}
 }
+// A covered tile is a button too: Enter or Space acts as a click.
+function fgTileKey(e){
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const t=e.target.closest&&e.target.closest('span.gm');if(!t||!(t.dataset.show||t.dataset.next))return;
+  e.preventDefault();e.stopPropagation();t.click();
+}
+// The hint in use: the step's, else the cross line's.
+function fgHintOf(which){return which==='cross'?fg.cross:fg.step;}
+// The spoiler rule on the hint: the next covered move in clear, or every move with all.
+function fgUncover(which,all){
+  const h=fgHintOf(which);if(!h||!h.moves.length)return;
+  const from=Math.max(h.shown||0,h.n||0,1);
+  h.shown=all?h.moves.length:Math.min(h.moves.length,from+1);fgDraw();
+}
+// Hide the moves: every move not made covered again, bar the first.
+function fgHide(which){const h=fgHintOf(which);if(!h)return;h.shown=0;fgDraw();}
 // ----- the drawing -----
 // The hint as tiles: the moves made dim, the first move in clear, every other move covered until
 // it is made. The next covered move is a button on the virtual cube and a real cube. Under each
 // tile, what the move does to the pair (the arc), where it says something.
-function fgHintTiles(moves,n,arc,click){
-  const row=fgEl('div','fg-hint');
+function fgHintTiles(h,which,arc,click){
+  const moves=h.moves,n=h.n,open=Math.max(h.shown||0,1),row=fgEl('div','fg-hint');
   const by={};for(const e of arc||[])by[e.i]=e.text;
   if(by[0]){const t=fgEl('span','fg-tile fg-lead');t.appendChild(fgEl('small',null,by[0]));row.appendChild(t);}
+  let left=0,first=true;
   moves.forEach((m,i)=>{
-    const t=fgEl('span','fg-tile'),x=fgEl('span','gm '+(i<n?'f2l-did':i===0?'f2l-first':'sp-m'));x.textContent=m;
-    if(click&&i===n){x.dataset.next='1';x.setAttribute('role','button');x.tabIndex=0;x.title='Make this move: click it, or press the Right arrow';x.classList.add('next');}
+    const shut=i>=n&&i>=open,t=fgEl('span','fg-tile'),x=fgEl('span','gm '+(i<n?'f2l-did':i===0?'f2l-first':shut?'sp-m':'f2l-open'));x.textContent=m;
+    if(shut){left++;x.dataset.show=which;x.setAttribute('role','button');x.title='Click to reveal the next move';
+      if(first){x.tabIndex=0;first=false;}if(click&&i===n)x.classList.add('next');}
+    else if(click&&i===n){x.dataset.next='1';x.setAttribute('role','button');x.tabIndex=0;x.title='Make this move: click it, or press the Right arrow';x.classList.add('next');}
     t.appendChild(x);if(by[i+1])t.appendChild(fgEl('small',null,by[i+1]));row.appendChild(t);});
-  row.title='Each move shows when you make it.';
+  if(left){const b=fgEl('button','small fg-reveal',`Reveal ${left} more move${left===1?'':'s'}`);b.type='button';b.dataset.show=which;b.dataset.all='1';b.title='Show the rest of the moves';row.appendChild(b);}
+  else if((h.shown||0)>Math.max(n,1)&&n<moves.length){const b=fgEl('button','small fg-reveal','Hide the moves');b.type='button';b.dataset.hide=which;b.title='Cover the moves not made yet again';row.appendChild(b);}
+  row.title=left?'A move shows when you make it. Click a covered move to reveal it.':'';
   return row;
 }
 function fgOffLine(h){
@@ -338,7 +364,7 @@ function fgWords(){const c=fg.src==='smart'?fg.held:fg.X?phys(fg.X):null;return 
 function fgColor(){const c=fg.src==='smart'?fg.held:fg.X?phys(fg.X):null;return c?COLOR_NAMES[c.center[3]]:$('#crossColor').value;}
 function fgDraw(){
   const a=document.activeElement,box=$('#f2lGuide');
-  const fo=a&&box&&box.contains(a)&&a.dataset?(a.dataset.ord?`[data-ord="${a.dataset.ord}"]`:a.dataset.chip?`[data-chip="${a.dataset.chip}"]`:a.dataset.use?`[data-use="${a.dataset.use}"]`:a.dataset.next?'.gm.next':null):null;
+  const fo=a&&box&&box.contains(a)&&a.dataset?(a.dataset.ord?`[data-ord="${a.dataset.ord}"]`:a.dataset.chip?`[data-chip="${a.dataset.chip}"]`:a.dataset.use?`[data-use="${a.dataset.use}"]`:a.classList.contains('fg-reveal')?'.fg-reveal':a.dataset.next||a.dataset.show?'.fg-hint .gm[tabindex="0"]':null):null;
   const dir=a&&a.dataset&&a.dataset.dir;
   fgDrawAll();
   if(typeof f2lTrainGuide==='function')f2lTrainGuide(); // F2L Trainer's F2L-1 shows the guide's pair
@@ -352,7 +378,8 @@ function fgDrawAll(){
   const cl=$('#fgCube');cl.textContent='';
   const who=f.src==='smart'?(typeof smartNiceName==='function'?smartNiceName(cubeTab.name):'your smart cube'):f.src==='real'?`your cube, ${/^scan/.test(scr.seed)?'scanned':/^paint/.test(scr.seed)?'painted':'read'} ${(scr.seed.match(/-(\d\d)(\d\d)(\d\d)$/)||[]).slice(1,3).join(':')||'earlier'}`:'the virtual cube';
   cl.appendChild(el('b',null,`Your cube: ${who}.`));
-  cl.appendChild(el('span','muted',f.src==='smart'?' Make each move on the cube: it uncovers as you turn.':f.src==='real'?(fgTouch()?' Make each move on your cube too, then tap the next move here.':' Make each move on your cube too: click the next move, or press the Right arrow. Left covers it again.'):fgTouch()?' Tap the next move to make it.':' Click the next move, or press the Right arrow. Left covers it again.'));
+  const tap=fgTouch()?'Tap':'Click';
+  cl.appendChild(el('span','muted',f.src==='smart'?` Make each move on the cube: it uncovers as you turn. ${tap} a covered move to reveal it.`:f.src==='real'?(fgTouch()?' Make each move on your cube too. Tap a covered move to reveal it, then tap it again when you made it.':' Make each move on your cube too. Click a covered move to reveal it, then click it again when you made it, or press the Right arrow. Left covers it again.'):fgTouch()?' Tap a covered move to reveal it. Tap it again to make it.':' Click a covered move to reveal it. Click it again to make it, or press the Right arrow. Left covers it again.'));
   if(f.back!=null){const p=el('p','fg-back');if(f.read)p.appendChild(el('span',null,f.read+' '));p.appendChild(el('b',null,f.back?'Back to the scramble: ':'The cube is at the scramble.'));if(f.back)p.appendChild(el('code',null,f.back));cl.appendChild(p);}
   $('#fgReturn').disabled=!(X&&f.base&&(f.src==='smart'?!X.equals(f.base):f.made.length>0));
   $('#fgSetup').disabled=!X||!!seqState.drill;
@@ -369,7 +396,7 @@ function fgDrawAll(){
     const c=f.cross,ln=c?c.moves.length:0;
     cr.appendChild(el('b',null,s?`The ${color} cross is apart.`:`Make the ${color} cross first.`));
     if(c&&ln){cr.appendChild(document.createTextNode(` ${s?'Make it again. ':''}Shortest: ${ln} move${ln===1?'':'s'}`+(c.n?`, ${c.n} made.`:'.')));
-      cr.appendChild(fgHintTiles(c.moves,c.n,null,click&&!c.away));if(c.away)cr.appendChild(fgOffLine(c));}
+      cr.appendChild(fgHintTiles(c,'cross',null,click&&!c.away));if(c.away)cr.appendChild(fgOffLine(c));}
   }
   const main=!!X&&!seqState.drill&&(!!s||st.cross);
   $('#fgMain').hidden=!main;
@@ -407,7 +434,7 @@ function fgDrawAll(){
     if(!s.moves.length)card.appendChild(el('p','warn',`No hint in ${F2L_MAX_DEPTH} moves or fewer. Make the ${color} cross again, or press N for a new scramble.`));
     else{
       const way=s.ways&&s.ways.find(x=>x.key===s.way),arc=way?way.arc:f2lArc(s.base,s.slot,s.moves);
-      card.appendChild(fgHintTiles(s.moves,s.n,arc,click&&!s.away));
+      card.appendChild(fgHintTiles(s,'step',arc,click&&!s.away));
       if(click&&!s.away){const k=el('span','hk fg-hk','→');k.setAttribute('aria-hidden','true');k.title='The Right arrow makes the next move; the Left arrow covers the last one again';card.appendChild(k);}
       const ln=s.moves.length;card.appendChild(el('span','cnt',`${ln} move${ln===1?'':'s'}`+(s.n?`, ${s.n} made`:'')+(way&&way.key!=='short'?` · ${way.label.toLowerCase()}`:'')));
       if(s.away)card.appendChild(fgOffLine(s));

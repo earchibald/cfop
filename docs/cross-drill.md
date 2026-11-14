@@ -150,8 +150,9 @@ its pieces through every turn of the whole cube, and the stickers are found by c
 A pick is read from the cube in view, turned so the cross color is down (`f2ltFrame`). It is read
 again once the cube changes and rests 150 ms, one search per turn of the event loop
 (`f2ltSteps`), so the page does not stop (Two at once: about a quarter of a second, at worst
-about two thirds). It holds while its pairs are not solved and are no farther from solved than
-when it was picked (`f2ltStill`), so the light does not hop while the user works on a pair. A new
+about two thirds). It holds until the pair it tracks is solved (`f2ltStill`), however far the
+user wanders on the way, so the light does not hop while the user works on a pair and the win
+counts the pair the user was on (1.87.1; before, a pair that got farther from solved let go). A new
 pick prefers the pairs of the one before on a tie; with Two at once, the second pair becomes the
 first when the first is solved. A new scramble starts over. A pick needs the cross within three
 moves (`F2LT_CROSS_NEAR`): an insert opens the cross for a move or two. Further off, F2L-1 shows
