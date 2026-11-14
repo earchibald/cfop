@@ -2,7 +2,7 @@
 // colors, the stickers of a pair, the speed cost; on random scrambles with the cross solved, in any
 // hold: Shortest lights a pair with the fewest moves, Fastest the one quickest to turn within two
 // extra moves, Two at once two pairs that one solution makes together or the shortest and the pair
-// after it; a pick holds while the pair gets no farther, and lets go when it is solved; a tie goes to
+// after it; a pick holds however far the pair wanders, and lets go when it is solved; a tie goes to
 // the pick before; a cross far off, or every pair solved, lights no pick; an insert that opens the cross keeps it.
 const assert=require('assert');
 const run=require('./vm-load')('js/engine.js','js/solver.js','js/algs.js','js/f2l.js','js/f2lpick.js');
@@ -12,6 +12,7 @@ const Cube=g('Cube'),applyAlg=g('applyAlg'),parseAlg=g('parseAlg'),solveCross=g(
 const f2lPairSolutions=g('f2lPairSolutions'),f2lLen=g('f2lLen'),f2lKeep=g('f2lKeep'),f2lOpen=g('f2lOpen'),F2L_COMBO_EXTRA=g('F2L_COMBO_EXTRA');
 const f2ltFrame=g('f2ltFrame'),f2ltPairs=g('f2ltPairs'),f2ltPieces=g('f2ltPieces'),f2ltPick=g('f2ltPick'),f2ltStill=g('f2ltStill'),f2lSpeed=g('f2lSpeed'),F2L_FAST_EXTRA=g('F2L_FAST_EXTRA');
 const cornerFacelet=g('cornerFacelet'),edgeFacelet=g('edgeFacelet');
+const slotSolved=g('slotSolved'),f2lSlot=g('f2lSlot');
 // A cube with home centers has its cross on D: yellow, 3.
 const CI=3;
 const withCross=seed=>{const c=applyAlg(new Cube(),randomMoveScramble(seed,25));return applyAlg(c,solveCross(c).solutions[0]);};
@@ -66,7 +67,7 @@ for(const c of cubes){const p=f2ltPick(c,CI,'two'),L=lens(c);kinds[p.kind]=(kind
   else assert.strictEqual(L.o[p.keys[0]],Math.min(...Object.values(L.o)),'a shortest pair first');}
 assert.ok(kinds.both>0,'some scrambles make two pairs at once');
 lap('two '+JSON.stringify(kinds));
-// A pick holds along its solution, and lets go when its pair is solved or gets farther.
+// A pick holds along its solution and off it, and lets go only when its pair is solved.
 {const c=cubes[0],p=f2ltPick(c,CI,'shortest'),L=lens(c),n=L.fr.slot[p.keys[0]];
   const sol=f2lPairSolutions(L.X,n,L.keep).byLen[p.n][0].split(' ');
   assert.ok(f2ltStill(c,CI,p),'at the start');
@@ -74,7 +75,9 @@ lap('two '+JSON.stringify(kinds));
   let Y=L.fr.P;for(let i=0;i<sol.length-1;i++){Y=applyAlg(Y,[sol[i]]);assert.ok(f2ltStill(Y,CI,p),'along the solution, move '+(i+1));}
   Y=applyAlg(Y,[sol[sol.length-1]]);assert.ok(!f2ltStill(Y,CI,p),'solved: a new pick');
   const away=['U','U2',"U'",'R','L',"F'"].map(m=>applyAlg(L.fr.P,[m])).find(z=>{const q=lens(z).o[p.keys[0]];return q!=null&&q>p.n;});
-  if(away)assert.ok(!f2ltStill(away,CI,p),'farther: a new pick');}
+  if(away)assert.ok(f2ltStill(away,CI,p),'farther: the pick holds');
+  const lost=applyAlg(L.fr.P,parseAlg("R U2 F' L D2 B U' R2 F"));
+  if(!slotSolved(lens(lost).X,f2lSlot(n)))assert.ok(f2ltStill(lost,CI,p),'far off, the cross broken: the pick holds');}
 // A tie goes to the pick before.
 {for(const c of cubes){const L=lens(c),min=Math.min(...Object.values(L.o)),ties=Object.keys(L.o).filter(k=>L.o[k]===min);if(ties.length<2)continue;
   for(const k of ties)deq(f2ltPick(c,CI,'shortest',{prefer:[k]}).keys,[k],'the tie to the pick before');break;}}

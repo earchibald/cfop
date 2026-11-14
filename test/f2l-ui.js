@@ -52,7 +52,16 @@ w.addEventListener('load',async()=>{try{
   assert.ok(n0>0&&tiles().length===n0,'the hint has a tile per move');
   assert.ok(tiles()[0].classList.contains('f2l-first')&&tiles()[0].dataset.next,'the first move is in clear and is the next');
   assert.ok(tiles().slice(1).every(t=>t.classList.contains('sp-m')),'every other move is covered');
-  assert.ok(!$('#fgCard').textContent.includes('Reveal'),'no Reveal');
+  // The spoiler rule: a click on a covered move uncovers the next one, Reveal the rest, Hide covers them.
+  const cov=()=>tiles().filter(t=>t.classList.contains('sp-m')).length,rv=()=>$('#fgCard .fg-reveal');
+  if(n0>1){
+    assert.ok(rv()&&rv().textContent===`Reveal ${n0-1} more move${n0>2?'s':''}`,'a Reveal button counts the covered moves');
+    click(tiles()[n0-1]);assert.strictEqual(cov(),n0-2,'a click on a covered move uncovers one');
+    assert.ok(tiles()[1].classList.contains('f2l-open')&&tiles()[1].textContent===s.moves[1],'the next move in clear');
+    assert.strictEqual(made(),0,'uncovering makes no move');
+    click(rv());assert.strictEqual(cov(),0,'Reveal uncovers the rest');
+    assert.ok(rv()&&/Hide the moves/.test(rv().textContent),'then Hide the moves');
+    click(rv());assert.strictEqual(cov(),n0-1,'Hide covers them again');}
   assert.ok($$('#fgCard .fg-tile small').length>=1&&/pair goes in/.test($('#fgCard').textContent),'the arc labels the moves');
   // The tree: a Shortest way in use, a Basic way with its case; the basic way is a hint too.
   const ways=$$('#fgTree button');
@@ -66,7 +75,7 @@ w.addEventListener('load',async()=>{try{
   const len0=moves().length,first=tiles()[0].textContent;
   key('ArrowRight');
   assert.strictEqual(moves().length,len0+1,'the player grows by one');assert.strictEqual(moves()[len0],first,'the move made');
-  assert.strictEqual(made(),1,'one move made');assert.ok(tiles()[1].dataset.next&&tiles()[1].classList.contains('sp-m'),'the next is the second move');
+  assert.strictEqual(made(),1,'one move made');assert.ok(tiles()[1].classList.contains('next')&&tiles()[1].classList.contains('sp-m')&&tiles()[1].dataset.show,'the next is the second move, covered: a click reveals it');
   assert.ok(/1 made/.test($('#fgCard .cnt').textContent),'the count says 1 made');
   assert.ok(!$('#fgReturn').disabled,'Return to scramble is enabled');
   assert.ok($$('#fgTree button').every(b=>b.disabled),'the ways close once a move is made');

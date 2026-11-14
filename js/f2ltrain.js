@@ -8,7 +8,7 @@
 //              picked from the cube in view by js/f2lpick.js; two lights two pairs
 // f2lTrainFade asks f2ltChoice for the side colors of each pair to light; null is the guide's pair.
 // A pick is read once the cube in view changes and then rests F2T_WAIT ms, one search per turn of
-// the event loop, and it holds while its pairs are not solved and get no farther from solved
+// the event loop, and it holds until the pair it tracks is solved, however long that takes
 // (f2ltStill), so the light does not hop as the user works on a pair. Pieces are found by color, so
 // the light follows them through every turn in the meantime. A new scramble starts the picks over.
 const F2T={pick:null,state:'',busy:false,seq:0,timer:0,obs:null};
