@@ -505,7 +505,6 @@ body:not([data-kind="beg"]) #brail{display:none}
 body[data-kind="beg"]:not([data-begtimer]) .timerpanel{display:none}
 body:not([data-kind="beg"]) #progressPanel,body[data-begtimer] #progressPanel{display:none}
 body:not([data-kind="beg"]) #timerBack{display:none}
-.mgroup{margin:4px 0 -4px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .tw-plan .step{grid-template-columns:110px 1fr;grid-template-rows:auto auto}
 .tw-plan .step .nm{grid-row:1 / span 2}
 .tw-plan .step>div:last-child{white-space:normal!important;grid-column:2}

@@ -34,6 +34,17 @@ w.addEventListener('load',async()=>{try{
    tap(btn);assert.ok(sp.classList.contains('open')&&on()===alg.length-1,'the button reveals the rest');assert.ok(!$('#modalBg'),'still no details');
    assert.strictEqual(w.getComputedStyle(btn).display,'none','the button goes away when every move shows');
    tap(sp);assert.strictEqual(on(),0,'a tap on the full line covers it again');assert.strictEqual(btn.textContent,`${alg.length-1} more`,'the button is back with its count');}
+  // A small letter is another move: r is two layers, R is one. The Bowtie row holds its algorithm letter for letter,
+  // and no rule that changes the case of text reaches a line of moves or a case name, on either layout (a rule for
+  // headings once matched the phone's groups, so every r read as R).
+  {const row=$('#refMobileCases .mrow[data-id="co-L"]');
+   assert.strictEqual(row.querySelector('.alg .spoil').firstChild.textContent.trim()+' '+[...row.querySelectorAll('.sp-m')].map(m=>m.textContent).join(' '),"F R' F' r U R U' r'",'the phone row holds the Bowtie algorithm as it is');
+   const dir=path.join(__dirname,'..','css'),css=fs.readdirSync(dir).filter(f=>/\.css$/.test(f)).map(f=>fs.readFileSync(path.join(dir,f),'utf8')).join('\n').replace(/\/\*[\s\S]*?\*\//g,'');
+   const sels=[];css.replace(/([^{}]+)\{([^{}]*)\}/g,(m,sel,body)=>{if(/text-transform\s*:\s*(uppercase|lowercase|capitalize)|font-variant(-caps)?\s*:\s*[a-z-]*small-caps/.test(body))sels.push(sel.trim());});
+   assert.ok(sels.length>3,'the style sheets were read');
+   const lines=$$('.alg,.ref-alg,.spoil,.mrow .nm,.rcard .nm');assert.ok(lines.length>200,'the lines of moves on both layouts');
+   for(const sel of sels){let hit=null;try{hit=lines.find(el=>el.closest(sel));}catch(e){continue;} // a selector jsdom cannot read matches no line here
+     assert.ok(!hit,`"${sel}" changes the case of ${hit&&(hit.textContent||'').trim().slice(0,40)}`);}}
   // The full PLL and the F2L lists start folded; the heading opens them.
   {const pll=$('#mg-pll'),f2l=$('#mg-f2l');assert.ok(pll.tagName==='DETAILS'&&f2l.tagName==='DETAILS','folds');
    assert.ok(!pll.open&&!f2l.open,'both start folded');assert.ok($('#mg-ollE').tagName!=='DETAILS','the two-look groups are open lists');
