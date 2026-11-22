@@ -54,6 +54,8 @@ w.addEventListener('load',async()=>{try{
   // moves, and Use my cube makes the cube the scramble again.
   const seed1=E('scr.seed');ev('cw:smartmoves',{moves:null,from:null,to:real});await sleep(50);assert.strictEqual(E('scr.seed'),seed1,'the first state counts once');
   E("newScramble('live-2')");assert.ok($('#liveNote')&&!$('#liveNote').hidden,'another scramble: the note under the moves');
+  // The seed names the second it was made in: wait for a later second, or the same name comes again.
+  await until(()=>E("customName('smart')")!==seed1,'a later second');
   click($('#liveNoteUse'));await until(()=>/^smart-/.test(E('scr.seed'))&&E('scr.seed')!==seed1,'Use my cube: the scramble from the cube again');
   assert.ok(E('liveInStep(cubeTab.target)'),'in step again');assert.ok($('#liveNote').hidden,'no note in step');
 
